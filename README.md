@@ -36,6 +36,22 @@
 
 ---
 
+## Screenshots
+
+### Log Search
+![Log Search](docs/images/01-search.png)
+
+### Dashboards
+![Dashboards](docs/images/03-dashboards.png)
+
+### Alerts
+![Alerts](docs/images/04-alerts.png)
+
+### Live Tail
+![Live Tail](docs/images/05-live-tail.png)
+
+---
+
 ## Choose Your Setup
 
 <table>
