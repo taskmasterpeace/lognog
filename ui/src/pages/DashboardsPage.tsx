@@ -1,0 +1,317 @@
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  Plus,
+  LayoutDashboard,
+  Trash2,
+  Loader2,
+  Calendar,
+  Grid3X3,
+  X,
+  Sparkles,
+} from 'lucide-react';
+import { getDashboards, createDashboard, deleteDashboard, Dashboard } from '../api/client';
+
+const TEMPLATES = [
+  {
+    name: 'System Overview',
+    description: 'Monitor system health, log volume, and errors across all hosts',
+    icon: '🖥️',
+    color: 'from-blue-500 to-cyan-500',
+  },
+  {
+    name: 'Network Traffic',
+    description: 'Firewall logs, connection states, and traffic patterns',
+    icon: '🌐',
+    color: 'from-purple-500 to-pink-500',
+  },
+  {
+    name: 'Security Events',
+    description: 'Authentication failures, security alerts, and access logs',
+    icon: '🛡️',
+    color: 'from-red-500 to-orange-500',
+  },
+  {
+    name: 'Application Logs',
+    description: 'Application performance, errors, and usage metrics',
+    icon: '📱',
+    color: 'from-green-500 to-emerald-500',
+  },
+];
+
+export default function DashboardsPage() {
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newDashboardName, setNewDashboardName] = useState('');
+  const [newDashboardDescription, setNewDashboardDescription] = useState('');
+  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+
+  const queryClient = useQueryClient();
+
+  const { data: dashboards, isLoading, error } = useQuery({
+    queryKey: ['dashboards'],
+    queryFn: getDashboards,
+  });
+
+  const createMutation = useMutation({
+    mutationFn: () => createDashboard(newDashboardName, newDashboardDescription),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dashboards'] });
+      setShowCreateModal(false);
+      setNewDashboardName('');
+      setNewDashboardDescription('');
+      setSelectedTemplate(null);
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteDashboard,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dashboards'] });
+    },
+  });
+
+  const handleTemplateSelect = (template: typeof TEMPLATES[0]) => {
+    setSelectedTemplate(template.name);
+    setNewDashboardName(template.name);
+    setNewDashboardDescription(template.description);
+    setShowCreateModal(true);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full">
+        <Loader2 className="w-10 h-10 text-sky-500 animate-spin mb-4" />
+        <p className="text-slate-600">Loading dashboards...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-8">
+        <div className="card border-red-200 bg-red-50 p-6">
+          <p className="font-semibold text-red-900">Failed to load dashboards</p>
+          <p className="text-sm text-red-700 mt-1">{String(error)}</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-full bg-slate-50 dark:bg-slate-900">
+      {/* Header */}
+      <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 shadow-sm">
+        <div className="p-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Dashboards</h1>
+              <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Create and manage log visualization dashboards</p>
+            </div>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="btn-primary"
+            >
+              <Plus className="w-5 h-5" />
+              <span>New Dashboard</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="p-6 space-y-8">
+        {/* User Dashboards */}
+        {dashboards && dashboards.length > 0 && (
+          <section>
+            <h2 className="text-lg font-semibold text-slate-900 mb-4">Your Dashboards</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {dashboards.map((dashboard: Dashboard) => (
+                <div key={dashboard.id} className="card-hover group">
+                  <div className="p-5">
+                    <div className="flex items-start justify-between mb-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-sky-400 to-sky-600 rounded-lg flex items-center justify-center shadow-md">
+                          <LayoutDashboard className="w-5 h-5 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="font-semibold text-slate-900">{dashboard.name}</h3>
+                          {dashboard.description && (
+                            <p className="text-sm text-slate-500 line-clamp-1">{dashboard.description}</p>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => deleteMutation.mutate(dashboard.id)}
+                        className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                      <div className="flex items-center gap-4 text-xs text-slate-500">
+                        <span className="flex items-center gap-1">
+                          <Calendar className="w-3.5 h-3.5" />
+                          {new Date(dashboard.created_at).toLocaleDateString()}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Grid3X3 className="w-3.5 h-3.5" />
+                          {dashboard.panels?.length || 0} panels
+                        </span>
+                      </div>
+                      <Link to={`/dashboards/${dashboard.id}`} className="text-sm font-medium text-sky-600 hover:text-sky-700">
+                        Open →
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Empty State */}
+        {(!dashboards || dashboards.length === 0) && (
+          <div className="text-center py-12">
+            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <LayoutDashboard className="w-8 h-8 text-slate-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-slate-900 mb-2">No dashboards yet</h3>
+            <p className="text-slate-500 mb-6">Create your first dashboard to start visualizing logs</p>
+            <button onClick={() => setShowCreateModal(true)} className="btn-primary">
+              <Plus className="w-5 h-5" />
+              Create Dashboard
+            </button>
+          </div>
+        )}
+
+        {/* Templates */}
+        <section>
+          <div className="flex items-center gap-2 mb-4">
+            <Sparkles className="w-5 h-5 text-amber-500" />
+            <h2 className="text-lg font-semibold text-slate-900">Starter Templates</h2>
+          </div>
+          <p className="text-slate-500 text-sm mb-4">
+            Quick-start with pre-configured dashboards for common use cases
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {TEMPLATES.map((template) => (
+              <button
+                key={template.name}
+                onClick={() => handleTemplateSelect(template)}
+                className="card-hover text-left group"
+              >
+                <div className="p-5">
+                  <div className={`w-12 h-12 bg-gradient-to-br ${template.color} rounded-xl flex items-center justify-center text-2xl mb-3 shadow-lg group-hover:scale-110 transition-transform`}>
+                    {template.icon}
+                  </div>
+                  <h4 className="font-semibold text-slate-900 mb-1">{template.name}</h4>
+                  <p className="text-sm text-slate-500 line-clamp-2">{template.description}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {/* Tips */}
+        <section className="card p-6 bg-gradient-to-r from-sky-50 to-cyan-50 border-sky-100">
+          <h3 className="font-semibold text-sky-900 mb-3">Dashboard Tips</h3>
+          <ul className="space-y-2 text-sm text-sky-800">
+            <li className="flex items-start gap-2">
+              <span className="text-sky-500 mt-0.5">•</span>
+              Use time filters to focus on relevant data and improve performance
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-sky-500 mt-0.5">•</span>
+              Create saved searches first, then add them as dashboard panels
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-sky-500 mt-0.5">•</span>
+              Use stats commands for aggregated views instead of raw log tables
+            </li>
+            <li className="flex items-start gap-2">
+              <span className="text-sky-500 mt-0.5">•</span>
+              Check the Documentation page for query language reference
+            </li>
+          </ul>
+        </section>
+      </div>
+
+      {/* Create Dashboard Modal */}
+      {showCreateModal && (
+        <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
+          <div className="modal animate-slide-up max-w-lg" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-900">
+                    {selectedTemplate ? `Create ${selectedTemplate}` : 'New Dashboard'}
+                  </h3>
+                  <p className="text-sm text-slate-500 mt-0.5">
+                    Configure your dashboard settings
+                  </p>
+                </div>
+                <button onClick={() => setShowCreateModal(false)} className="btn-ghost p-1">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="modal-body space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                  Dashboard Name
+                </label>
+                <input
+                  type="text"
+                  value={newDashboardName}
+                  onChange={(e) => setNewDashboardName(e.target.value)}
+                  placeholder="My Dashboard"
+                  className="input"
+                  autoFocus
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                  Description <span className="text-slate-400 font-normal">(optional)</span>
+                </label>
+                <textarea
+                  value={newDashboardDescription}
+                  onChange={(e) => setNewDashboardDescription(e.target.value)}
+                  placeholder="What does this dashboard monitor?"
+                  rows={3}
+                  className="input resize-none"
+                />
+              </div>
+
+              {selectedTemplate && (
+                <div className="p-3 bg-amber-50 rounded-lg border border-amber-100">
+                  <p className="text-sm text-amber-800">
+                    <strong>Template:</strong> This will create an empty dashboard.
+                    Add panels manually using queries from the Documentation.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="modal-footer">
+              <button onClick={() => setShowCreateModal(false)} className="btn-secondary">
+                Cancel
+              </button>
+              <button
+                onClick={() => createMutation.mutate()}
+                disabled={!newDashboardName || createMutation.isPending}
+                className="btn-primary"
+              >
+                {createMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
+                Create Dashboard
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

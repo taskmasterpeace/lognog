@@ -1,0 +1,12 @@
+{
+  "name": "spunk-log-generator",
+  "version": "1.0.0",
+  "description": "Generate realistic syslog messages for testing Spunk",
+  "main": "generator.js",
+  "type": "module",
+  "scripts": {
+    "start": "node generator.js",
+    "generate": "node generator.js"
+  },
+  "dependencies": {}
+}

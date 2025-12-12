@@ -1,0 +1,528 @@
+# Vector Configuration for LogNog
+# Receives syslog messages and forwards to ClickHouse
+
+[api]
+enabled = true
+address = "0.0.0.0:8686"
+
+# ============================================
+# SOURCES
+# ============================================
+
+# Syslog UDP source (RFC3164 and RFC5424)
+[sources.syslog_udp]
+type = "syslog"
+address = "0.0.0.0:514"
+mode = "udp"
+
+# Syslog TCP source
+[sources.syslog_tcp]
+type = "syslog"
+address = "0.0.0.0:514"
+mode = "tcp"
+
+# ============================================
+# TRANSFORMS
+# ============================================
+
+# Merge UDP and TCP sources
+[transforms.merge_syslog]
+type = "remap"
+inputs = ["syslog_udp", "syslog_tcp"]
+source = '''
+# Set received timestamp
+.received_at = now()
+
+# Convert severity string to numeric value (syslog levels 0-7)
+# Vector syslog source returns string names like "info", "err", "warning", etc.
+severity_map = {
+  "emerg": 0, "emergency": 0,
+  "alert": 1,
+  "crit": 2, "critical": 2,
+  "err": 3, "error": 3,
+  "warning": 4, "warn": 4,
+  "notice": 5,
+  "info": 6, "informational": 6,
+  "debug": 7
+}
+severity_str = downcase(to_string!(.severity))
+.severity = get(severity_map, [severity_str]) ?? 6
+
+# Convert facility string to numeric value
+facility_map = {
+  "kern": 0, "user": 1, "mail": 2, "daemon": 3,
+  "auth": 4, "syslog": 5, "lpr": 6, "news": 7,
+  "uucp": 8, "cron": 9, "authpriv": 10, "ftp": 11,
+  "local0": 16, "local1": 17, "local2": 18, "local3": 19,
+  "local4": 20, "local5": 21, "local6": 22, "local7": 23
+}
+facility_str = downcase(to_string!(.facility))
+.facility = get(facility_map, [facility_str]) ?? 1
+
+# Remove extra fields that shouldn't be sent to ClickHouse
+del(.source_type)
+del(.version)
+del(.priority)
+del(.INFO)
+del(.WARN)
+del(.ERROR)
+del(.DEBUG)
+
+# Normalize hostname
+if exists(.hostname) {
+  .hostname = .hostname
+} else if exists(.host) {
+  .hostname = .host
+} else {
+  .hostname = "unknown"
+}
+del(.host)
+
+# Normalize app_name
+if exists(.appname) {
+  .app_name = .appname
+} else if !exists(.app_name) {
+  .app_name = "-"
+}
+del(.appname)
+
+# Extract proc_id
+if exists(.procid) {
+  .proc_id = to_string!(.procid)
+} else {
+  .proc_id = ""
+}
+del(.procid)
+
+# Extract msg_id
+if exists(.msgid) {
+  .msg_id = to_string!(.msgid)
+} else {
+  .msg_id = ""
+}
+del(.msgid)
+
+# Keep raw message
+if exists(.raw_message) {
+  .raw = .raw_message
+} else {
+  .raw = encode_json(.)
+}
+
+# Parse structured data if present
+if exists(.structured_data) {
+  .structured_data = encode_json(.structured_data)
+} else {
+  .structured_data = "{}"
+}
+
+# Try to extract common fields from message
+message_str = to_string!(.message)
+
+# Extract IP addresses if present
+ip_match, err = parse_regex(message_str, r'(?P<src_ip>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}).*?(?P<dst_ip>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})')
+if err == null {
+  .source_ip = ip_match.src_ip
+  .dest_ip = ip_match.dst_ip
+} else {
+  .source_ip = "0.0.0.0"
+  .dest_ip = "0.0.0.0"
+}
+
+# Set index name based on facility
+if .facility == 4 || .facility == 10 {
+  .index_name = "security"
+} else if .facility == 0 {
+  .index_name = "kernel"
+} else {
+  .index_name = "main"
+}
+
+# Default empty values for optional fields
+.source_port = 0
+.dest_port = 0
+.protocol = ""
+.action = ""
+.user = ""
+.message_tokens = []
+'''
+
+# ============================================
+# PARSER 1: JSON Structured Logs
+# ============================================
+# Parse message field if it contains valid JSON
+# Common for Node.js, Python, Go application logs
+[transforms.parse_json]
+type = "remap"
+inputs = ["merge_syslog"]
+source = '''
+# Try to parse message as JSON
+message_str = to_string!(.message)
+parsed, err = parse_json(message_str)
+
+if err == null {
+  # Valid JSON found - extract all fields as top-level
+  .log_type = "json"
+
+  # Common JSON log fields
+  if exists(parsed.level) {
+    .json_level = to_string!(parsed.level)
+  }
+  if exists(parsed.msg) {
+    .json_msg = to_string!(parsed.msg)
+  }
+  if exists(parsed.message) {
+    .json_message = to_string!(parsed.message)
+  }
+  if exists(parsed.timestamp) {
+    .json_timestamp = to_string!(parsed.timestamp)
+  }
+  if exists(parsed.logger) {
+    .json_logger = to_string!(parsed.logger)
+  }
+  if exists(parsed.service) {
+    .json_service = to_string!(parsed.service)
+  }
+
+  # Store full JSON for querying
+  .json_data = encode_json(parsed)
+
+  # Update app_name if service/logger is found
+  if exists(parsed.service) {
+    .app_name = to_string!(parsed.service)
+  } else if exists(parsed.logger) {
+    .app_name = to_string!(parsed.logger)
+  }
+} else {
+  .log_type = "unknown"
+  .json_data = "{}"
+}
+'''
+
+# ============================================
+# PARSER 2: Apache/Nginx Access Logs
+# ============================================
+# Parse common and combined log formats
+[transforms.parse_web_access]
+type = "remap"
+inputs = ["parse_json"]
+source = '''
+message_str = to_string!(.message)
+
+# Combined log format:
+# 192.168.1.1 - user [10/Oct/2000:13:55:36 -0700] "GET /apache_pb.gif HTTP/1.0" 200 2326 "http://example.com" "Mozilla/5.0"
+web_match, err = parse_regex(
+  message_str,
+  r'(?P<client_ip>\S+) (?P<ident>\S+) (?P<user>\S+) \[(?P<timestamp>[^\]]+)\] "(?P<method>\S+) (?P<path>\S+) (?P<http_version>\S+)" (?P<status>\d+) (?P<bytes>\S+)(?: "(?P<referrer>[^"]*)" "(?P<user_agent>[^"]*)")?'
+)
+
+if err == null {
+  .log_type = "web_access"
+
+  # Extract web access fields
+  .client_ip = web_match.client_ip
+  .http_ident = web_match.ident
+  .http_user = if web_match.user != "-" { web_match.user } else { "" }
+  .http_method = web_match.method
+  .http_path = web_match.path
+  .http_version = web_match.http_version
+  .http_status = to_int!(web_match.status)
+  .http_bytes = if web_match.bytes != "-" { to_int(web_match.bytes) ?? 0 } else { 0 }
+
+  if exists(web_match.referrer) {
+    .http_referrer = if web_match.referrer != "-" { web_match.referrer } else { "" }
+  }
+  if exists(web_match.user_agent) {
+    .http_user_agent = web_match.user_agent
+  }
+
+  # Override source_ip for web logs
+  .source_ip = web_match.client_ip
+
+  # Update user field if authenticated
+  if .http_user != "" {
+    .user = .http_user
+  }
+
+  # Set index to web logs
+  .index_name = "web"
+
+  # Parse response time if present (Nginx: request_time at end)
+  time_match, time_err = parse_regex(message_str, r'request_time=(?P<response_time>[\d.]+)')
+  if time_err == null {
+    .http_response_time = to_float!(time_match.response_time)
+  }
+}
+'''
+
+# ============================================
+# PARSER 3: Key-Value Pairs
+# ============================================
+# Parse logs with key=value format
+[transforms.parse_kv]
+type = "remap"
+inputs = ["parse_web_access"]
+source = '''
+message_str = to_string!(.message)
+
+# Check if message contains key=value patterns
+# Look for at least 2 key=value pairs
+if match(message_str, r'\w+=\S+.*\w+=\S+') {
+  .log_type = "keyvalue"
+
+  # Parse key-value pairs (handles quoted values too)
+  kv_parsed, err = parse_key_value(message_str, key_value_delimiter: "=", field_delimiter: " ")
+
+  if err == null {
+    # Store parsed KV pairs
+    .kv_data = encode_json(kv_parsed)
+
+    # Extract common fields
+    if exists(kv_parsed.host) {
+      .hostname = to_string!(kv_parsed.host)
+    }
+    if exists(kv_parsed.user) {
+      .user = to_string!(kv_parsed.user)
+    }
+    if exists(kv_parsed.src) {
+      .source_ip = to_string!(kv_parsed.src)
+    } else if exists(kv_parsed.src_ip) {
+      .source_ip = to_string!(kv_parsed.src_ip)
+    }
+    if exists(kv_parsed.dst) {
+      .dest_ip = to_string!(kv_parsed.dst)
+    } else if exists(kv_parsed.dst_ip) {
+      .dest_ip = to_string!(kv_parsed.dst_ip)
+    }
+    if exists(kv_parsed.sport) {
+      .source_port = to_int!(kv_parsed.sport)
+    } else if exists(kv_parsed.src_port) {
+      .source_port = to_int!(kv_parsed.src_port)
+    }
+    if exists(kv_parsed.dport) {
+      .dest_port = to_int!(kv_parsed.dport)
+    } else if exists(kv_parsed.dst_port) {
+      .dest_port = to_int!(kv_parsed.dst_port)
+    }
+    if exists(kv_parsed.proto) {
+      .protocol = to_string!(kv_parsed.proto)
+    } else if exists(kv_parsed.protocol) {
+      .protocol = to_string!(kv_parsed.protocol)
+    }
+    if exists(kv_parsed.action) {
+      .action = to_string!(kv_parsed.action)
+    }
+  } else {
+    .kv_data = "{}"
+  }
+}
+'''
+
+# ============================================
+# PARSER 4: Stack Trace Detection
+# ============================================
+# Detect and parse stack traces (Java, Python, JavaScript, etc.)
+[transforms.parse_stacktrace]
+type = "remap"
+inputs = ["parse_kv"]
+source = '''
+message_str = to_string!(.message)
+
+# Detect common stack trace patterns
+# Java: "Exception in thread" or "at package.Class.method"
+# Python: "Traceback (most recent call last):" or "File \"/path\", line"
+# JavaScript: "Error:" followed by "at" lines
+# .NET: "Exception:" with "at" lines
+
+is_stacktrace = false
+exception_type = ""
+exception_message = ""
+
+# Java exception detection
+java_match, java_err = parse_regex(
+  message_str,
+  r'(?P<exception>\w+(\.\w+)*Exception): (?P<message>.*?)(\n|$)'
+)
+if java_err == null {
+  is_stacktrace = true
+  exception_type = java_match.exception
+  exception_message = java_match.message
+  .log_type = "stacktrace"
+  .stacktrace_language = "java"
+}
+
+# Python exception detection
+python_match, python_err = parse_regex(
+  message_str,
+  r'(Traceback \(most recent call last\):|\w+Error: )'
+)
+if python_err == null && !is_stacktrace {
+  is_stacktrace = true
+  .log_type = "stacktrace"
+  .stacktrace_language = "python"
+
+  # Extract exception type and message
+  py_exc_match, py_exc_err = parse_regex(
+    message_str,
+    r'(?P<exception>\w+Error): (?P<message>.*?)(\n|$)'
+  )
+  if py_exc_err == null {
+    exception_type = py_exc_match.exception
+    exception_message = py_exc_match.message
+  }
+}
+
+# JavaScript exception detection
+js_match, js_err = parse_regex(
+  message_str,
+  r'(?P<exception>\w+Error): (?P<message>.*?)(\n|    at )'
+)
+if js_err == null && !is_stacktrace {
+  is_stacktrace = true
+  exception_type = js_match.exception
+  exception_message = js_match.message
+  .log_type = "stacktrace"
+  .stacktrace_language = "javascript"
+}
+
+if is_stacktrace {
+  .exception_type = exception_type
+  .exception_message = exception_message
+
+  # Extract file and line number if present
+  file_match, file_err = parse_regex(
+    message_str,
+    r'(File |at )[\"\']?(?P<file>[^\"\':\s]+)[\"\']?,? line (?P<line>\d+)|at (?P<file2>[^:]+):(?P<line2>\d+)'
+  )
+  if file_err == null {
+    if exists(file_match.file) {
+      .exception_file = file_match.file
+      .exception_line = to_int!(file_match.line)
+    } else if exists(file_match.file2) {
+      .exception_file = file_match.file2
+      .exception_line = to_int!(file_match.line2)
+    }
+  }
+
+  # Set high severity for exceptions
+  .severity = 3  # error level
+  .index_name = "errors"
+}
+'''
+
+# ============================================
+# PARSER 5: Docker Container Labels
+# ============================================
+# Extract Docker container metadata if available
+[transforms.parse_docker]
+type = "remap"
+inputs = ["parse_stacktrace"]
+source = '''
+# Check if this is from a Docker container
+# Docker typically adds container info to hostname or structured_data
+
+# Try to extract from hostname (often container ID or name)
+hostname_str = to_string!(.hostname)
+
+# Check if hostname looks like a Docker container ID (12 hex chars)
+if match(hostname_str, r'^[a-f0-9]{12}$') {
+  .docker_container_id = hostname_str
+  .docker_enabled = true
+}
+
+# Parse container name from app_name if it follows docker pattern
+# Docker Compose sets app_name like "project_service_1"
+app_name_str = to_string!(.app_name)
+compose_match, compose_err = parse_regex(
+  app_name_str,
+  r'^(?P<project>[^_]+)_(?P<service>[^_]+)_(?P<instance>\d+)$'
+)
+if compose_err == null {
+  .docker_compose_project = compose_match.project
+  .docker_compose_service = compose_match.service
+  .docker_compose_instance = to_int!(compose_match.instance)
+  .docker_enabled = true
+}
+
+# Try to extract container info from structured data
+structured_str = to_string!(.structured_data)
+if structured_str != "{}" {
+  sd_parsed, sd_err = parse_json(structured_str)
+  if sd_err == null {
+    # Check for Docker metadata
+    if exists(sd_parsed.container_name) {
+      .docker_container_name = to_string!(sd_parsed.container_name)
+      .docker_enabled = true
+    }
+    if exists(sd_parsed.container_id) {
+      .docker_container_id = to_string!(sd_parsed.container_id)
+      .docker_enabled = true
+    }
+    if exists(sd_parsed.image_name) {
+      .docker_image_name = to_string!(sd_parsed.image_name)
+      .docker_enabled = true
+    }
+  }
+}
+
+# Set default if not Docker
+if !exists(.docker_enabled) {
+  .docker_enabled = false
+}
+'''
+
+# ============================================
+# FINAL: Route parsed logs
+# ============================================
+[transforms.final_route]
+type = "remap"
+inputs = ["parse_docker"]
+source = '''
+# Ensure all required fields exist with defaults
+if !exists(.log_type) {
+  .log_type = "syslog"
+}
+if !exists(.json_data) {
+  .json_data = "{}"
+}
+if !exists(.kv_data) {
+  .kv_data = "{}"
+}
+
+# Add parsing metadata
+.parsed_at = now()
+'''
+
+# ============================================
+# SINKS
+# ============================================
+
+# ClickHouse sink
+[sinks.clickhouse]
+type = "clickhouse"
+inputs = ["final_route"]
+endpoint = "http://clickhouse:8123"
+database = "lognog"
+table = "logs"
+auth.strategy = "basic"
+auth.user = "lognog"
+auth.password = "lognog123"
+skip_unknown_fields = true
+compression = "gzip"
+
+# Batching for performance
+batch.max_bytes = 10485760
+batch.max_events = 10000
+batch.timeout_secs = 5
+
+# Healthcheck
+healthcheck.enabled = true
+
+# Encoding
+encoding.timestamp_format = "unix"
+
+# Console sink for debugging (optional, comment out in production)
+[sinks.console]
+type = "console"
+inputs = ["final_route"]
+encoding.codec = "json"
