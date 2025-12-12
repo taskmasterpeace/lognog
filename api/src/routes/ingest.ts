@@ -370,4 +370,190 @@ router.post('/otlp/v1/logs', async (req, res) => {
   }
 });
 
+// =============================================================================
+// Test Data Generation
+// =============================================================================
+
+const TEST_HOSTS = [
+  'web-server-01', 'web-server-02', 'db-server-01', 'db-server-02',
+  'firewall-01', 'router-01', 'nas-01', 'proxmox-01', 'k8s-node-01',
+  'pihole-01', 'homeassistant', 'pfsense', 'unifi-controller'
+];
+
+const TEST_APPS = [
+  'nginx', 'apache', 'postgres', 'mysql', 'redis', 'docker',
+  'sshd', 'systemd', 'kernel', 'cron', 'sudo', 'ufw',
+  'haproxy', 'prometheus', 'grafana', 'elasticsearch'
+];
+
+const TEST_MESSAGES = {
+  info: [
+    'Connection established from {ip}',
+    'User {user} logged in successfully',
+    'Service started successfully',
+    'Health check passed',
+    'Backup completed: {size}MB transferred',
+    'Cache hit for key: user:{id}',
+    'Request processed in {ms}ms',
+    'Configuration reloaded',
+    'Worker process spawned (PID {pid})',
+    'SSL certificate valid for {days} more days',
+  ],
+  warning: [
+    'High memory usage detected: {pct}%',
+    'Disk space running low: {pct}% used',
+    'Rate limit approaching for client {ip}',
+    'Connection pool nearly exhausted',
+    'Slow query detected: {ms}ms',
+    'Certificate expires in {days} days',
+    'Retry attempt {n} for operation',
+    'Non-standard request from {ip}',
+  ],
+  error: [
+    'Connection refused to upstream server',
+    'Authentication failed for user {user}',
+    'Database connection timeout',
+    'Out of memory error',
+    'Deadlock detected in transaction {id}',
+    'SSL handshake failed',
+    'Service unavailable',
+    'Maximum connections reached',
+  ],
+  critical: [
+    'CRITICAL: Possible intrusion attempt from {ip}',
+    'CRITICAL: Disk failure detected on /dev/sda',
+    'CRITICAL: Kernel panic - not syncing',
+    'CRITICAL: Security violation detected',
+    'CRITICAL: Ransomware signature detected',
+    'CRITICAL: Unauthorized root access attempt',
+  ],
+  firewall: [
+    '[UFW BLOCK] IN=eth0 SRC={src_ip} DST={dst_ip} PROTO=TCP DPT={port}',
+    '[UFW ALLOW] IN=eth0 SRC={src_ip} DST={dst_ip} PROTO=TCP DPT={port}',
+    'Block port scan from {ip}',
+    'Deny incoming connection {src_ip}:{src_port} -> {dst_ip}:{dst_port}',
+    'Allow established connection {src_ip} -> {dst_ip}',
+    'Drop invalid packet from {ip}',
+    'Rate limit triggered for {ip}',
+    'GeoIP block: {country} ({ip})',
+  ],
+};
+
+const MALICIOUS_IPS = [
+  '185.234.219.1', '45.33.32.156', '91.121.87.10', '23.94.5.133',
+  '194.26.29.102', '89.248.167.131', '141.98.10.60', '193.32.162.189'
+];
+
+function randomChoice<T>(arr: T[]): T {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function randomInt(min: number, max: number): number {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function randomIP(): string {
+  return `${randomInt(10, 192)}.${randomInt(0, 255)}.${randomInt(0, 255)}.${randomInt(1, 254)}`;
+}
+
+function fillTemplate(template: string): string {
+  return template
+    .replace('{ip}', Math.random() > 0.3 ? randomIP() : randomChoice(MALICIOUS_IPS))
+    .replace('{src_ip}', randomIP())
+    .replace('{dst_ip}', `192.168.1.${randomInt(1, 254)}`)
+    .replace('{port}', String(randomChoice([22, 80, 443, 3306, 5432, 6379, 8080, 8443])))
+    .replace('{src_port}', String(randomInt(10000, 65000)))
+    .replace('{dst_port}', String(randomChoice([22, 80, 443, 3306, 5432])))
+    .replace('{user}', randomChoice(['admin', 'root', 'deploy', 'www-data', 'postgres']))
+    .replace('{pct}', String(randomInt(75, 98)))
+    .replace('{ms}', String(randomInt(100, 5000)))
+    .replace('{size}', String(randomInt(100, 5000)))
+    .replace('{id}', String(randomInt(10000, 99999)))
+    .replace('{pid}', String(randomInt(1000, 50000)))
+    .replace('{days}', String(randomInt(7, 365)))
+    .replace('{n}', String(randomInt(1, 5)))
+    .replace('{country}', randomChoice(['CN', 'RU', 'KP', 'IR']));
+}
+
+function generateTestLog(): Record<string, unknown> {
+  const now = new Date();
+  // Generate logs spread over last hour
+  const timestamp = new Date(now.getTime() - randomInt(0, 3600000));
+
+  // Weighted severity distribution
+  const roll = Math.random();
+  let severity: number;
+  let messageType: keyof typeof TEST_MESSAGES;
+
+  if (roll < 0.5) {
+    severity = 6; // info
+    messageType = 'info';
+  } else if (roll < 0.7) {
+    severity = 5; // notice
+    messageType = 'info';
+  } else if (roll < 0.85) {
+    severity = 4; // warning
+    messageType = 'warning';
+  } else if (roll < 0.92) {
+    severity = 3; // error
+    messageType = 'error';
+  } else if (roll < 0.97) {
+    severity = 2; // critical
+    messageType = 'critical';
+  } else {
+    // Firewall logs
+    severity = randomChoice([4, 5, 6]);
+    messageType = 'firewall';
+  }
+
+  const hostname = randomChoice(TEST_HOSTS);
+  const app_name = messageType === 'firewall'
+    ? randomChoice(['ufw', 'pfsense', 'iptables', 'firewalld'])
+    : randomChoice(TEST_APPS);
+
+  return {
+    timestamp: timestamp.toISOString(),
+    received_at: now.toISOString(),
+    hostname,
+    app_name,
+    severity,
+    facility: 1,
+    priority: (1 * 8) + severity,
+    message: fillTemplate(randomChoice(TEST_MESSAGES[messageType])),
+    raw: '',
+    structured_data: '{}',
+    index_name: messageType === 'firewall' ? 'security' : 'main',
+  };
+}
+
+/**
+ * POST /api/ingest/generate-test-data
+ *
+ * Generate test log data for demos and screenshots.
+ * Requires authentication.
+ */
+router.post('/generate-test-data', authenticate, async (req, res) => {
+  try {
+    const count = Math.min(parseInt(req.body.count) || 100, 1000);
+
+    const logs = Array.from({ length: count }, generateTestLog);
+
+    await insertLogs(logs);
+
+    console.log(`Generated ${count} test logs`);
+
+    res.json({
+      success: true,
+      generated: count,
+      message: `Generated ${count} test log entries`,
+    });
+  } catch (error) {
+    console.error('Test data generation error:', error);
+    res.status(500).json({
+      error: 'Failed to generate test data',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
 export default router;

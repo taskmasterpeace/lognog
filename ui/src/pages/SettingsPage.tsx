@@ -12,6 +12,8 @@ import {
   Shield,
   Clock,
   XCircle,
+  Database,
+  Zap,
 } from 'lucide-react';
 
 export default function SettingsPage() {
@@ -30,6 +32,11 @@ export default function SettingsPage() {
   // Newly created key (shown once)
   const [newlyCreatedKey, setNewlyCreatedKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // Test data generation
+  const [generatingData, setGeneratingData] = useState(false);
+  const [testDataCount, setTestDataCount] = useState('500');
+  const [testDataResult, setTestDataResult] = useState<string | null>(null);
 
   // Load API keys
   useEffect(() => {
@@ -96,6 +103,36 @@ export default function SettingsPage() {
     setNewKeyPermissions((prev) =>
       prev.includes(perm) ? prev.filter((p) => p !== perm) : [...prev, perm]
     );
+  };
+
+  const handleGenerateTestData = async () => {
+    setGeneratingData(true);
+    setTestDataResult(null);
+    setError(null);
+
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch('/api/ingest/generate-test-data', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ count: parseInt(testDataCount) || 500 }),
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setTestDataResult(`Successfully generated ${data.generated} log entries!`);
+      } else {
+        setError(data.error || 'Failed to generate test data');
+      }
+    } catch (err) {
+      setError('Failed to connect to server');
+    } finally {
+      setGeneratingData(false);
+    }
   };
 
   return (
@@ -353,6 +390,64 @@ export default function SettingsPage() {
             ))}
           </div>
         )}
+      </section>
+
+      {/* Developer Tools Section */}
+      <section className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 mt-8">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2 mb-4">
+          <Database className="w-5 h-5" />
+          Developer Tools
+        </h2>
+
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+          Generate realistic test data for demos, screenshots, and testing purposes.
+        </p>
+
+        {/* Success message */}
+        {testDataResult && (
+          <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800 flex items-center gap-2 text-green-700 dark:text-green-300 text-sm">
+            <Check className="w-4 h-4" />
+            {testDataResult}
+          </div>
+        )}
+
+        <div className="flex items-end gap-4">
+          <div className="flex-1 max-w-xs">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              Number of Logs
+            </label>
+            <input
+              type="number"
+              value={testDataCount}
+              onChange={(e) => setTestDataCount(e.target.value)}
+              min="10"
+              max="1000"
+              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+            />
+          </div>
+          <button
+            onClick={handleGenerateTestData}
+            disabled={generatingData}
+            className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+          >
+            {generatingData ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Zap className="w-4 h-4" />
+                Generate Test Data
+              </>
+            )}
+          </button>
+        </div>
+
+        <p className="mt-4 text-xs text-slate-400 dark:text-slate-500">
+          Generates realistic logs from various sources including web servers, databases, firewalls, and more.
+          Includes security events, errors, warnings, and info messages.
+        </p>
       </section>
     </div>
   );
