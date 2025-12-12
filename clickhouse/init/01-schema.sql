@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS lognog.logs
 ENGINE = MergeTree()
 PARTITION BY toYYYYMM(timestamp)
 ORDER BY (timestamp, hostname, app_name)
-TTL timestamp + INTERVAL 90 DAY
+TTL toDateTime(timestamp) + INTERVAL 90 DAY
 SETTINGS index_granularity = 8192;
 
 -- Materialized view for fast hostname lookups
