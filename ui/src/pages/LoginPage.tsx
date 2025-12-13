@@ -1,6 +1,7 @@
 import { useState, FormEvent } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Lock, User, Mail, AlertCircle, Loader2 } from 'lucide-react';
+import { Lock, User, Mail, AlertCircle, Loader2, ArrowLeft } from 'lucide-react';
 
 export default function LoginPage() {
   const { login, setup, setupRequired, isLoading } = useAuth();
@@ -74,6 +75,15 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-4">
+      {/* Back to Landing */}
+      <Link
+        to="/"
+        className="absolute top-4 left-4 flex items-center gap-2 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+      >
+        <ArrowLeft className="w-5 h-5" />
+        <span>Back</span>
+      </Link>
+
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">

@@ -26,6 +26,7 @@ import ReportsPage from './pages/ReportsPage';
 import DocsPage from './pages/DocsPage';
 import KnowledgePage from './pages/KnowledgePage';
 import LoginPage from './pages/LoginPage';
+import LandingPage from './pages/LandingPage';
 import SettingsPage from './pages/SettingsPage';
 import AlertsPage from './pages/AlertsPage';
 import SilencesPage from './pages/SilencesPage';
@@ -119,7 +120,7 @@ function Layout({ children }: { children: React.ReactNode }) {
           <p className="px-3 py-2 text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
             Main
           </p>
-          <NavLink to="/" icon={Search}>Search & Explore</NavLink>
+          <NavLink to="/search" icon={Search}>Search & Explore</NavLink>
           <NavLink to="/dashboards" icon={LayoutDashboard}>Dashboards</NavLink>
           <NavLink to="/alerts" icon={Bell}>Alerts</NavLink>
           <NavLink to="/stats" icon={Activity}>Analytics</NavLink>
@@ -190,7 +191,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   }
 
   if (!isAuthenticated || setupRequired) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/" replace />;
   }
 
   return <>{children}</>;
@@ -209,12 +210,24 @@ function AppRoutes() {
 
   return (
     <Routes>
+      {/* Landing page - public, redirects to search if authenticated */}
+      <Route
+        path="/"
+        element={
+          isAuthenticated && !setupRequired ? (
+            <Navigate to="/search" replace />
+          ) : (
+            <LandingPage />
+          )
+        }
+      />
+
       {/* Login route */}
       <Route
         path="/login"
         element={
           isAuthenticated && !setupRequired ? (
-            <Navigate to="/" replace />
+            <Navigate to="/search" replace />
           ) : (
             <LoginPage />
           )
@@ -223,7 +236,7 @@ function AppRoutes() {
 
       {/* Protected routes */}
       <Route
-        path="/"
+        path="/search"
         element={
           <ProtectedRoute>
             <Layout>
@@ -323,8 +336,8 @@ function AppRoutes() {
         }
       />
 
-      {/* Catch all - redirect to home */}
-      <Route path="*" element={<Navigate to="/" replace />} />
+      {/* Catch all - redirect to search (or landing if not authenticated) */}
+      <Route path="*" element={<Navigate to="/search" replace />} />
     </Routes>
   );
 }
