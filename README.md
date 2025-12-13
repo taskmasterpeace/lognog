@@ -36,6 +36,46 @@
 
 ---
 
+## How LogNog Compares
+
+| Feature | LogNog | Splunk | ELK Stack | Grafana Loki |
+|---------|--------|--------|-----------|--------------|
+| **Cost** | Free (MIT) | $$$$ | Free* | Free* |
+| **Setup Time** | 10 minutes | Hours | Hours | 30+ min |
+| **Query Language** | Splunk-like DSL | SPL | Lucene/KQL | LogQL |
+| **Learning Curve** | Low | High | Medium | Medium |
+| **Single Binary** | Yes (Lite) | No | No | No |
+| **Windows Native** | Yes | Yes | Painful | No |
+| **Docker Required** | Optional | No | Yes | Yes |
+| **Built-in Alerts** | Yes | Yes | Via Elastalert | Via Grafana |
+| **Built-in Dashboards** | Yes | Yes | Via Kibana | Via Grafana |
+| **FIM (File Monitoring)** | Yes | Via addon | No | No |
+| **Real-time Tail** | Yes (SSE) | Yes | Yes | Yes |
+| **GeoIP** | Yes | Yes | Yes | Plugin |
+| **Components** | 1-3 | 1 | 3+ (E+L+K) | 3+ (Loki+Promtail+Grafana) |
+
+*ELK and Loki are free but require significant infrastructure and expertise
+
+### Why Not ELK Stack?
+- **3 separate systems** to manage (Elasticsearch, Logstash, Kibana)
+- **Java-heavy** - high memory usage
+- **Complex configuration** - YAML everywhere
+- **Lucene query syntax** - different from Splunk SPL
+
+### Why Not Grafana Loki?
+- **Designed for metrics first**, logs second
+- **LogQL** is different from Splunk SPL
+- **Requires Grafana** for visualization
+- **No Windows agent** out of the box
+
+### Why LogNog?
+- **Splunk-familiar** query language
+- **One docker-compose** or native Windows binary
+- **Built-in everything** - no separate tools needed
+- **AI-ready** - NogBot advisors coming soon
+
+---
+
 ## Screenshots
 
 ### Log Search
@@ -523,14 +563,38 @@ SMTP_FROM=reports@example.com
 - [ ] Lookup tables (CSV enrichment)
 - [ ] Public dashboard sharing (embed without login)
 - [ ] macOS/Linux agent packages
-- [ ] Cloudflare Tunnel guide
+- [ ] Cloudflare Tunnel setup guide
+
+### Planned - Data Sources
+- [ ] AWS CloudWatch Logs integration
+- [ ] Docker container logs
+- [ ] Kubernetes pod logs
+- [ ] Cloudflare Logs
+- [ ] GitHub Actions logs
+- [ ] Custom webhook templates
+
+### Planned - AI Features (NogBot)
+- [ ] **Codebase Interview Wizard** - AI helps developers set up logging
+  - Step 1: Generate interview prompts for developer's AI assistant
+  - Step 2: Process responses, ask follow-up questions
+  - Step 3: Generate implementation guide with code snippets
+- [ ] **Alert Advisor** - AI suggests alerts based on your log patterns
+  - Learns baselines from your data
+  - Recommends thresholds and alert rules
+- [ ] **Security Advisor** - AI identifies security gaps
+  - Maps alerts to MITRE ATT&CK framework
+  - Identifies coverage gaps
+- [ ] **Performance Advisor** - AI finds performance issues
+  - Detects slow endpoints, error spikes
+  - Suggests optimizations
 
 ### Planned - Long Term
 - [ ] Machine learning anomaly detection
-- [ ] Natural language to DSL conversion
+- [ ] Natural language to DSL conversion ("show me errors from yesterday")
 - [ ] Grafana data source plugin
 - [ ] Kubernetes deployment (Helm chart)
 - [ ] Log forwarding between LogNog instances
+- [ ] Multi-tenant support with data isolation
 
 ---
 
