@@ -1,0 +1,92 @@
+# LogNog In Agent Configuration Example
+
+# Server connection
+server_url: "http://localhost:4000"
+api_key: "your-api-key-here"
+
+# Agent settings
+hostname: "my-windows-pc"  # Auto-detected if not specified
+batch_size: 100
+batch_interval_seconds: 5.0
+retry_max_attempts: 5
+retry_backoff_seconds: 2.0
+
+# Behavior
+start_on_boot: false
+send_hostname: true
+debug_logging: false
+
+# Watch paths for log files
+watch_paths:
+  - path: "C:\\Logs"
+    pattern: "*.log"
+    recursive: true
+    enabled: true
+  - path: "C:\\inetpub\\logs"
+    pattern: "*.log"
+    recursive: true
+    enabled: true
+
+# File Integrity Monitoring (FIM)
+fim_enabled: true
+fim_paths:
+  - path: "C:\\Windows\\System32\\drivers\\etc"
+    pattern: "*"
+    recursive: false
+    enabled: true
+  - path: "C:\\Program Files\\MyApp"
+    pattern: "*.exe"
+    recursive: true
+    enabled: true
+
+# Windows Event Log Collection
+windows_events:
+  enabled: true
+
+  # Channels to monitor
+  channels:
+    - Security
+    - System
+    - Application
+
+  # Optional: Filter for specific event IDs
+  # If not specified or null, all events are collected
+  # High-value security events are recommended
+  event_ids:
+    - 4624  # Successful logon
+    - 4625  # Failed logon
+    - 4648  # Explicit credential logon
+    - 4672  # Special privileges assigned
+    - 4688  # Process creation
+    - 4698  # Scheduled task created
+    - 4720  # User account created
+    - 4722  # User account enabled
+    - 4725  # User account disabled
+    - 4726  # User account deleted
+    - 4732  # Member added to security-enabled local group
+    - 4740  # User account locked out
+    - 7045  # Service installed
+    - 7040  # Service start type changed
+
+  # Poll interval in seconds (how often to check for new events)
+  poll_interval: 10
+
+# Example: Collect all Security events (no filtering)
+# windows_events:
+#   enabled: true
+#   channels:
+#     - Security
+#   event_ids: null  # Collect all events
+#   poll_interval: 10
+
+# Example: Collect from multiple channels without filtering
+# windows_events:
+#   enabled: true
+#   channels:
+#     - Security
+#     - System
+#     - Application
+#     - "Microsoft-Windows-PowerShell/Operational"
+#     - "Microsoft-Windows-Sysmon/Operational"
+#   event_ids: null
+#   poll_interval: 5

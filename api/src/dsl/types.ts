@@ -21,6 +21,13 @@ export enum TokenType {
   NOT = 'NOT',
   ASC = 'ASC',
   DESC = 'DESC',
+  TOP = 'TOP',
+  RARE = 'RARE',
+  BIN = 'BIN',
+  TIMECHART = 'TIMECHART',
+  REX = 'REX',
+  SPAN = 'SPAN',
+  FIELD = 'FIELD',
 
   // Aggregation functions
   COUNT = 'COUNT',
@@ -32,6 +39,18 @@ export enum TokenType {
   VALUES = 'VALUES',
   EARLIEST = 'EARLIEST',
   LATEST = 'LATEST',
+  MEDIAN = 'MEDIAN',
+  MODE = 'MODE',
+  STDDEV = 'STDDEV',
+  VARIANCE = 'VARIANCE',
+  RANGE = 'RANGE',
+  P50 = 'P50',
+  P90 = 'P90',
+  P95 = 'P95',
+  P99 = 'P99',
+  FIRST = 'FIRST',
+  LAST = 'LAST',
+  LIST = 'LIST',
 
   // Literals
   STRING = 'STRING',
@@ -48,6 +67,11 @@ export enum TokenType {
   GREATER_THAN = 'GREATER_THAN',
   GREATER_THAN_EQ = 'GREATER_THAN_EQ',
   CONTAINS = 'CONTAINS', // ~
+  PLUS = 'PLUS',
+  MINUS = 'MINUS',
+  MULTIPLY = 'MULTIPLY',
+  DIVIDE = 'DIVIDE',
+  MODULO = 'MODULO',
 
   // Punctuation
   PIPE = 'PIPE',
@@ -78,7 +102,12 @@ export type ASTNode =
   | FieldsNode
   | RenameNode
   | EvalNode
-  | WhereNode;
+  | WhereNode
+  | TopNode
+  | RareNode
+  | BinNode
+  | TimechartNode
+  | RexNode;
 
 export interface SearchNode {
   type: 'search';
@@ -95,11 +124,27 @@ export interface WhereNode {
   conditions: Condition[];
 }
 
-export interface Condition {
+export interface SimpleCondition {
   field: string;
   operator: ComparisonOperator;
   value: string | number | null;
   negate?: boolean;
+}
+
+export interface LogicGroup {
+  logic: 'AND' | 'OR';
+  conditions: (SimpleCondition | LogicGroup)[];
+}
+
+export type Condition = SimpleCondition | LogicGroup;
+
+// Type guard helpers
+export function isLogicGroup(cond: Condition): cond is LogicGroup {
+  return 'logic' in cond;
+}
+
+export function isSimpleCondition(cond: Condition): cond is SimpleCondition {
+  return 'field' in cond;
 }
 
 export type ComparisonOperator =
@@ -134,7 +179,19 @@ export type AggregationFunction =
   | 'dc'
   | 'values'
   | 'earliest'
-  | 'latest';
+  | 'latest'
+  | 'median'
+  | 'mode'
+  | 'stddev'
+  | 'variance'
+  | 'range'
+  | 'p50'
+  | 'p90'
+  | 'p95'
+  | 'p99'
+  | 'first'
+  | 'last'
+  | 'list';
 
 export interface SortNode {
   type: 'sort';
@@ -174,7 +231,69 @@ export interface RenameNode {
 
 export interface EvalNode {
   type: 'eval';
-  assignments: { field: string; expression: string }[];
+  assignments: { field: string; expression: EvalExpression }[];
+}
+
+// Eval expression types
+export type EvalExpression =
+  | LiteralExpression
+  | FieldRefExpression
+  | FunctionCallExpression
+  | BinaryOpExpression;
+
+export interface LiteralExpression {
+  type: 'literal';
+  value: string | number;
+}
+
+export interface FieldRefExpression {
+  type: 'field';
+  name: string;
+}
+
+export interface FunctionCallExpression {
+  type: 'function';
+  name: string;
+  args: EvalExpression[];
+}
+
+export interface BinaryOpExpression {
+  type: 'binary';
+  operator: '+' | '-' | '*' | '/' | '%';
+  left: EvalExpression;
+  right: EvalExpression;
+}
+
+export interface TopNode {
+  type: 'top';
+  limit: number;
+  field: string;
+  by?: string; // optional grouping field
+}
+
+export interface RareNode {
+  type: 'rare';
+  limit: number;
+  field: string;
+}
+
+export interface BinNode {
+  type: 'bin';
+  field: string;
+  span: string | number; // e.g. "1h", "5m", or 100 for numeric
+}
+
+export interface TimechartNode {
+  type: 'timechart';
+  span: string; // e.g. "1h", "5m"
+  aggregations: Aggregation[];
+  groupBy?: string; // optional split-by field
+}
+
+export interface RexNode {
+  type: 'rex';
+  field: string;
+  pattern: string; // regex with named groups
 }
 
 // Query AST

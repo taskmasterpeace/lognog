@@ -47,7 +47,10 @@ a = Analysis(
         'lognog_in.shipper',
         'lognog_in.tray',
         'lognog_in.watcher',
+        'lognog_in.sound_alerts',
         'lognog_in.main',
+        'lognog_in.collectors',
+        'lognog_in.collectors.windows_events',
         # Tkinter for GUI
         'tkinter',
         'tkinter.ttk',
@@ -80,6 +83,8 @@ a = Analysis(
         'appdirs',
         # SQLite
         'sqlite3',
+        # Sound alerts (Windows)
+        'winsound',
     ],
     hookspath=[],
     hooksconfig={},

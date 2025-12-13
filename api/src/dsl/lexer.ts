@@ -21,6 +21,13 @@ const KEYWORDS: Record<string, TokenType> = {
   'not': TokenType.NOT,
   'asc': TokenType.ASC,
   'desc': TokenType.DESC,
+  'top': TokenType.TOP,
+  'rare': TokenType.RARE,
+  'bin': TokenType.BIN,
+  'timechart': TokenType.TIMECHART,
+  'rex': TokenType.REX,
+  'span': TokenType.SPAN,
+  'field': TokenType.FIELD,
   // Aggregation functions
   'count': TokenType.COUNT,
   'sum': TokenType.SUM,
@@ -31,6 +38,18 @@ const KEYWORDS: Record<string, TokenType> = {
   'values': TokenType.VALUES,
   'earliest': TokenType.EARLIEST,
   'latest': TokenType.LATEST,
+  'median': TokenType.MEDIAN,
+  'mode': TokenType.MODE,
+  'stddev': TokenType.STDDEV,
+  'variance': TokenType.VARIANCE,
+  'range': TokenType.RANGE,
+  'p50': TokenType.P50,
+  'p90': TokenType.P90,
+  'p95': TokenType.P95,
+  'p99': TokenType.P99,
+  'first': TokenType.FIRST,
+  'last': TokenType.LAST,
+  'list': TokenType.LIST,
 };
 
 export class Lexer {
@@ -38,26 +57,25 @@ export class Lexer {
   private pos: number = 0;
   private line: number = 1;
   private column: number = 1;
+  private tokens: Token[] = [];
 
   constructor(input: string) {
     this.input = input;
   }
 
   tokenize(): Token[] {
-    const tokens: Token[] = [];
-
     while (!this.isAtEnd()) {
       this.skipWhitespace();
       if (this.isAtEnd()) break;
 
       const token = this.nextToken();
       if (token) {
-        tokens.push(token);
+        this.tokens.push(token);
       }
     }
 
-    tokens.push(this.makeToken(TokenType.EOF, ''));
-    return tokens;
+    this.tokens.push(this.makeToken(TokenType.EOF, ''));
+    return this.tokens;
   }
 
   private nextToken(): Token | null {
@@ -75,6 +93,12 @@ export class Lexer {
         return this.advance() && this.makeToken(TokenType.RPAREN, ')');
       case '~':
         return this.advance() && this.makeToken(TokenType.CONTAINS, '~');
+      case '+':
+        return this.advance() && this.makeToken(TokenType.PLUS, '+');
+      case '*':
+        return this.advance() && this.makeToken(TokenType.MULTIPLY, '*');
+      case '%':
+        return this.advance() && this.makeToken(TokenType.MODULO, '%');
     }
 
     // Comparison operators
@@ -115,25 +139,53 @@ export class Lexer {
       return this.readString(char);
     }
 
-    // Regex literals
+    // Division or Regex literals
     if (char === '/') {
-      return this.readRegex();
+      // Look behind to determine if this is division or regex
+      // If preceded by identifier, number, or ), it's likely division
+      // Otherwise, it's likely a regex
+      const prevToken = this.tokens[this.tokens.length - 1];
+      const isDivision = prevToken && (
+        prevToken.type === TokenType.IDENTIFIER ||
+        prevToken.type === TokenType.NUMBER ||
+        prevToken.type === TokenType.RPAREN
+      );
+
+      if (isDivision) {
+        this.advance();
+        return this.makeToken(TokenType.DIVIDE, '/');
+      } else {
+        return this.readRegex();
+      }
+    }
+
+    // Minus or Numbers
+    if (char === '-') {
+      // Look ahead to determine if this is minus operator or negative number
+      // If followed by digit and not preceded by identifier/number/), it's a negative number
+      const prevToken = this.tokens[this.tokens.length - 1];
+      const isNegativeNumber = this.isDigit(this.peekNext()) && (!prevToken || (
+        prevToken.type !== TokenType.IDENTIFIER &&
+        prevToken.type !== TokenType.NUMBER &&
+        prevToken.type !== TokenType.RPAREN
+      ));
+
+      if (isNegativeNumber) {
+        return this.readNumber();
+      } else {
+        this.advance();
+        return this.makeToken(TokenType.MINUS, '-');
+      }
     }
 
     // Numbers
-    if (this.isDigit(char) || (char === '-' && this.isDigit(this.peekNext()))) {
+    if (this.isDigit(char)) {
       return this.readNumber();
     }
 
     // Identifiers and keywords
     if (this.isIdentifierStart(char)) {
       return this.readIdentifier();
-    }
-
-    // Wildcard
-    if (char === '*') {
-      this.advance();
-      return this.makeToken(TokenType.WILDCARD, '*');
     }
 
     throw new ParseError(`Unexpected character '${char}'`, this.line, this.column);

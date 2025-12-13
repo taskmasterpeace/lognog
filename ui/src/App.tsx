@@ -28,6 +28,7 @@ import KnowledgePage from './pages/KnowledgePage';
 import LoginPage from './pages/LoginPage';
 import SettingsPage from './pages/SettingsPage';
 import AlertsPage from './pages/AlertsPage';
+import SilencesPage from './pages/SilencesPage';
 
 interface NavLinkProps {
   to: string;
@@ -257,6 +258,16 @@ function AppRoutes() {
           <ProtectedRoute>
             <Layout>
               <AlertsPage />
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/silences"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <SilencesPage />
             </Layout>
           </ProtectedRoute>
         }

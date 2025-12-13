@@ -15,6 +15,7 @@ import {
   createAlertHistoryEntry,
   getRecentAlertTrigger,
   createAgentNotification,
+  isAlertSilenced,
 } from '../db/sqlite.js';
 import { executeDSLQuery, getBackend } from '../db/backend.js';
 
@@ -284,6 +285,20 @@ export async function evaluateAlert(alertId: string): Promise<{
 
     if (!triggered) {
       return { triggered: false, resultCount, message: 'Condition not met' };
+    }
+
+    // Check if alert is silenced
+    // Extract hostname from results if available
+    const hostname = results.length > 0
+      ? (results[0] as Record<string, unknown>).hostname as string || undefined
+      : undefined;
+
+    if (isAlertSilenced(alertId, hostname)) {
+      return {
+        triggered: false,
+        resultCount,
+        message: 'Alert is silenced',
+      };
     }
 
     // Check throttling

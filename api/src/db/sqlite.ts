@@ -194,6 +194,42 @@ function initializeSchema(): void {
       FOREIGN KEY (alert_id) REFERENCES alerts(id) ON DELETE SET NULL
     );
 
+    -- Source Templates (for onboarding different log types)
+    CREATE TABLE IF NOT EXISTS source_templates (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      source_type TEXT NOT NULL UNIQUE,
+      category TEXT NOT NULL,
+      description TEXT,
+      setup_instructions TEXT,
+      agent_config_example TEXT,
+      syslog_config_example TEXT,
+      field_extractions TEXT,
+      default_index TEXT DEFAULT 'main',
+      default_severity INTEGER DEFAULT 6,
+      sample_log TEXT,
+      sample_query TEXT,
+      icon TEXT,
+      dashboard_widgets TEXT,
+      alert_templates TEXT,
+      enabled INTEGER DEFAULT 1,
+      built_in INTEGER DEFAULT 1,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+
+    -- Alert silences (3-level silencing: global, host, alert)
+    CREATE TABLE IF NOT EXISTS alert_silences (
+      id TEXT PRIMARY KEY,
+      level TEXT NOT NULL,           -- 'global', 'host', 'alert'
+      target_id TEXT,                -- hostname or alert_id (null for global)
+      reason TEXT,
+      created_by TEXT,
+      starts_at TEXT NOT NULL DEFAULT (datetime('now')),
+      ends_at TEXT,                  -- null = indefinite
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+
     -- Create indexes
     CREATE INDEX IF NOT EXISTS idx_panels_dashboard ON dashboard_panels(dashboard_id);
     CREATE INDEX IF NOT EXISTS idx_searches_name ON saved_searches(name);
@@ -210,6 +246,11 @@ function initializeSchema(): void {
     CREATE INDEX IF NOT EXISTS idx_alert_history_triggered ON alert_history(triggered_at);
     CREATE INDEX IF NOT EXISTS idx_agent_notifications_hostname ON agent_notifications(hostname);
     CREATE INDEX IF NOT EXISTS idx_agent_notifications_delivered ON agent_notifications(delivered);
+    CREATE INDEX IF NOT EXISTS idx_source_templates_category ON source_templates(category);
+    CREATE INDEX IF NOT EXISTS idx_source_templates_source_type ON source_templates(source_type);
+    CREATE INDEX IF NOT EXISTS idx_alert_silences_level ON alert_silences(level);
+    CREATE INDEX IF NOT EXISTS idx_alert_silences_target ON alert_silences(target_id);
+    CREATE INDEX IF NOT EXISTS idx_alert_silences_ends_at ON alert_silences(ends_at);
   `);
 }
 
@@ -1243,4 +1284,314 @@ export function closeDatabase(): void {
     db.close();
     db = null;
   }
+}
+
+// Source Templates
+export type SourceCategory = 'database' | 'security' | 'web' | 'system' | 'application';
+
+export interface FieldExtractionPattern {
+  field_name: string;
+  pattern: string;
+  pattern_type: 'regex' | 'grok' | 'json_path';
+  description?: string;
+  required?: boolean;
+}
+
+export interface SourceTemplate {
+  id: string;
+  name: string;
+  source_type: string;
+  category: SourceCategory;
+  description?: string;
+  setup_instructions?: string;
+  agent_config_example?: string;
+  syslog_config_example?: string;
+  field_extractions?: string;  // JSON stringified FieldExtractionPattern[]
+  default_index: string;
+  default_severity: number;
+  sample_log?: string;
+  sample_query?: string;
+  icon?: string;
+  dashboard_widgets?: string;  // JSON
+  alert_templates?: string;  // JSON
+  enabled: number;
+  built_in: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export function getSourceTemplates(category?: SourceCategory): SourceTemplate[] {
+  const database = getSQLiteDB();
+  if (category) {
+    return database.prepare('SELECT * FROM source_templates WHERE category = ? AND enabled = 1 ORDER BY name').all(category) as SourceTemplate[];
+  }
+  return database.prepare('SELECT * FROM source_templates WHERE enabled = 1 ORDER BY category, name').all() as SourceTemplate[];
+}
+
+export function getSourceTemplate(id: string): SourceTemplate | undefined {
+  const database = getSQLiteDB();
+  return database.prepare('SELECT * FROM source_templates WHERE id = ?').get(id) as SourceTemplate | undefined;
+}
+
+export function getSourceTemplateByType(sourceType: string): SourceTemplate | undefined {
+  const database = getSQLiteDB();
+  return database.prepare('SELECT * FROM source_templates WHERE source_type = ?').get(sourceType) as SourceTemplate | undefined;
+}
+
+export function createSourceTemplate(
+  name: string,
+  sourceType: string,
+  category: SourceCategory,
+  options: {
+    description?: string;
+    setup_instructions?: string;
+    agent_config_example?: string;
+    syslog_config_example?: string;
+    field_extractions?: FieldExtractionPattern[];
+    default_index?: string;
+    default_severity?: number;
+    sample_log?: string;
+    sample_query?: string;
+    icon?: string;
+    dashboard_widgets?: Record<string, unknown>[];
+    alert_templates?: Record<string, unknown>[];
+    enabled?: boolean;
+    built_in?: boolean;
+  } = {}
+): SourceTemplate {
+  const database = getSQLiteDB();
+  const id = uuidv4();
+
+  database.prepare(`
+    INSERT INTO source_templates (
+      id, name, source_type, category, description,
+      setup_instructions, agent_config_example, syslog_config_example,
+      field_extractions, default_index, default_severity,
+      sample_log, sample_query, icon,
+      dashboard_widgets, alert_templates, enabled, built_in
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    id,
+    name,
+    sourceType,
+    category,
+    options.description || null,
+    options.setup_instructions || null,
+    options.agent_config_example || null,
+    options.syslog_config_example || null,
+    options.field_extractions ? JSON.stringify(options.field_extractions) : null,
+    options.default_index || 'main',
+    options.default_severity ?? 6,
+    options.sample_log || null,
+    options.sample_query || null,
+    options.icon || null,
+    options.dashboard_widgets ? JSON.stringify(options.dashboard_widgets) : null,
+    options.alert_templates ? JSON.stringify(options.alert_templates) : null,
+    options.enabled !== false ? 1 : 0,
+    options.built_in !== false ? 1 : 0
+  );
+
+  return getSourceTemplate(id)!;
+}
+
+export function updateSourceTemplate(
+  id: string,
+  updates: {
+    name?: string;
+    source_type?: string;
+    category?: SourceCategory;
+    description?: string;
+    setup_instructions?: string;
+    agent_config_example?: string;
+    syslog_config_example?: string;
+    field_extractions?: FieldExtractionPattern[];
+    default_index?: string;
+    default_severity?: number;
+    sample_log?: string;
+    sample_query?: string;
+    icon?: string;
+    dashboard_widgets?: Record<string, unknown>[];
+    alert_templates?: Record<string, unknown>[];
+    enabled?: boolean;
+  }
+): SourceTemplate | undefined {
+  const database = getSQLiteDB();
+  const fields: string[] = [];
+  const values: unknown[] = [];
+
+  if (updates.name !== undefined) {
+    fields.push('name = ?');
+    values.push(updates.name);
+  }
+  if (updates.source_type !== undefined) {
+    fields.push('source_type = ?');
+    values.push(updates.source_type);
+  }
+  if (updates.category !== undefined) {
+    fields.push('category = ?');
+    values.push(updates.category);
+  }
+  if (updates.description !== undefined) {
+    fields.push('description = ?');
+    values.push(updates.description);
+  }
+  if (updates.setup_instructions !== undefined) {
+    fields.push('setup_instructions = ?');
+    values.push(updates.setup_instructions);
+  }
+  if (updates.agent_config_example !== undefined) {
+    fields.push('agent_config_example = ?');
+    values.push(updates.agent_config_example);
+  }
+  if (updates.syslog_config_example !== undefined) {
+    fields.push('syslog_config_example = ?');
+    values.push(updates.syslog_config_example);
+  }
+  if (updates.field_extractions !== undefined) {
+    fields.push('field_extractions = ?');
+    values.push(JSON.stringify(updates.field_extractions));
+  }
+  if (updates.default_index !== undefined) {
+    fields.push('default_index = ?');
+    values.push(updates.default_index);
+  }
+  if (updates.default_severity !== undefined) {
+    fields.push('default_severity = ?');
+    values.push(updates.default_severity);
+  }
+  if (updates.sample_log !== undefined) {
+    fields.push('sample_log = ?');
+    values.push(updates.sample_log);
+  }
+  if (updates.sample_query !== undefined) {
+    fields.push('sample_query = ?');
+    values.push(updates.sample_query);
+  }
+  if (updates.icon !== undefined) {
+    fields.push('icon = ?');
+    values.push(updates.icon);
+  }
+  if (updates.dashboard_widgets !== undefined) {
+    fields.push('dashboard_widgets = ?');
+    values.push(JSON.stringify(updates.dashboard_widgets));
+  }
+  if (updates.alert_templates !== undefined) {
+    fields.push('alert_templates = ?');
+    values.push(JSON.stringify(updates.alert_templates));
+  }
+  if (updates.enabled !== undefined) {
+    fields.push('enabled = ?');
+    values.push(updates.enabled ? 1 : 0);
+  }
+
+  if (fields.length === 0) {
+    return getSourceTemplate(id);
+  }
+
+  fields.push("updated_at = datetime('now')");
+  values.push(id);
+  database.prepare(`UPDATE source_templates SET ${fields.join(', ')} WHERE id = ?`).run(...values);
+  return getSourceTemplate(id);
+}
+
+export function deleteSourceTemplate(id: string): boolean {
+  const database = getSQLiteDB();
+  const result = database.prepare('DELETE FROM source_templates WHERE id = ? AND built_in = 0').run(id);
+  return result.changes > 0;
+}
+
+// Alert Silences
+export type SilenceLevel = 'global' | 'host' | 'alert';
+
+export interface AlertSilence {
+  id: string;
+  level: SilenceLevel;
+  target_id?: string;
+  reason?: string;
+  created_by?: string;
+  starts_at: string;
+  ends_at?: string;
+  created_at: string;
+}
+
+export function getAlertSilences(): AlertSilence[] {
+  const database = getSQLiteDB();
+  return database.prepare('SELECT * FROM alert_silences ORDER BY created_at DESC').all() as AlertSilence[];
+}
+
+export function getActiveSilences(): AlertSilence[] {
+  const database = getSQLiteDB();
+  return database.prepare(`
+    SELECT * FROM alert_silences
+    WHERE (ends_at IS NULL OR ends_at > datetime('now'))
+    ORDER BY created_at DESC
+  `).all() as AlertSilence[];
+}
+
+export function getAlertSilence(id: string): AlertSilence | undefined {
+  const database = getSQLiteDB();
+  return database.prepare('SELECT * FROM alert_silences WHERE id = ?').get(id) as AlertSilence | undefined;
+}
+
+export function createAlertSilence(
+  level: SilenceLevel,
+  options: {
+    target_id?: string;
+    reason?: string;
+    created_by?: string;
+    starts_at?: string;
+    ends_at?: string;
+  } = {}
+): AlertSilence {
+  const database = getSQLiteDB();
+  const id = uuidv4();
+
+  database.prepare(`
+    INSERT INTO alert_silences (
+      id, level, target_id, reason, created_by, starts_at, ends_at
+    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    id,
+    level,
+    options.target_id || null,
+    options.reason || null,
+    options.created_by || null,
+    options.starts_at || new Date().toISOString(),
+    options.ends_at || null
+  );
+
+  return getAlertSilence(id)!;
+}
+
+export function deleteAlertSilence(id: string): boolean {
+  const database = getSQLiteDB();
+  const result = database.prepare('DELETE FROM alert_silences WHERE id = ?').run(id);
+  return result.changes > 0;
+}
+
+export function deleteExpiredSilences(): number {
+  const database = getSQLiteDB();
+  const result = database.prepare(`
+    DELETE FROM alert_silences
+    WHERE ends_at IS NOT NULL AND ends_at < datetime('now')
+  `).run();
+  return result.changes;
+}
+
+export function isAlertSilenced(alertId: string, hostname?: string): boolean {
+  const database = getSQLiteDB();
+
+  // Check for active silences (global, host-specific, or alert-specific)
+  const silence = database.prepare(`
+    SELECT * FROM alert_silences
+    WHERE (ends_at IS NULL OR ends_at > datetime('now'))
+    AND (
+      level = 'global'
+      OR (level = 'host' AND target_id = ?)
+      OR (level = 'alert' AND target_id = ?)
+    )
+    LIMIT 1
+  `).get(hostname || null, alertId) as AlertSilence | undefined;
+
+  return !!silence;
 }

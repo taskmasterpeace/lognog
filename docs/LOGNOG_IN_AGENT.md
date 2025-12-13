@@ -256,11 +256,81 @@ Authorization: ApiKey lnog_your_api_key
 - [ ] SQLite buffer
 - [ ] Basic config UI
 
-### Phase 2
-- [ ] File Integrity Monitoring
-- [ ] Windows Event Log collection
+### Phase 2 ✅
+- [x] File Integrity Monitoring
+- [x] Windows Event Log collection
 - [ ] macOS Unified Log collection
 - [ ] Linux journald collection
+
+## Windows Event Log Collection
+
+LogNog In can collect Windows Event Logs directly without needing additional agents.
+
+### Enable Windows Events
+
+In your `config.yaml`:
+
+```yaml
+windows_events:
+  enabled: true
+  channels:
+    - Security
+    - System
+    - Application
+  event_ids: null  # null = all events, or list like [4624, 4625, 4634]
+  poll_interval: 10  # seconds
+```
+
+### High-Value Security Events
+
+By default, the agent tracks these security events:
+
+| Event ID | Description |
+|----------|-------------|
+| 4624 | Successful logon |
+| 4625 | Failed logon |
+| 4648 | Explicit credential logon |
+| 4672 | Special privileges assigned |
+| 4688 | Process creation |
+| 4698-4702 | Scheduled task changes |
+| 4720 | User account created |
+| 4726 | User account deleted |
+| 4740 | User account locked out |
+| 7045 | Service installed |
+
+### Filter by Event IDs
+
+To collect only specific events:
+
+```yaml
+windows_events:
+  enabled: true
+  channels:
+    - Security
+  event_ids:
+    - 4624  # Successful logon
+    - 4625  # Failed logon
+    - 4740  # Account lockout
+```
+
+### Querying Windows Events
+
+```
+# All Windows security events
+search source_type=windows_events index=security
+
+# Failed login attempts
+search source_type=windows_events event_id=4625
+  | stats count by computer
+
+# Account lockouts
+search source_type=windows_events event_id=4740
+  | table timestamp, computer, message
+
+# New services installed (potential malware)
+search source_type=windows_events event_id=7045
+  | table timestamp, computer, message
+```
 
 ### Phase 3
 - [ ] OpenTelemetry export

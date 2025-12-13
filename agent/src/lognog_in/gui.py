@@ -106,12 +106,22 @@ class ConfigWindow:
             except Exception:
                 pass
 
-        # Create main frame with padding
-        main_frame = ttk.Frame(self.window, padding="15")
-        main_frame.grid(row=0, column=0, sticky="nsew")
+        # Create notebook for tabs
+        notebook = ttk.Notebook(self.window)
+        notebook.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
 
         self.window.columnconfigure(0, weight=1)
         self.window.rowconfigure(0, weight=1)
+
+        # Create tabs
+        general_tab = ttk.Frame(notebook, padding="15")
+        sound_tab = ttk.Frame(notebook, padding="15")
+
+        notebook.add(general_tab, text="General")
+        notebook.add(sound_tab, text="Sound Alerts")
+
+        # Configure general tab
+        main_frame = general_tab
         main_frame.columnconfigure(1, weight=1)
 
         row = 0
@@ -367,9 +377,12 @@ class ConfigWindow:
         main_frame.rowconfigure(row, weight=1)
         row += 1
 
+        # === SOUND ALERTS TAB ===
+        self._create_sound_tab(sound_tab)
+
         # === Buttons ===
-        btn_frame = ttk.Frame(main_frame)
-        btn_frame.grid(row=row, column=0, columnspan=2, sticky="e", pady=10)
+        btn_frame = ttk.Frame(notebook)
+        btn_frame.grid(row=1, column=0, sticky="e", padx=10, pady=10)
 
         ttk.Button(btn_frame, text="Save", command=self._save, width=10).pack(side="left", padx=5)
         ttk.Button(btn_frame, text="Cancel", command=self._close, width=10).pack(side="left", padx=5)
@@ -385,6 +398,215 @@ class ConfigWindow:
 
         # Run the window
         self.window.mainloop()
+
+    def _create_sound_tab(self, parent: ttk.Frame) -> None:
+        """Create the sound alerts configuration tab."""
+        parent.columnconfigure(1, weight=1)
+        row = 0
+
+        # === HEADER ===
+        header_frame = ttk.Frame(parent)
+        header_frame.grid(row=row, column=0, columnspan=2, sticky="ew", pady=(0, 15))
+
+        ttk.Label(
+            header_frame,
+            text="Sound Alerts",
+            font=("Segoe UI", 14, "bold"),
+        ).pack(anchor="w")
+
+        ttk.Label(
+            header_frame,
+            text="Configure sound notifications for alerts",
+            font=("Segoe UI", 9),
+            foreground="#666666",
+        ).pack(anchor="w")
+        row += 1
+
+        ttk.Separator(parent, orient="horizontal").grid(
+            row=row, column=0, columnspan=2, sticky="ew", pady=(0, 15)
+        )
+        row += 1
+
+        # === Enable sound alerts ===
+        self.sound_alerts_enabled = tk.BooleanVar(value=self.config.sound_alerts_enabled)
+        enable_check = ttk.Checkbutton(
+            parent,
+            text="Enable sound alerts for notifications",
+            variable=self.sound_alerts_enabled,
+            command=self._on_sound_toggle,
+        )
+        enable_check.grid(row=row, column=0, columnspan=2, sticky="w", pady=(0, 10))
+        ToolTip(enable_check, "Play sounds when alert notifications are received from the server")
+        row += 1
+
+        # === Volume control ===
+        ttk.Label(parent, text="Volume:").grid(row=row, column=0, sticky="w", pady=5)
+
+        volume_frame = ttk.Frame(parent)
+        volume_frame.grid(row=row, column=1, sticky="ew", pady=5)
+
+        self.sound_volume = tk.IntVar(value=self.config.sound_volume)
+        volume_slider = ttk.Scale(
+            volume_frame,
+            from_=0,
+            to=100,
+            orient="horizontal",
+            variable=self.sound_volume,
+        )
+        volume_slider.pack(side="left", fill="x", expand=True, padx=(0, 10))
+
+        self.volume_label = ttk.Label(volume_frame, text=f"{self.sound_volume.get()}%", width=5)
+        self.volume_label.pack(side="left")
+
+        # Update label when slider moves
+        def update_volume_label(*args):
+            self.volume_label.configure(text=f"{self.sound_volume.get()}%")
+        self.sound_volume.trace_add("write", update_volume_label)
+
+        row += 1
+
+        ttk.Separator(parent, orient="horizontal").grid(
+            row=row, column=0, columnspan=2, sticky="ew", pady=15
+        )
+        row += 1
+
+        # === Sound configuration for each severity ===
+        ttk.Label(
+            parent,
+            text="Sounds by Severity Level",
+            font=("Segoe UI", 11, "bold"),
+        ).grid(row=row, column=0, columnspan=2, sticky="w", pady=(0, 10))
+        row += 1
+
+        help_text = ttk.Label(
+            parent,
+            text='Select "Default Beep" for built-in system sounds, or choose custom .wav files',
+            font=("Segoe UI", 8),
+            foreground="#666666",
+        )
+        help_text.grid(row=row, column=0, columnspan=2, sticky="w", pady=(0, 10))
+        row += 1
+
+        # Store sound path variables
+        self.sound_paths = {}
+
+        # Create config for each severity
+        severities = [
+            ("Critical", "critical", "High-priority alerts", "#d32f2f"),
+            ("Error", "error", "Error-level alerts", "#f57c00"),
+            ("Warning", "warning", "Warning-level alerts", "#fbc02d"),
+            ("Info", "info", "Informational alerts", "#1976d2"),
+        ]
+
+        for label, severity, tooltip, color in severities:
+            # Severity label with color
+            severity_frame = ttk.Frame(parent)
+            severity_frame.grid(row=row, column=0, columnspan=2, sticky="ew", pady=5)
+
+            severity_label = ttk.Label(
+                severity_frame,
+                text=f"{label}:",
+                font=("Segoe UI", 10),
+                foreground=color,
+            )
+            severity_label.pack(side="left", padx=(0, 10))
+            ToolTip(severity_label, tooltip)
+
+            # Sound selection
+            sound_path = getattr(self.config, f"sound_{severity}", "default")
+            self.sound_paths[severity] = tk.StringVar(value=sound_path)
+
+            # Display name for path
+            display_name = "Default Beep" if sound_path == "default" else Path(sound_path).name if sound_path else "None"
+
+            path_label = ttk.Label(severity_frame, text=display_name, width=30, anchor="w", relief="sunken")
+            path_label.pack(side="left", padx=5)
+
+            # Browse button
+            browse_btn = ttk.Button(
+                severity_frame,
+                text="Browse...",
+                command=lambda s=severity, pl=path_label: self._browse_sound(s, pl),
+                width=10,
+            )
+            browse_btn.pack(side="left", padx=2)
+
+            # Default button
+            default_btn = ttk.Button(
+                severity_frame,
+                text="Default",
+                command=lambda s=severity, pl=path_label: self._set_default_sound(s, pl),
+                width=10,
+            )
+            default_btn.pack(side="left", padx=2)
+
+            # Test button
+            test_btn = ttk.Button(
+                severity_frame,
+                text="Test",
+                command=lambda s=severity: self._test_sound(s),
+                width=8,
+            )
+            test_btn.pack(side="left", padx=2)
+
+            row += 1
+
+        # Add spacer
+        parent.rowconfigure(row, weight=1)
+
+    def _on_sound_toggle(self) -> None:
+        """Handle sound alerts enable/disable toggle."""
+        pass  # Just update the variable
+
+    def _browse_sound(self, severity: str, label: ttk.Label) -> None:
+        """Browse for a custom sound file."""
+        file_path = filedialog.askopenfilename(
+            title=f"Select sound for {severity} alerts",
+            filetypes=[("WAV files", "*.wav"), ("All files", "*.*")],
+        )
+        if file_path:
+            self.sound_paths[severity].set(file_path)
+            label.configure(text=Path(file_path).name)
+
+    def _set_default_sound(self, severity: str, label: ttk.Label) -> None:
+        """Set default beep for a severity."""
+        self.sound_paths[severity].set("default")
+        label.configure(text="Default Beep")
+
+    def _test_sound(self, severity: str) -> None:
+        """Test the sound for a severity level."""
+        from .sound_alerts import SoundAlertPlayer, Severity
+
+        sound_path = self.sound_paths[severity].get()
+        volume = self.sound_volume.get()
+
+        # Map severity string to enum
+        severity_map = {
+            "critical": Severity.CRITICAL,
+            "error": Severity.ERROR,
+            "warning": Severity.WARNING,
+            "info": Severity.INFO,
+        }
+        sev = severity_map.get(severity, Severity.INFO)
+
+        # Play test sound
+        player = SoundAlertPlayer()
+        if not player.is_available():
+            messagebox.showwarning(
+                "Sound Not Available",
+                "No audio backend is available on this system.\n\n"
+                "Sound alerts require either:\n"
+                "- Windows (winsound built-in)\n"
+                "- pygame library installed",
+            )
+            return
+
+        try:
+            success = player.test_sound(sound_path, sev, volume)
+            if not success:
+                messagebox.showerror("Test Failed", "Could not play sound.\n\nCheck the file path and format (.wav only).")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to test sound: {e}")
 
     def _test_connection(self) -> None:
         """Test the server connection."""
@@ -479,6 +701,14 @@ class ConfigWindow:
         self.config.fim_enabled = self.fim_enabled.get()
         self.config.debug_logging = self.debug_logging.get()
         self.config.start_on_boot = self.start_on_boot.get()
+
+        # Update sound settings
+        self.config.sound_alerts_enabled = self.sound_alerts_enabled.get()
+        self.config.sound_volume = self.sound_volume.get()
+        self.config.sound_critical = self.sound_paths.get("critical", tk.StringVar(value="default")).get()
+        self.config.sound_error = self.sound_paths.get("error", tk.StringVar(value="default")).get()
+        self.config.sound_warning = self.sound_paths.get("warning", tk.StringVar(value="default")).get()
+        self.config.sound_info = self.sound_paths.get("info", tk.StringVar(value="default")).get()
 
         # Handle start on boot
         self._update_startup_registry()

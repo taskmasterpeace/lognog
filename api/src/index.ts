@@ -14,10 +14,15 @@ import fieldExtractionsRouter from './routes/field-extractions.js';
 import authRouter from './routes/auth.js';
 import ingestRouter from './routes/ingest.js';
 import alertsRouter from './routes/alerts.js';
+import geoipRouter from './routes/geoip.js';
+import silencesRouter from './routes/silences.js';
+import utilsRouter from './routes/utils.js';
+import templatesRouter from './routes/templates.js';
 import { healthCheck as clickhouseHealth, executeQuery, closeConnection } from './db/clickhouse.js';
 import { closeDatabase } from './db/sqlite.js';
 import { startScheduler } from './services/scheduler.js';
 import { executeDSLQuery } from './db/backend.js';
+import { seedBuiltinTemplates } from './data/builtin-templates.js';
 
 const PORT = process.env.PORT || 4000;
 
@@ -52,6 +57,10 @@ app.use('/reports', reportsRouter);
 app.use('/knowledge', knowledgeRouter);
 app.use('/field-extractions', fieldExtractionsRouter);
 app.use('/alerts', alertsRouter);
+app.use('/silences', silencesRouter);
+app.use('/geoip', geoipRouter);
+app.use('/utils', utilsRouter);
+app.use('/templates', templatesRouter);
 
 // WebSocket endpoint for live tail
 const liveTailClients: Set<WebSocket> = new Set();
@@ -224,6 +233,10 @@ if (uiDistPath) {
         req.path.startsWith('/knowledge') ||
         req.path.startsWith('/field-extractions') ||
         req.path.startsWith('/alerts') ||
+        req.path.startsWith('/silences') ||
+        req.path.startsWith('/geoip') ||
+        req.path.startsWith('/utils') ||
+        req.path.startsWith('/templates') ||
         req.path.startsWith('/health') ||
         req.path.startsWith('/ws') ||
         req.path.startsWith('/sse')) {
@@ -260,6 +273,13 @@ process.on('SIGTERM', async () => {
 app.listen(PORT, () => {
   console.log(`LogNog API server running on port ${PORT}`);
   console.log(`Health check: http://localhost:${PORT}/health`);
+
+  // Seed built-in templates
+  try {
+    seedBuiltinTemplates();
+  } catch (error) {
+    console.error('Failed to seed built-in templates:', error);
+  }
 
   // Start the report scheduler
   startScheduler();

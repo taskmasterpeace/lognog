@@ -33,6 +33,7 @@ dependencies = [
     "pystray>=0.19.0",
     "pillow>=10.0.0",
     "appdirs>=1.4.4",
+    "pywin32>=306; sys_platform == 'win32'",
 ]
 
 [project.optional-dependencies]
@@ -43,6 +44,10 @@ dev = [
     "ruff>=0.1.0",
     "mypy>=1.5.0",
     "pyinstaller>=6.0.0",
+]
+sound = [
+    "pygame>=2.5.0",
+    "numpy>=1.24.0",
 ]
 
 [project.scripts]

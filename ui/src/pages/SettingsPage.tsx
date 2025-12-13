@@ -14,6 +14,8 @@ import {
   XCircle,
   Database,
   Zap,
+  Globe,
+  MapPin,
 } from 'lucide-react';
 
 export default function SettingsPage() {
@@ -38,9 +40,17 @@ export default function SettingsPage() {
   const [testDataCount, setTestDataCount] = useState('500');
   const [testDataResult, setTestDataResult] = useState<string | null>(null);
 
-  // Load API keys
+  // GeoIP status
+  const [geoipStatus, setGeoipStatus] = useState<any>(null);
+  const [geoipLoading, setGeoipLoading] = useState(true);
+  const [geoipTestIp, setGeoipTestIp] = useState('8.8.8.8');
+  const [geoipTestResult, setGeoipTestResult] = useState<any>(null);
+  const [geoipTesting, setGeoipTesting] = useState(false);
+
+  // Load API keys and GeoIP status
   useEffect(() => {
     loadApiKeys();
+    loadGeoipStatus();
   }, []);
 
   const loadApiKeys = async () => {
@@ -133,6 +143,51 @@ export default function SettingsPage() {
     } finally {
       setGeneratingData(false);
     }
+  };
+
+  const loadGeoipStatus = async () => {
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch('/api/geoip/status', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      const data = await response.json();
+      setGeoipStatus(data);
+    } catch (err) {
+      console.error('Failed to load GeoIP status:', err);
+    } finally {
+      setGeoipLoading(false);
+    }
+  };
+
+  const handleGeoipTest = async () => {
+    setGeoipTesting(true);
+    setGeoipTestResult(null);
+
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`/api/geoip/lookup/${geoipTestIp}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      const data = await response.json();
+      setGeoipTestResult(data);
+    } catch (err) {
+      setGeoipTestResult({ error: 'Failed to lookup IP' });
+    } finally {
+      setGeoipTesting(false);
+    }
+  };
+
+  const formatBytes = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
   };
 
   return (
@@ -388,6 +443,184 @@ export default function SettingsPage() {
                 </div>
               </div>
             ))}
+          </div>
+        )}
+      </section>
+
+      {/* GeoIP Section */}
+      <section className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 mt-8">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2 mb-4">
+          <Globe className="w-5 h-5" />
+          GeoIP Lookup
+        </h2>
+
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+          Geographic IP lookup using MaxMind GeoLite2 databases. Determine country, city, and ASN for IP addresses in your logs.
+        </p>
+
+        {geoipLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+          </div>
+        ) : geoipStatus?.enabled ? (
+          <div className="space-y-4">
+            {/* Status */}
+            <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+              <div className="flex items-center gap-2 text-green-700 dark:text-green-300 mb-2">
+                <Check className="w-5 h-5" />
+                <span className="font-semibold">GeoIP Enabled</span>
+              </div>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                {geoipStatus.city_db_available && (
+                  <div>
+                    <span className="text-slate-600 dark:text-slate-400">City Database:</span>
+                    <div className="text-slate-900 dark:text-slate-100 font-mono text-xs mt-1">
+                      {formatBytes(geoipStatus.city_db_size)}
+                      <br />
+                      {new Date(geoipStatus.city_db_modified).toLocaleDateString()}
+                    </div>
+                  </div>
+                )}
+                {geoipStatus.asn_db_available && (
+                  <div>
+                    <span className="text-slate-600 dark:text-slate-400">ASN Database:</span>
+                    <div className="text-slate-900 dark:text-slate-100 font-mono text-xs mt-1">
+                      {formatBytes(geoipStatus.asn_db_size)}
+                      <br />
+                      {new Date(geoipStatus.asn_db_modified).toLocaleDateString()}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Test Lookup */}
+            <div className="border-t border-slate-200 dark:border-slate-700 pt-4">
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">
+                Test Lookup
+              </h3>
+              <div className="flex items-end gap-4">
+                <div className="flex-1 max-w-xs">
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    IP Address
+                  </label>
+                  <input
+                    type="text"
+                    value={geoipTestIp}
+                    onChange={(e) => setGeoipTestIp(e.target.value)}
+                    placeholder="8.8.8.8"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-mono"
+                  />
+                </div>
+                <button
+                  onClick={handleGeoipTest}
+                  disabled={geoipTesting || !geoipTestIp}
+                  className="flex items-center gap-2 px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {geoipTesting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Looking up...
+                    </>
+                  ) : (
+                    <>
+                      <MapPin className="w-4 h-4" />
+                      Lookup
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* Test Result */}
+              {geoipTestResult && (
+                <div className="mt-4 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700">
+                  {geoipTestResult.error ? (
+                    <div className="text-red-600 dark:text-red-400 text-sm">
+                      {geoipTestResult.error}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      {geoipTestResult.country_name && (
+                        <div>
+                          <span className="text-slate-500 dark:text-slate-400">Country:</span>
+                          <div className="font-medium text-slate-900 dark:text-slate-100">
+                            {geoipTestResult.country_name} ({geoipTestResult.country_code})
+                          </div>
+                        </div>
+                      )}
+                      {geoipTestResult.city && (
+                        <div>
+                          <span className="text-slate-500 dark:text-slate-400">City:</span>
+                          <div className="font-medium text-slate-900 dark:text-slate-100">
+                            {geoipTestResult.city}
+                          </div>
+                        </div>
+                      )}
+                      {geoipTestResult.latitude && (
+                        <div>
+                          <span className="text-slate-500 dark:text-slate-400">Coordinates:</span>
+                          <div className="font-medium text-slate-900 dark:text-slate-100 font-mono text-xs">
+                            {geoipTestResult.latitude.toFixed(4)}, {geoipTestResult.longitude.toFixed(4)}
+                          </div>
+                        </div>
+                      )}
+                      {geoipTestResult.timezone && (
+                        <div>
+                          <span className="text-slate-500 dark:text-slate-400">Timezone:</span>
+                          <div className="font-medium text-slate-900 dark:text-slate-100">
+                            {geoipTestResult.timezone}
+                          </div>
+                        </div>
+                      )}
+                      {geoipTestResult.asn && (
+                        <div className="col-span-2">
+                          <span className="text-slate-500 dark:text-slate-400">ASN:</span>
+                          <div className="font-medium text-slate-900 dark:text-slate-100">
+                            AS{geoipTestResult.asn} - {geoipTestResult.as_org}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className="p-6 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700">
+            <div className="flex items-start gap-3 mb-4">
+              <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+              <div>
+                <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">
+                  GeoIP Not Configured
+                </h3>
+                <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
+                  MaxMind GeoLite2 databases are not installed. Follow the setup guide to enable GeoIP lookups.
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
+              <h4 className="font-medium text-slate-900 dark:text-slate-100 mb-2 text-sm">
+                Quick Setup (Docker)
+              </h4>
+              <ol className="space-y-2 text-sm text-slate-600 dark:text-slate-400">
+                <li>1. Register for a free MaxMind account at <code className="text-xs bg-slate-100 dark:bg-slate-700 px-1 rounded">maxmind.com/geolite2/signup</code></li>
+                <li>2. Generate a license key in your account dashboard</li>
+                <li>3. Run the download script:
+                  <pre className="mt-2 p-3 bg-slate-100 dark:bg-slate-900 rounded text-xs font-mono overflow-x-auto">
+                    docker exec -it lognog-api /bin/sh{'\n'}
+                    MAXMIND_ACCOUNT_ID=your_id \{'\n'}
+                    MAXMIND_LICENSE_KEY=your_key \{'\n'}
+                    /app/scripts/download-geoip.sh
+                  </pre>
+                </li>
+                <li>4. Restart the API: <code className="text-xs bg-slate-100 dark:bg-slate-700 px-1 rounded">docker-compose restart api</code></li>
+              </ol>
+              <p className="mt-3 text-xs text-slate-500 dark:text-slate-500">
+                See <code className="bg-slate-100 dark:bg-slate-700 px-1 rounded">api/scripts/GEOIP-SETUP.md</code> for detailed instructions.
+              </p>
+            </div>
           </div>
         )}
       </section>

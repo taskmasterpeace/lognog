@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
-import { authenticate, requirePermission } from '../auth/middleware.js';
+import { authenticate, requirePermission, authenticateIngestion } from '../auth/middleware.js';
 import { logAuthEvent } from '../auth/auth.js';
 import { insertLogs, getBackendInfo } from '../db/backend.js';
 import { getPendingNotifications, markNotificationDelivered, AgentNotification } from '../db/sqlite.js';
@@ -265,8 +265,14 @@ function extractAttributes(attrs: Array<{ key: string; value: unknown }> | undef
  *
  * Receive logs in OTLP/HTTP JSON format.
  * Compatible with OpenTelemetry collectors and SDKs.
+ *
+ * Authentication:
+ * - Requires API key with 'write' permission (unless OTLP_REQUIRE_AUTH=false)
+ * - Supports Authorization: Bearer <api-key>
+ * - Supports Authorization: ApiKey <api-key>
+ * - Supports X-API-Key: <api-key>
  */
-router.post('/otlp/v1/logs', async (req, res) => {
+router.post('/otlp/v1/logs', authenticateIngestion, async (req, res) => {
   try {
     const body = req.body;
 
@@ -359,12 +365,579 @@ router.post('/otlp/v1/logs', async (req, res) => {
 
     console.log(`OTLP: Ingested ${logs.length} log records`);
 
+    // Log ingestion event if authenticated
+    if (req.user) {
+      logAuthEvent(req.user.id, 'otlp_ingest', req.ip, req.get('user-agent'), {
+        logs_count: logs.length,
+      });
+    }
+
     // OTLP expects empty response on success
     res.status(200).json({ accepted: logs.length });
   } catch (error) {
     console.error('OTLP ingest error:', error);
     res.status(500).json({
       error: 'OTLP ingestion failed',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+// =============================================================================
+// Supabase Log Drains
+// =============================================================================
+
+/**
+ * Supabase Log Drain event structure.
+ * Supabase sends logs from: database, auth, storage, realtime, edge functions
+ */
+interface SupabaseLogEvent {
+  id?: string;
+  timestamp: number; // Unix milliseconds
+  event_message: string;
+  metadata: {
+    project?: string;
+    // Database logs
+    parsed?: {
+      user_name?: string;
+      database_name?: string;
+      process_id?: number;
+      error_severity?: string;
+      session_id?: string;
+      session_line_num?: number;
+      command_tag?: string;
+      session_start_time?: string;
+      virtual_transaction_id?: string;
+      transaction_id?: number;
+      sql_state_code?: string;
+      application_name?: string;
+    };
+    // Auth logs
+    level?: string;
+    component?: string;
+    method?: string;
+    path?: string;
+    status?: number;
+    // Edge function logs
+    function_id?: string;
+    execution_id?: string;
+    deployment_id?: string;
+    version?: string;
+    // Common
+    host?: string;
+    [key: string]: unknown;
+  };
+}
+
+/**
+ * Map Supabase log level to syslog severity
+ */
+function supabaseLogLevelToSeverity(level?: string, errorSeverity?: string): number {
+  // Database error severity
+  if (errorSeverity) {
+    const sev = errorSeverity.toUpperCase();
+    if (sev === 'FATAL' || sev === 'PANIC') return 2;  // critical
+    if (sev === 'ERROR') return 3;                      // error
+    if (sev === 'WARNING') return 4;                    // warning
+    if (sev === 'NOTICE') return 5;                     // notice
+    if (sev === 'LOG' || sev === 'INFO') return 6;     // info
+    if (sev === 'DEBUG') return 7;                      // debug
+  }
+
+  // General log level
+  if (level) {
+    const lvl = level.toLowerCase();
+    if (lvl === 'fatal' || lvl === 'panic' || lvl === 'critical') return 2;
+    if (lvl === 'error' || lvl === 'err') return 3;
+    if (lvl === 'warn' || lvl === 'warning') return 4;
+    if (lvl === 'notice') return 5;
+    if (lvl === 'info' || lvl === 'log') return 6;
+    if (lvl === 'debug' || lvl === 'trace') return 7;
+  }
+
+  return 6; // default to info
+}
+
+/**
+ * Determine Supabase component from log metadata
+ */
+function getSupabaseComponent(metadata: SupabaseLogEvent['metadata']): string {
+  if (metadata.function_id) return 'edge-functions';
+  if (metadata.parsed?.database_name) return 'postgres';
+  if (metadata.component === 'auth' || metadata.path?.includes('/auth')) return 'auth';
+  if (metadata.path?.includes('/storage')) return 'storage';
+  if (metadata.path?.includes('/realtime')) return 'realtime';
+  if (metadata.component) return metadata.component;
+  return 'supabase';
+}
+
+/**
+ * POST /api/ingest/supabase
+ *
+ * Receive logs from Supabase Log Drains.
+ * Supabase sends batched logs (up to 250 per request).
+ *
+ * Setup in Supabase:
+ * 1. Dashboard → Settings → Log Drains
+ * 2. Add destination: Generic HTTP endpoint
+ * 3. URL: https://your-lognog-server/api/ingest/supabase
+ * 4. Headers: X-API-Key: <your-api-key>
+ *
+ * Authentication:
+ * - X-API-Key header (recommended)
+ * - Authorization: Bearer <api-key>
+ * - Authorization: ApiKey <api-key>
+ */
+router.post('/supabase', authenticateIngestion, async (req, res) => {
+  try {
+    const body = req.body;
+
+    // Supabase sends an array of log events
+    if (!Array.isArray(body)) {
+      return res.status(400).json({
+        error: 'Invalid Supabase Log Drains format',
+        message: 'Expected array of log events',
+      });
+    }
+
+    const events = body as SupabaseLogEvent[];
+    const receivedAt = new Date().toISOString();
+
+    const logs = events.map((event) => {
+      const metadata = event.metadata || {};
+
+      // Parse timestamp
+      let timestamp: string;
+      if (event.timestamp) {
+        timestamp = new Date(event.timestamp).toISOString();
+      } else {
+        timestamp = receivedAt;
+      }
+
+      // Determine component and severity
+      const component = getSupabaseComponent(metadata);
+      const severity = supabaseLogLevelToSeverity(
+        metadata.level,
+        metadata.parsed?.error_severity
+      );
+
+      // Build hostname from project or host
+      const hostname = metadata.project || metadata.host || 'supabase';
+
+      // Build app_name from component
+      const appName = `supabase-${component}`;
+
+      // Extract structured data
+      const structuredData: Record<string, unknown> = {
+        supabase_component: component,
+        supabase_project: metadata.project,
+      };
+
+      // Add database-specific fields
+      if (metadata.parsed) {
+        Object.assign(structuredData, {
+          db_user: metadata.parsed.user_name,
+          db_name: metadata.parsed.database_name,
+          db_pid: metadata.parsed.process_id,
+          db_session_id: metadata.parsed.session_id,
+          db_command: metadata.parsed.command_tag,
+          db_application: metadata.parsed.application_name,
+          sql_state: metadata.parsed.sql_state_code,
+        });
+      }
+
+      // Add edge function fields
+      if (metadata.function_id) {
+        Object.assign(structuredData, {
+          function_id: metadata.function_id,
+          execution_id: metadata.execution_id,
+          deployment_id: metadata.deployment_id,
+          function_version: metadata.version,
+        });
+      }
+
+      // Add HTTP request fields
+      if (metadata.method || metadata.path) {
+        Object.assign(structuredData, {
+          http_method: metadata.method,
+          http_path: metadata.path,
+          http_status: metadata.status,
+        });
+      }
+
+      return {
+        timestamp,
+        received_at: receivedAt,
+        hostname,
+        app_name: appName,
+        message: event.event_message || '',
+        severity,
+        raw: JSON.stringify(event),
+        structured_data: JSON.stringify(structuredData),
+        index_name: 'supabase',
+        protocol: 'supabase-log-drain',
+      };
+    });
+
+    if (logs.length === 0) {
+      return res.status(200).json({ accepted: 0 });
+    }
+
+    // Insert into database
+    await insertLogs(logs);
+
+    console.log(`Supabase: Ingested ${logs.length} log events`);
+
+    // Log ingestion event if authenticated
+    if (req.user) {
+      logAuthEvent(req.user.id, 'supabase_ingest', req.ip, req.get('user-agent'), {
+        logs_count: logs.length,
+        project: events[0]?.metadata?.project,
+      });
+    }
+
+    // Supabase expects 200 OK on success
+    res.status(200).json({
+      accepted: logs.length,
+      message: 'Logs ingested successfully',
+    });
+  } catch (error) {
+    console.error('Supabase ingest error:', error);
+    res.status(500).json({
+      error: 'Supabase log ingestion failed',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+/**
+ * POST /api/ingest/http
+ *
+ * Generic HTTP log ingestion endpoint.
+ * Accepts a JSON array of log objects with flexible schema.
+ *
+ * Authentication: API key required
+ */
+router.post('/http', authenticateIngestion, async (req, res) => {
+  try {
+    const body = req.body;
+
+    // Accept array of logs
+    if (!Array.isArray(body)) {
+      return res.status(400).json({
+        error: 'Invalid format',
+        message: 'Expected array of log objects',
+      });
+    }
+
+    const receivedAt = new Date().toISOString();
+
+    const logs = body.map((event: Record<string, unknown>) => {
+      // Try to extract timestamp from various common field names
+      let timestamp = receivedAt;
+      const tsField = event.timestamp || event.time || event['@timestamp'] || event.ts || event.datetime;
+      if (tsField) {
+        if (typeof tsField === 'number') {
+          // Unix timestamp (seconds or milliseconds)
+          timestamp = new Date(tsField > 1e12 ? tsField : tsField * 1000).toISOString();
+        } else if (typeof tsField === 'string') {
+          timestamp = new Date(tsField).toISOString();
+        }
+      }
+
+      // Extract common fields
+      const hostname = String(event.hostname || event.host || event.source || 'unknown');
+      const appName = String(event.app_name || event.app || event.application || event.program || event.service || 'generic');
+      const message = String(event.message || event.msg || event.log || event.text || JSON.stringify(event));
+
+      // Try to determine severity
+      let severity = 6; // default info
+      const levelField = event.level || event.severity || event.loglevel;
+      if (levelField) {
+        if (typeof levelField === 'number') {
+          severity = Math.min(7, Math.max(0, levelField));
+        } else {
+          const lvl = String(levelField).toLowerCase();
+          if (lvl.includes('fatal') || lvl.includes('crit')) severity = 2;
+          else if (lvl.includes('error') || lvl.includes('err')) severity = 3;
+          else if (lvl.includes('warn')) severity = 4;
+          else if (lvl.includes('notice')) severity = 5;
+          else if (lvl.includes('info')) severity = 6;
+          else if (lvl.includes('debug') || lvl.includes('trace')) severity = 7;
+        }
+      }
+
+      return {
+        timestamp,
+        received_at: receivedAt,
+        hostname,
+        app_name: appName,
+        message,
+        severity,
+        raw: JSON.stringify(event),
+        structured_data: JSON.stringify(event),
+        index_name: 'http',
+        protocol: 'http',
+      };
+    });
+
+    if (logs.length === 0) {
+      return res.status(200).json({ accepted: 0 });
+    }
+
+    await insertLogs(logs);
+
+    console.log(`HTTP: Ingested ${logs.length} log events`);
+
+    if (req.user) {
+      logAuthEvent(req.user.id, 'http_ingest', req.ip, req.get('user-agent'), {
+        logs_count: logs.length,
+      });
+    }
+
+    res.status(200).json({
+      accepted: logs.length,
+    });
+  } catch (error) {
+    console.error('HTTP ingest error:', error);
+    res.status(500).json({
+      error: 'HTTP log ingestion failed',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+// =============================================================================
+// Vercel Log Drains
+// =============================================================================
+
+/**
+ * Vercel Log Drain event structure.
+ * Vercel sends logs in JSON, NDJSON, or syslog format.
+ * We support JSON format here.
+ *
+ * Log types:
+ * - stdout/stderr: Application logs
+ * - request: Edge/Serverless function requests
+ * - static: Static file requests
+ * - build: Build logs
+ */
+interface VercelLogEvent {
+  id?: string;
+  message: string;
+  timestamp: number; // Unix milliseconds
+  type?: 'stdout' | 'stderr' | 'request' | 'static' | 'build';
+  source?: 'static' | 'lambda' | 'edge' | 'build' | 'external';
+  projectId?: string;
+  projectName?: string;
+  deploymentId?: string;
+  deploymentUrl?: string;
+  host?: string;
+  path?: string;
+  entrypoint?: string;
+  requestId?: string;
+  statusCode?: number;
+  // Request-specific fields
+  proxy?: {
+    timestamp: number;
+    method: string;
+    scheme: string;
+    host: string;
+    path: string;
+    userAgent: string[];
+    referer: string;
+    statusCode: number;
+    clientIp: string;
+    region: string;
+    cacheId?: string;
+    vercelCache?: string;
+  };
+  // Build-specific fields
+  buildId?: string;
+  // Lambda/Edge function fields
+  level?: 'info' | 'warn' | 'error' | 'debug';
+  environment?: string;
+}
+
+/**
+ * Map Vercel log type/level to syslog severity
+ */
+function vercelLogToSeverity(event: VercelLogEvent): number {
+  // Check explicit level first
+  if (event.level) {
+    switch (event.level) {
+      case 'error': return 3;
+      case 'warn': return 4;
+      case 'info': return 6;
+      case 'debug': return 7;
+    }
+  }
+
+  // Check type
+  if (event.type === 'stderr') return 3; // error
+  if (event.type === 'build') return 5;  // notice
+
+  // Check status code for requests
+  if (event.statusCode || event.proxy?.statusCode) {
+    const status = event.statusCode || event.proxy?.statusCode || 200;
+    if (status >= 500) return 3; // error
+    if (status >= 400) return 4; // warning
+  }
+
+  return 6; // default info
+}
+
+/**
+ * Determine Vercel source component
+ */
+function getVercelComponent(event: VercelLogEvent): string {
+  if (event.source === 'edge') return 'edge';
+  if (event.source === 'lambda') return 'serverless';
+  if (event.source === 'static') return 'static';
+  if (event.source === 'build') return 'build';
+  if (event.type === 'request') return 'request';
+  if (event.type === 'build') return 'build';
+  return 'runtime';
+}
+
+/**
+ * POST /api/ingest/vercel
+ *
+ * Receive logs from Vercel Log Drains.
+ *
+ * Setup in Vercel:
+ * 1. Dashboard → Team Settings → Drains
+ * 2. Add Drain → Custom HTTP endpoint
+ * 3. URL: https://your-lognog-server/api/ingest/vercel
+ * 4. Format: JSON
+ * 5. Headers: X-API-Key: <your-api-key>
+ *
+ * Note: Vercel requires Pro or Enterprise plan for Log Drains.
+ *
+ * Authentication:
+ * - X-API-Key header (recommended)
+ * - Authorization: Bearer <api-key>
+ * - x-vercel-verify header (for Vercel's verification)
+ */
+router.post('/vercel', authenticateIngestion, async (req, res) => {
+  try {
+    const body = req.body;
+    const receivedAt = new Date().toISOString();
+
+    // Handle Vercel's verification request
+    if (req.headers['x-vercel-verify']) {
+      return res.status(200).send(req.headers['x-vercel-verify']);
+    }
+
+    // Vercel can send single object or array
+    const events: VercelLogEvent[] = Array.isArray(body) ? body : [body];
+
+    if (events.length === 0) {
+      return res.status(200).json({ accepted: 0 });
+    }
+
+    const logs = events.map((event) => {
+      // Parse timestamp
+      let timestamp: string;
+      if (event.timestamp) {
+        timestamp = new Date(event.timestamp).toISOString();
+      } else if (event.proxy?.timestamp) {
+        timestamp = new Date(event.proxy.timestamp).toISOString();
+      } else {
+        timestamp = receivedAt;
+      }
+
+      // Determine severity and component
+      const severity = vercelLogToSeverity(event);
+      const component = getVercelComponent(event);
+
+      // Build hostname from project name or deployment URL
+      const hostname = event.projectName || event.host || event.deploymentUrl || 'vercel';
+
+      // Build app_name
+      const appName = `vercel-${component}`;
+
+      // Build message
+      let message = event.message || '';
+      if (event.proxy && !message) {
+        message = `${event.proxy.method} ${event.proxy.path} ${event.proxy.statusCode}`;
+      }
+
+      // Extract structured data
+      const structuredData: Record<string, unknown> = {
+        vercel_component: component,
+        vercel_project: event.projectName,
+        vercel_deployment: event.deploymentId,
+        vercel_type: event.type,
+        vercel_source: event.source,
+      };
+
+      // Add request-specific fields
+      if (event.proxy) {
+        Object.assign(structuredData, {
+          http_method: event.proxy.method,
+          http_path: event.proxy.path,
+          http_status: event.proxy.statusCode,
+          http_scheme: event.proxy.scheme,
+          client_ip: event.proxy.clientIp,
+          user_agent: event.proxy.userAgent?.join(' '),
+          vercel_region: event.proxy.region,
+          vercel_cache: event.proxy.vercelCache,
+        });
+      }
+
+      // Add lambda/edge fields
+      if (event.entrypoint) {
+        structuredData.entrypoint = event.entrypoint;
+      }
+      if (event.requestId) {
+        structuredData.request_id = event.requestId;
+      }
+      if (event.environment) {
+        structuredData.environment = event.environment;
+      }
+
+      // Add build fields
+      if (event.buildId) {
+        structuredData.build_id = event.buildId;
+      }
+
+      return {
+        timestamp,
+        received_at: receivedAt,
+        hostname,
+        app_name: appName,
+        message,
+        severity,
+        raw: JSON.stringify(event),
+        structured_data: JSON.stringify(structuredData),
+        index_name: 'vercel',
+        protocol: 'vercel-log-drain',
+      };
+    });
+
+    // Insert into database
+    await insertLogs(logs);
+
+    console.log(`Vercel: Ingested ${logs.length} log events`);
+
+    // Log ingestion event if authenticated
+    if (req.user) {
+      logAuthEvent(req.user.id, 'vercel_ingest', req.ip, req.get('user-agent'), {
+        logs_count: logs.length,
+        project: events[0]?.projectName,
+      });
+    }
+
+    // Vercel expects 200 OK on success
+    res.status(200).json({
+      accepted: logs.length,
+      message: 'Logs ingested successfully',
+    });
+  } catch (error) {
+    console.error('Vercel ingest error:', error);
+    res.status(500).json({
+      error: 'Vercel log ingestion failed',
       message: error instanceof Error ? error.message : 'Unknown error',
     });
   }

@@ -263,3 +263,108 @@ setInterval(() => {
     }
   }
 }, 60000);
+
+/**
+ * Optional API key authentication for ingestion endpoints
+ * Checks for API key in Authorization header (Bearer or ApiKey) or X-API-Key header
+ * If OTLP_REQUIRE_AUTH=false, authentication is optional
+ * If OTLP_REQUIRE_AUTH=true (default), authentication is required
+ */
+export function authenticateIngestion(req: Request, res: Response, next: NextFunction): void {
+  const requireAuth = process.env.OTLP_REQUIRE_AUTH !== 'false';
+
+  // Check for authorization header or X-API-Key header
+  const authHeader = req.headers.authorization;
+  const apiKeyHeader = req.headers['x-api-key'] as string | undefined;
+
+  if (!authHeader && !apiKeyHeader) {
+    if (requireAuth) {
+      res.status(401).json({
+        error: 'Authentication required',
+        message: 'Provide API key in Authorization header (Bearer <key>) or X-API-Key header',
+      });
+      return;
+    }
+    // Auth not required, allow unauthenticated access
+    next();
+    return;
+  }
+
+  // Extract API key from either header
+  let apiKey: string | undefined;
+
+  if (authHeader) {
+    if (authHeader.startsWith('Bearer ')) {
+      apiKey = authHeader.slice(7);
+    } else if (authHeader.startsWith('ApiKey ')) {
+      apiKey = authHeader.slice(7);
+    }
+  } else if (apiKeyHeader) {
+    apiKey = apiKeyHeader;
+  }
+
+  if (!apiKey) {
+    if (requireAuth) {
+      res.status(401).json({ error: 'Invalid authorization format' });
+      return;
+    }
+    next();
+    return;
+  }
+
+  // Validate API key
+  validateApiKey(apiKey)
+    .then((result) => {
+      if (!result) {
+        if (requireAuth) {
+          res.status(401).json({ error: 'Invalid API key' });
+          return;
+        }
+        next();
+        return;
+      }
+
+      const user = getUserById(result.userId);
+      if (!user || !user.is_active) {
+        if (requireAuth) {
+          res.status(401).json({ error: 'User account is disabled' });
+          return;
+        }
+        next();
+        return;
+      }
+
+      // Check if API key has write permission
+      const hasWritePermission = result.permissions.includes('write') || result.permissions.includes('*');
+      if (!hasWritePermission) {
+        logAuthEvent(user.id, 'ingestion_permission_denied', req.ip, req.get('user-agent'), {
+          apiKeyPermissions: result.permissions,
+          path: req.path,
+        });
+        res.status(403).json({ error: 'API key requires write permission for ingestion' });
+        return;
+      }
+
+      req.user = {
+        id: user.id,
+        username: user.username,
+        role: user.role,
+      };
+      req.authMethod = 'apikey';
+      req.apiKeyPermissions = result.permissions;
+
+      // Log successful authentication
+      logAuthEvent(user.id, 'otlp_ingest_auth', req.ip, req.get('user-agent'), {
+        path: req.path,
+      });
+
+      next();
+    })
+    .catch(() => {
+      if (requireAuth) {
+        res.status(500).json({ error: 'Authentication error' });
+        return;
+      }
+      next();
+    });
+}

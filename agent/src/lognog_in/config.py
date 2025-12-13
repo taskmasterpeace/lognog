@@ -31,6 +31,15 @@ class FIMPath:
 
 
 @dataclass
+class WindowsEventsConfig:
+    """Configuration for Windows Event Log collection."""
+    enabled: bool = False
+    channels: list[str] = field(default_factory=lambda: ["Security", "System", "Application"])
+    event_ids: Optional[list[int]] = None  # None = collect all events
+    poll_interval: int = 10  # seconds
+
+
+@dataclass
 class Config:
     """Agent configuration."""
     # Server connection
@@ -44,6 +53,9 @@ class Config:
     fim_paths: list[FIMPath] = field(default_factory=list)
     fim_enabled: bool = False
 
+    # Windows Event Log collection
+    windows_events: WindowsEventsConfig = field(default_factory=WindowsEventsConfig)
+
     # Agent settings
     hostname: str = field(default_factory=lambda: os.uname().nodename if hasattr(os, 'uname') else os.environ.get('COMPUTERNAME', 'unknown'))
     batch_size: int = 100
@@ -55,6 +67,14 @@ class Config:
     start_on_boot: bool = False
     send_hostname: bool = True
     debug_logging: bool = False
+
+    # Sound alerts
+    sound_alerts_enabled: bool = False
+    sound_critical: str = "default"
+    sound_error: str = "default"
+    sound_warning: str = "default"
+    sound_info: str = "default"
+    sound_volume: int = 100
 
     # Internal: track where config was loaded from
     _config_path: Optional[Path] = field(default=None, repr=False)
@@ -106,12 +126,25 @@ class Config:
             elif isinstance(fp, dict):
                 fim_paths.append(FIMPath(**fp))
 
+        # Parse Windows Events config
+        windows_events_data = data.get("windows_events", {})
+        if isinstance(windows_events_data, dict):
+            windows_events = WindowsEventsConfig(
+                enabled=windows_events_data.get("enabled", False),
+                channels=windows_events_data.get("channels", ["Security", "System", "Application"]),
+                event_ids=windows_events_data.get("event_ids"),
+                poll_interval=windows_events_data.get("poll_interval", 10),
+            )
+        else:
+            windows_events = WindowsEventsConfig()
+
         config = cls(
             server_url=data.get("server_url", "http://localhost:4000"),
             api_key=data.get("api_key", ""),
             watch_paths=watch_paths,
             fim_paths=fim_paths,
             fim_enabled=data.get("fim_enabled", False),
+            windows_events=windows_events,
             hostname=data.get("hostname", cls().hostname),
             batch_size=data.get("batch_size", 100),
             batch_interval_seconds=data.get("batch_interval_seconds", 5.0),
@@ -120,6 +153,12 @@ class Config:
             start_on_boot=data.get("start_on_boot", False),
             send_hostname=data.get("send_hostname", True),
             debug_logging=data.get("debug_logging", False),
+            sound_alerts_enabled=data.get("sound_alerts_enabled", False),
+            sound_critical=data.get("sound_critical", "default"),
+            sound_error=data.get("sound_error", "default"),
+            sound_warning=data.get("sound_warning", "default"),
+            sound_info=data.get("sound_info", "default"),
+            sound_volume=data.get("sound_volume", 100),
             _config_path=config_path,
         )
         return config
@@ -151,6 +190,12 @@ class Config:
                 for fp in self.fim_paths
             ],
             "fim_enabled": self.fim_enabled,
+            "windows_events": {
+                "enabled": self.windows_events.enabled,
+                "channels": self.windows_events.channels,
+                "event_ids": self.windows_events.event_ids,
+                "poll_interval": self.windows_events.poll_interval,
+            },
             "hostname": self.hostname,
             "batch_size": self.batch_size,
             "batch_interval_seconds": self.batch_interval_seconds,
@@ -159,6 +204,12 @@ class Config:
             "start_on_boot": self.start_on_boot,
             "send_hostname": self.send_hostname,
             "debug_logging": self.debug_logging,
+            "sound_alerts_enabled": self.sound_alerts_enabled,
+            "sound_critical": self.sound_critical,
+            "sound_error": self.sound_error,
+            "sound_warning": self.sound_warning,
+            "sound_info": self.sound_info,
+            "sound_volume": self.sound_volume,
         }
 
         with open(config_path, "w") as f:

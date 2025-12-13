@@ -11,6 +11,7 @@ LogNog In is a cross-platform agent that monitors log files, ships them to your 
 ## Features
 
 - **Real-time log file monitoring** - Automatically detects and ships new log entries as they're written
+- **Windows Event Log collection** - Collects from Security, System, Application, and custom channels (Windows only)
 - **File Integrity Monitoring (FIM)** - SHA-256 baseline tracking with change detection for security monitoring
 - **Offline buffering** - SQLite-backed queue ensures logs are never lost when the server is unreachable
 - **System tray integration** - Visual status indicators (green/yellow/red) with right-click controls
@@ -20,6 +21,7 @@ LogNog In is a cross-platform agent that monitors log files, ships them to your 
 - **Batched shipping** - Efficient HTTP/2 batching with configurable size and interval
 - **Flexible configuration** - YAML config file with glob pattern matching for paths
 - **Headless mode** - Run as daemon/service without system tray for servers
+- **Sound alerts** - Customizable audio notifications for alert severity levels (critical, error, warning, info)
 
 ---
 
@@ -183,6 +185,7 @@ Double-click the system tray icon to open the configuration window:
 - **Test Connection** - Verify your server URL and API key work
 - **Browse for folders** - Click "Add Path..." to select folders visually
 - **Start on boot** - Automatically run when Windows starts
+- **Sound Alerts Tab** - Configure custom sounds for different alert severity levels
 
 ---
 
@@ -255,6 +258,14 @@ retry_backoff_seconds: 2.0         # Initial backoff (doubles each retry)
 # Behavior
 start_on_boot: false               # Auto-start with system (future)
 debug_logging: false               # Enable verbose debug logs
+
+# Sound alerts
+sound_alerts_enabled: true         # Enable sound alerts for notifications
+sound_critical: default            # Sound for critical alerts (path or "default")
+sound_error: default               # Sound for error alerts
+sound_warning: default             # Sound for warning alerts
+sound_info: default                # Sound for info alerts
+sound_volume: 100                  # Volume level (0-100)
 ```
 
 ### Path Patterns
@@ -499,6 +510,105 @@ The agent provides a visual system tray icon with status indicators:
 
 ---
 
+## Sound Alerts
+
+LogNog In can play audio notifications when alert notifications are received from the server. This helps ensure you never miss critical alerts.
+
+### Features
+
+- **Severity-based sounds**: Different sounds for critical, error, warning, and info alerts
+- **Built-in beeps**: Default system beeps with frequency based on severity (no additional dependencies)
+- **Custom sounds**: Use your own .wav files for each severity level
+- **Volume control**: Adjust playback volume from 0-100%
+- **Test sounds**: Preview sounds before saving configuration
+- **Cross-platform**: Works on Windows (winsound), and other platforms with pygame
+
+### Audio Backend
+
+The agent automatically detects the available audio backend:
+
+1. **Windows**: Uses built-in `winsound` module (no additional dependencies)
+2. **Other platforms**: Uses `pygame` if installed (optional dependency)
+3. **Fallback**: System bell if no audio backend available
+
+### Installation with Sound Support
+
+```bash
+# Install with optional sound dependencies
+pip install lognog-in[sound]
+
+# Or install manually
+pip install lognog-in pygame numpy
+```
+
+### Configuration
+
+#### Using the GUI
+
+1. Open the configuration window (double-click tray icon)
+2. Navigate to the **Sound Alerts** tab
+3. Check **Enable sound alerts for notifications**
+4. Adjust the volume slider (0-100%)
+5. For each severity level:
+   - Click **Browse...** to select a custom .wav file
+   - Click **Default** to use the built-in system beep
+   - Click **Test** to preview the sound
+6. Click **Save** to apply changes
+
+#### Using YAML Config
+
+```yaml
+# Enable sound alerts
+sound_alerts_enabled: true
+
+# Set volume (0-100)
+sound_volume: 75
+
+# Configure sounds per severity
+sound_critical: default                           # Built-in beep
+sound_error: C:\Sounds\error.wav                 # Custom sound
+sound_warning: /home/user/sounds/warning.wav     # Custom sound
+sound_info: default                              # Built-in beep
+```
+
+### Custom Sound Files
+
+- **Format**: Only .wav files are supported
+- **Recommendations**:
+  - Keep files under 5 seconds
+  - Use 16-bit PCM encoding
+  - Sample rate: 22050 Hz or 44100 Hz
+  - Mono or stereo
+
+### Default Beep Frequencies
+
+When using "default" beeps, the agent plays system beeps at different frequencies:
+
+| Severity | Frequency | Duration | Color |
+|----------|-----------|----------|-------|
+| Critical | 1000 Hz   | 500 ms   | Red   |
+| Error    | 800 Hz    | 300 ms   | Orange|
+| Warning  | 600 Hz    | 200 ms   | Yellow|
+| Info     | 400 Hz    | 150 ms   | Blue  |
+
+### Troubleshooting
+
+**No sound plays**:
+- Verify sound alerts are enabled in configuration
+- Check system volume is not muted
+- Test each severity level using the GUI
+- On non-Windows systems, install pygame: `pip install pygame numpy`
+
+**Sound quality is poor**:
+- Use higher quality .wav files (44100 Hz, 16-bit)
+- Adjust volume in the configuration
+
+**Sounds are too quiet/loud**:
+- Adjust the volume slider in the Sound Alerts tab
+- Check system volume settings
+
+---
+
 ## Use Cases
 
 ### 1. Homelab Log Aggregation
@@ -558,7 +668,27 @@ fim_paths:
     recursive: true
 ```
 
-### 4. Docker Container Logging
+### 4. Windows Security Event Collection
+
+Collect critical security events from Windows Event Logs (Windows only):
+
+```yaml
+windows_events:
+  enabled: true
+  channels:
+    - Security
+    - System
+  event_ids:
+    - 4624  # Successful logon
+    - 4625  # Failed logon
+    - 4688  # Process creation
+    - 7045  # Service installed
+  poll_interval: 10
+```
+
+See [docs/WINDOWS-EVENTS.md](docs/WINDOWS-EVENTS.md) for complete documentation.
+
+### 5. Docker Container Logging
 
 Ship logs from Docker containers to LogNog:
 
@@ -848,6 +978,7 @@ LogNog In follows security best practices:
 |-----------|------------|---------|
 | Language | Python 3.10+ | Cross-platform, easy packaging |
 | File Watching | [watchdog](https://github.com/gorakhargosh/watchdog) | Native file system events (inotify/FSEvents/ReadDirectoryChanges) |
+| Windows Events | [pywin32](https://github.com/mhammond/pywin32) | Windows Event Log API (Windows only) |
 | HTTP Client | [httpx](https://www.python-httpx.org/) | Async, HTTP/2, connection pooling |
 | System Tray | [pystray](https://github.com/moses-palmer/pystray) | Cross-platform tray icon |
 | Config Format | YAML | Human-readable configuration |

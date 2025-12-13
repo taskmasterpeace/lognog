@@ -14,12 +14,24 @@ import {
   FieldsNode,
   RenameNode,
   EvalNode,
+  TopNode,
+  RareNode,
+  BinNode,
+  TimechartNode,
+  RexNode,
   Condition,
+  SimpleCondition,
+  LogicGroup,
   Aggregation,
   SortField,
   ComparisonOperator,
   AggregationFunction,
   ParseError,
+  EvalExpression,
+  LiteralExpression,
+  FieldRefExpression,
+  FunctionCallExpression,
+  BinaryOpExpression,
 } from './types.js';
 
 export class Parser {
@@ -85,6 +97,16 @@ export class Parser {
         return this.parseRename();
       case TokenType.EVAL:
         return this.parseEval();
+      case TokenType.TOP:
+        return this.parseTop();
+      case TokenType.RARE:
+        return this.parseRare();
+      case TokenType.BIN:
+        return this.parseBin();
+      case TokenType.TIMECHART:
+        return this.parseTimechart();
+      case TokenType.REX:
+        return this.parseRex();
       case TokenType.IDENTIFIER:
         // Implicit search with field=value
         return this.parseImplicitSearch();
@@ -124,32 +146,97 @@ export class Parser {
   private parseConditions(): Condition[] {
     const conditions: Condition[] = [];
 
-    while (!this.isAtEnd() && !this.check(TokenType.PIPE)) {
-      // Skip AND/OR for now - treat as implicit AND
-      if (this.match(TokenType.AND, TokenType.OR)) {
-        continue;
-      }
-
-      // Handle wildcard * as "match all"
-      if (this.match(TokenType.WILDCARD)) {
-        // Wildcard means match all - don't add any condition
-        continue;
-      }
-
-      const negate = this.match(TokenType.NOT);
-
-      if (this.check(TokenType.IDENTIFIER) || this.check(TokenType.STRING)) {
-        const condition = this.parseCondition(negate);
-        if (condition) conditions.push(condition);
-      } else {
-        break;
-      }
+    // Parse OR-separated groups
+    const orGroup = this.parseOrExpression();
+    if (orGroup) {
+      conditions.push(orGroup);
     }
 
     return conditions;
   }
 
-  private parseCondition(negate: boolean): Condition | null {
+  // OR has lower precedence than AND
+  private parseOrExpression(): Condition | null {
+    const left = this.parseAndExpression();
+    if (!left) return null;
+
+    const orTerms: Condition[] = [left];
+
+    while (this.match(TokenType.OR)) {
+      const right = this.parseAndExpression();
+      if (right) {
+        orTerms.push(right);
+      }
+    }
+
+    if (orTerms.length === 1) {
+      return orTerms[0];
+    }
+
+    return { logic: 'OR', conditions: orTerms };
+  }
+
+  // AND has higher precedence than OR
+  private parseAndExpression(): Condition | null {
+    const left = this.parsePrimaryCondition();
+    if (!left) return null;
+
+    const andTerms: Condition[] = [left];
+
+    while (!this.isAtEnd() && !this.check(TokenType.PIPE) && !this.check(TokenType.OR)) {
+      // Check for explicit AND or implicit AND (next condition)
+      const hasExplicitAnd = this.match(TokenType.AND);
+
+      // If we don't have explicit AND, check if next token looks like a condition
+      if (!hasExplicitAnd && !this.isConditionStart()) {
+        break;
+      }
+
+      const right = this.parsePrimaryCondition();
+      if (right) {
+        andTerms.push(right);
+      } else {
+        break;
+      }
+    }
+
+    if (andTerms.length === 1) {
+      return andTerms[0];
+    }
+
+    return { logic: 'AND', conditions: andTerms };
+  }
+
+  private isConditionStart(): boolean {
+    return this.check(TokenType.NOT) ||
+           this.check(TokenType.IDENTIFIER) ||
+           this.check(TokenType.STRING) ||
+           this.check(TokenType.LPAREN);
+  }
+
+  private parsePrimaryCondition(): Condition | null {
+    // Handle wildcard * as "match all" - skip it
+    if (this.match(TokenType.MULTIPLY)) {
+      return null;
+    }
+
+    // Handle parentheses for grouping
+    if (this.match(TokenType.LPAREN)) {
+      const expr = this.parseOrExpression();
+      this.consume(TokenType.RPAREN, 'Expected ")"');
+      return expr;
+    }
+
+    const negate = this.match(TokenType.NOT);
+
+    if (this.check(TokenType.IDENTIFIER) || this.check(TokenType.STRING)) {
+      return this.parseCondition(negate);
+    }
+
+    return null;
+  }
+
+  private parseCondition(negate: boolean): SimpleCondition | null {
     const field = this.consume(
       TokenType.IDENTIFIER,
       'Expected field name'
@@ -186,7 +273,7 @@ export class Parser {
       value = parseFloat(this.previous().value);
     } else if (this.match(TokenType.IDENTIFIER)) {
       value = this.previous().value;
-    } else if (this.match(TokenType.WILDCARD)) {
+    } else if (this.match(TokenType.MULTIPLY)) {
       value = '*';
     } else if (this.match(TokenType.REGEX)) {
       operator = '~';
@@ -253,6 +340,42 @@ export class Parser {
       case TokenType.LATEST:
         func = 'latest';
         break;
+      case TokenType.MEDIAN:
+        func = 'median';
+        break;
+      case TokenType.MODE:
+        func = 'mode';
+        break;
+      case TokenType.STDDEV:
+        func = 'stddev';
+        break;
+      case TokenType.VARIANCE:
+        func = 'variance';
+        break;
+      case TokenType.RANGE:
+        func = 'range';
+        break;
+      case TokenType.P50:
+        func = 'p50';
+        break;
+      case TokenType.P90:
+        func = 'p90';
+        break;
+      case TokenType.P95:
+        func = 'p95';
+        break;
+      case TokenType.P99:
+        func = 'p99';
+        break;
+      case TokenType.FIRST:
+        func = 'first';
+        break;
+      case TokenType.LAST:
+        func = 'last';
+        break;
+      case TokenType.LIST:
+        func = 'list';
+        break;
       default:
         return null;
     }
@@ -292,8 +415,13 @@ export class Parser {
 
     // Parse fields
     while (!this.isAtEnd() && !this.check(TokenType.PIPE)) {
-      if (this.check(TokenType.IDENTIFIER)) {
-        const field = this.consume(TokenType.IDENTIFIER, 'Expected field name').value;
+      // Allow both identifiers and aggregation function keywords as field names
+      // (e.g., you might want to sort by a field called "count")
+      if (this.check(TokenType.IDENTIFIER) ||
+          this.check(TokenType.COUNT) || this.check(TokenType.SUM) ||
+          this.check(TokenType.AVG) || this.check(TokenType.MIN) ||
+          this.check(TokenType.MAX)) {
+        const field = this.advance().value;
         let direction = defaultDirection;
 
         if (this.match(TokenType.DESC)) {
@@ -397,32 +525,277 @@ export class Parser {
 
   private parseEval(): EvalNode {
     this.consume(TokenType.EVAL, 'Expected "eval"');
-    const assignments: { field: string; expression: string }[] = [];
+    const assignments: { field: string; expression: EvalExpression }[] = [];
 
     while (!this.isAtEnd() && !this.check(TokenType.PIPE)) {
       const field = this.consume(TokenType.IDENTIFIER, 'Expected field name').value;
       this.consume(TokenType.EQUALS, 'Expected "="');
 
-      // Collect expression tokens until comma or pipe
-      let expression = '';
-      let parenDepth = 0;
-
-      while (!this.isAtEnd()) {
-        if (this.check(TokenType.PIPE) && parenDepth === 0) break;
-        if (this.check(TokenType.COMMA) && parenDepth === 0) break;
-
-        if (this.check(TokenType.LPAREN)) parenDepth++;
-        if (this.check(TokenType.RPAREN)) parenDepth--;
-
-        expression += this.peek().value + ' ';
-        this.advance();
-      }
-
-      assignments.push({ field, expression: expression.trim() });
+      const expression = this.parseEvalExpression();
+      assignments.push({ field, expression });
       this.match(TokenType.COMMA);
     }
 
     return { type: 'eval', assignments };
+  }
+
+  // Parse eval expressions with operators
+  private parseEvalExpression(): EvalExpression {
+    return this.parseComparison();
+  }
+
+  // Parse comparison operators (for if statements)
+  private parseComparison(): EvalExpression {
+    let left = this.parseAdditive();
+
+    while (
+      this.check(TokenType.LESS_THAN) ||
+      this.check(TokenType.LESS_THAN_EQ) ||
+      this.check(TokenType.GREATER_THAN) ||
+      this.check(TokenType.GREATER_THAN_EQ) ||
+      this.check(TokenType.EQUALS) ||
+      this.check(TokenType.NOT_EQUALS)
+    ) {
+      const opToken = this.advance();
+      const right = this.parseAdditive();
+
+      // For comparisons, we'll wrap them in a pseudo-binary expression
+      // The compiler will handle this specially
+      left = {
+        type: 'function',
+        name: '_cmp_' + opToken.value,
+        args: [left, right]
+      } as any;
+    }
+
+    return left;
+  }
+
+  // Parse addition/subtraction
+  private parseAdditive(): EvalExpression {
+    let left = this.parseMultiplicative();
+
+    while (this.check(TokenType.PLUS) || this.check(TokenType.MINUS)) {
+      const op = this.advance().value as '+' | '-';
+      const right = this.parseMultiplicative();
+      left = { type: 'binary', operator: op, left, right };
+    }
+
+    return left;
+  }
+
+  // Parse multiplication/division/modulo
+  private parseMultiplicative(): EvalExpression {
+    let left = this.parseEvalPrimary();
+
+    while (this.check(TokenType.MULTIPLY) || this.check(TokenType.DIVIDE) || this.check(TokenType.MODULO)) {
+      const op = this.advance().value as '*' | '/' | '%';
+      const right = this.parseEvalPrimary();
+      left = { type: 'binary', operator: op, left, right };
+    }
+
+    return left;
+  }
+
+  // Parse primary eval expression (literals, fields, function calls, parentheses)
+  private parseEvalPrimary(): EvalExpression {
+    // Check for parentheses
+    if (this.match(TokenType.LPAREN)) {
+      const expr = this.parseEvalExpression();
+      this.consume(TokenType.RPAREN, 'Expected ")"');
+      return expr;
+    }
+
+    // Check for numbers
+    if (this.check(TokenType.NUMBER)) {
+      const value = parseFloat(this.advance().value);
+      return { type: 'literal', value };
+    }
+
+    // Check for strings
+    if (this.check(TokenType.STRING)) {
+      const value = this.advance().value;
+      return { type: 'literal', value };
+    }
+
+    // Check for identifiers (could be field or function)
+    if (this.check(TokenType.IDENTIFIER)) {
+      const name = this.advance().value;
+
+      // Check if it's a function call
+      if (this.check(TokenType.LPAREN)) {
+        this.advance(); // consume (
+        const args: EvalExpression[] = [];
+
+        // Parse arguments
+        if (!this.check(TokenType.RPAREN)) {
+          args.push(this.parseEvalExpression());
+
+          while (this.match(TokenType.COMMA)) {
+            args.push(this.parseEvalExpression());
+          }
+        }
+
+        this.consume(TokenType.RPAREN, 'Expected ")"');
+        return { type: 'function', name: name.toLowerCase(), args };
+      }
+
+      // Otherwise it's a field reference
+      return { type: 'field', name };
+    }
+
+    throw new ParseError(
+      `Expected expression, got '${this.peek().value}'`,
+      this.peek().line,
+      this.peek().column
+    );
+  }
+
+  private parseTop(): TopNode {
+    this.consume(TokenType.TOP, 'Expected "top"');
+
+    // Parse limit number
+    const limit = parseInt(
+      this.consume(TokenType.NUMBER, 'Expected number').value,
+      10
+    );
+
+    // Parse field
+    const field = this.consume(TokenType.IDENTIFIER, 'Expected field name').value;
+
+    // Optional: by count (default behavior, so we can ignore it)
+    if (this.match(TokenType.BY)) {
+      const byField = this.peek().value;
+      if (byField.toLowerCase() === 'count') {
+        this.advance(); // consume 'count'
+      }
+    }
+
+    return { type: 'top', limit, field };
+  }
+
+  private parseRare(): RareNode {
+    this.consume(TokenType.RARE, 'Expected "rare"');
+
+    // Parse limit number
+    const limit = parseInt(
+      this.consume(TokenType.NUMBER, 'Expected number').value,
+      10
+    );
+
+    // Parse field
+    const field = this.consume(TokenType.IDENTIFIER, 'Expected field name').value;
+
+    return { type: 'rare', limit, field };
+  }
+
+  private parseBin(): BinNode {
+    this.consume(TokenType.BIN, 'Expected "bin"');
+
+    // Parse span=<value>
+    this.consume(TokenType.SPAN, 'Expected "span"');
+    this.consume(TokenType.EQUALS, 'Expected "="');
+
+    // Parse span value (could be time like "1h" or number like 100)
+    let span: string | number;
+    if (this.check(TokenType.NUMBER)) {
+      const numStr = this.advance().value;
+      // Check if followed by a time unit identifier
+      if (this.check(TokenType.IDENTIFIER)) {
+        const unit = this.peek().value;
+        if (/^[smhd]$/.test(unit)) {
+          span = numStr + unit;
+          this.advance();
+        } else {
+          span = parseFloat(numStr);
+        }
+      } else {
+        span = parseFloat(numStr);
+      }
+    } else if (this.check(TokenType.IDENTIFIER)) {
+      // Could be something like "1h" parsed as identifier
+      span = this.advance().value;
+    } else if (this.check(TokenType.STRING)) {
+      span = this.advance().value;
+    } else {
+      throw new ParseError('Expected span value', this.peek().line, this.peek().column);
+    }
+
+    // Parse field
+    const field = this.consume(TokenType.IDENTIFIER, 'Expected field name').value;
+
+    return { type: 'bin', field, span };
+  }
+
+  private parseTimechart(): TimechartNode {
+    this.consume(TokenType.TIMECHART, 'Expected "timechart"');
+
+    // Parse span=<value>
+    this.consume(TokenType.SPAN, 'Expected "span"');
+    this.consume(TokenType.EQUALS, 'Expected "="');
+
+    // Parse span value (time like "1h")
+    let span: string;
+    if (this.check(TokenType.NUMBER)) {
+      const numStr = this.advance().value;
+      // Check if followed by a time unit identifier
+      if (this.check(TokenType.IDENTIFIER)) {
+        const unit = this.peek().value;
+        if (/^[smhd]$/.test(unit)) {
+          span = numStr + unit;
+          this.advance();
+        } else {
+          span = numStr + 'h'; // default to hours
+        }
+      } else {
+        span = numStr + 'h'; // default to hours
+      }
+    } else if (this.check(TokenType.IDENTIFIER)) {
+      span = this.advance().value;
+    } else if (this.check(TokenType.STRING)) {
+      span = this.advance().value;
+    } else {
+      throw new ParseError('Expected span value', this.peek().line, this.peek().column);
+    }
+
+    // Parse aggregations (similar to stats)
+    const aggregations: Aggregation[] = [];
+    while (!this.isAtEnd() && !this.check(TokenType.BY) && !this.check(TokenType.PIPE)) {
+      const agg = this.parseAggregation();
+      if (agg) aggregations.push(agg);
+      this.match(TokenType.COMMA);
+    }
+
+    // Parse optional group by
+    let groupBy: string | undefined;
+    if (this.match(TokenType.BY)) {
+      groupBy = this.consume(TokenType.IDENTIFIER, 'Expected field name').value;
+    }
+
+    return { type: 'timechart', span, aggregations, groupBy };
+  }
+
+  private parseRex(): RexNode {
+    this.consume(TokenType.REX, 'Expected "rex"');
+
+    // Parse optional field=<fieldname>
+    let field = 'message'; // default field
+    if (this.match(TokenType.FIELD)) {
+      this.consume(TokenType.EQUALS, 'Expected "="');
+      field = this.consume(TokenType.IDENTIFIER, 'Expected field name').value;
+    }
+
+    // Parse regex pattern (could be string or regex literal)
+    let pattern: string;
+    if (this.check(TokenType.STRING)) {
+      pattern = this.advance().value;
+    } else if (this.check(TokenType.REGEX)) {
+      pattern = this.advance().value;
+    } else {
+      throw new ParseError('Expected regex pattern', this.peek().line, this.peek().column);
+    }
+
+    return { type: 'rex', field, pattern };
   }
 
   // Helper methods

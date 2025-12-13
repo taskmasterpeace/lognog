@@ -22,6 +22,7 @@ import {
   History,
   TestTube,
   Settings,
+  BellOff,
 } from 'lucide-react';
 import {
   getAlerts,
@@ -34,6 +35,7 @@ import {
   evaluateAlert,
   Alert,
   AlertAction,
+  createSilence,
 } from '../api/client';
 
 // Local type for alert history (used in UI)
@@ -97,8 +99,10 @@ const TIME_RANGES = [
 export default function AlertsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [showSilenceModal, setShowSilenceModal] = useState(false);
   const [editingAlert, setEditingAlert] = useState<Alert | null>(null);
   const [selectedAlertId, setSelectedAlertId] = useState<string | null>(null);
+  const [silencingAlertId, setSilencingAlertId] = useState<string | null>(null);
   const [expandedAlerts, setExpandedAlerts] = useState<Set<string>>(new Set());
 
   // Form state
@@ -395,6 +399,16 @@ export default function AlertsPage() {
                       title="Run Now"
                     >
                       <Play className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        setSilencingAlertId(alert.id);
+                        setShowSilenceModal(true);
+                      }}
+                      className="p-2 text-slate-400 hover:text-purple-500 hover:bg-purple-50 rounded-lg"
+                      title="Silence this alert"
+                    >
+                      <BellOff className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => toggleMutation.mutate(alert.id)}
@@ -922,6 +936,142 @@ export default function AlertsPage() {
           </div>
         </div>
       )}
+
+      {/* Quick Silence Modal */}
+      {showSilenceModal && silencingAlertId && (
+        <QuickSilenceModal
+          alertId={silencingAlertId}
+          alertName={alerts?.find(a => a.id === silencingAlertId)?.name || ''}
+          onClose={() => {
+            setShowSilenceModal(false);
+            setSilencingAlertId(null);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+interface QuickSilenceModalProps {
+  alertId: string;
+  alertName: string;
+  onClose: () => void;
+}
+
+function QuickSilenceModal({ alertId, alertName, onClose }: QuickSilenceModalProps) {
+  const [duration, setDuration] = useState('4h');
+  const [reason, setReason] = useState('');
+  const queryClient = useQueryClient();
+
+  const silenceMutation = useMutation({
+    mutationFn: () =>
+      createSilence({
+        level: 'alert',
+        target_id: alertId,
+        duration,
+        reason: reason || undefined,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['silences'] });
+      onClose();
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    silenceMutation.mutate();
+  };
+
+  const durationOptions = [
+    { label: '1 hour', value: '1h' },
+    { label: '4 hours', value: '4h' },
+    { label: '24 hours', value: '24h' },
+    { label: '1 week', value: '1w' },
+    { label: 'Indefinite', value: 'indefinite' },
+  ];
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div className="p-6 border-b border-slate-200 dark:border-slate-700">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <BellOff className="h-5 w-5 text-purple-500" />
+              Silence Alert
+            </h2>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6">
+          <div className="mb-4">
+            <p className="text-slate-600 dark:text-slate-400">
+              Silence <span className="font-medium text-slate-900 dark:text-slate-100">{alertName}</span>
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                Duration
+              </label>
+              <select
+                value={duration}
+                onChange={(e) => setDuration(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-slate-700 dark:text-slate-100"
+              >
+                {durationOptions.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                Reason (optional)
+              </label>
+              <textarea
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-slate-700 dark:text-slate-100"
+                rows={3}
+                placeholder="Why are you silencing this alert?"
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-3 mt-6">
+            <button
+              type="button"
+              onClick={onClose}
+              className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={silenceMutation.isPending}
+              className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {silenceMutation.isPending ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Silencing...
+                </span>
+              ) : (
+                'Silence Alert'
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

@@ -21,6 +21,19 @@ from .fim import FileIntegrityMonitor
 from .shipper import HTTPShipper, ConnectionStatus
 from .tray import SystemTray
 from .gui import ConfigWindow, AlertHistoryWindow
+from .sound_alerts import SoundAlertManager
+
+# Import Windows Event collector only on Windows
+if sys.platform == "win32":
+    try:
+        from .collectors.windows_events import WindowsEventCollector
+        HAS_WINDOWS_EVENTS = True
+    except ImportError:
+        HAS_WINDOWS_EVENTS = False
+        logger = logging.getLogger(__name__)
+        logger.warning("pywin32 not available - Windows Event collection disabled")
+else:
+    HAS_WINDOWS_EVENTS = False
 
 logger = logging.getLogger(__name__)
 
@@ -120,8 +133,24 @@ class Agent:
             config=self.config,
             on_event=self._on_fim_event,
         )
+
+        # Windows Event collector (only on Windows with pywin32)
+        self.windows_events: Optional['WindowsEventCollector'] = None
+        if HAS_WINDOWS_EVENTS and self.config.windows_events.enabled:
+            from .collectors.windows_events import WindowsEventCollector
+            self.windows_events = WindowsEventCollector(
+                channels=self.config.windows_events.channels,
+                hostname=self.config.hostname,
+                event_ids=self.config.windows_events.event_ids,
+                poll_interval=self.config.windows_events.poll_interval,
+                on_event=self._on_log_event,
+            )
+
         self.tray: Optional[SystemTray] = None
         self.config_window: Optional[ConfigWindow] = None
+
+        # Sound alerts
+        self.sound_manager = SoundAlertManager(config=self.config)
 
         # State
         self._running = False
@@ -177,6 +206,9 @@ class Agent:
         if len(self._alert_history) > self._max_alert_history:
             self._alert_history = self._alert_history[:self._max_alert_history]
 
+        # Play sound alert
+        self.sound_manager.play_alert(severity)
+
         if self.tray:
             self.tray.show_notification(title, message)
 
@@ -211,6 +243,8 @@ class Agent:
         """Handle config saved from GUI."""
         logger.info("Configuration saved")
         self.config = new_config
+        # Update sound manager with new config
+        self.sound_manager.update_config(new_config)
         # Note: Full reload requires restart for now
 
     def _on_pause(self) -> None:
@@ -306,6 +340,10 @@ class Agent:
         if self.config.fim_enabled and self.config.fim_paths:
             self.fim.start()
 
+        # Start Windows Event collector
+        if self.windows_events:
+            self.windows_events.start()
+
         self._running = True
         self._stop_event.clear()
 
@@ -318,6 +356,9 @@ class Agent:
         logger.info(f"  Hostname: {self.config.hostname}")
         logger.info(f"  Watch paths: {len(self.config.watch_paths)}")
         logger.info(f"  FIM enabled: {self.config.fim_enabled}")
+        logger.info(f"  Windows Events enabled: {self.windows_events is not None}")
+        if self.windows_events:
+            logger.info(f"  Windows Event channels: {', '.join(self.config.windows_events.channels)}")
 
     def stop(self) -> None:
         """Stop the agent and all components."""
@@ -327,6 +368,8 @@ class Agent:
         logger.info("Stopping LogNog In agent...")
 
         # Stop components in reverse order
+        if self.windows_events:
+            self.windows_events.stop()
         self.fim.stop()
         self.watcher.stop()
         self.shipper.stop()
@@ -358,7 +401,7 @@ class Agent:
 
     def get_status(self) -> dict:
         """Get the current agent status."""
-        return {
+        status = {
             "running": self._running,
             "paused": self._paused,
             "configured": self.config.is_configured(),
@@ -372,3 +415,15 @@ class Agent:
                 "enabled": self.config.fim_enabled,
             },
         }
+
+        # Add Windows Event collector status if available
+        if self.windows_events:
+            status["windows_events"] = self.windows_events.get_stats()
+        else:
+            status["windows_events"] = {
+                "running": False,
+                "enabled": self.config.windows_events.enabled,
+                "available": HAS_WINDOWS_EVENTS,
+            }
+
+        return status

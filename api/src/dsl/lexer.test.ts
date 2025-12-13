@@ -23,7 +23,7 @@ describe('Lexer', () => {
 
     expect(tokens.map(t => t.type)).toEqual([
       TokenType.SEARCH,
-      TokenType.WILDCARD,
+      TokenType.MULTIPLY, // * is now MULTIPLY instead of WILDCARD
       TokenType.PIPE,
       TokenType.STATS,
       TokenType.COUNT,
@@ -99,7 +99,7 @@ describe('Lexer', () => {
 
     expect(tokens.map(t => t.type)).toEqual([
       TokenType.SEARCH,
-      TokenType.WILDCARD,
+      TokenType.MULTIPLY, // * is now MULTIPLY instead of WILDCARD
       TokenType.PIPE,
       TokenType.LIMIT,
       TokenType.NUMBER,

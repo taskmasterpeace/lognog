@@ -13,7 +13,7 @@
   <a href="#choose-your-setup">Get Started</a> •
   <a href="#features">Features</a> •
   <a href="#query-language">Query Language</a> •
-  <a href="#architecture">Architecture</a> •
+  <a href="#integrations">Integrations</a> •
   <a href="docs/">Documentation</a>
 </p>
 
@@ -85,19 +85,58 @@
 ## Features
 
 ### Core Features (All Versions)
-- **Real-time Log Search** - Powerful query language, sub-second results
+- **Real-time Log Search** - Powerful Splunk-like query language, sub-second results
 - **Live Tail** - SSE-powered real-time log streaming
-- **Custom Dashboards** - Build your own visualizations
-- **File Integrity Monitoring** - Know when critical files change
+- **Custom Dashboards** - Build visualizations with line charts, bar charts, pie charts
+- **File Integrity Monitoring (FIM)** - Know when critical files change
 - **Splunk-style Alerts** - Threshold-based triggers with email, webhook, and log actions
-- **Reports** - Generate and schedule HTML reports
+- **Alert Silencing** - Suppress alerts by host, alert rule, or globally with time-based expiration
+- **Reports** - Generate and schedule HTML reports with email delivery
+- **Source Templates** - 15+ pre-built templates for common log sources
+
+### Query Language Features
+- **Boolean Logic** - Full AND, OR, NOT with parentheses grouping
+- **Math Functions** - abs, round, floor, ceil, sqrt, pow, log, exp
+- **String Functions** - len, lower, upper, trim, substr, replace, concat, split
+- **Statistical Functions** - count, sum, avg, min, max, distinct count, percentiles (p50, p90, p95, p99)
+- **Time Functions** - bin span=1h/5m/1d, timechart
+- **Field Extraction** - rex command for regex-based field extraction
 
 ### LogNog Full (Docker) Extras
 - **Syslog Ingestion** - UDP/TCP port 514 (RFC 3164 & 5424)
-- **OpenTelemetry (OTLP)** - Native OTLP/HTTP JSON ingestion
+- **OpenTelemetry (OTLP)** - Native OTLP/HTTP JSON ingestion with optional authentication
 - **ClickHouse Storage** - Columnar database for billions of logs
 - **Vector Pipeline** - High-performance log routing
 - **Network Device Support** - pfSense, OPNsense, Ubiquiti, etc.
+- **IP Classification** - Automatic RFC-compliant IP categorization (private/public/loopback)
+- **GeoIP Lookup** - MaxMind GeoLite2 integration for IP geolocation
+
+---
+
+## Integrations
+
+LogNog integrates with popular platforms via Log Drains:
+
+| Platform | Endpoint | Documentation |
+|----------|----------|---------------|
+| **Supabase** | `POST /api/ingest/supabase` | [Supabase Integration](docs/SUPABASE-INTEGRATION.md) |
+| **Vercel** | `POST /api/ingest/vercel` | [Vercel Integration](docs/VERCEL-INTEGRATION.md) |
+| **Generic HTTP** | `POST /api/ingest/http` | Accepts any JSON array of logs |
+| **OpenTelemetry** | `POST /api/ingest/otlp/v1/logs` | [OTLP Authentication](docs/OTLP_AUTHENTICATION.md) |
+
+### Supabase Log Drains
+Ingest logs from your Supabase projects (database, auth, storage, edge functions):
+1. Go to Supabase Dashboard → Settings → Log Drains
+2. Add destination: Generic HTTP endpoint
+3. URL: `https://your-lognog-server/api/ingest/supabase`
+4. Headers: `X-API-Key: your-lognog-api-key`
+
+### Vercel Log Drains
+Ingest logs from Vercel deployments (serverless functions, edge, builds):
+1. Go to Vercel Dashboard → Project Settings → Log Drains
+2. Add Log Drain → Custom HTTP endpoint
+3. URL: `https://your-lognog-server/api/ingest/vercel`
+4. Headers: `X-API-Key: your-lognog-api-key`
 
 ---
 
@@ -109,11 +148,27 @@ The lightweight agent that ships logs to your LogNog server.
 - System tray with status indicator
 - GUI configuration (no command line needed)
 - File watching with pattern matching
-- File Integrity Monitoring (FIM)
+- **File Integrity Monitoring (FIM)** - Track file changes with SHA-256 hashing
+- **Windows Event Log Collection** - Security, System, Application channels
+- **Customizable Sound Alerts** - Different sounds for different severity levels
 - **Alert notifications** - Push alerts from server to system tray
 - **Alert history** - View previous alerts received
 - Offline buffering - never lose logs
 - Low resource usage (~50MB RAM)
+
+### Windows Events
+The agent can collect Windows Event Logs directly:
+- Security events (logon, logoff, account changes)
+- System events (service changes, errors)
+- Application events
+- Configurable event ID filtering
+
+### Sound Alerts
+Customize audio notifications for different alert severities:
+- Critical, Error, Warning, Info sounds
+- Use default system beeps or custom .wav files
+- Volume control
+- Per-severity enable/disable
 
 ### Quick Start
 
@@ -145,12 +200,12 @@ Native Windows server with SQLite - no Docker required!
 
 ```
 LogNogLite/
-+-- LogNogLite.exe    (run this)
-+-- api/              (server code)
-+-- ui/               (dashboard)
-+-- data/             (created on first run)
-    +-- lognog.db     (settings)
-    +-- lognog-logs.db (your logs)
+├── LogNogLite.exe    (run this)
+├── api/              (server code)
+├── ui/               (dashboard)
+└── data/             (created on first run)
+    ├── lognog.db     (settings)
+    └── lognog-logs.db (your logs)
 ```
 
 ### Performance
@@ -159,6 +214,8 @@ LogNogLite/
 - **Storage**: ~100 bytes per log
 
 For larger deployments, use [LogNog Full (Docker)](#lognog-full-docker-installation).
+
+[Full Lite Documentation →](docs/LOGNOG-LITE.md)
 
 ---
 
@@ -218,12 +275,33 @@ command arguments | command arguments | ...
 |---------|-------------|---------|
 | `search` | Filter logs | `search host=router severity>=warning` |
 | `filter` | Additional filtering | `filter app_name~"nginx"` |
-| `stats` | Aggregate | `stats count by hostname` |
+| `where` | Alias for filter | `where severity<=3` |
+| `stats` | Aggregate | `stats count, avg(bytes) as avg_bytes by hostname` |
 | `sort` | Order results | `sort desc timestamp` |
 | `limit` | Limit results | `limit 100` |
+| `head` | First N results | `head 50` |
+| `tail` | Last N results | `tail 20` |
 | `table` | Select fields | `table timestamp hostname message` |
+| `fields` | Include/exclude fields | `fields - raw structured_data` |
 | `dedup` | Remove duplicates | `dedup hostname` |
 | `rename` | Rename fields | `rename hostname as host` |
+| `top` | Most common values | `top 10 hostname` |
+| `rare` | Least common values | `rare 10 app_name` |
+| `bin` | Time bucketing | `bin span=1h timestamp` |
+| `timechart` | Time-based stats | `timechart span=1h count by hostname` |
+| `rex` | Regex extraction | `rex field=message "user=(?P<user>\w+)"` |
+| `eval` | Calculate fields | `eval rate=bytes/1024` |
+
+### Operators
+
+| Operator | Description | Example |
+|----------|-------------|---------|
+| `=` | Equals | `host=router` |
+| `!=` | Not equals | `severity!=7` |
+| `>`, `>=`, `<`, `<=` | Comparison | `severity>=warning` |
+| `~` | Contains (regex) | `message~"error"` |
+| `AND`, `OR`, `NOT` | Boolean | `host=router AND severity<=3` |
+| `()` | Grouping | `(host=a OR host=b) AND severity<=3` |
 
 ### Example Queries
 
@@ -231,15 +309,59 @@ command arguments | command arguments | ...
 # All errors from the last hour
 search severity<=3
 
-# Count by host
-search * | stats count by hostname | sort desc
+# Count by host with boolean logic
+search (host=router OR host=firewall) AND severity<=4
+  | stats count by hostname
 
 # Find failed SSH logins
-search app_name=sshd message~"Failed" | stats count by hostname
+search app_name=sshd message~"Failed"
+  | stats count by hostname
 
-# Top talkers
-search * | stats count by app_name | sort desc | limit 10
+# Top 10 talkers with percentiles
+search *
+  | stats count, p95(bytes) as p95_bytes by app_name
+  | sort desc count
+  | limit 10
+
+# Time-based analysis
+search severity<=3
+  | timechart span=1h count by hostname
+
+# Extract fields with regex
+search app_name=nginx
+  | rex field=message "status=(?P<status>\d+)"
+  | stats count by status
 ```
+
+[Full Query Language Documentation →](docs/QUERY-LANGUAGE.md)
+
+---
+
+## Source Templates
+
+LogNog includes 15+ pre-built templates for common log sources:
+
+### Databases
+- MySQL Error Log, Slow Query Log
+- PostgreSQL
+- MongoDB
+- Redis
+
+### Web Servers
+- Nginx Access/Error
+- Apache Access/Error
+- IIS (W3C format)
+
+### Security
+- Windows Security Events
+- Linux Auth/Secure logs
+- SSH (sshd)
+
+### Platforms
+- Supabase (Postgres, Auth, Edge Functions)
+- Vercel (Serverless, Edge, Builds)
+
+Access templates at **Data Sources** in the UI or via API at `GET /api/templates`.
 
 ---
 
@@ -253,8 +375,11 @@ search * | stats count by app_name | sort desc | limit 10
 │   Clients   │     │  (ingest)   │     │  (storage)  │
 └─────────────┘     └─────────────┘     └─────────────┘
                                                │
-                    ┌─────────────┐            │
-                    │  React UI   │◀───────────┤
+┌─────────────┐                                │
+│  Supabase   │─────────────────────────┐      │
+│  Vercel     │                         │      │
+└─────────────┘     ┌─────────────┐     │      │
+                    │  React UI   │◀────┴──────┤
                     │             │            │
                     └─────────────┘            ▼
                                         ┌─────────────┐
@@ -275,75 +400,19 @@ search * | stats count by app_name | sort desc | limit 10
 
 ---
 
-## Log Sources
+## Documentation
 
-### LogNog In Agent (Recommended)
-Install on any Windows/Mac/Linux machine to ship logs.
-
-### Syslog (Docker version)
-
-**Linux (rsyslog)**
-```bash
-# /etc/rsyslog.d/50-lognog.conf
-*.* @lognog-server:514
-sudo systemctl restart rsyslog
-```
-
-**Docker Containers**
-```yaml
-services:
-  myapp:
-    logging:
-      driver: syslog
-      options:
-        syslog-address: "udp://lognog-server:514"
-```
-
-**Network Devices**
-Configure syslog forwarding to your LogNog server IP on port 514.
-
-### OpenTelemetry (OTLP)
-
-LogNog Full supports native OpenTelemetry log ingestion via OTLP/HTTP JSON.
-
-**Endpoint:** `POST /api/ingest/otlp/v1/logs`
-
-**Example with OpenTelemetry Collector:**
-```yaml
-exporters:
-  otlphttp:
-    endpoint: http://lognog-server:4000/api/ingest
-    tls:
-      insecure: true
-
-service:
-  pipelines:
-    logs:
-      exporters: [otlphttp]
-```
-
-**Example with curl:**
-```bash
-curl -X POST http://localhost:4000/api/ingest/otlp/v1/logs \
-  -H "Content-Type: application/json" \
-  -d '{
-    "resourceLogs": [{
-      "resource": {
-        "attributes": [
-          {"key": "service.name", "value": {"stringValue": "my-app"}},
-          {"key": "host.name", "value": {"stringValue": "server01"}}
-        ]
-      },
-      "scopeLogs": [{
-        "logRecords": [{
-          "timeUnixNano": "1702400000000000000",
-          "severityNumber": 9,
-          "body": {"stringValue": "Hello from OpenTelemetry!"}
-        }]
-      }]
-    }]
-  }'
-```
+| Document | Description |
+|----------|-------------|
+| [Query Language](docs/QUERY-LANGUAGE.md) | Complete DSL reference |
+| [Supabase Integration](docs/SUPABASE-INTEGRATION.md) | Supabase Log Drains setup |
+| [Vercel Integration](docs/VERCEL-INTEGRATION.md) | Vercel Log Drains setup |
+| [IP Classification](docs/IP-CLASSIFICATION.md) | IP categorization features |
+| [GeoIP Implementation](docs/GEOIP-IMPLEMENTATION.md) | GeoIP lookup setup |
+| [OTLP Authentication](docs/OTLP_AUTHENTICATION.md) | OpenTelemetry auth config |
+| [LogNog Lite](docs/LOGNOG-LITE.md) | SQLite mode documentation |
+| [Database Templates](docs/DATABASE-TEMPLATES.md) | Database log templates |
+| [Agent Guide](agent/README.md) | LogNog In agent documentation |
 
 ---
 
@@ -354,7 +423,7 @@ curl -X POST http://localhost:4000/api/ingest/otlp/v1/logs \
 cd api
 npm install
 npm run dev      # Development server
-npm run test     # Run tests
+npm run test     # Run tests (202 tests)
 ```
 
 ### UI
@@ -368,15 +437,24 @@ npm run dev      # Vite dev server (port 3000)
 ```bash
 cd agent
 pip install -e ".[dev]"
-pytest           # Run tests
+pytest           # Run tests (68 tests)
 python -m lognog_in  # Run agent
 ```
 
 ### Build Agent EXE
 ```bash
 cd agent
-python build.py  # Creates dist/LogNogIn.exe
+python build.py  # Creates dist/LogNogIn.exe (84 MB)
 ```
+
+---
+
+## Test Coverage
+
+| Component | Tests | Status |
+|-----------|-------|--------|
+| API (Vitest) | 202 | ✅ |
+| Agent (pytest) | 68 | ✅ |
 
 ---
 
@@ -387,6 +465,9 @@ python build.py  # Creates dist/LogNogIn.exe
 ```bash
 # API Port
 PORT=4000
+
+# OTLP Authentication (optional)
+OTLP_REQUIRE_AUTH=true
 
 # SMTP for scheduled reports
 SMTP_HOST=smtp.example.com
@@ -400,18 +481,32 @@ SMTP_FROM=reports@example.com
 
 ## Roadmap
 
-- [x] Custom dashboards
+### Completed
+- [x] Custom dashboards with multiple chart types
 - [x] Report generation & scheduling
-- [x] User authentication
-- [x] LogNog In agent (Windows)
+- [x] User authentication with JWT
+- [x] LogNog In agent (Windows) with GUI
 - [x] LogNog Lite (native Windows server)
 - [x] Splunk-style alert rules & notifications
+- [x] Alert silencing (global, per-host, per-alert)
 - [x] OpenTelemetry (OTLP) ingestion
 - [x] SSE Live Tail (real-time streaming)
 - [x] Agent alert notifications (push to system tray)
+- [x] Windows Event Log collection
+- [x] Customizable sound alerts
+- [x] Supabase Log Drains integration
+- [x] Vercel Log Drains integration
+- [x] IP Classification (RFC compliant)
+- [x] GeoIP lookup (MaxMind)
+- [x] Source templates (15+ templates)
+- [x] Advanced DSL (OR/AND, math, strings, percentiles)
+
+### Planned
 - [ ] macOS/Linux agent packages
-- [ ] Kubernetes deployment
+- [ ] Kubernetes deployment (Helm chart)
 - [ ] Log forwarding between LogNog instances
+- [ ] Machine learning anomaly detection
+- [ ] Natural language to DSL conversion
 
 ---
 

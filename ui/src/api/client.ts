@@ -629,3 +629,149 @@ export async function acknowledgeAlertHistory(id: string, acknowledgedBy: string
     body: JSON.stringify({ acknowledged_by: acknowledgedBy, notes }),
   });
 }
+
+// Silences API
+export interface AlertSilence {
+  id: string;
+  level: 'global' | 'host' | 'alert';
+  target_id?: string;
+  reason?: string;
+  created_by?: string;
+  starts_at: string;
+  ends_at?: string;
+  created_at: string;
+}
+
+export async function getSilences(activeOnly?: boolean): Promise<AlertSilence[]> {
+  const params = activeOnly ? '?active=true' : '';
+  return request(`/silences${params}`);
+}
+
+export async function getSilence(id: string): Promise<AlertSilence> {
+  return request(`/silences/${id}`);
+}
+
+export async function createSilence(silence: {
+  level: 'global' | 'host' | 'alert';
+  target_id?: string;
+  duration: string;
+  reason?: string;
+  created_by?: string;
+}): Promise<AlertSilence> {
+  return request('/silences', {
+    method: 'POST',
+    body: JSON.stringify(silence),
+  });
+}
+
+export async function deleteSilence(id: string): Promise<void> {
+  await request(`/silences/${id}`, { method: 'DELETE' });
+}
+
+export async function checkSilenced(alertId: string, hostname?: string): Promise<{ silenced: boolean; silence?: AlertSilence }> {
+  const params = new URLSearchParams({ alert_id: alertId });
+  if (hostname) params.append('hostname', hostname);
+  return request(`/silences/check?${params}`);
+}
+
+// Source Templates API
+export interface FieldExtractionPattern {
+  field_name: string;
+  pattern: string;
+  pattern_type: 'regex' | 'grok' | 'json_path';
+  description?: string;
+  required?: boolean;
+}
+
+export interface SourceTemplate {
+  id: string;
+  name: string;
+  source_type: string;
+  category: 'database' | 'security' | 'web' | 'system' | 'application';
+  description?: string;
+  setup_instructions?: string;
+  agent_config_example?: string;
+  syslog_config_example?: string;
+  field_extractions?: FieldExtractionPattern[];
+  default_index: string;
+  default_severity: number;
+  sample_log?: string;
+  sample_query?: string;
+  icon?: string;
+  dashboard_widgets?: Record<string, unknown>[];
+  alert_templates?: Record<string, unknown>[];
+  enabled: number;
+  built_in: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TemplateValidationResult {
+  valid: boolean;
+  errors: string[];
+  warnings: string[];
+  extracted_fields: Record<string, unknown>;
+}
+
+export async function getTemplates(category?: string): Promise<SourceTemplate[]> {
+  const params = category ? `?category=${category}` : '';
+  return request(`/templates${params}`);
+}
+
+export async function getTemplatesByCategory(): Promise<Record<string, SourceTemplate[]>> {
+  return request('/templates/by-category');
+}
+
+export async function getTemplateStats(): Promise<{
+  total: number;
+  by_category: Record<string, number>;
+  built_in: number;
+  custom: number;
+}> {
+  return request('/templates/stats');
+}
+
+export async function getTemplate(id: string): Promise<SourceTemplate> {
+  return request(`/templates/${id}`);
+}
+
+export async function testTemplate(id: string, logLine: string): Promise<TemplateValidationResult> {
+  return request(`/templates/${id}/test`, {
+    method: 'POST',
+    body: JSON.stringify({ log_line: logLine }),
+  });
+}
+
+export async function createTemplate(template: {
+  name: string;
+  source_type: string;
+  category: 'database' | 'security' | 'web' | 'system' | 'application';
+  description?: string;
+  setup_instructions?: string;
+  agent_config_example?: string;
+  syslog_config_example?: string;
+  field_extractions?: FieldExtractionPattern[];
+  default_index?: string;
+  default_severity?: number;
+  sample_log?: string;
+  sample_query?: string;
+  icon?: string;
+  dashboard_widgets?: Record<string, unknown>[];
+  alert_templates?: Record<string, unknown>[];
+}): Promise<SourceTemplate> {
+  return request('/templates', {
+    method: 'POST',
+    body: JSON.stringify(template),
+  });
+}
+
+export async function updateTemplate(id: string, updates: Partial<SourceTemplate>): Promise<SourceTemplate> {
+  return request(`/templates/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(updates),
+  });
+}
+
+export async function deleteTemplate(id: string): Promise<void> {
+  await request(`/templates/${id}`, { method: 'DELETE' });
+}
