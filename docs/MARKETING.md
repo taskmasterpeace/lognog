@@ -187,6 +187,27 @@ POST /api/ingest/otlp/v1/logs
 
 **Graylog's Problem:** SSPL license is not truly open source. Requires Elasticsearch AND MongoDB. Heavy resource requirements.
 
+### LogNog vs Google Chronicle (Security Operations)
+
+| Aspect | LogNog | Google Chronicle |
+|--------|--------|------------------|
+| **Price** | Free (MIT) | Enterprise pricing (contact sales) |
+| **Deployment** | Anywhere | Google Cloud only |
+| **Query Language** | Splunk-like | YARA-L, UDM |
+| **Data Sovereignty** | Your servers | Google's cloud |
+| **Setup** | 10 minutes | Weeks (enterprise onboarding) |
+| **Target User** | SMBs, homelabs, startups | Large enterprises |
+| **Open Source** | Yes (MIT) | No |
+| **Offline Access** | Always | Never |
+| **Multi-Cloud** | Yes | GCP-centric |
+| **Customization** | Full control | Limited |
+
+**Chronicle's Problem:** Google's answer to Splunk, but with Google-sized requirements. You need to be on Google Cloud, go through enterprise sales, and learn yet another query language (YARA-L). Great if you're a Fortune 500 already on GCP. Overkill and inaccessible for everyone else. Also: your logs live on Google's infrastructure - not everyone wants that.
+
+**Chronicle's Strengths:** Unlimited storage on Google infrastructure, VirusTotal integration for threat intelligence, automatic log normalization via UDM (Unified Data Model). If you're already enterprise GCP and need SIEM, it's solid.
+
+**Why LogNog wins for most users:** You don't need to "contact sales." You don't need to be on Google Cloud. You don't need unlimited storage for petabytes. You need to search your logs. Today. For free.
+
 ### LogNog vs Papertrail/Loggly/Datadog
 
 | Aspect | LogNog | Cloud Services |
