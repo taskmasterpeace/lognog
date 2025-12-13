@@ -34,6 +34,7 @@ export default function SettingsPage() {
   // Newly created key (shown once)
   const [newlyCreatedKey, setNewlyCreatedKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [copiedPrefix, setCopiedPrefix] = useState<string | null>(null);
 
   // Test data generation
   const [generatingData, setGeneratingData] = useState(false);
@@ -102,6 +103,12 @@ export default function SettingsPage() {
     await navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const copyPrefixToClipboard = async (prefix: string) => {
+    await navigator.clipboard.writeText(prefix);
+    setCopiedPrefix(prefix);
+    setTimeout(() => setCopiedPrefix(null), 2000);
   };
 
   const formatDate = (dateStr: string | null) => {
@@ -410,9 +417,22 @@ export default function SettingsPage() {
                         </span>
                       )}
                     </div>
-                    <code className="text-sm text-slate-500 dark:text-slate-400 font-mono">
-                      {key.key_prefix}...
-                    </code>
+                    <div className="flex items-center gap-1">
+                      <code className="text-sm text-slate-500 dark:text-slate-400 font-mono">
+                        {key.key_prefix}...
+                      </code>
+                      <button
+                        onClick={() => copyPrefixToClipboard(key.key_prefix)}
+                        className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded transition-colors"
+                        title="Copy prefix"
+                      >
+                        {copiedPrefix === key.key_prefix ? (
+                          <Check className="w-3.5 h-3.5 text-green-500" />
+                        ) : (
+                          <Copy className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                    </div>
                   </div>
 
                   {key.is_active && (

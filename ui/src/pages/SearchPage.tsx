@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import {
   Search,
@@ -18,6 +18,7 @@ import {
   FileJson,
   PanelLeftClose,
   PanelLeft,
+  Download,
 } from 'lucide-react';
 import { executeSearch, getSavedSearches, createSavedSearch, aiSearch, getAISuggestions } from '../api/client';
 import LogViewer from '../components/LogViewer';
@@ -44,8 +45,16 @@ export default function SearchPage() {
   const [searchMode, setSearchMode] = useState<'dsl' | 'ai'>('dsl');
   const [aiQuestion, setAiQuestion] = useState('');
   const [viewMode, setViewMode] = useState<'log' | 'table' | 'json'>('log');
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    const saved = localStorage.getItem('lognog_sidebar_open');
+    return saved !== null ? saved === 'true' : true;
+  });
   const [selectedFilters, setSelectedFilters] = useState<Record<string, string[]>>({});
+
+  // Persist sidebar state to localStorage
+  useEffect(() => {
+    localStorage.setItem('lognog_sidebar_open', String(sidebarOpen));
+  }, [sidebarOpen]);
 
   const { data: savedSearches } = useQuery({
     queryKey: ['savedSearches'],
@@ -69,6 +78,19 @@ export default function SearchPage() {
       setQuery(data.query);
     },
   });
+
+  // Update page title with results count
+  useEffect(() => {
+    const count = searchMutation.data?.count ?? aiSearchMutation.data?.results?.length;
+    if (count !== undefined) {
+      document.title = `(${count.toLocaleString()}) Search - LogNog`;
+    } else {
+      document.title = 'Search - LogNog';
+    }
+    return () => {
+      document.title = 'LogNog';
+    };
+  }, [searchMutation.data, aiSearchMutation.data]);
 
   const saveMutation = useMutation({
     mutationFn: () => createSavedSearch(saveName, query),
@@ -115,6 +137,38 @@ export default function SearchPage() {
       });
     }
     return terms;
+  }, []);
+
+  // Export results to CSV
+  const exportToCSV = useCallback((data: Record<string, unknown>[]) => {
+    if (!data || data.length === 0) return;
+
+    const headers = Object.keys(data[0]);
+    const csvRows = [
+      headers.join(','),
+      ...data.map(row =>
+        headers.map(h => {
+          const val = row[h];
+          const str = val === null || val === undefined ? '' : String(val);
+          // Escape quotes and wrap in quotes if contains comma or newline
+          if (str.includes(',') || str.includes('\n') || str.includes('"')) {
+            return `"${str.replace(/"/g, '""')}"`;
+          }
+          return str;
+        }).join(',')
+      )
+    ];
+
+    const csvContent = csvRows.join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `lognog-export-${new Date().toISOString().slice(0, 19).replace(/[T:]/g, '-')}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   }, []);
 
   // Calculate facets from results
@@ -314,9 +368,19 @@ export default function SearchPage() {
                   onChange={(e) => setAiQuestion(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="Show me all errors from the last hour..."
-                  className="input-search h-12 border-purple-200 focus:border-purple-400 focus:ring-purple-200"
+                  className="input-search h-12 pr-24 border-purple-200 focus:border-purple-400 focus:ring-purple-200"
+                  autoFocus
                 />
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                  {aiQuestion && (
+                    <button
+                      onClick={() => setAiQuestion('')}
+                      className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded transition-colors"
+                      title="Clear"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
                   <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-slate-400 bg-slate-100 rounded">
                     <span>Ctrl</span>
                     <span>+</span>
@@ -334,9 +398,19 @@ export default function SearchPage() {
                   onChange={(e) => setQuery(e.target.value)}
                   onKeyDown={handleKeyDown}
                   placeholder="search host=* | stats count by hostname"
-                  className="input-search h-12"
+                  className="input-search h-12 pr-24"
+                  autoFocus
                 />
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                  {query && query !== 'search *' && (
+                    <button
+                      onClick={() => setQuery('search *')}
+                      className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded transition-colors"
+                      title="Clear search"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
                   <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-slate-400 bg-slate-100 rounded">
                     <span>Ctrl</span>
                     <span>+</span>
@@ -556,6 +630,32 @@ export default function SearchPage() {
           const results = searchMutation.data?.results || aiSearchMutation.data?.results;
           const count = searchMutation.data?.count ?? aiSearchMutation.data?.results?.length ?? 0;
           const sql = searchMutation.data?.sql || aiSearchMutation.data?.sql;
+          const hasSearched = searchMutation.data !== undefined || aiSearchMutation.data !== undefined;
+
+          if (hasSearched && (!results || results.length === 0)) {
+            return (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-4">
+                  <Search className="w-8 h-8 text-slate-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">
+                  No results found
+                </h3>
+                <p className="text-slate-500 dark:text-slate-400 max-w-md mb-6">
+                  Your search didn't match any logs. Try adjusting your query or time range.
+                </p>
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4 max-w-md text-left">
+                  <p className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Suggestions:</p>
+                  <ul className="text-sm text-slate-600 dark:text-slate-400 space-y-1">
+                    <li>• Try a broader time range (e.g., "Last 7 days")</li>
+                    <li>• Use wildcards: <code className="text-xs bg-slate-200 dark:bg-slate-700 px-1 rounded">host=web*</code></li>
+                    <li>• Check field names: <code className="text-xs bg-slate-200 dark:bg-slate-700 px-1 rounded">hostname</code> vs <code className="text-xs bg-slate-200 dark:bg-slate-700 px-1 rounded">host</code></li>
+                    <li>• Try <code className="text-xs bg-slate-200 dark:bg-slate-700 px-1 rounded">search *</code> to see all logs</li>
+                  </ul>
+                </div>
+              </div>
+            );
+          }
 
           if (!results || results.length === 0) return null;
 
@@ -633,6 +733,14 @@ export default function SearchPage() {
                       {showSqlPreview ? 'Hide SQL' : 'Show SQL'}
                     </button>
                   )}
+                  <button
+                    onClick={() => exportToCSV(results as Record<string, unknown>[])}
+                    className="btn-ghost text-xs"
+                    title="Export to CSV"
+                  >
+                    <Download className="w-4 h-4" />
+                    Export CSV
+                  </button>
                 </div>
               </div>
 
@@ -832,7 +940,7 @@ export default function SearchPage() {
               </button>
               <button
                 onClick={() => saveMutation.mutate()}
-                disabled={!saveName || saveMutation.isPending}
+                disabled={!saveName.trim() || saveMutation.isPending}
                 className="btn-primary"
               >
                 {saveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : null}

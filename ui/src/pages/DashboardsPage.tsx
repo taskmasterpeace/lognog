@@ -141,8 +141,13 @@ export default function DashboardsPage() {
                         </div>
                       </div>
                       <button
-                        onClick={() => deleteMutation.mutate(dashboard.id)}
+                        onClick={() => {
+                          if (confirm(`Delete dashboard "${dashboard.name}"? This cannot be undone.`)) {
+                            deleteMutation.mutate(dashboard.id);
+                          }
+                        }}
                         className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                        title="Delete dashboard"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -302,7 +307,7 @@ export default function DashboardsPage() {
               </button>
               <button
                 onClick={() => createMutation.mutate()}
-                disabled={!newDashboardName || createMutation.isPending}
+                disabled={!newDashboardName.trim() || createMutation.isPending}
                 className="btn-primary"
               >
                 {createMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}

@@ -149,8 +149,9 @@ const FieldValue: React.FC<FieldValueProps> = ({ field, value, onAddFilter, sear
             {SEVERITY_CONFIG[value as keyof typeof SEVERITY_CONFIG]?.name || value}
           </span>
         ) : field === 'timestamp' ? (
-          <span className="text-slate-600" title={getRelativeTime(valueStr)}>
-            {formatTimestamp(valueStr)}
+          <span className="text-slate-600 flex items-center gap-2">
+            <span>{formatTimestamp(valueStr)}</span>
+            <span className="text-xs text-slate-400">({getRelativeTime(valueStr)})</span>
           </span>
         ) : (
           highlightText(valueStr, searchTerms)

@@ -33,14 +33,31 @@ const TIME_PRESETS: TimeRange[] = [
 
 export default function TimePicker({ onRangeChange, defaultRange = '-24h', className = '' }: TimePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedPreset, setSelectedPreset] = useState<TimeRange>(
-    TIME_PRESETS.find(p => p.value === defaultRange) || TIME_PRESETS[6]
-  );
+  const [selectedPreset, setSelectedPreset] = useState<TimeRange>(() => {
+    // Check localStorage for saved preference
+    const saved = localStorage.getItem('lognog_time_range');
+    if (saved) {
+      const preset = TIME_PRESETS.find(p => p.value === saved);
+      if (preset) return preset;
+    }
+    return TIME_PRESETS.find(p => p.value === defaultRange) || TIME_PRESETS[6];
+  });
   const [isCustomMode, setIsCustomMode] = useState(false);
   const [startDate, setStartDate] = useState<Date | null>(new Date(Date.now() - 24 * 60 * 60 * 1000));
   const [endDate, setEndDate] = useState<Date | null>(new Date());
 
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Initialize with saved time range on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('lognog_time_range');
+    if (saved && saved !== 'custom') {
+      const preset = TIME_PRESETS.find(p => p.value === saved);
+      if (preset) {
+        onRangeChange(preset.earliest, preset.latest);
+      }
+    }
+  }, []);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -64,6 +81,8 @@ export default function TimePicker({ onRangeChange, defaultRange = '-24h', class
       setIsCustomMode(false);
       setSelectedPreset(preset);
       setIsOpen(false);
+      // Save to localStorage
+      localStorage.setItem('lognog_time_range', preset.value);
       onRangeChange(preset.earliest, preset.latest);
     }
   };

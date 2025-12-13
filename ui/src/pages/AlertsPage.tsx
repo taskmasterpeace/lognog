@@ -87,6 +87,13 @@ const SCHEDULE_OPTIONS = [
   { label: 'Daily at midnight', value: '0 0 * * *' },
 ];
 
+// Email validation helper
+const isValidEmail = (email: string): boolean => {
+  if (!email || !email.trim()) return false;
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email.trim());
+};
+
 const TIME_RANGES = [
   { label: 'Last 1 minute', value: '-1m' },
   { label: 'Last 5 minutes', value: '-5m' },
@@ -286,6 +293,20 @@ export default function AlertsPage() {
 
   const getSeverityConfig = (severity: string) => {
     return SEVERITIES.find(s => s.value === severity) || SEVERITIES[2];
+  };
+
+  // Validate all actions have required config
+  const areActionsValid = () => {
+    return formData.actions.every((action) => {
+      if (action.type === 'email') {
+        return isValidEmail(action.config.to || '');
+      }
+      if (action.type === 'webhook') {
+        const url = action.config.url || '';
+        return url.trim() && (url.startsWith('http://') || url.startsWith('https://'));
+      }
+      return true; // log type doesn't need config
+    });
   };
 
   if (isLoading) {
@@ -777,8 +798,15 @@ export default function AlertsPage() {
                               placeholder="recipient@example.com"
                               value={action.config.to || ''}
                               onChange={(e) => updateAction(index, { to: e.target.value })}
-                              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm"
+                              className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm ${
+                                action.config.to && !isValidEmail(action.config.to)
+                                  ? 'border-red-400 focus:ring-red-200 focus:border-red-400'
+                                  : 'border-slate-300 dark:border-slate-600'
+                              }`}
                             />
+                            {action.config.to && !isValidEmail(action.config.to) && (
+                              <p className="text-xs text-red-500">Please enter a valid email address</p>
+                            )}
                           </div>
                         )}
 
@@ -789,8 +817,15 @@ export default function AlertsPage() {
                               placeholder="https://api.example.com/webhook"
                               value={action.config.url || ''}
                               onChange={(e) => updateAction(index, { url: e.target.value })}
-                              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm"
+                              className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm ${
+                                action.config.url && !(action.config.url.startsWith('http://') || action.config.url.startsWith('https://'))
+                                  ? 'border-red-400 focus:ring-red-200 focus:border-red-400'
+                                  : 'border-slate-300 dark:border-slate-600'
+                              }`}
                             />
+                            {action.config.url && !(action.config.url.startsWith('http://') || action.config.url.startsWith('https://')) && (
+                              <p className="text-xs text-red-500">URL must start with http:// or https://</p>
+                            )}
                             <select
                               value={action.config.method || 'POST'}
                               onChange={(e) => updateAction(index, { method: e.target.value as 'GET' | 'POST' | 'PUT' })}
@@ -847,7 +882,7 @@ export default function AlertsPage() {
                 </button>
                 <button
                   onClick={() => editingAlert ? updateMutation.mutate() : createMutation.mutate()}
-                  disabled={!formData.name || !formData.search_query || createMutation.isPending || updateMutation.isPending}
+                  disabled={!formData.name.trim() || !formData.search_query.trim() || !areActionsValid() || createMutation.isPending || updateMutation.isPending}
                   className="px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg flex items-center gap-2 disabled:opacity-50"
                 >
                   {(createMutation.isPending || updateMutation.isPending) && <Loader2 className="w-4 h-4 animate-spin" />}

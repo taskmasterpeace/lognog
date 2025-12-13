@@ -140,6 +140,17 @@
 - **Source Templates** - 15+ pre-built templates for common log sources
 - **API Key Management** - Create and manage API keys for integrations
 
+### User Experience
+- **Relative Timestamps** - "5m ago" display alongside formatted times
+- **Time Range Memory** - Remembers your preferred time range across sessions
+- **Sidebar State Persistence** - Keeps filter panel open/closed as you left it
+- **Search Clear Button** - Quick clear with X button, auto-focus on load
+- **Export to CSV** - One-click export of search results
+- **Results in Tab Title** - See result count without switching tabs
+- **Empty Results Help** - Helpful suggestions when no results found
+- **Form Validation** - Visual feedback for emails, URLs, required fields
+- **Dark Mode** - Automatic system theme detection with manual override
+
 ### Query Language Features
 - **Boolean Logic** - Full AND, OR, NOT with parentheses grouping
 - **Math Functions** - abs, round, floor, ceil, sqrt, pow, log, exp
