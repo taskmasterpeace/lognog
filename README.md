@@ -251,7 +251,9 @@ Native Windows server with SQLite - no Docker required!
 1. **Download** the `LogNogLite.zip` from [Releases](https://github.com/machinekinglabs/lognog/releases)
 2. **Extract** to any folder
 3. **Run** `LogNogLite.exe`
-4. **Done** - Browser opens automatically to http://localhost:4000
+4. **Browser opens** to http://localhost:4000
+5. **Create your admin account** (no default credentials - you choose your own username/password)
+6. **Done** - Start searching logs!
 
 ### What's Included
 
@@ -303,6 +305,26 @@ docker-compose ps
 | **Web UI** | http://localhost | Main dashboard |
 | **API** | http://localhost:4000 | REST API |
 | **Syslog** | localhost:514 (UDP/TCP) | Log ingestion |
+
+### First Time Setup
+
+**There are no default credentials.** On first visit, you'll create your admin account:
+
+1. Open http://localhost in your browser
+2. Click "Get Started" or "Sign In"
+3. You'll see "Welcome to LogNog!" setup screen
+4. Create your admin account:
+   - **Username**: Choose any (e.g., `admin`)
+   - **Email**: Your email address
+   - **Password**: At least 8 characters
+5. Click "Create Admin Account"
+6. You're in! Start searching logs.
+
+**Security Notes:**
+- The first user automatically becomes admin
+- Additional users can be created via Settings
+- API keys can be generated for agents and integrations
+- All passwords are hashed with bcrypt (12 rounds)
 
 ### Send Test Logs
 
