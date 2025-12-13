@@ -74,14 +74,14 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 p-4 relative">
       {/* Back to Landing */}
       <Link
         to="/"
-        className="absolute top-4 left-4 flex items-center gap-2 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
+        className="absolute top-6 left-6 flex items-center gap-2 px-3 py-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200/50 dark:hover:bg-slate-700/50 rounded-lg transition-all"
       >
         <ArrowLeft className="w-5 h-5" />
-        <span>Back</span>
+        <span className="font-medium">Back to Home</span>
       </Link>
 
       <div className="w-full max-w-md">
