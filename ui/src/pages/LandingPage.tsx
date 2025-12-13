@@ -10,18 +10,22 @@ import {
   ChevronRight,
   Github,
   ArrowRight,
+  Cloud,
+  Zap,
+  Terminal,
+  Database,
 } from 'lucide-react';
 
 const features = [
   {
     icon: Search,
-    title: 'Powerful Search',
-    description: 'Splunk-like query language with boolean logic, stats, and time analysis',
+    title: 'Splunk-Like Query Language',
+    description: 'search, stats, filter, dedup, table - the commands you already know',
   },
   {
     icon: LayoutDashboard,
     title: '7 Visualization Types',
-    description: 'Tables, charts, heatmaps, gauges with auto-refresh dashboards',
+    description: 'Tables, bar charts, pie charts, line/area, heatmaps, gauges, single stats',
   },
   {
     icon: Bell,
@@ -54,11 +58,29 @@ const integrations = [
   { name: 'Windows Events', description: 'Agent' },
 ];
 
+const screenshots = [
+  {
+    title: 'Powerful Search',
+    description: 'Splunk-like query language with stats, filtering, and field extraction',
+    image: '/screenshot-search.png',
+  },
+  {
+    title: 'Custom Dashboards',
+    description: 'Build dashboards with 7 visualization types and auto-refresh',
+    image: '/screenshot-dashboards.png',
+  },
+  {
+    title: 'Smart Alerts',
+    description: 'Threshold-based alerts with email, webhook, and silencing',
+    image: '/screenshot-alerts.png',
+  },
+];
+
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
       {/* Header */}
-      <header className="border-b border-slate-700/50">
+      <header className="border-b border-slate-700/50 sticky top-0 bg-slate-900/95 backdrop-blur-sm z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -81,7 +103,7 @@ export default function LandingPage() {
               </a>
               <Link
                 to="/login"
-                className="px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white font-medium rounded-lg transition-colors"
+                className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-medium rounded-lg transition-colors"
               >
                 Sign In
               </Link>
@@ -91,27 +113,40 @@ export default function LandingPage() {
       </header>
 
       {/* Hero Section */}
-      <section className="py-16 sm:py-24">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <section className="py-16 sm:py-24 relative overflow-hidden">
+        {/* Background decoration */}
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute -top-40 -right-40 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl" />
+          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-sky-500/10 rounded-full blur-3xl" />
+        </div>
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative">
+          {/* Splunk users badge */}
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-slate-800/80 border border-slate-700 rounded-full text-sm text-slate-300 mb-8">
+            <Terminal className="w-4 h-4 text-emerald-400" />
+            <span>Built for Splunk users who want freedom</span>
+          </div>
+
           <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-white mb-6">
             Your Logs,{' '}
-            <span className="bg-gradient-to-r from-sky-400 to-cyan-400 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-emerald-400 to-cyan-400 bg-clip-text text-transparent">
               Your Control
             </span>
           </h1>
-          <p className="text-xl text-slate-400 max-w-3xl mx-auto mb-4">
-            Self-hosted log management for homelabs and beyond.
-            100% open source, no cloud dependencies, no arbitrary limits.
+          <p className="text-xl text-slate-300 max-w-3xl mx-auto mb-4">
+            Self-hosted log management with the query language you already know.
+            No cloud lock-in. No surprise bills. No arbitrary limits.
           </p>
           <p className="text-lg text-slate-500 max-w-2xl mx-auto mb-8">
-            Splunk pricing made us build this. grep is not a SIEM.
+            <span className="text-emerald-400 font-medium">Splunk pricing</span> made us build this.{' '}
+            <span className="text-slate-400">grep is not a SIEM.</span>
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
               to="/login"
-              className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-sky-500 to-cyan-500 hover:from-sky-600 hover:to-cyan-600 text-white font-semibold rounded-lg shadow-lg shadow-sky-500/25 transition-all"
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white font-semibold rounded-lg shadow-lg shadow-emerald-500/25 transition-all"
             >
-              Get Started
+              Get Started Free
               <ArrowRight className="w-5 h-5" />
             </Link>
             <a
@@ -124,34 +159,156 @@ export default function LandingPage() {
               View on GitHub
             </a>
           </div>
+
+          {/* Quick stats */}
+          <div className="flex flex-wrap justify-center gap-8 mt-12 text-sm">
+            <div className="flex items-center gap-2 text-slate-400">
+              <Zap className="w-4 h-4 text-emerald-400" />
+              <span>10 min setup</span>
+            </div>
+            <div className="flex items-center gap-2 text-slate-400">
+              <Database className="w-4 h-4 text-emerald-400" />
+              <span>Millions of logs/day</span>
+            </div>
+            <div className="flex items-center gap-2 text-slate-400">
+              <Shield className="w-4 h-4 text-emerald-400" />
+              <span>MIT Licensed</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Hosted Coming Soon Banner */}
+      <section className="py-6 bg-gradient-to-r from-purple-600/20 to-indigo-600/20 border-y border-purple-500/30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-center sm:text-left">
+            <div className="flex items-center gap-3">
+              <Cloud className="w-6 h-6 text-purple-400" />
+              <span className="text-lg font-semibold text-white">Hosted LogNog Coming Soon</span>
+            </div>
+            <span className="text-slate-400">•</span>
+            <p className="text-slate-300">
+              Don't want to self-host? We're building a managed cloud version.
+            </p>
+            <a
+              href="https://github.com/taskmasterpeace/lognog"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-2 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/50 text-purple-300 font-medium rounded-lg transition-colors text-sm"
+            >
+              Star for Updates
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* Screenshot Showcase */}
+      <section className="py-20 bg-slate-800/30">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
+              See It In Action
+            </h2>
+            <p className="text-slate-400 max-w-2xl mx-auto">
+              A familiar interface for anyone who's used Splunk, with the simplicity you deserve.
+            </p>
+          </div>
+
+          <div className="space-y-20">
+            {screenshots.map((screenshot, index) => (
+              <div
+                key={screenshot.title}
+                className={`flex flex-col ${
+                  index % 2 === 0 ? 'lg:flex-row' : 'lg:flex-row-reverse'
+                } items-center gap-8 lg:gap-12`}
+              >
+                <div className="flex-1 text-center lg:text-left">
+                  <h3 className="text-2xl font-bold text-white mb-3">
+                    {screenshot.title}
+                  </h3>
+                  <p className="text-slate-400 text-lg">
+                    {screenshot.description}
+                  </p>
+                </div>
+                <div className="flex-1 w-full">
+                  <div className="relative group">
+                    <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 rounded-xl blur-lg group-hover:blur-xl transition-all" />
+                    <img
+                      src={screenshot.image}
+                      alt={screenshot.title}
+                      className="relative rounded-xl shadow-2xl border border-slate-700/50 w-full"
+                    />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Splunk Comparison - For Splunk Users */}
+      <section className="py-16 border-y border-slate-700/50">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-white mb-4">
+              Coming From Splunk?
+            </h2>
+            <p className="text-slate-400 max-w-2xl mx-auto">
+              Your SPL knowledge transfers directly. Same concepts, same workflow.
+            </p>
+          </div>
+
+          <div className="bg-slate-800/50 rounded-xl border border-slate-700/50 overflow-hidden">
+            <div className="grid grid-cols-2 text-sm font-medium">
+              <div className="p-4 bg-slate-700/50 text-slate-300 text-center border-b border-slate-700">Splunk SPL</div>
+              <div className="p-4 bg-emerald-900/30 text-emerald-300 text-center border-b border-slate-700">LogNog Query</div>
+            </div>
+            <div className="divide-y divide-slate-700/50">
+              {[
+                ['host=web* sourcetype=nginx', 'search hostname=web* app_name=nginx'],
+                ['| stats count by host', '| stats count by hostname'],
+                ['| top 10 status', '| stats count by status | sort desc | limit 10'],
+                ['| dedup host | table host, status', '| dedup hostname | table hostname status'],
+                ['| where count > 100', '| filter count>100'],
+              ].map(([splunk, lognog], i) => (
+                <div key={i} className="grid grid-cols-2 text-sm">
+                  <div className="p-4 font-mono text-slate-400 border-r border-slate-700/50">{splunk}</div>
+                  <div className="p-4 font-mono text-emerald-400">{lognog}</div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 
       {/* Problem Section */}
-      <section className="py-12 border-t border-slate-700/50">
+      <section className="py-16">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-2xl font-bold text-white mb-6">
+          <h2 className="text-2xl font-bold text-white mb-8">
             The Problem with Log Management
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="p-4">
-              <p className="text-4xl mb-2">$$$</p>
-              <p className="text-slate-400">Splunk costs more than your entire homelab</p>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="p-6 bg-slate-800/30 rounded-xl border border-slate-700/50">
+              <p className="text-4xl mb-3 text-red-400">$$$</p>
+              <p className="text-lg font-medium text-white mb-2">Splunk</p>
+              <p className="text-slate-400 text-sm">Costs more than your entire homelab infrastructure</p>
             </div>
-            <div className="p-4">
-              <p className="text-4xl mb-2">YAML</p>
-              <p className="text-slate-400">ELK requires a PhD in configuration</p>
+            <div className="p-6 bg-slate-800/30 rounded-xl border border-slate-700/50">
+              <p className="text-4xl mb-3 text-yellow-400">YAML</p>
+              <p className="text-lg font-medium text-white mb-2">ELK Stack</p>
+              <p className="text-slate-400 text-sm">Requires a PhD in configuration and 8GB+ RAM</p>
             </div>
-            <div className="p-4">
-              <p className="text-4xl mb-2">Cloud</p>
-              <p className="text-slate-400">SaaS services see everything</p>
+            <div className="p-6 bg-slate-800/30 rounded-xl border border-slate-700/50">
+              <p className="text-4xl mb-3 text-blue-400">Cloud</p>
+              <p className="text-lg font-medium text-white mb-2">SaaS Services</p>
+              <p className="text-slate-400 text-sm">Your sensitive logs on someone else's servers</p>
             </div>
           </div>
-          <p className="text-xl text-slate-300 mt-6">You just want to search your logs.</p>
+          <p className="text-xl text-slate-300 mt-8">You just want to <span className="text-emerald-400 font-medium">search your logs</span>.</p>
         </div>
       </section>
 
-      {/* Comparison Section */}
+      {/* Comparison Table */}
       <section className="py-16 bg-slate-800/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
@@ -159,8 +316,7 @@ export default function LandingPage() {
               How LogNog Compares
             </h2>
             <p className="text-slate-400 max-w-2xl mx-auto">
-              Built as a Splunk alternative for people who want powerful log management
-              without the enterprise pricing or complexity.
+              Enterprise features without the enterprise price tag.
             </p>
           </div>
           <div className="flex justify-center">
@@ -188,10 +344,10 @@ export default function LandingPage() {
             {features.map((feature) => (
               <div
                 key={feature.title}
-                className="p-6 bg-slate-800/50 rounded-xl border border-slate-700/50 hover:border-sky-500/50 transition-colors"
+                className="p-6 bg-slate-800/50 rounded-xl border border-slate-700/50 hover:border-emerald-500/50 transition-colors group"
               >
-                <div className="w-12 h-12 bg-sky-500/10 rounded-lg flex items-center justify-center mb-4">
-                  <feature.icon className="w-6 h-6 text-sky-400" />
+                <div className="w-12 h-12 bg-emerald-500/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-emerald-500/20 transition-colors">
+                  <feature.icon className="w-6 h-6 text-emerald-400" />
                 </div>
                 <h3 className="text-lg font-semibold text-white mb-2">
                   {feature.title}
@@ -213,16 +369,16 @@ export default function LandingPage() {
               Works With Your Stack
             </h2>
             <p className="text-slate-400 max-w-2xl mx-auto">
-              Send logs from anywhere - cloud platforms, network devices, or custom apps.
+              Send logs from anywhere - cloud platforms, network devices, game servers, or custom apps.
             </p>
           </div>
           <div className="flex flex-wrap justify-center gap-4">
             {integrations.map((integration) => (
               <div
                 key={integration.name}
-                className="px-5 py-3 bg-slate-800 rounded-lg border border-slate-700 flex items-center gap-3"
+                className="px-5 py-3 bg-slate-800 rounded-lg border border-slate-700 flex items-center gap-3 hover:border-emerald-500/50 transition-colors"
               >
-                <Server className="w-5 h-5 text-sky-400" />
+                <Server className="w-5 h-5 text-emerald-400" />
                 <div>
                   <div className="text-white font-medium">{integration.name}</div>
                   <div className="text-xs text-slate-500">{integration.description}</div>
@@ -241,7 +397,7 @@ export default function LandingPage() {
               Choose Your Setup
             </h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
             <div className="p-6 bg-slate-800/50 rounded-xl border border-slate-700/50 text-center">
               <div className="text-4xl mb-4">📁</div>
               <h3 className="text-xl font-semibold text-white mb-2">Agent Only</h3>
@@ -250,8 +406,8 @@ export default function LandingPage() {
               </p>
               <div className="text-xs text-slate-500">Perfect for file monitoring</div>
             </div>
-            <div className="p-6 bg-gradient-to-b from-sky-900/50 to-slate-800/50 rounded-xl border border-sky-500/50 text-center relative">
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-sky-500 text-white text-xs font-medium rounded-full">
+            <div className="p-6 bg-gradient-to-b from-emerald-900/50 to-slate-800/50 rounded-xl border border-emerald-500/50 text-center relative">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-emerald-500 text-white text-xs font-medium rounded-full">
                 Popular
               </div>
               <div className="text-4xl mb-4">🖥️</div>
@@ -274,7 +430,7 @@ export default function LandingPage() {
       </section>
 
       {/* Testimonials Section */}
-      <section className="py-16">
+      <section className="py-16 bg-slate-800/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-white mb-4">
@@ -305,21 +461,32 @@ export default function LandingPage() {
       </section>
 
       {/* CTA Section */}
-      <section className="py-16 bg-gradient-to-r from-sky-600 to-cyan-600">
+      <section className="py-16 bg-gradient-to-r from-emerald-600 to-cyan-600">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl font-bold text-white mb-4">
             Ready to Take Control?
           </h2>
-          <p className="text-sky-100 mb-8 max-w-2xl mx-auto">
+          <p className="text-emerald-100 mb-8 max-w-2xl mx-auto">
             Set up in 10 minutes. Free forever. MIT licensed.
           </p>
-          <Link
-            to="/login"
-            className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white text-sky-600 font-semibold rounded-lg shadow-lg hover:bg-sky-50 transition-colors"
-          >
-            Get Started Now
-            <ChevronRight className="w-5 h-5" />
-          </Link>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link
+              to="/login"
+              className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white text-emerald-600 font-semibold rounded-lg shadow-lg hover:bg-emerald-50 transition-colors"
+            >
+              Get Started Now
+              <ChevronRight className="w-5 h-5" />
+            </Link>
+            <a
+              href="https://github.com/taskmasterpeace/lognog"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-emerald-700/50 text-white font-semibold rounded-lg hover:bg-emerald-700 transition-colors border border-emerald-400/30"
+            >
+              <Github className="w-5 h-5" />
+              Star on GitHub
+            </a>
+          </div>
         </div>
       </section>
 
