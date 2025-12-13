@@ -229,24 +229,43 @@ search source_type=fim file_path="/etc/passwd" OR file_path="/etc/shadow"
 
 ## Part 4: Dashboard Improvements Needed
 
-### Current Dashboard Limitations
+### Current Dashboard Capabilities
 
-| What We Have | What's Missing |
-|--------------|----------------|
-| Line charts | Heatmaps |
-| Bar charts | Treemaps |
-| Pie charts | Scatter plots |
-| Stat cards | Gauges |
-| Tables | Sparklines in tables |
-| - | Drill-down on click |
-| - | Dashboard variables (like $host) |
-| - | Time range synchronization |
-| - | Panel linking |
-| - | Dashboard templates |
+| What We Have | Status |
+|--------------|--------|
+| Line/Area charts | ✅ |
+| Bar charts | ✅ |
+| Pie charts | ✅ |
+| Stat cards | ✅ |
+| Tables | ✅ |
+| **Heatmaps** | ✅ Added |
+| **Gauges** | ✅ Added |
+| **Auto-refresh** | ✅ Added (30s, 1m, 5m) |
+| **Time range selector** | ✅ Have it |
+| Drill-down on click | ❌ Planned |
+| Dashboard variables ($host) | ❌ Planned |
+| Dashboard templates | ❌ Planned |
+| Treemaps | ❌ Future |
+| Scatter plots | ❌ Future |
 
 ### Priority Improvements
 
-#### HIGH Priority (Would significantly improve UX)
+#### COMPLETED
+
+1. ~~**Time Picker for Dashboards**~~ ✅
+   - Global time range for all panels
+   - Relative times (last 15m, 1h, 4h, 24h, 7d)
+
+2. ~~**Better Chart Library (ECharts)**~~ ✅
+   - Heatmaps for time-based patterns
+   - Gauges for SLA/KPI monitoring
+   - Already had ECharts components, now exposed in dashboard
+
+3. ~~**Auto-Refresh**~~ ✅
+   - 30 second, 1 minute, 5 minute intervals
+   - Visual indicator when active
+
+#### HIGH Priority (Next to implement)
 
 1. **Dashboard Variables / Tokens**
    - Let users define `$host` variable
@@ -258,18 +277,6 @@ search source_type=fim file_path="/etc/passwd" OR file_path="/etc/shadow"
    - Click a bar in chart → opens search with that filter
    - Click a cell in table → filters dashboard
    - **Effort:** 1-2 days
-
-3. **Time Picker for Dashboards**
-   - Global time range for all panels
-   - Relative times (last 1h, 24h, 7d)
-   - Custom range picker
-   - **Effort:** 1 day
-
-4. **Better Chart Library (ECharts)**
-   - Heatmaps for time-based patterns
-   - Gauges for SLA/KPI monitoring
-   - More professional look
-   - **Effort:** 3-4 days
 
 #### MEDIUM Priority
 
@@ -349,25 +356,32 @@ search source_type=fim file_path="/etc/passwd" OR file_path="/etc/shadow"
 
 ## Summary: What To Do Next
 
-### Immediate (This Week)
+### Completed
 1. ✅ ~~Push current changes to GitHub~~
-2. Add dashboard time picker
-3. Add click-to-drill-down on charts
+2. ✅ ~~Add dashboard time picker~~ (already had it)
+3. ✅ ~~Add heatmap visualization~~ (exposed existing ECharts component)
+4. ✅ ~~Add gauge visualization~~ (exposed existing ECharts component)
+5. ✅ ~~Add dashboard auto-refresh~~ (30s, 1m, 5m intervals)
+6. ✅ ~~API key management~~ (Settings page)
+7. ✅ ~~Generic HTTP ingestion~~ (/api/ingest/http)
+8. ✅ ~~Data retention/TTL~~ (90 days default, configurable)
 
-### Short Term (Next 2 Weeks)
-4. Replace Recharts with ECharts
-5. Add dashboard variables ($host dropdown)
-6. Add heatmap visualization
-7. Improve table component
+### Short Term (Next)
+- [ ] Add click-to-drill-down on charts
+- [ ] Add dashboard variables ($host dropdown)
+- [ ] Improve table component (sorting, pagination)
+- [ ] Add JSON batch import via UI
+- [ ] Add dashboard templates (pre-built layouts)
 
-### Medium Term (Next Month)
-8. Add Sigma rule importer
-9. Add lookup tables (CSV enrichment)
-10. Add dashboard templates
-11. Add public dashboard sharing
+### Medium Term
+- [ ] Add Sigma rule importer (3000+ free security rules)
+- [ ] Add lookup tables (CSV enrichment)
+- [ ] Add public dashboard sharing
+- [ ] Cloudflare Tunnel setup guide
 
-### Long Term (Next Quarter)
-12. Machine learning anomaly detection
-13. Natural language to DSL
-14. Grafana data source plugin
-15. Kubernetes Helm chart
+### Long Term
+- [ ] Machine learning anomaly detection
+- [ ] Natural language to DSL
+- [ ] Grafana data source plugin
+- [ ] Kubernetes Helm chart
+- [ ] macOS/Linux agent packages

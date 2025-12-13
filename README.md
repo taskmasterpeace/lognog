@@ -87,12 +87,16 @@
 ### Core Features (All Versions)
 - **Real-time Log Search** - Powerful Splunk-like query language, sub-second results
 - **Live Tail** - SSE-powered real-time log streaming
-- **Custom Dashboards** - Build visualizations with line charts, bar charts, pie charts
+- **Custom Dashboards** - 7 visualization types with auto-refresh
+  - Table, Bar, Pie, Line/Area, Single Stat, Heatmap, Gauge
+  - Auto-refresh intervals (30s, 1m, 5m)
+  - Global time range selector
 - **File Integrity Monitoring (FIM)** - Know when critical files change
 - **Splunk-style Alerts** - Threshold-based triggers with email, webhook, and log actions
 - **Alert Silencing** - Suppress alerts by host, alert rule, or globally with time-based expiration
 - **Reports** - Generate and schedule HTML reports with email delivery
 - **Source Templates** - 15+ pre-built templates for common log sources
+- **API Key Management** - Create and manage API keys for integrations
 
 ### Query Language Features
 - **Boolean Logic** - Full AND, OR, NOT with parentheses grouping
@@ -413,6 +417,7 @@ Access templates at **Data Sources** in the UI or via API at `GET /api/templates
 | [LogNog Lite](docs/LOGNOG-LITE.md) | SQLite mode documentation |
 | [Database Templates](docs/DATABASE-TEMPLATES.md) | Database log templates |
 | [Agent Guide](agent/README.md) | LogNog In agent documentation |
+| [Feature Gap Analysis](docs/FEATURE-GAP-ANALYSIS.md) | Splunk comparison & roadmap |
 
 ---
 
@@ -482,9 +487,12 @@ SMTP_FROM=reports@example.com
 ## Roadmap
 
 ### Completed
-- [x] Custom dashboards with multiple chart types
+- [x] Custom dashboards with 7 visualization types
+- [x] Dashboard auto-refresh (30s, 1m, 5m intervals)
+- [x] Heatmap and Gauge chart types
 - [x] Report generation & scheduling
 - [x] User authentication with JWT
+- [x] API key management for integrations
 - [x] LogNog In agent (Windows) with GUI
 - [x] LogNog Lite (native Windows server)
 - [x] Splunk-style alert rules & notifications
@@ -496,17 +504,33 @@ SMTP_FROM=reports@example.com
 - [x] Customizable sound alerts
 - [x] Supabase Log Drains integration
 - [x] Vercel Log Drains integration
+- [x] Generic HTTP ingestion endpoint
 - [x] IP Classification (RFC compliant)
 - [x] GeoIP lookup (MaxMind)
 - [x] Source templates (15+ templates)
 - [x] Advanced DSL (OR/AND, math, strings, percentiles)
+- [x] Data retention with TTL (configurable)
 
-### Planned
+### Planned - Short Term
+- [ ] Dashboard variables ($host, $app dropdowns)
+- [ ] Click-to-drill-down on charts
+- [ ] Dashboard templates (pre-built layouts)
+- [ ] JSON batch import via UI
+- [ ] Table sorting and pagination
+
+### Planned - Medium Term
+- [ ] Sigma rule importer (3000+ security rules)
+- [ ] Lookup tables (CSV enrichment)
+- [ ] Public dashboard sharing (embed without login)
 - [ ] macOS/Linux agent packages
-- [ ] Kubernetes deployment (Helm chart)
-- [ ] Log forwarding between LogNog instances
+- [ ] Cloudflare Tunnel guide
+
+### Planned - Long Term
 - [ ] Machine learning anomaly detection
 - [ ] Natural language to DSL conversion
+- [ ] Grafana data source plugin
+- [ ] Kubernetes deployment (Helm chart)
+- [ ] Log forwarding between LogNog instances
 
 ---
 
