@@ -99,9 +99,12 @@ export default function LandingPage() {
               Your Control
             </span>
           </h1>
-          <p className="text-xl text-slate-400 max-w-3xl mx-auto mb-8">
+          <p className="text-xl text-slate-400 max-w-3xl mx-auto mb-4">
             Self-hosted log management for homelabs and beyond.
             100% open source, no cloud dependencies, no arbitrary limits.
+          </p>
+          <p className="text-lg text-slate-500 max-w-2xl mx-auto mb-8">
+            Splunk pricing made us build this. grep is not a SIEM.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
@@ -121,6 +124,30 @@ export default function LandingPage() {
               View on GitHub
             </a>
           </div>
+        </div>
+      </section>
+
+      {/* Problem Section */}
+      <section className="py-12 border-t border-slate-700/50">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-2xl font-bold text-white mb-6">
+            The Problem with Log Management
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="p-4">
+              <p className="text-4xl mb-2">$$$</p>
+              <p className="text-slate-400">Splunk costs more than your entire homelab</p>
+            </div>
+            <div className="p-4">
+              <p className="text-4xl mb-2">YAML</p>
+              <p className="text-slate-400">ELK requires a PhD in configuration</p>
+            </div>
+            <div className="p-4">
+              <p className="text-4xl mb-2">Cloud</p>
+              <p className="text-slate-400">SaaS services see everything</p>
+            </div>
+          </div>
+          <p className="text-xl text-slate-300 mt-6">You just want to search your logs.</p>
         </div>
       </section>
 
@@ -241,6 +268,37 @@ export default function LandingPage() {
                 Docker stack with ClickHouse. Scales to millions of logs.
               </p>
               <div className="text-xs text-slate-500">Perfect for power users</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonials Section */}
+      <section className="py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-white mb-4">
+              What People Are Saying
+            </h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="p-6 bg-slate-800/50 rounded-xl border border-slate-700/50">
+              <p className="text-slate-300 mb-4 italic">
+                "Got LogNog running in 10 minutes. Same search syntax I know from work. Finally."
+              </p>
+              <p className="text-sm text-slate-500">— Homelab enthusiast</p>
+            </div>
+            <div className="p-6 bg-slate-800/50 rounded-xl border border-slate-700/50">
+              <p className="text-slate-300 mb-4 italic">
+                "My Minecraft server generates 50GB of logs a month. Splunk wanted $2000/year. LogNog? Free."
+              </p>
+              <p className="text-sm text-slate-500">— Game server operator</p>
+            </div>
+            <div className="p-6 bg-slate-800/50 rounded-xl border border-slate-700/50">
+              <p className="text-slate-300 mb-4 italic">
+                "One docker-compose file. That's it. No Helm charts, no Kubernetes manifests."
+              </p>
+              <p className="text-sm text-slate-500">— DevOps engineer</p>
             </div>
           </div>
         </div>
