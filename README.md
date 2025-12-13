@@ -122,6 +122,15 @@
 </tr>
 </table>
 
+### Remote Access & Secure Deployment
+
+Need to access LogNog from outside your network? See our **[Deployment Guide](docs/DEPLOYMENT-GUIDE.md)** for:
+
+- **Cloudflare Tunnel** - Free, secure, no port forwarding needed
+- **Tailscale** - Private mesh network for team access
+- **VPS Deployment** - Run on Hetzner, DigitalOcean, etc.
+- **Self-hosted tunnels** - FRP, Rathole, Headscale options
+
 ---
 
 ## Features
