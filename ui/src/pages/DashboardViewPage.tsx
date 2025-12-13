@@ -17,6 +17,10 @@ import {
   Hash,
   Clock,
   ChevronDown,
+  Grid3X3,
+  Gauge,
+  Play,
+  Pause,
 } from 'lucide-react';
 import {
   XAxis,
@@ -40,6 +44,8 @@ import {
   deleteDashboardPanel,
   DashboardPanel,
 } from '../api/client';
+import { HeatmapChart, HeatmapData } from '../components/charts/HeatmapChart';
+import { GaugeChart } from '../components/charts/GaugeChart';
 
 const CHART_COLORS = ['#0ea5e9', '#8b5cf6', '#22c55e', '#f59e0b', '#ef4444', '#ec4899', '#06b6d4', '#84cc16'];
 
@@ -49,6 +55,15 @@ const VISUALIZATION_OPTIONS = [
   { value: 'pie', label: 'Pie Chart', icon: PieChartIcon },
   { value: 'line', label: 'Area Chart', icon: LineChart },
   { value: 'stat', label: 'Single Stat', icon: Hash },
+  { value: 'heatmap', label: 'Heatmap', icon: Grid3X3 },
+  { value: 'gauge', label: 'Gauge', icon: Gauge },
+];
+
+const AUTO_REFRESH_OPTIONS = [
+  { label: 'Off', value: 0 },
+  { label: '30 seconds', value: 30000 },
+  { label: '1 minute', value: 60000 },
+  { label: '5 minutes', value: 300000 },
 ];
 
 const TIME_PRESETS = [
@@ -230,6 +245,39 @@ function PanelVisualization({
         </div>
       );
 
+    case 'heatmap':
+      // Convert results to heatmap format (expects hour, day, value fields or similar)
+      const heatmapData: HeatmapData[] = results.map((item, i) => {
+        // Try to extract hour and day from timestamp or use index-based fallback
+        const hour = typeof item.hour === 'number' ? item.hour :
+                    typeof item.timestamp === 'string' ? new Date(item.timestamp).getHours() : i % 24;
+        const day = typeof item.day === 'number' ? item.day :
+                   typeof item.timestamp === 'string' ? new Date(item.timestamp).getDay() : Math.floor(i / 24) % 7;
+        const value = Number(item[valueKey]) || Number(item.count) || Number(item.value) || 0;
+        return { hour, day, value };
+      });
+      return (
+        <div className="h-full w-full">
+          <HeatmapChart data={heatmapData} height={240} />
+        </div>
+      );
+
+    case 'gauge':
+      // Use the first numeric value as the gauge value
+      const gaugeValue = results[0] ? Number(Object.values(results[0]).find(v => typeof v === 'number') || 0) : 0;
+      // Try to determine max from data or use 100 as default
+      const maxGaugeValue = Math.max(gaugeValue * 1.2, 100);
+      return (
+        <div className="h-full w-full flex items-center justify-center">
+          <GaugeChart
+            value={gaugeValue}
+            max={maxGaugeValue}
+            height={200}
+            thresholds={{ low: maxGaugeValue * 0.33, medium: maxGaugeValue * 0.66, high: maxGaugeValue }}
+          />
+        </div>
+      );
+
     case 'table':
     default:
       return (
@@ -364,7 +412,7 @@ function PanelEditor({ panel, onSave, onCancel, saving }: PanelEditorProps) {
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1.5">Visualization</label>
-            <div className="grid grid-cols-5 gap-2">
+            <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
               {VISUALIZATION_OPTIONS.map((option) => {
                 const Icon = option.icon;
                 return (
@@ -410,6 +458,8 @@ export default function DashboardViewPage() {
 
   const [timeRange, setTimeRange] = useState('-24h');
   const [showTimeDropdown, setShowTimeDropdown] = useState(false);
+  const [showAutoRefreshDropdown, setShowAutoRefreshDropdown] = useState(false);
+  const [autoRefreshInterval, setAutoRefreshInterval] = useState(0);
   const [showPanelEditor, setShowPanelEditor] = useState(false);
   const [editingPanel, setEditingPanel] = useState<DashboardPanel | undefined>();
   const [panelData, setPanelData] = useState<Record<string, PanelData>>({});
@@ -478,6 +528,16 @@ export default function DashboardViewPage() {
   const handleRefreshAll = () => {
     setRefreshKey((k) => k + 1);
   };
+
+  // Auto-refresh effect
+  useEffect(() => {
+    if (autoRefreshInterval > 0) {
+      const interval = setInterval(() => {
+        setRefreshKey((k) => k + 1);
+      }, autoRefreshInterval);
+      return () => clearInterval(interval);
+    }
+  }, [autoRefreshInterval]);
 
   const handleEditPanel = (panel: DashboardPanel) => {
     setEditingPanel(panel);
@@ -567,9 +627,46 @@ export default function DashboardViewPage() {
                 )}
               </div>
 
+              {/* Auto-Refresh Selector */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowAutoRefreshDropdown(!showAutoRefreshDropdown)}
+                  className={`btn-secondary ${autoRefreshInterval > 0 ? 'text-green-600 border-green-300' : ''}`}
+                >
+                  {autoRefreshInterval > 0 ? (
+                    <Play className="w-4 h-4 text-green-500" />
+                  ) : (
+                    <Pause className="w-4 h-4 text-slate-400" />
+                  )}
+                  <span className="hidden sm:inline">
+                    {AUTO_REFRESH_OPTIONS.find(o => o.value === autoRefreshInterval)?.label || 'Auto-refresh'}
+                  </span>
+                  <ChevronDown className="w-4 h-4 text-slate-400" />
+                </button>
+
+                {showAutoRefreshDropdown && (
+                  <div className="dropdown right-0 w-36 animate-fade-in">
+                    {AUTO_REFRESH_OPTIONS.map((option) => (
+                      <button
+                        key={option.value}
+                        onClick={() => {
+                          setAutoRefreshInterval(option.value);
+                          setShowAutoRefreshDropdown(false);
+                        }}
+                        className={`dropdown-item ${
+                          autoRefreshInterval === option.value ? 'bg-sky-50 text-sky-600 font-medium' : ''
+                        }`}
+                      >
+                        {option.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <button onClick={handleRefreshAll} className="btn-secondary">
-                <RefreshCw className="w-4 h-4" />
-                <span>Refresh</span>
+                <RefreshCw className={`w-4 h-4 ${autoRefreshInterval > 0 ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">Refresh</span>
               </button>
 
               <button
