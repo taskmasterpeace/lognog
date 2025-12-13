@@ -38,6 +38,8 @@
 
 ## How LogNog Compares
 
+![LogNog vs Splunk vs ELK vs Grafana Loki](compare.png)
+
 | Feature | LogNog | Splunk | ELK Stack | Grafana Loki |
 |---------|--------|--------|-----------|--------------|
 | **Cost** | Free (MIT) | $$$$ | Free* | Free* |
