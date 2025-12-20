@@ -25,7 +25,7 @@
 
 ## Why LogNog?
 
-**Splunk lost its way.** What started as a powerful tool for everyone became an enterprise-only product with pricing that locks out homelabbers, small teams, and independent developers. The dev license? A joke.
+**Enterprise log management shouldn't require enterprise budgets.** Tools like Splunk offer powerful features, but their pricing puts them out of reach for homelabbers, small teams, and independent developers. The typical dev license limits? Often too restrictive for real-world testing.
 
 **LogNog is different:**
 - 100% open source (MIT license)
@@ -217,6 +217,25 @@ Ingest logs from Vercel deployments (serverless functions, edge, builds):
 2. Add Log Drain → Custom HTTP endpoint
 3. URL: `https://your-lognog-server/api/ingest/vercel`
 4. Headers: `X-API-Key: your-lognog-api-key`
+
+### Claude Desktop (MCP)
+Connect LogNog to Claude Desktop for AI-powered log management:
+1. Generate API key in LogNog (Settings → API Keys)
+2. Add to Claude Desktop config (`claude_desktop_config.json`):
+   ```json
+   {
+     "mcpServers": {
+       "lognog": {
+         "command": "curl",
+         "args": ["-N", "-H", "X-API-Key: YOUR_KEY", "http://localhost:4000/mcp/sse"]
+       }
+     }
+   }
+   ```
+3. Restart Claude Desktop
+4. Ask Claude: "Show me error logs from the last hour"
+
+[Full MCP Documentation →](docs/MCP-INTEGRATION.md)
 
 ---
 
@@ -511,6 +530,7 @@ Access templates at **Data Sources** in the UI or via API at `GET /api/templates
 | [Codebase Interview Wizard](docs/CODEBASE-INTERVIEW-WIZARD.md) | Help dev teams implement logging |
 | [Supabase Integration](docs/SUPABASE-INTEGRATION.md) | Supabase Log Drains setup |
 | [Vercel Integration](docs/VERCEL-INTEGRATION.md) | Vercel Log Drains setup |
+| [MCP Integration](docs/MCP-INTEGRATION.md) | Claude Desktop / AI integration |
 | [IP Classification](docs/IP-CLASSIFICATION.md) | IP categorization features |
 | [GeoIP Implementation](docs/GEOIP-IMPLEMENTATION.md) | GeoIP lookup setup |
 | [OTLP Authentication](docs/OTLP_AUTHENTICATION.md) | OpenTelemetry auth config |
