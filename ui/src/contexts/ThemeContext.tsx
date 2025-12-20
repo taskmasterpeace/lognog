@@ -13,7 +13,7 @@ const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() => {
     // Check localStorage first
-    const stored = localStorage.getItem('spunk-theme') as Theme | null;
+    const stored = localStorage.getItem('lognog-theme') as Theme | null;
     if (stored === 'light' || stored === 'dark') {
       return stored;
     }
@@ -36,7 +36,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     root.classList.add(theme);
 
     // Persist to localStorage
-    localStorage.setItem('spunk-theme', theme);
+    localStorage.setItem('lognog-theme', theme);
   }, [theme]);
 
   // Listen for system preference changes
@@ -45,7 +45,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
     const handleChange = (e: MediaQueryListEvent) => {
       // Only auto-switch if user hasn't manually set a preference
-      const stored = localStorage.getItem('spunk-theme');
+      const stored = localStorage.getItem('lognog-theme');
       if (!stored) {
         setThemeState(e.matches ? 'dark' : 'light');
       }

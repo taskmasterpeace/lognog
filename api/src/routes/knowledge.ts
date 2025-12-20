@@ -645,23 +645,23 @@ async function executePythonScript(
   return new Promise((resolve, reject) => {
     // Create a temporary script file
     const tmpDir = os.tmpdir();
-    const scriptPath = path.join(tmpDir, `spunk_script_${Date.now()}.py`);
+    const scriptPath = path.join(tmpDir, `lognog_script_${Date.now()}.py`);
 
     // Wrap the script with context injection and output capture
     const wrappedScript = `
 import json
 import sys
 
-# Context passed from Spunk
+# Context passed from LogNog
 context = json.loads('''${JSON.stringify(context).replace(/'/g, "\\'")}''')
 
 # User script output
-_spunk_output = None
+_lognog_output = None
 
 def set_output(value):
-    """Set the output value to return to Spunk"""
-    global _spunk_output
-    _spunk_output = value
+    """Set the output value to return to LogNog"""
+    global _lognog_output
+    _lognog_output = value
 
 def get_field(name, default=None):
     """Get a field value from the log context"""
@@ -672,8 +672,8 @@ ${scriptContent}
 # --- USER SCRIPT ENDS HERE ---
 
 # Output the result
-if _spunk_output is not None:
-    print("__SPUNK_OUTPUT__:" + json.dumps(_spunk_output))
+if _lognog_output is not None:
+    print("__LOGNOG_OUTPUT__:" + json.dumps(_lognog_output))
 `;
 
     try {
@@ -706,11 +706,11 @@ if _spunk_output is not None:
 
         // Parse output
         let output: unknown = null;
-        const outputMatch = stdout.match(/__SPUNK_OUTPUT__:(.+)/);
+        const outputMatch = stdout.match(/__LOGNOG_OUTPUT__:(.+)/);
         if (outputMatch) {
           try {
             output = JSON.parse(outputMatch[1]);
-            stdout = stdout.replace(/__SPUNK_OUTPUT__:.+\n?/, '').trim();
+            stdout = stdout.replace(/__LOGNOG_OUTPUT__:.+\n?/, '').trim();
           } catch (e) {
             // Output wasn't valid JSON
           }

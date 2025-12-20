@@ -10,27 +10,27 @@ router.get('/overview', async (_req: Request, res: Response) => {
     const [totalLogs, recentLogs, bySeverity, byHost, byApp] = await Promise.all([
       // Total log count
       executeQuery<{ count: number }>(
-        'SELECT count() as count FROM spunk.logs'
+        'SELECT count() as count FROM lognog.logs'
       ),
 
       // Logs in last 24 hours
       executeQuery<{ count: number }>(
-        "SELECT count() as count FROM spunk.logs WHERE timestamp > now() - INTERVAL 24 HOUR"
+        "SELECT count() as count FROM lognog.logs WHERE timestamp > now() - INTERVAL 24 HOUR"
       ),
 
       // Logs by severity
       executeQuery<{ severity: number; count: number }>(
-        'SELECT severity, count() as count FROM spunk.logs GROUP BY severity ORDER BY severity'
+        'SELECT severity, count() as count FROM lognog.logs GROUP BY severity ORDER BY severity'
       ),
 
       // Top hosts
       executeQuery<{ hostname: string; count: number }>(
-        'SELECT hostname, count() as count FROM spunk.logs GROUP BY hostname ORDER BY count DESC LIMIT 10'
+        'SELECT hostname, count() as count FROM lognog.logs GROUP BY hostname ORDER BY count DESC LIMIT 10'
       ),
 
       // Top apps
       executeQuery<{ app_name: string; count: number }>(
-        'SELECT app_name, count() as count FROM spunk.logs GROUP BY app_name ORDER BY count DESC LIMIT 10'
+        'SELECT app_name, count() as count FROM lognog.logs GROUP BY app_name ORDER BY count DESC LIMIT 10'
       ),
     ]);
 
@@ -63,7 +63,7 @@ router.get('/timeseries', async (req: Request, res: Response) => {
         toStartOfInterval(timestamp, INTERVAL ${interval}) as time,
         count() as count,
         countIf(severity <= 3) as errors
-      FROM spunk.logs
+      FROM lognog.logs
       WHERE timestamp > now() - INTERVAL ${parseInt(hours as string, 10)} HOUR
       GROUP BY time
       ORDER BY time`
@@ -84,8 +84,8 @@ router.get('/severity', async (_req: Request, res: Response) => {
         l.severity,
         s.name,
         count() as count
-      FROM spunk.logs l
-      LEFT JOIN spunk.severity_levels s ON l.severity = s.level
+      FROM lognog.logs l
+      LEFT JOIN lognog.severity_levels s ON l.severity = s.level
       WHERE timestamp > now() - INTERVAL 24 HOUR
       GROUP BY l.severity, s.name
       ORDER BY l.severity`
@@ -106,7 +106,7 @@ router.get('/indexes', async (_req: Request, res: Response) => {
         index_name,
         count() as count,
         sum(length(message)) as size_bytes
-      FROM spunk.logs
+      FROM lognog.logs
       GROUP BY index_name`
     );
 

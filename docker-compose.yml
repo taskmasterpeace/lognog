@@ -36,6 +36,7 @@ services:
     volumes:
       - ./vector/vector.toml:/etc/vector/vector.toml:ro
       - vector-data:/var/lib/vector
+      - /var/run/docker.sock:/var/run/docker.sock:ro  # Docker logs collection
     depends_on:
       clickhouse:
         condition: service_healthy
@@ -62,9 +63,17 @@ services:
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-lognog-refresh-secret-change-me}
       OTLP_REQUIRE_AUTH: ${OTLP_REQUIRE_AUTH:-true}
       GEOIP_DATA_PATH: /data/geoip
+      OLLAMA_URL: ${OLLAMA_URL:-http://ollama:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-deepseek-coder-v2:16b}
+      OLLAMA_REASONING_MODEL: ${OLLAMA_REASONING_MODEL:-qwen3:30b}
+      OLLAMA_EMBED_MODEL: ${OLLAMA_EMBED_MODEL:-nomic-embed-text}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-anthropic/claude-3.5-sonnet}
+      LLAMAINDEX_PERSIST_DIR: /data/llamaindex
     volumes:
       - api-data:/data
       - geoip-data:/data/geoip
+      - llamaindex-data:/data/llamaindex
     depends_on:
       clickhouse:
         condition: service_healthy
@@ -122,6 +131,44 @@ services:
     profiles:
       - testing
 
+  # Cloudflare Tunnel - Expose LogNog to the internet securely
+  # No port forwarding needed, no firewall changes
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: lognog-cloudflared
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN:-}
+    restart: unless-stopped
+    depends_on:
+      - nginx
+    networks:
+      - lognog-network
+    profiles:
+      - tunnel
+
+  # Ollama - Local AI (GPU)
+  ollama:
+    image: ollama/ollama:latest
+    container_name: lognog-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    networks:
+      - lognog-network
+    profiles:
+      - ai
+
 networks:
   lognog-network:
     driver: bridge
@@ -131,3 +178,5 @@ volumes:
   vector-data:
   api-data:
   geoip-data:
+  ollama-data:
+  llamaindex-data:

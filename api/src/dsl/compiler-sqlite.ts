@@ -3,7 +3,7 @@
  *
  * This compiler generates SQLite-compatible SQL instead of ClickHouse SQL.
  * Key differences:
- * - Uses 'logs' table instead of 'spunk.logs'
+ * - Uses 'logs' table instead of 'lognog.logs'
  * - Replaces ClickHouse functions with SQLite equivalents
  * - Different time functions
  */
@@ -195,7 +195,7 @@ export class SQLiteCompiler {
       sql += selectFields.join(', ');
     }
 
-    // Use 'logs' table for SQLite (not 'spunk.logs')
+    // Use 'logs' table for SQLite (not 'lognog.logs')
     sql += ' FROM logs';
 
     if (whereConditions.length > 0) {

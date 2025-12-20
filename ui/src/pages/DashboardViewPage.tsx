@@ -1,8 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
-  ArrowLeft,
   Plus,
   RefreshCw,
   Loader2,
@@ -21,6 +20,13 @@ import {
   Gauge,
   Play,
   Pause,
+  Palette,
+  Share2,
+  Settings,
+  Move,
+  Download,
+  Sparkles,
+  Variable,
 } from 'lucide-react';
 import {
   XAxis,
@@ -42,10 +48,29 @@ import {
   createDashboardPanel,
   updateDashboardPanel,
   deleteDashboardPanel,
+  updateDashboardLayout,
+  getDashboardVariables,
+  exportDashboard,
   DashboardPanel,
+  DashboardVariable as APIDashboardVariable,
 } from '../api/client';
 import { HeatmapChart, HeatmapData } from '../components/charts/HeatmapChart';
 import { GaugeChart } from '../components/charts/GaugeChart';
+import {
+  DashboardGrid,
+  DashboardHeader,
+  DashboardBrandingModal,
+  DashboardShareModal,
+  DashboardVariablesBar,
+  VariableEditorModal,
+  PaginatedTable,
+  useDrilldown,
+  AIInsightsPanel,
+  type PanelLayout,
+  type DashboardVariable,
+} from '../components/dashboard';
+import { InfoTip } from '../components/ui/InfoTip';
+import { Tooltip as FloatingTooltip } from '../components/ui/Tooltip';
 
 const CHART_COLORS = ['#0ea5e9', '#8b5cf6', '#22c55e', '#f59e0b', '#ef4444', '#ec4899', '#06b6d4', '#84cc16'];
 
@@ -84,10 +109,12 @@ function PanelVisualization({
   panel,
   data,
   onRefresh,
+  onDrilldown,
 }: {
   panel: DashboardPanel;
   data: PanelData;
   onRefresh: () => void;
+  onDrilldown?: (field: string, value: string) => void;
 }) {
   if (data.loading) {
     return (
@@ -122,11 +149,17 @@ function PanelVisualization({
   const valueKey = keys.find(k => typeof results[0][k] === 'number') || keys[keys.length - 1];
   const labelKey = keys.find(k => k !== valueKey) || keys[0];
 
+  const handleChartClick = (chartData: Record<string, unknown>) => {
+    if (onDrilldown && labelKey && chartData[labelKey]) {
+      onDrilldown(labelKey, String(chartData[labelKey]));
+    }
+  };
+
   switch (panel.visualization) {
     case 'bar':
       return (
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={results} layout="vertical" barSize={20}>
+          <BarChart data={results} layout="vertical" barSize={20} onClick={(e) => e?.activePayload?.[0]?.payload && handleChartClick(e.activePayload[0].payload)}>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
             <XAxis type="number" stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} />
             <YAxis
@@ -145,7 +178,7 @@ function PanelVisualization({
                 fontSize: '12px',
               }}
             />
-            <Bar dataKey={valueKey} fill="#0ea5e9" radius={[0, 4, 4, 0]} />
+            <Bar dataKey={valueKey} fill="#0ea5e9" radius={[0, 4, 4, 0]} cursor="pointer" />
           </BarChart>
         </ResponsiveContainer>
       );
@@ -168,9 +201,15 @@ function PanelVisualization({
                 outerRadius="80%"
                 paddingAngle={2}
                 dataKey="value"
+                onClick={(_, index) => {
+                  const item = results[index];
+                  if (item && onDrilldown) {
+                    handleChartClick(item);
+                  }
+                }}
               >
                 {pieData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.fill} />
+                  <Cell key={`cell-${index}`} fill={entry.fill} cursor="pointer" />
                 ))}
               </Pie>
               <Tooltip
@@ -196,7 +235,7 @@ function PanelVisualization({
     case 'line':
       return (
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={results}>
+          <AreaChart data={results} onClick={(e) => e?.activePayload?.[0]?.payload && handleChartClick(e.activePayload[0].payload)}>
             <defs>
               <linearGradient id={`color-${panel.id}`} x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.3} />
@@ -230,6 +269,7 @@ function PanelVisualization({
               stroke="#0ea5e9"
               strokeWidth={2}
               fill={`url(#color-${panel.id})`}
+              cursor="pointer"
             />
           </AreaChart>
         </ResponsiveContainer>
@@ -246,9 +286,7 @@ function PanelVisualization({
       );
 
     case 'heatmap':
-      // Convert results to heatmap format (expects hour, day, value fields or similar)
       const heatmapData: HeatmapData[] = results.map((item, i) => {
-        // Try to extract hour and day from timestamp or use index-based fallback
         const hour = typeof item.hour === 'number' ? item.hour :
                     typeof item.timestamp === 'string' ? new Date(item.timestamp).getHours() : i % 24;
         const day = typeof item.day === 'number' ? item.day :
@@ -263,9 +301,7 @@ function PanelVisualization({
       );
 
     case 'gauge':
-      // Use the first numeric value as the gauge value
       const gaugeValue = results[0] ? Number(Object.values(results[0]).find(v => typeof v === 'number') || 0) : 0;
-      // Try to determine max from data or use 100 as default
       const maxGaugeValue = Math.max(gaugeValue * 1.2, 100);
       return (
         <div className="h-full w-full flex items-center justify-center">
@@ -281,30 +317,18 @@ function PanelVisualization({
     case 'table':
     default:
       return (
-        <div className="h-full overflow-auto">
-          <table className="w-full text-sm">
-            <thead className="sticky top-0 bg-white">
-              <tr>
-                {keys.map((key) => (
-                  <th key={key} className="text-left p-2 border-b border-slate-200 font-medium text-slate-600">
-                    {key}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {results.slice(0, 100).map((row, i) => (
-                <tr key={i} className="hover:bg-slate-50">
-                  {keys.map((key) => (
-                    <td key={key} className="p-2 border-b border-slate-100 text-slate-700">
-                      {String(row[key] ?? '')}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <PaginatedTable
+          data={results}
+          pageSize={10}
+          onRowClick={(row) => {
+            if (onDrilldown && keys.length > 0) {
+              const firstKey = keys[0];
+              if (row[firstKey]) {
+                onDrilldown(firstKey, String(row[firstKey]));
+              }
+            }
+          }}
+        />
       );
   }
 }
@@ -315,24 +339,29 @@ function PanelCard({
   onEdit,
   onDelete,
   onRefresh,
+  onDrilldown,
+  editMode,
 }: {
   panel: DashboardPanel;
   data: PanelData;
   onEdit: () => void;
   onDelete: () => void;
   onRefresh: () => void;
+  onDrilldown?: (field: string, value: string) => void;
+  editMode?: boolean;
 }) {
   const vizOption = VISUALIZATION_OPTIONS.find(v => v.value === panel.visualization) || VISUALIZATION_OPTIONS[0];
   const VizIcon = vizOption.icon;
 
   return (
     <div className="card flex flex-col h-full">
-      <div className="flex items-center justify-between p-3 border-b border-slate-100">
+      <div className={`flex items-center justify-between p-3 border-b border-slate-100 ${editMode ? 'panel-drag-handle cursor-move' : ''}`}>
         <div className="flex items-center gap-2">
+          {editMode && <Move className="w-4 h-4 text-slate-400" />}
           <VizIcon className="w-4 h-4 text-slate-400" />
           <h3 className="font-medium text-slate-900 truncate">{panel.title}</h3>
         </div>
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className={`flex items-center gap-1 ${editMode ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}>
           <button onClick={onRefresh} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded">
             <RefreshCw className="w-3.5 h-3.5" />
           </button>
@@ -345,7 +374,7 @@ function PanelCard({
         </div>
       </div>
       <div className="flex-1 p-3 min-h-0">
-        <PanelVisualization panel={panel} data={data} onRefresh={onRefresh} />
+        <PanelVisualization panel={panel} data={data} onRefresh={onRefresh} onDrilldown={onDrilldown} />
       </div>
     </div>
   );
@@ -385,7 +414,13 @@ function PanelEditor({ panel, onSave, onCancel, saving }: PanelEditorProps) {
 
         <div className="modal-body space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Title</label>
+            <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-1.5">
+              Title
+              <InfoTip
+                content="Display name for this panel shown in the dashboard"
+                placement="right"
+              />
+            </label>
             <input
               type="text"
               value={title}
@@ -397,7 +432,20 @@ function PanelEditor({ panel, onSave, onCancel, saving }: PanelEditorProps) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Query</label>
+            <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-1.5">
+              Query
+              <InfoTip
+                content={
+                  <div className="space-y-1">
+                    <p>DSL query to fetch data for this panel. Use aggregation queries for charts.</p>
+                    <p className="text-xs opacity-80 mt-2">Tip: Use <code className="bg-gray-800 px-1 rounded">$variable$</code> syntax to reference dashboard variables</p>
+                  </div>
+                }
+                code="search * | stats count by hostname
+search error | timechart span=1h count"
+                placement="right"
+              />
+            </label>
             <textarea
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -406,28 +454,49 @@ function PanelEditor({ panel, onSave, onCancel, saving }: PanelEditorProps) {
               className="input font-mono text-sm resize-none"
             />
             <p className="text-xs text-slate-500 mt-1">
-              Use aggregation queries (stats count by ...) for charts, or table commands for tables
+              Use $variable$ syntax to reference dashboard variables. Use aggregation queries for charts.
             </p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Visualization</label>
+            <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-1.5">
+              Visualization
+              <InfoTip
+                content={
+                  <div className="space-y-1 text-xs">
+                    <p><strong>Table:</strong> Display raw results in a tabular format</p>
+                    <p><strong>Bar Chart:</strong> Compare values across categories</p>
+                    <p><strong>Pie Chart:</strong> Show proportions of a whole</p>
+                    <p><strong>Area Chart:</strong> Display trends over time</p>
+                    <p><strong>Single Stat:</strong> Show one key metric prominently</p>
+                    <p><strong>Heatmap:</strong> Visualize patterns in 2D data</p>
+                    <p><strong>Gauge:</strong> Display a metric with min/max range</p>
+                  </div>
+                }
+                placement="right"
+              />
+            </label>
             <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
               {VISUALIZATION_OPTIONS.map((option) => {
                 const Icon = option.icon;
                 return (
-                  <button
+                  <FloatingTooltip
                     key={option.value}
-                    onClick={() => setVisualization(option.value)}
-                    className={`flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-all ${
-                      visualization === option.value
-                        ? 'border-sky-500 bg-sky-50 text-sky-700'
-                        : 'border-slate-200 hover:border-slate-300 text-slate-600'
-                    }`}
+                    content={option.label}
+                    placement="top"
                   >
-                    <Icon className="w-5 h-5" />
-                    <span className="text-xs font-medium">{option.label}</span>
-                  </button>
+                    <button
+                      onClick={() => setVisualization(option.value)}
+                      className={`flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-all ${
+                        visualization === option.value
+                          ? 'border-sky-500 bg-sky-50 text-sky-700'
+                          : 'border-slate-200 hover:border-slate-300 text-slate-600'
+                      }`}
+                    >
+                      <Icon className="w-5 h-5" />
+                      <span className="text-xs font-medium">{option.label}</span>
+                    </button>
+                  </FloatingTooltip>
                 );
               })}
             </div>
@@ -455,6 +524,7 @@ function PanelEditor({ panel, onSave, onCancel, saving }: PanelEditorProps) {
 export default function DashboardViewPage() {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
+  const { drilldown } = useDrilldown();
 
   const [timeRange, setTimeRange] = useState('-24h');
   const [showTimeDropdown, setShowTimeDropdown] = useState(false);
@@ -465,11 +535,63 @@ export default function DashboardViewPage() {
   const [panelData, setPanelData] = useState<Record<string, PanelData>>({});
   const [refreshKey, setRefreshKey] = useState(0);
 
+  // New state for enhanced features
+  const [editMode, setEditMode] = useState(false);
+  const [showBrandingModal, setShowBrandingModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [showVariableEditor, setShowVariableEditor] = useState(false);
+  const [variableValues, setVariableValues] = useState<Record<string, string>>({});
+  const [showActionsDropdown, setShowActionsDropdown] = useState(false);
+  const [showAIInsights, setShowAIInsights] = useState(false);
+
   const { data: dashboard, isLoading, error } = useQuery({
     queryKey: ['dashboard', id],
     queryFn: () => getDashboard(id!),
     enabled: !!id,
   });
+
+  const { data: variables = [] } = useQuery({
+    queryKey: ['dashboard-variables', id],
+    queryFn: () => getDashboardVariables(id!),
+    enabled: !!id,
+  });
+
+  // Convert API variables to component format
+  const dashboardVariables: DashboardVariable[] = useMemo(() => {
+    return variables.map((v: APIDashboardVariable) => ({
+      id: v.id || v.name,
+      name: v.name,
+      label: v.label || v.name,
+      type: v.type as DashboardVariable['type'],
+      default_value: v.default_value,
+      query: v.query,
+      options: v.type === 'custom' && v.default_value ? v.default_value.split(',') : undefined,
+      multi_select: v.multi_select ?? false,
+      include_all: v.include_all ?? false,
+    }));
+  }, [variables]);
+
+  // Initialize variable values from defaults
+  useEffect(() => {
+    const defaults: Record<string, string> = {};
+    dashboardVariables.forEach((v) => {
+      if (v.default_value && !variableValues[v.name]) {
+        defaults[v.name] = v.default_value;
+      }
+    });
+    if (Object.keys(defaults).length > 0) {
+      setVariableValues((prev) => ({ ...prev, ...defaults }));
+    }
+  }, [dashboardVariables]);
+
+  // Function to substitute variables in query
+  const substituteVariables = useCallback((query: string): string => {
+    let result = query;
+    Object.entries(variableValues).forEach(([name, value]) => {
+      result = result.replace(new RegExp(`\\$${name}\\$`, 'g'), value);
+    });
+    return result;
+  }, [variableValues]);
 
   const createPanelMutation = useMutation({
     mutationFn: (data: { title: string; query: string; visualization: string }) =>
@@ -497,6 +619,14 @@ export default function DashboardViewPage() {
     },
   });
 
+  const updateLayoutMutation = useMutation({
+    mutationFn: (layout: Array<{ panelId: string; x: number; y: number; w: number; h: number }>) =>
+      updateDashboardLayout(id!, layout),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dashboard', id] });
+    },
+  });
+
   const fetchPanelData = useCallback(async (panel: DashboardPanel) => {
     setPanelData((prev) => ({
       ...prev,
@@ -504,7 +634,8 @@ export default function DashboardViewPage() {
     }));
 
     try {
-      const result = await executeSearch(panel.query, timeRange);
+      const queryWithVars = substituteVariables(panel.query);
+      const result = await executeSearch(queryWithVars, timeRange);
       setPanelData((prev) => ({
         ...prev,
         [panel.id]: { results: result.results, loading: false, error: null },
@@ -515,7 +646,7 @@ export default function DashboardViewPage() {
         [panel.id]: { results: [], loading: false, error: String(err) },
       }));
     }
-  }, [timeRange]);
+  }, [timeRange, substituteVariables]);
 
   useEffect(() => {
     if (dashboard?.panels) {
@@ -523,7 +654,7 @@ export default function DashboardViewPage() {
         fetchPanelData(panel);
       });
     }
-  }, [dashboard?.panels, timeRange, refreshKey, fetchPanelData]);
+  }, [dashboard?.panels, timeRange, refreshKey, fetchPanelData, variableValues]);
 
   const handleRefreshAll = () => {
     setRefreshKey((k) => k + 1);
@@ -551,6 +682,54 @@ export default function DashboardViewPage() {
       createPanelMutation.mutate(data);
     }
   };
+
+  const handleLayoutChange = (newLayout: PanelLayout[]) => {
+    if (!editMode) return;
+
+    const layoutUpdate = newLayout.map((item) => ({
+      panelId: item.id,
+      x: item.x,
+      y: item.y,
+      w: item.w,
+      h: item.h,
+    }));
+
+    updateLayoutMutation.mutate(layoutUpdate);
+  };
+
+  const handleDrilldown = (field: string, value: string) => {
+    drilldown({ field, value, timeRange });
+  };
+
+  const handleExport = async () => {
+    if (!id) return;
+    try {
+      const exportData = await exportDashboard(id);
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${dashboard?.name || 'dashboard'}-export.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Export failed:', err);
+    }
+  };
+
+  // Convert panels to layout format
+  const panelLayouts: PanelLayout[] = useMemo(() => {
+    if (!dashboard?.panels) return [];
+    return dashboard.panels.map((panel, index) => ({
+      id: panel.id,
+      x: panel.position_x ?? (index % 3) * 4,
+      y: panel.position_y ?? Math.floor(index / 3) * 4,
+      w: panel.width ?? 4,
+      h: panel.height ?? 4,
+    }));
+  }, [dashboard?.panels]);
 
   if (isLoading) {
     return (
@@ -580,109 +759,195 @@ export default function DashboardViewPage() {
   return (
     <div className="min-h-full bg-slate-50 dark:bg-slate-900 flex flex-col">
       {/* Header */}
-      <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 shadow-sm">
-        <div className="p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Link to="/dashboards" className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg">
-                <ArrowLeft className="w-5 h-5" />
-              </Link>
-              <div>
-                <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">{dashboard.name}</h1>
-                {dashboard.description && (
-                  <p className="text-slate-500 dark:text-slate-400 text-sm">{dashboard.description}</p>
-                )}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {/* Time Range Selector */}
-              <div className="relative">
-                <button
-                  onClick={() => setShowTimeDropdown(!showTimeDropdown)}
-                  className="btn-secondary"
-                >
-                  <Clock className="w-4 h-4 text-slate-400" />
-                  <span>{selectedPreset.label}</span>
-                  <ChevronDown className="w-4 h-4 text-slate-400" />
-                </button>
-
-                {showTimeDropdown && (
-                  <div className="dropdown right-0 w-48 animate-fade-in">
-                    {TIME_PRESETS.map((preset) => (
-                      <button
-                        key={preset.value}
-                        onClick={() => {
-                          setTimeRange(preset.value);
-                          setShowTimeDropdown(false);
-                        }}
-                        className={`dropdown-item ${
-                          timeRange === preset.value ? 'bg-sky-50 text-sky-600 font-medium' : ''
-                        }`}
-                      >
-                        {preset.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Auto-Refresh Selector */}
-              <div className="relative">
-                <button
-                  onClick={() => setShowAutoRefreshDropdown(!showAutoRefreshDropdown)}
-                  className={`btn-secondary ${autoRefreshInterval > 0 ? 'text-green-600 border-green-300' : ''}`}
-                >
-                  {autoRefreshInterval > 0 ? (
-                    <Play className="w-4 h-4 text-green-500" />
-                  ) : (
-                    <Pause className="w-4 h-4 text-slate-400" />
-                  )}
-                  <span className="hidden sm:inline">
-                    {AUTO_REFRESH_OPTIONS.find(o => o.value === autoRefreshInterval)?.label || 'Auto-refresh'}
-                  </span>
-                  <ChevronDown className="w-4 h-4 text-slate-400" />
-                </button>
-
-                {showAutoRefreshDropdown && (
-                  <div className="dropdown right-0 w-36 animate-fade-in">
-                    {AUTO_REFRESH_OPTIONS.map((option) => (
-                      <button
-                        key={option.value}
-                        onClick={() => {
-                          setAutoRefreshInterval(option.value);
-                          setShowAutoRefreshDropdown(false);
-                        }}
-                        className={`dropdown-item ${
-                          autoRefreshInterval === option.value ? 'bg-sky-50 text-sky-600 font-medium' : ''
-                        }`}
-                      >
-                        {option.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <button onClick={handleRefreshAll} className="btn-secondary">
-                <RefreshCw className={`w-4 h-4 ${autoRefreshInterval > 0 ? 'animate-spin' : ''}`} />
-                <span className="hidden sm:inline">Refresh</span>
-              </button>
-
+      <DashboardHeader
+        name={dashboard.name}
+        description={dashboard.description}
+        logoUrl={dashboard.logo_url}
+        accentColor={dashboard.accent_color}
+        headerColor={dashboard.header_color}
+        backLink="/dashboards"
+        actions={
+          <div className="flex items-center gap-2">
+            {/* Variables */}
+            {dashboardVariables.length > 0 && (
               <button
-                onClick={() => {
-                  setEditingPanel(undefined);
-                  setShowPanelEditor(true);
-                }}
-                className="btn-primary"
+                onClick={() => setShowVariableEditor(true)}
+                className="btn-secondary"
+                title="Edit Variables"
               >
-                <Plus className="w-4 h-4" />
-                <span>Add Panel</span>
+                <Variable className="w-4 h-4" />
               </button>
+            )}
+
+            {/* Time Range Selector */}
+            <div className="relative">
+              <button
+                onClick={() => setShowTimeDropdown(!showTimeDropdown)}
+                className="btn-secondary"
+              >
+                <Clock className="w-4 h-4 text-slate-400" />
+                <span>{selectedPreset.label}</span>
+                <ChevronDown className="w-4 h-4 text-slate-400" />
+              </button>
+
+              {showTimeDropdown && (
+                <div className="dropdown right-0 w-48 animate-fade-in">
+                  {TIME_PRESETS.map((preset) => (
+                    <button
+                      key={preset.value}
+                      onClick={() => {
+                        setTimeRange(preset.value);
+                        setShowTimeDropdown(false);
+                      }}
+                      className={`dropdown-item ${
+                        timeRange === preset.value ? 'bg-sky-50 text-sky-600 font-medium' : ''
+                      }`}
+                    >
+                      {preset.label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
+
+            {/* Auto-Refresh Selector */}
+            <div className="relative">
+              <button
+                onClick={() => setShowAutoRefreshDropdown(!showAutoRefreshDropdown)}
+                className={`btn-secondary ${autoRefreshInterval > 0 ? 'text-green-600 border-green-300' : ''}`}
+              >
+                {autoRefreshInterval > 0 ? (
+                  <Play className="w-4 h-4 text-green-500" />
+                ) : (
+                  <Pause className="w-4 h-4 text-slate-400" />
+                )}
+                <span className="hidden sm:inline">
+                  {AUTO_REFRESH_OPTIONS.find(o => o.value === autoRefreshInterval)?.label || 'Auto-refresh'}
+                </span>
+                <ChevronDown className="w-4 h-4 text-slate-400" />
+              </button>
+
+              {showAutoRefreshDropdown && (
+                <div className="dropdown right-0 w-36 animate-fade-in">
+                  {AUTO_REFRESH_OPTIONS.map((option) => (
+                    <button
+                      key={option.value}
+                      onClick={() => {
+                        setAutoRefreshInterval(option.value);
+                        setShowAutoRefreshDropdown(false);
+                      }}
+                      className={`dropdown-item ${
+                        autoRefreshInterval === option.value ? 'bg-sky-50 text-sky-600 font-medium' : ''
+                      }`}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <button onClick={handleRefreshAll} className="btn-secondary">
+              <RefreshCw className={`w-4 h-4 ${autoRefreshInterval > 0 ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">Refresh</span>
+            </button>
+
+            {/* Actions dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setShowActionsDropdown(!showActionsDropdown)}
+                className="btn-secondary"
+              >
+                <Settings className="w-4 h-4" />
+                <ChevronDown className="w-4 h-4 text-slate-400" />
+              </button>
+
+              {showActionsDropdown && (
+                <div className="dropdown right-0 w-48 animate-fade-in">
+                  <button
+                    onClick={() => { setEditMode(!editMode); setShowActionsDropdown(false); }}
+                    className="dropdown-item"
+                  >
+                    <Move className="w-4 h-4" />
+                    {editMode ? 'Exit Edit Mode' : 'Edit Layout'}
+                  </button>
+                  <button
+                    onClick={() => { setShowBrandingModal(true); setShowActionsDropdown(false); }}
+                    className="dropdown-item"
+                  >
+                    <Palette className="w-4 h-4" />
+                    Branding
+                  </button>
+                  <button
+                    onClick={() => { setShowShareModal(true); setShowActionsDropdown(false); }}
+                    className="dropdown-item"
+                  >
+                    <Share2 className="w-4 h-4" />
+                    Share
+                  </button>
+                  <button
+                    onClick={() => { handleExport(); setShowActionsDropdown(false); }}
+                    className="dropdown-item"
+                  >
+                    <Download className="w-4 h-4" />
+                    Export
+                  </button>
+                  <button
+                    onClick={() => { setShowAIInsights(!showAIInsights); setShowActionsDropdown(false); }}
+                    className="dropdown-item"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    {showAIInsights ? 'Hide AI Insights' : 'AI Insights'}
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={() => {
+                setEditingPanel(undefined);
+                setShowPanelEditor(true);
+              }}
+              className="btn-primary"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Add Panel</span>
+            </button>
           </div>
+        }
+      />
+
+      {/* Variables Bar */}
+      {dashboardVariables.length > 0 && (
+        <DashboardVariablesBar
+          variables={dashboardVariables}
+          values={variableValues}
+          onChange={setVariableValues}
+        />
+      )}
+
+      {/* Edit Mode Banner */}
+      {editMode && (
+        <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-amber-800">
+            <Move className="w-4 h-4" />
+            <span className="text-sm font-medium">Edit Mode: Drag panels to rearrange, resize from corners</span>
+          </div>
+          <button
+            onClick={() => setEditMode(false)}
+            className="text-sm text-amber-600 hover:text-amber-800 font-medium"
+          >
+            Done Editing
+          </button>
         </div>
-      </div>
+      )}
+
+      {/* AI Insights Panel */}
+      {showAIInsights && (
+        <div className="p-4 border-b border-slate-200 bg-white">
+          <AIInsightsPanel dashboardId={id!} timeRange={timeRange} />
+        </div>
+      )}
 
       {/* Panels Grid */}
       <div className="flex-1 p-4 overflow-auto">
@@ -707,21 +972,35 @@ export default function DashboardViewPage() {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <DashboardGrid
+            layouts={panelLayouts}
+            editMode={editMode}
+            onLayoutChange={handleLayoutChange}
+          >
             {dashboard.panels.map((panel) => (
-              <div key={panel.id} className="h-80 group">
+              <div key={panel.id} className="group">
                 <PanelCard
                   panel={panel}
                   data={panelData[panel.id] || { results: [], loading: true, error: null }}
                   onEdit={() => handleEditPanel(panel)}
                   onDelete={() => deletePanelMutation.mutate(panel.id)}
                   onRefresh={() => fetchPanelData(panel)}
+                  onDrilldown={handleDrilldown}
+                  editMode={editMode}
                 />
               </div>
             ))}
-          </div>
+          </DashboardGrid>
         )}
       </div>
+
+      {/* Annotations - TODO: Implement annotations feature */}
+      {/* {id && (
+        <DashboardAnnotations
+          annotations={[]}
+          editMode={isEditing}
+        />
+      )} */}
 
       {/* Panel Editor Modal */}
       {showPanelEditor && (
@@ -733,6 +1012,66 @@ export default function DashboardViewPage() {
             setEditingPanel(undefined);
           }}
           saving={createPanelMutation.isPending || updatePanelMutation.isPending}
+        />
+      )}
+
+      {/* Branding Modal */}
+      {showBrandingModal && (
+        <DashboardBrandingModal
+          branding={{
+            logo_url: dashboard.logo_url,
+            accent_color: dashboard.accent_color,
+            header_color: dashboard.header_color,
+            description: dashboard.description,
+          }}
+          onCancel={() => setShowBrandingModal(false)}
+          onSave={async (branding) => {
+            await fetch(`/api/dashboards/${id}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(branding),
+            });
+            queryClient.invalidateQueries({ queryKey: ['dashboard', id] });
+            setShowBrandingModal(false);
+          }}
+        />
+      )}
+
+      {/* Share Modal */}
+      {showShareModal && (
+        <DashboardShareModal
+          dashboardId={id!}
+          dashboardName={dashboard.name}
+          settings={{
+            is_public: !!dashboard.is_public,
+            public_token: dashboard.public_token,
+          }}
+          onCancel={() => setShowShareModal(false)}
+          onSave={async (settings) => {
+            await fetch(`/api/dashboards/${id}/share`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(settings),
+            });
+            queryClient.invalidateQueries({ queryKey: ['dashboard', id] });
+            setShowShareModal(false);
+          }}
+        />
+      )}
+
+      {/* Variable Editor Modal */}
+      {showVariableEditor && (
+        <VariableEditorModal
+          onCancel={() => setShowVariableEditor(false)}
+          onSave={async (data) => {
+            await fetch(`/api/dashboards/${id}/variables`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(data),
+            });
+            queryClient.invalidateQueries({ queryKey: ['dashboard-variables', id] });
+            setShowVariableEditor(false);
+          }}
         />
       )}
     </div>

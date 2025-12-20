@@ -140,8 +140,8 @@ export async function executeDSLQuery<T = Record<string, unknown>>(
       if (timeConditions.length > 0) {
         if (sql.includes('WHERE')) {
           sql = sql.replace('WHERE', `WHERE ${timeConditions.join(' AND ')} AND`);
-        } else if (sql.includes('FROM spunk.logs')) {
-          sql = sql.replace('FROM spunk.logs', `FROM spunk.logs WHERE ${timeConditions.join(' AND ')}`);
+        } else if (sql.includes('FROM lognog.logs')) {
+          sql = sql.replace('FROM lognog.logs', `FROM lognog.logs WHERE ${timeConditions.join(' AND ')}`);
         }
       }
     }
@@ -194,7 +194,7 @@ export async function getFields(): Promise<{ name: string; type: string }[]> {
     ];
   }
   return clickhouse.executeQuery<{ name: string; type: string }>(
-    "SELECT name, type FROM system.columns WHERE database = 'spunk' AND table = 'logs'"
+    "SELECT name, type FROM system.columns WHERE database = 'lognog' AND table = 'logs'"
   );
 }
 
@@ -216,7 +216,7 @@ export async function getFieldValues(
     );
   }
   return clickhouse.executeQuery<{ value: string; count: number }>(
-    `SELECT ${field} as value, count() as count FROM spunk.logs GROUP BY ${field} ORDER BY count DESC LIMIT ${limit}`
+    `SELECT ${field} as value, count() as count FROM lognog.logs GROUP BY ${field} ORDER BY count DESC LIMIT ${limit}`
   );
 }
 

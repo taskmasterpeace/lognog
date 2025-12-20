@@ -16,6 +16,13 @@ export interface SavedSearch {
   updated_at: string;
 }
 
+export interface DashboardBranding {
+  logo_url?: string;
+  logo_position?: 'left' | 'center' | 'right';
+  accent_color?: string;
+  header_color?: string;
+}
+
 export interface Dashboard {
   id: string;
   name: string;
@@ -23,6 +30,13 @@ export interface Dashboard {
   panels: DashboardPanel[];
   created_at: string;
   updated_at: string;
+  // Branding
+  logo_url?: string;
+  accent_color?: string;
+  header_color?: string;
+  // Sharing
+  is_public?: number;
+  public_token?: string;
 }
 
 export interface DashboardPanel {
@@ -774,4 +788,232 @@ export async function updateTemplate(id: string, updates: Partial<SourceTemplate
 
 export async function deleteTemplate(id: string): Promise<void> {
   await request(`/templates/${id}`, { method: 'DELETE' });
+}
+
+// Dashboard Variables API
+export interface DashboardVariable {
+  id: string;
+  dashboard_id: string;
+  name: string;
+  label?: string;
+  type: 'query' | 'custom' | 'textbox' | 'interval';
+  query?: string;
+  default_value?: string;
+  multi_select: boolean;
+  include_all: boolean;
+  sort_order: number;
+}
+
+export async function getDashboardVariables(dashboardId: string): Promise<DashboardVariable[]> {
+  return request(`/dashboards/${dashboardId}/variables`);
+}
+
+export async function createDashboardVariable(
+  dashboardId: string,
+  variable: Omit<DashboardVariable, 'id' | 'dashboard_id'>
+): Promise<DashboardVariable> {
+  return request(`/dashboards/${dashboardId}/variables`, {
+    method: 'POST',
+    body: JSON.stringify(variable),
+  });
+}
+
+export async function updateDashboardVariable(
+  dashboardId: string,
+  variableId: string,
+  updates: Partial<DashboardVariable>
+): Promise<DashboardVariable> {
+  return request(`/dashboards/${dashboardId}/variables/${variableId}`, {
+    method: 'PUT',
+    body: JSON.stringify(updates),
+  });
+}
+
+export async function deleteDashboardVariable(dashboardId: string, variableId: string): Promise<void> {
+  await request(`/dashboards/${dashboardId}/variables/${variableId}`, { method: 'DELETE' });
+}
+
+// Dashboard Branding API
+export async function updateDashboardBranding(
+  dashboardId: string,
+  branding: DashboardBranding & { description?: string }
+): Promise<Dashboard> {
+  return request(`/dashboards/${dashboardId}/branding`, {
+    method: 'PUT',
+    body: JSON.stringify(branding),
+  });
+}
+
+export async function updateDashboard(
+  dashboardId: string,
+  updates: Partial<Dashboard>
+): Promise<Dashboard> {
+  return request(`/dashboards/${dashboardId}`, {
+    method: 'PUT',
+    body: JSON.stringify(updates),
+  });
+}
+
+// Dashboard Layout API
+export async function updateDashboardLayout(
+  dashboardId: string,
+  layout: Array<{ panelId: string; x: number; y: number; w: number; h: number }>
+): Promise<void> {
+  await request(`/dashboards/${dashboardId}/layout`, {
+    method: 'PUT',
+    body: JSON.stringify({ layout }),
+  });
+}
+
+// Dashboard Sharing API
+export interface DashboardShareSettings {
+  is_public: boolean;
+  public_token?: string;
+  public_url?: string;
+}
+
+export async function enableDashboardSharing(
+  dashboardId: string,
+  options?: { password?: string; expires_at?: string }
+): Promise<DashboardShareSettings> {
+  return request(`/dashboards/${dashboardId}/share`, {
+    method: 'POST',
+    body: JSON.stringify(options || {}),
+  });
+}
+
+export async function disableDashboardSharing(dashboardId: string): Promise<void> {
+  await request(`/dashboards/${dashboardId}/share`, { method: 'DELETE' });
+}
+
+// Dashboard Annotations API
+export interface DashboardAnnotation {
+  id: string;
+  dashboard_id: string;
+  timestamp: string;
+  title: string;
+  description?: string;
+  color: string;
+  created_by?: string;
+  created_at: string;
+}
+
+export async function getDashboardAnnotations(dashboardId: string): Promise<DashboardAnnotation[]> {
+  return request(`/dashboards/${dashboardId}/annotations`);
+}
+
+export async function createDashboardAnnotation(
+  dashboardId: string,
+  annotation: { timestamp: string; title: string; description?: string; color?: string }
+): Promise<DashboardAnnotation> {
+  return request(`/dashboards/${dashboardId}/annotations`, {
+    method: 'POST',
+    body: JSON.stringify(annotation),
+  });
+}
+
+export async function deleteDashboardAnnotation(dashboardId: string, annotationId: string): Promise<void> {
+  await request(`/dashboards/${dashboardId}/annotations/${annotationId}`, { method: 'DELETE' });
+}
+
+// Dashboard Export/Import API
+export interface DashboardExport {
+  name: string;
+  description?: string;
+  logo_url?: string;
+  accent_color?: string;
+  header_color?: string;
+  panels: Array<{
+    title: string;
+    query: string;
+    visualization: string;
+    options: Record<string, unknown>;
+    position_x: number;
+    position_y: number;
+    width: number;
+    height: number;
+  }>;
+  variables?: Array<{
+    name: string;
+    label?: string;
+    type: string;
+    query?: string;
+    default_value?: string;
+    multi_select: boolean;
+    include_all: boolean;
+  }>;
+  exported_at: string;
+  version: string;
+}
+
+export async function exportDashboard(dashboardId: string): Promise<DashboardExport> {
+  return request(`/dashboards/${dashboardId}/export`, { method: 'POST' });
+}
+
+export async function importDashboard(template: DashboardExport, name?: string): Promise<Dashboard> {
+  return request('/dashboards/import', {
+    method: 'POST',
+    body: JSON.stringify({ template, name }),
+  });
+}
+
+// Dashboard Templates API
+export interface DashboardTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  category?: string;
+  thumbnail_url?: string;
+  required_sources: string[];
+  downloads: number;
+  created_at: string;
+}
+
+export async function getDashboardTemplates(category?: string): Promise<DashboardTemplate[]> {
+  const params = category ? `?category=${category}` : '';
+  return request(`/dashboards/templates${params}`);
+}
+
+export async function getDashboardTemplateById(templateId: string): Promise<DashboardTemplate & { template_json: DashboardExport }> {
+  return request(`/dashboards/templates/${templateId}`);
+}
+
+export async function createDashboardFromTemplate(templateId: string, name?: string): Promise<Dashboard> {
+  return request(`/dashboards/templates/${templateId}/create`, {
+    method: 'POST',
+    body: JSON.stringify({ name }),
+  });
+}
+
+// AI API
+export interface AIInsight {
+  type: 'anomaly' | 'trend' | 'suggestion';
+  severity: 'info' | 'warning' | 'critical';
+  title: string;
+  description: string;
+  action?: { label: string; query?: string };
+}
+
+export async function getAIStatus(): Promise<{
+  available: boolean;
+  url?: string;
+  model?: string;
+  availableModels?: string[];
+  message?: string;
+}> {
+  return request('/ai/status');
+}
+
+export async function generateAIQuery(prompt: string): Promise<{ query: string; prompt: string }> {
+  return request('/ai/generate-query', {
+    method: 'POST',
+    body: JSON.stringify({ prompt }),
+  });
+}
+
+export async function getAIInsights(dashboardId: string, timeRange: string): Promise<{ insights: AIInsight[] }> {
+  return request('/ai/insights', {
+    method: 'POST',
+    body: JSON.stringify({ dashboardId, timeRange }),
+  });
 }

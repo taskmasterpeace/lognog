@@ -138,10 +138,24 @@ Need to access LogNog from outside your network? See our **[Deployment Guide](do
 ### Core Features (All Versions)
 - **Real-time Log Search** - Powerful Splunk-like query language, sub-second results
 - **Live Tail** - SSE-powered real-time log streaming
-- **Custom Dashboards** - 7 visualization types with auto-refresh
+- **Custom Dashboards** - 7 visualization types with pro features
   - Table, Bar, Pie, Line/Area, Single Stat, Heatmap, Gauge
+  - **Drag-and-drop layout** - Resize and rearrange panels with react-grid-layout
+  - **Dashboard variables** - Dynamic $host$, $app$ dropdowns that filter all panels
+  - **Click-to-drilldown** - Click any chart element to search those logs
+  - **Dashboard branding** - Custom logos, accent colors, headers per dashboard
+  - **Public sharing** - Share dashboards without requiring login
+  - **Export/Import** - Backup dashboards as JSON, share with the community
+  - **Annotations** - Mark events on your dashboard timeline
   - Auto-refresh intervals (30s, 1m, 5m)
-  - Global time range selector
+  - **7 pre-built templates** - pfSense, Docker, Windows, Nginx, Minecraft, System, Ubiquiti
+- **AI Features** (optional, via Ollama)
+  - Natural language to query conversion ("show me errors from last hour")
+  - AI-generated insights for dashboards (anomalies, trends, suggestions)
+  - **Codebase Interview Wizard** - Help dev teams implement logging
+    - Generate questionnaires for your dev teams
+    - AI analyzes responses and recommends what to log
+    - Generates implementation guides with actual code
 - **File Integrity Monitoring (FIM)** - Know when critical files change
 - **Splunk-style Alerts** - Threshold-based triggers with email, webhook, and log actions
 - **Alert Silencing** - Suppress alerts by host, alert rule, or globally with time-based expiration
@@ -493,6 +507,8 @@ Access templates at **Data Sources** in the UI or via API at `GET /api/templates
 | Document | Description |
 |----------|-------------|
 | [Query Language](docs/QUERY-LANGUAGE.md) | Complete DSL reference |
+| [Dashboards](docs/DASHBOARDS.md) | Dashboard features, templates, AI insights |
+| [Codebase Interview Wizard](docs/CODEBASE-INTERVIEW-WIZARD.md) | Help dev teams implement logging |
 | [Supabase Integration](docs/SUPABASE-INTEGRATION.md) | Supabase Log Drains setup |
 | [Vercel Integration](docs/VERCEL-INTEGRATION.md) | Vercel Log Drains setup |
 | [IP Classification](docs/IP-CLASSIFICATION.md) | IP categorization features |
@@ -502,6 +518,7 @@ Access templates at **Data Sources** in the UI or via API at `GET /api/templates
 | [Database Templates](docs/DATABASE-TEMPLATES.md) | Database log templates |
 | [Agent Guide](agent/README.md) | LogNog In agent documentation |
 | [Feature Gap Analysis](docs/FEATURE-GAP-ANALYSIS.md) | Splunk comparison & roadmap |
+| [Deployment Guide](docs/DEPLOYMENT-GUIDE.md) | Secure remote access setup |
 
 ---
 
@@ -594,18 +611,27 @@ SMTP_FROM=reports@example.com
 - [x] Source templates (15+ templates)
 - [x] Advanced DSL (OR/AND, math, strings, percentiles)
 - [x] Data retention with TTL (configurable)
+- [x] **Dashboard variables** ($host$, $app$ dropdowns)
+- [x] **Click-to-drilldown** on charts → navigate to search
+- [x] **Dashboard templates** (7 pre-built: pfSense, Docker, Windows, etc.)
+- [x] **Table pagination** with sorting
+- [x] **Drag-and-drop dashboard layout** (react-grid-layout)
+- [x] **Dashboard branding** (logos, accent colors, custom headers)
+- [x] **Public dashboard sharing** (share without login)
+- [x] **Dashboard export/import** (JSON format)
+- [x] **Dashboard annotations** (mark events on timeline)
+- [x] **Natural language to query** (via Ollama)
+- [x] **AI dashboard insights** (anomalies, trends, suggestions via Ollama)
+- [x] **Codebase Interview Wizard** - Generate questionnaires, AI-powered implementation guides
 
 ### Planned - Short Term
-- [ ] Dashboard variables ($host, $app dropdowns)
-- [ ] Click-to-drill-down on charts
-- [ ] Dashboard templates (pre-built layouts)
 - [ ] JSON batch import via UI
-- [ ] Table sorting and pagination
+- [ ] PDF export for dashboards
+- [ ] Dashboard template gallery (community submissions)
 
 ### Planned - Medium Term
 - [ ] Sigma rule importer (3000+ security rules)
 - [ ] Lookup tables (CSV enrichment)
-- [ ] Public dashboard sharing (embed without login)
 - [ ] macOS/Linux agent packages
 - [ ] Cloudflare Tunnel setup guide
 
@@ -618,10 +644,6 @@ SMTP_FROM=reports@example.com
 - [ ] Custom webhook templates
 
 ### Planned - AI Features (NogBot)
-- [ ] **Codebase Interview Wizard** - AI helps developers set up logging
-  - Step 1: Generate interview prompts for developer's AI assistant
-  - Step 2: Process responses, ask follow-up questions
-  - Step 3: Generate implementation guide with code snippets
 - [ ] **Alert Advisor** - AI suggests alerts based on your log patterns
   - Learns baselines from your data
   - Recommends thresholds and alert rules
@@ -634,7 +656,6 @@ SMTP_FROM=reports@example.com
 
 ### Planned - Long Term
 - [ ] Machine learning anomaly detection
-- [ ] Natural language to DSL conversion ("show me errors from yesterday")
 - [ ] Grafana data source plugin
 - [ ] Kubernetes deployment (Helm chart)
 - [ ] Log forwarding between LogNog instances

@@ -27,7 +27,7 @@ const SMTP_CONFIG = {
   } : undefined,
 };
 
-const SMTP_FROM = process.env.SMTP_FROM || 'noreply@spunk.local';
+const SMTP_FROM = process.env.SMTP_FROM || 'noreply@lognog.local';
 
 // Create transporter if SMTP is configured
 let transporter: nodemailer.Transporter | null = null;
@@ -129,7 +129,7 @@ async function generateReportHtml(
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>${escapeHtml(title)} - Spunk Report</title>
+  <title>${escapeHtml(title)} - LogNog Report</title>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px; background: #f8fafc; }
     .header { background: linear-gradient(135deg, #0ea5e9, #0284c7); color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
@@ -150,7 +150,7 @@ async function generateReportHtml(
 <body>
   <div class="header">
     <h1>${escapeHtml(title)}</h1>
-    <p>Scheduled Report from Spunk Log Analytics</p>
+    <p>Scheduled Report from LogNog Log Analytics</p>
     <div class="meta">Generated: ${escapeHtml(generatedAt)}</div>
   </div>
   <div class="query">${escapeHtml(query)}</div>
@@ -199,8 +199,8 @@ async function runReport(report: ScheduledReport): Promise<void> {
     const timeCondition = `timestamp >= now() - INTERVAL 24 HOUR`;
     if (sql.includes('WHERE')) {
       sql = sql.replace('WHERE', `WHERE ${timeCondition} AND`);
-    } else if (sql.includes('FROM spunk.logs')) {
-      sql = sql.replace('FROM spunk.logs', `FROM spunk.logs WHERE ${timeCondition}`);
+    } else if (sql.includes('FROM lognog.logs')) {
+      sql = sql.replace('FROM lognog.logs', `FROM lognog.logs WHERE ${timeCondition}`);
     }
 
     const results = await executeQuery(sql);
@@ -215,7 +215,7 @@ async function runReport(report: ScheduledReport): Promise<void> {
       await transporter.sendMail({
         from: SMTP_FROM,
         to: recipients.join(', '),
-        subject: `[Spunk Report] ${report.name}`,
+        subject: `[LogNog Report] ${report.name}`,
         html,
         attachments: [
           {

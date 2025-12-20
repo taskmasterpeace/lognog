@@ -18,6 +18,8 @@ import {
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import ThemeToggle from './components/ThemeToggle';
+import NogChat from './components/NogChat';
+import AnimatedPage from './components/ui/AnimatedPage';
 import SearchPage from './pages/SearchPage';
 import DashboardsPage from './pages/DashboardsPage';
 import DashboardViewPage from './pages/DashboardViewPage';
@@ -47,12 +49,12 @@ function NavLink({ to, icon: Icon, children }: NavLinkProps) {
       className={`group flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
         isActive
           ? 'bg-gradient-to-r from-sky-500 to-sky-600 text-white shadow-md shadow-sky-500/25'
-          : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100'
+          : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 hover:translate-x-0.5 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100'
       }`}
     >
-      <Icon className={`w-5 h-5 ${isActive ? '' : 'text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300'}`} />
+      <Icon className={`w-5 h-5 transition-transform duration-200 ${isActive ? '' : 'text-slate-400 group-hover:text-slate-600 group-hover:scale-110 dark:group-hover:text-slate-300'}`} />
       <span className="font-medium">{children}</span>
-      {isActive && <ChevronRight className="w-4 h-4 ml-auto opacity-75" />}
+      {isActive && <ChevronRight className="w-4 h-4 ml-auto opacity-75 animate-pulse" />}
     </Link>
   );
 }
@@ -78,14 +80,14 @@ function UserMenu() {
       <div className="flex gap-2">
         <Link
           to="/settings"
-          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-all duration-200 hover:scale-105 active:scale-95"
         >
           <Settings className="w-4 h-4" />
           Settings
         </Link>
         <button
           onClick={logout}
-          className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+          className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all duration-200 hover:scale-105 active:scale-95"
         >
           <LogOut className="w-4 h-4" />
         </button>
@@ -175,6 +177,9 @@ function Layout({ children }: { children: React.ReactNode }) {
       <main className="flex-1 overflow-auto">
         {children}
       </main>
+
+      {/* NogChat - Intelligent Assistant */}
+      <NogChat />
     </div>
   );
 }
@@ -240,7 +245,9 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Layout>
-              <SearchPage />
+              <AnimatedPage>
+                <SearchPage />
+              </AnimatedPage>
             </Layout>
           </ProtectedRoute>
         }
@@ -250,7 +257,9 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Layout>
-              <DashboardsPage />
+              <AnimatedPage>
+                <DashboardsPage />
+              </AnimatedPage>
             </Layout>
           </ProtectedRoute>
         }
@@ -260,7 +269,9 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Layout>
-              <DashboardViewPage />
+              <AnimatedPage>
+                <DashboardViewPage />
+              </AnimatedPage>
             </Layout>
           </ProtectedRoute>
         }
@@ -270,7 +281,9 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Layout>
-              <AlertsPage />
+              <AnimatedPage>
+                <AlertsPage />
+              </AnimatedPage>
             </Layout>
           </ProtectedRoute>
         }
@@ -280,7 +293,9 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Layout>
-              <SilencesPage />
+              <AnimatedPage>
+                <SilencesPage />
+              </AnimatedPage>
             </Layout>
           </ProtectedRoute>
         }
@@ -290,7 +305,9 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Layout>
-              <StatsPage />
+              <AnimatedPage>
+                <StatsPage />
+              </AnimatedPage>
             </Layout>
           </ProtectedRoute>
         }
@@ -300,7 +317,9 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Layout>
-              <ReportsPage />
+              <AnimatedPage>
+                <ReportsPage />
+              </AnimatedPage>
             </Layout>
           </ProtectedRoute>
         }
@@ -310,7 +329,9 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Layout>
-              <KnowledgePage />
+              <AnimatedPage>
+                <KnowledgePage />
+              </AnimatedPage>
             </Layout>
           </ProtectedRoute>
         }
@@ -320,7 +341,9 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Layout>
-              <DocsPage />
+              <AnimatedPage>
+                <DocsPage />
+              </AnimatedPage>
             </Layout>
           </ProtectedRoute>
         }
@@ -330,7 +353,9 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <Layout>
-              <SettingsPage />
+              <AnimatedPage>
+                <SettingsPage />
+              </AnimatedPage>
             </Layout>
           </ProtectedRoute>
         }

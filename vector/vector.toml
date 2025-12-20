@@ -22,13 +22,91 @@ address = "0.0.0.0:514"
 mode = "tcp"
 
 # ============================================
+# Docker Container Logs
+# ============================================
+# Collects logs from LogNog infrastructure containers
+[sources.docker_logs]
+type = "docker_logs"
+docker_host = "unix:///var/run/docker.sock"
+# Include specific containers we want to monitor
+include_containers = ["lognog-ollama", "lognog-api", "lognog-ui", "lognog-nginx", "lognog-clickhouse"]
+
+# ============================================
 # TRANSFORMS
 # ============================================
 
-# Merge UDP and TCP sources
+# ============================================
+# TRANSFORM: Docker Logs Processing
+# ============================================
+[transforms.process_docker_logs]
+type = "remap"
+inputs = ["docker_logs"]
+source = '''
+# Set timestamp
+.received_at = now()
+
+# Extract container metadata
+.hostname = if exists(.container_name) { to_string!(.container_name) } else { "docker" }
+.app_name = if exists(.container_name) { to_string!(.container_name) } else { "docker" }
+
+# Set Docker-specific fields
+.docker_enabled = true
+.docker_container_name = if exists(.container_name) { to_string!(.container_name) } else { "" }
+.docker_container_id = if exists(.container_id) { to_string!(.container_id) } else { "" }
+.docker_image_name = if exists(.image) { to_string!(.image) } else { "" }
+
+# Extract labels if present
+if exists(.label) {
+  .docker_labels = encode_json(.label)
+}
+
+# Set default severity (info)
+.severity = 6
+.facility = 1
+
+# Try to detect severity from message
+message_lower = downcase(to_string!(.message))
+if contains(message_lower, "error") || contains(message_lower, "err") || contains(message_lower, "fatal") {
+  .severity = 3
+  .index_name = "errors"
+} else if contains(message_lower, "warn") {
+  .severity = 4
+  .index_name = "main"
+} else if contains(message_lower, "debug") {
+  .severity = 7
+  .index_name = "main"
+} else {
+  .index_name = "docker"
+}
+
+# Set default values for syslog fields
+.proc_id = ""
+.msg_id = ""
+.raw = to_string!(.message)
+.structured_data = "{}"
+.source_ip = "0.0.0.0"
+.dest_ip = "0.0.0.0"
+.source_port = 0
+.dest_port = 0
+.protocol = ""
+.action = ""
+.user = ""
+.message_tokens = []
+
+# Clean up Docker-specific fields that aren't in our schema
+del(.container_name)
+del(.container_id)
+del(.container_created_at)
+del(.image)
+del(.label)
+del(.stream)
+del(.source_type)
+'''
+
+# Merge UDP, TCP, and Docker sources
 [transforms.merge_syslog]
 type = "remap"
-inputs = ["syslog_udp", "syslog_tcp"]
+inputs = ["syslog_udp", "syslog_tcp", "process_docker_logs"]
 source = '''
 # Set received timestamp
 .received_at = now()

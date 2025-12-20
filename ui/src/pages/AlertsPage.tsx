@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Bell,
@@ -37,6 +37,8 @@ import {
   AlertAction,
   createSilence,
 } from '../api/client';
+import VariableHelper from '../components/VariableHelper';
+import { InfoTip } from '../components/ui/InfoTip';
 
 // Local type for alert history (used in UI)
 interface LocalAlertHistory {
@@ -111,6 +113,11 @@ export default function AlertsPage() {
   const [selectedAlertId, setSelectedAlertId] = useState<string | null>(null);
   const [silencingAlertId, setSilencingAlertId] = useState<string | null>(null);
   const [expandedAlerts, setExpandedAlerts] = useState<Set<string>>(new Set());
+
+  // Refs for action inputs (for variable insertion)
+  const emailSubjectRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const emailBodyRefs = useRef<(HTMLTextAreaElement | null)[]>([]);
+  const webhookPayloadRefs = useRef<(HTMLTextAreaElement | null)[]>([]);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -279,6 +286,28 @@ export default function AlertsPage() {
 
   const removeAction = (index: number) => {
     setFormData({ ...formData, actions: formData.actions.filter((_, i) => i !== index) });
+  };
+
+  const insertVariableIntoField = (variable: string, inputRef: HTMLInputElement | HTMLTextAreaElement | null) => {
+    if (!inputRef) return;
+
+    const start = inputRef.selectionStart || 0;
+    const end = inputRef.selectionEnd || 0;
+    const currentValue = inputRef.value;
+    const newValue = currentValue.substring(0, start) + variable + currentValue.substring(end);
+
+    // Update the value
+    inputRef.value = newValue;
+
+    // Trigger change event to update formData
+    const event = new Event('input', { bubbles: true });
+    inputRef.dispatchEvent(event);
+
+    // Set cursor position after inserted variable
+    setTimeout(() => {
+      inputRef.focus();
+      inputRef.setSelectionRange(start + variable.length, start + variable.length);
+    }, 0);
   };
 
   const toggleExpand = (id: string) => {
@@ -607,11 +636,27 @@ export default function AlertsPage() {
 
               {/* Trigger Condition */}
               <div className="space-y-4">
-                <h3 className="font-medium text-slate-900 dark:text-slate-100">Trigger Condition</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-medium text-slate-900 dark:text-slate-100">Trigger Condition</h3>
+                  <InfoTip
+                    content="Define when this alert should fire based on search results. The alert will trigger when the condition is met."
+                    placement="right"
+                  />
+                </div>
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                       Type
+                      <InfoTip
+                        content={
+                          <div className="space-y-1">
+                            <p><strong>Number of Results:</strong> Trigger based on total log count</p>
+                            <p><strong>Number of Hosts:</strong> Trigger based on unique hosts count</p>
+                            <p><strong>Custom:</strong> Trigger if any results match</p>
+                          </div>
+                        }
+                        placement="top"
+                      />
                     </label>
                     <select
                       value={formData.trigger_type}
@@ -624,8 +669,12 @@ export default function AlertsPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                       Condition
+                      <InfoTip
+                        content="Compare the result count/value against the threshold. Use 'drops by' or 'rises by' to detect sudden changes."
+                        placement="top"
+                      />
                     </label>
                     <select
                       value={formData.trigger_condition}
@@ -638,8 +687,12 @@ export default function AlertsPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                       Threshold
+                      <InfoTip
+                        content="The numeric value to compare against. For example, set to 10 to trigger when results exceed 10."
+                        placement="top"
+                      />
                     </label>
                     <input
                       type="number"
@@ -653,11 +706,21 @@ export default function AlertsPage() {
 
               {/* Schedule */}
               <div className="space-y-4">
-                <h3 className="font-medium text-slate-900 dark:text-slate-100">Schedule</h3>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-medium text-slate-900 dark:text-slate-100">Schedule</h3>
+                  <InfoTip
+                    content="Configure how often this alert runs and what time range to search."
+                    placement="right"
+                  />
+                </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                       Run Schedule
+                      <InfoTip
+                        content="How frequently the alert runs. For example, 'Every 5 minutes' will check for alert conditions every 5 minutes."
+                        placement="top"
+                      />
                     </label>
                     <select
                       value={formData.cron_expression}
@@ -670,8 +733,12 @@ export default function AlertsPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                       Time Range to Search
+                      <InfoTip
+                        content="How far back to search when the alert runs. For example, 'Last 5 minutes' will search the most recent 5 minutes of logs."
+                        placement="top"
+                      />
                     </label>
                     <select
                       value={formData.time_range}
@@ -721,8 +788,12 @@ export default function AlertsPage() {
                     onChange={(e) => setFormData({ ...formData, throttle_enabled: e.target.checked })}
                     className="w-4 h-4 rounded border-slate-300"
                   />
-                  <label htmlFor="throttle" className="font-medium text-slate-900 dark:text-slate-100">
+                  <label htmlFor="throttle" className="flex items-center gap-2 font-medium text-slate-900 dark:text-slate-100">
                     Enable Throttling
+                    <InfoTip
+                      content="Prevent alert fatigue by suppressing notifications after the first trigger. The alert won't fire again until the throttle window expires."
+                      placement="right"
+                    />
                   </label>
                 </div>
                 {formData.throttle_enabled && (
@@ -792,49 +863,122 @@ export default function AlertsPage() {
                         </div>
 
                         {action.type === 'email' && (
-                          <div className="space-y-2">
-                            <input
-                              type="email"
-                              placeholder="recipient@example.com"
-                              value={action.config.to || ''}
-                              onChange={(e) => updateAction(index, { to: e.target.value })}
-                              className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm ${
-                                action.config.to && !isValidEmail(action.config.to)
-                                  ? 'border-red-400 focus:ring-red-200 focus:border-red-400'
-                                  : 'border-slate-300 dark:border-slate-600'
-                              }`}
-                            />
-                            {action.config.to && !isValidEmail(action.config.to) && (
-                              <p className="text-xs text-red-500">Please enter a valid email address</p>
-                            )}
+                          <div className="space-y-3">
+                            <div>
+                              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                Recipient Email
+                              </label>
+                              <input
+                                type="email"
+                                placeholder="recipient@example.com"
+                                value={action.config.to || ''}
+                                onChange={(e) => updateAction(index, { to: e.target.value })}
+                                className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm ${
+                                  action.config.to && !isValidEmail(action.config.to)
+                                    ? 'border-red-400 focus:ring-red-200 focus:border-red-400'
+                                    : 'border-slate-300 dark:border-slate-600'
+                                }`}
+                              />
+                              {action.config.to && !isValidEmail(action.config.to) && (
+                                <p className="text-xs text-red-500">Please enter a valid email address</p>
+                              )}
+                            </div>
+
+                            <div>
+                              <div className="flex items-center justify-between mb-1">
+                                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+                                  Subject (supports variables)
+                                </label>
+                                <VariableHelper onInsert={(variable) => insertVariableIntoField(variable, emailSubjectRefs.current[index])} />
+                              </div>
+                              <input
+                                ref={(el) => { emailSubjectRefs.current[index] = el; }}
+                                type="text"
+                                placeholder="e.g., High Error Rate on {{hostname}}"
+                                value={action.config.subject || ''}
+                                onChange={(e) => updateAction(index, { subject: e.target.value })}
+                                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm"
+                              />
+                            </div>
+
+                            <div>
+                              <div className="flex items-center justify-between mb-1">
+                                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+                                  Body (supports variables)
+                                </label>
+                                <VariableHelper onInsert={(variable) => insertVariableIntoField(variable, emailBodyRefs.current[index])} />
+                              </div>
+                              <textarea
+                                ref={(el) => { emailBodyRefs.current[index] = el; }}
+                                placeholder="Alert triggered with {{result_count}} results. Host: {{hostname}}"
+                                value={action.config.body || ''}
+                                onChange={(e) => updateAction(index, { body: e.target.value })}
+                                rows={4}
+                                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm font-mono"
+                              />
+                              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                Leave empty to use default template
+                              </p>
+                            </div>
                           </div>
                         )}
 
                         {action.type === 'webhook' && (
-                          <div className="space-y-2">
-                            <input
-                              type="url"
-                              placeholder="https://api.example.com/webhook"
-                              value={action.config.url || ''}
-                              onChange={(e) => updateAction(index, { url: e.target.value })}
-                              className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm ${
-                                action.config.url && !(action.config.url.startsWith('http://') || action.config.url.startsWith('https://'))
-                                  ? 'border-red-400 focus:ring-red-200 focus:border-red-400'
-                                  : 'border-slate-300 dark:border-slate-600'
-                              }`}
-                            />
-                            {action.config.url && !(action.config.url.startsWith('http://') || action.config.url.startsWith('https://')) && (
-                              <p className="text-xs text-red-500">URL must start with http:// or https://</p>
-                            )}
-                            <select
-                              value={action.config.method || 'POST'}
-                              onChange={(e) => updateAction(index, { method: e.target.value as 'GET' | 'POST' | 'PUT' })}
-                              className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm"
-                            >
-                              <option value="GET">GET</option>
-                              <option value="POST">POST</option>
-                              <option value="PUT">PUT</option>
-                            </select>
+                          <div className="space-y-3">
+                            <div>
+                              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                Webhook URL
+                              </label>
+                              <input
+                                type="url"
+                                placeholder="https://api.example.com/webhook"
+                                value={action.config.url || ''}
+                                onChange={(e) => updateAction(index, { url: e.target.value })}
+                                className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm ${
+                                  action.config.url && !(action.config.url.startsWith('http://') || action.config.url.startsWith('https://'))
+                                    ? 'border-red-400 focus:ring-red-200 focus:border-red-400'
+                                    : 'border-slate-300 dark:border-slate-600'
+                                }`}
+                              />
+                              {action.config.url && !(action.config.url.startsWith('http://') || action.config.url.startsWith('https://')) && (
+                                <p className="text-xs text-red-500">URL must start with http:// or https://</p>
+                              )}
+                            </div>
+
+                            <div>
+                              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                HTTP Method
+                              </label>
+                              <select
+                                value={action.config.method || 'POST'}
+                                onChange={(e) => updateAction(index, { method: e.target.value as 'GET' | 'POST' | 'PUT' })}
+                                className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm"
+                              >
+                                <option value="GET">GET</option>
+                                <option value="POST">POST</option>
+                                <option value="PUT">PUT</option>
+                              </select>
+                            </div>
+
+                            <div>
+                              <div className="flex items-center justify-between mb-1">
+                                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+                                  Custom Payload (JSON, supports variables)
+                                </label>
+                                <VariableHelper onInsert={(variable) => insertVariableIntoField(variable, webhookPayloadRefs.current[index])} />
+                              </div>
+                              <textarea
+                                ref={(el) => { webhookPayloadRefs.current[index] = el; }}
+                                placeholder={'{\n  "alert": "{{alert_name}}",\n  "host": "{{hostname}}",\n  "count": {{result_count}}\n}'}
+                                value={action.config.payload || ''}
+                                onChange={(e) => updateAction(index, { payload: e.target.value })}
+                                rows={6}
+                                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm font-mono"
+                              />
+                              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                Leave empty to use default payload
+                              </p>
+                            </div>
                           </div>
                         )}
                       </div>

@@ -227,7 +227,7 @@ router.post('/api-keys', authenticate, async (req, res) => {
 
     res.status(201).json({
       apiKey, // Only returned once!
-      ...keyData,
+      keyData,
       warning: 'Store this API key securely. It will not be shown again.',
     });
   } catch (error) {

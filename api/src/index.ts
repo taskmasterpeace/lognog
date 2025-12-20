@@ -18,11 +18,14 @@ import geoipRouter from './routes/geoip.js';
 import silencesRouter from './routes/silences.js';
 import utilsRouter from './routes/utils.js';
 import templatesRouter from './routes/templates.js';
+import aiRouter from './routes/ai.js';
+import demoRouter from './routes/demo.js';
 import { healthCheck as clickhouseHealth, executeQuery, closeConnection } from './db/clickhouse.js';
 import { closeDatabase } from './db/sqlite.js';
 import { startScheduler } from './services/scheduler.js';
 import { executeDSLQuery } from './db/backend.js';
 import { seedBuiltinTemplates } from './data/builtin-templates.js';
+import { seedDashboardTemplates } from './data/seed-templates.js';
 
 const PORT = process.env.PORT || 4000;
 
@@ -61,6 +64,8 @@ app.use('/silences', silencesRouter);
 app.use('/geoip', geoipRouter);
 app.use('/utils', utilsRouter);
 app.use('/templates', templatesRouter);
+app.use('/ai', aiRouter);
+app.use('/demo', demoRouter);
 
 // WebSocket endpoint for live tail
 const liveTailClients: Set<WebSocket> = new Set();
@@ -101,7 +106,7 @@ async function pollNewLogs(): Promise<void> {
 
   try {
     const logs = await executeQuery<Record<string, unknown>>(
-      `SELECT * FROM spunk.logs
+      `SELECT * FROM lognog.logs
        WHERE timestamp > parseDateTimeBestEffort('${lastTimestamp}')
        ORDER BY timestamp ASC
        LIMIT 100`
@@ -237,6 +242,8 @@ if (uiDistPath) {
         req.path.startsWith('/geoip') ||
         req.path.startsWith('/utils') ||
         req.path.startsWith('/templates') ||
+        req.path.startsWith('/ai') ||
+        req.path.startsWith('/demo') ||
         req.path.startsWith('/health') ||
         req.path.startsWith('/ws') ||
         req.path.startsWith('/sse')) {
@@ -277,8 +284,9 @@ app.listen(PORT, () => {
   // Seed built-in templates
   try {
     seedBuiltinTemplates();
+    seedDashboardTemplates();
   } catch (error) {
-    console.error('Failed to seed built-in templates:', error);
+    console.error('Failed to seed templates:', error);
   }
 
   // Start the report scheduler

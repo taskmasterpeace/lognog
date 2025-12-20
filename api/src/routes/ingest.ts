@@ -1129,4 +1129,216 @@ router.post('/generate-test-data', authenticate, async (req, res) => {
   }
 });
 
+// =============================================================================
+// SmartThings Integration
+// =============================================================================
+
+/**
+ * SmartThings Event Types
+ */
+interface SmartThingsEvent {
+  eventTime: string;
+  eventType: string;
+  deviceEvent?: {
+    deviceId: string;
+    componentId: string;
+    capability: string;
+    attribute: string;
+    value: unknown;
+    unit?: string;
+    stateChange?: boolean;
+  };
+  deviceLifecycleEvent?: {
+    deviceId: string;
+    lifecycle: string;
+    locationId?: string;
+    roomId?: string;
+  };
+  deviceHealthEvent?: {
+    deviceId: string;
+    status: string;
+    reason?: string;
+  };
+  hubHealthEvent?: {
+    hubId: string;
+    status: string;
+    reason?: string;
+  };
+}
+
+interface SmartThingsWebhookPayload {
+  messageType: 'EVENT' | 'CONFIRMATION' | 'PING';
+  confirmationUrl?: string;
+  challenge?: string;
+  eventData?: {
+    events: SmartThingsEvent[];
+    installedApp?: {
+      installedAppId: string;
+      locationId: string;
+    };
+  };
+}
+
+/**
+ * Map SmartThings event type to syslog severity
+ */
+function smartThingsEventToSeverity(event: SmartThingsEvent): number {
+  if (event.deviceHealthEvent) {
+    if (event.deviceHealthEvent.status === 'OFFLINE') return 4; // warning
+    if (event.deviceHealthEvent.status === 'UNHEALTHY') return 3; // error
+  }
+  if (event.hubHealthEvent) {
+    if (event.hubHealthEvent.status === 'OFFLINE') return 3; // error
+    if (event.hubHealthEvent.status === 'UNHEALTHY') return 4; // warning
+  }
+  if (event.eventType === 'DEVICE_LIFECYCLE_EVENT') {
+    return 5; // notice
+  }
+  return 6; // info for normal device events
+}
+
+/**
+ * POST /api/ingest/smartthings
+ *
+ * Receive events from SmartThings SmartApps or Enterprise Eventing.
+ * Handles:
+ * - CONFIRMATION: Responds to sink verification challenge
+ * - PING: Health check from SmartThings
+ * - EVENT: Device events, lifecycle events, health events
+ *
+ * Headers:
+ * - X-API-Key: <api-key> (for authentication)
+ */
+router.post('/smartthings', authenticateIngestion, async (req, res) => {
+  try {
+    const payload = req.body as SmartThingsWebhookPayload;
+    const receivedAt = new Date().toISOString();
+
+    // Handle sink verification (CONFIRMATION)
+    if (payload.messageType === 'CONFIRMATION') {
+      // SmartThings sends a confirmation URL to verify the endpoint
+      if (payload.confirmationUrl) {
+        try {
+          await fetch(payload.confirmationUrl);
+          console.log('SmartThings webhook confirmed');
+        } catch (error) {
+          console.error('Failed to confirm SmartThings webhook:', error);
+        }
+      }
+      return res.status(200).json({ status: 'confirmed' });
+    }
+
+    // Handle ping/challenge (for sink verification)
+    if (payload.messageType === 'PING' || payload.challenge) {
+      return res.status(200).json({
+        pingData: { challenge: payload.challenge },
+      });
+    }
+
+    // Handle events
+    if (payload.messageType !== 'EVENT' || !payload.eventData?.events) {
+      return res.status(200).json({ status: 'ok', message: 'No events to process' });
+    }
+
+    const events = payload.eventData.events;
+    const installedApp = payload.eventData.installedApp;
+
+    const logs = events.map((event) => {
+      const severity = smartThingsEventToSeverity(event);
+      let hostname = 'smartthings';
+      let appName = 'smartthings';
+      let message = '';
+      const structuredData: Record<string, unknown> = {
+        smartthings_event_type: event.eventType,
+        location_id: installedApp?.locationId,
+        installed_app_id: installedApp?.installedAppId,
+      };
+
+      // Handle device events
+      if (event.deviceEvent) {
+        const de = event.deviceEvent;
+        hostname = de.deviceId.substring(0, 12);
+        appName = `smartthings-${de.capability}`;
+        message = `${de.capability}.${de.attribute} = ${JSON.stringify(de.value)}${de.unit ? ` ${de.unit}` : ''}`;
+        Object.assign(structuredData, {
+          device_id: de.deviceId,
+          component_id: de.componentId,
+          capability: de.capability,
+          attribute: de.attribute,
+          value: de.value,
+          unit: de.unit,
+          state_change: de.stateChange,
+        });
+      }
+
+      // Handle device lifecycle events
+      if (event.deviceLifecycleEvent) {
+        const dle = event.deviceLifecycleEvent;
+        hostname = dle.deviceId.substring(0, 12);
+        appName = 'smartthings-lifecycle';
+        message = `Device lifecycle: ${dle.lifecycle}`;
+        Object.assign(structuredData, {
+          device_id: dle.deviceId,
+          lifecycle: dle.lifecycle,
+          room_id: dle.roomId,
+        });
+      }
+
+      // Handle device health events
+      if (event.deviceHealthEvent) {
+        const dhe = event.deviceHealthEvent;
+        hostname = dhe.deviceId.substring(0, 12);
+        appName = 'smartthings-health';
+        message = `Device health: ${dhe.status}${dhe.reason ? ` (${dhe.reason})` : ''}`;
+        Object.assign(structuredData, {
+          device_id: dhe.deviceId,
+          health_status: dhe.status,
+          health_reason: dhe.reason,
+        });
+      }
+
+      // Handle hub health events
+      if (event.hubHealthEvent) {
+        const hhe = event.hubHealthEvent;
+        hostname = hhe.hubId.substring(0, 12);
+        appName = 'smartthings-hub';
+        message = `Hub health: ${hhe.status}${hhe.reason ? ` (${hhe.reason})` : ''}`;
+        Object.assign(structuredData, {
+          hub_id: hhe.hubId,
+          hub_status: hhe.status,
+          hub_reason: hhe.reason,
+        });
+      }
+
+      return {
+        timestamp: event.eventTime || receivedAt,
+        hostname,
+        app_name: appName,
+        severity,
+        facility: 1,
+        message,
+        raw: JSON.stringify(event),
+        structured_data: JSON.stringify(structuredData),
+        source_ip: null,
+      };
+    });
+
+    if (logs.length > 0) {
+      await insertLogs(logs);
+    }
+
+    res.status(200).json({
+      status: 'ok',
+      received: events.length,
+      stored: logs.length,
+    });
+  } catch (error) {
+    console.error('SmartThings ingestion error:', error);
+    res.status(500).json({
+      error: 'Failed to process SmartThings events',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
 export default router;

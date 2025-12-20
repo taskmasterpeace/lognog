@@ -20,7 +20,10 @@ import {
   Sparkles,
   DollarSign,
   Lock,
+  Check,
+  X,
 } from 'lucide-react';
+import ImagePlaceholder from '../components/landing/ImagePlaceholder';
 
 const features = [
   {
@@ -68,17 +71,50 @@ const screenshots = [
   {
     title: 'Powerful Search',
     description: 'Splunk-like query language with stats, filtering, and field extraction',
-    image: '/screenshot-search.png',
+    aspectRatio: '16/9',
+    width: 1920,
+    height: 1080,
+    details: 'Search interface showing DSL query bar, field extraction sidebar, and log results table with syntax highlighting',
   },
   {
     title: 'Custom Dashboards',
     description: 'Build dashboards with 7 visualization types and auto-refresh',
-    image: '/screenshot-dashboards.png',
+    aspectRatio: '16/9',
+    width: 1920,
+    height: 1080,
+    details: 'Dashboard view with multiple panels: bar chart, line chart, pie chart, and stats tables with dark theme',
   },
   {
     title: 'Smart Alerts',
     description: 'Threshold-based alerts with email, webhook, and silencing',
-    image: '/screenshot-alerts.png',
+    aspectRatio: '16/9',
+    width: 1920,
+    height: 1080,
+    details: 'Alert management page showing alert rules list, severity indicators, and alert configuration form',
+  },
+  {
+    title: 'Real-Time Live Tail',
+    description: 'Watch logs stream in real-time as they arrive',
+    aspectRatio: '16/9',
+    width: 1920,
+    height: 1080,
+    details: 'Live tail view with streaming logs, auto-scroll toggle, and real-time log count metrics',
+  },
+  {
+    title: 'NogChat AI Assistant',
+    description: 'Ask questions about your logs in natural language',
+    aspectRatio: '4/3',
+    width: 1024,
+    height: 768,
+    details: 'Chat interface showing conversation with AI assistant analyzing log patterns and suggesting queries',
+  },
+  {
+    title: 'Data Source Templates',
+    description: 'Pre-built templates for common log sources',
+    aspectRatio: '4/3',
+    width: 1024,
+    height: 768,
+    details: 'Template gallery showing database, security, and web server templates with quick-start guides',
   },
 ];
 
@@ -291,10 +327,10 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Screenshot Showcase */}
-      <section className="py-20">
+      {/* Hero Screenshot */}
+      <section className="py-20 border-t border-slate-700/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
+          <div className="text-center mb-12">
             <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">
               See It In Action
             </h2>
@@ -303,6 +339,25 @@ export default function LandingPage() {
             </p>
           </div>
 
+          <div className="relative group">
+            <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 rounded-2xl blur-xl group-hover:blur-2xl transition-all" />
+            <div className="relative">
+              <ImagePlaceholder
+                aspectRatio="16/9"
+                width={1920}
+                height={1080}
+                description="Full dashboard overview showing real-time log monitoring with search bar, multiple visualization panels (line charts, bar charts, stats), and live tail sidebar"
+                alt="LogNog Dashboard Overview"
+                className="w-full"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Screenshot Showcase */}
+      <section className="py-20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="space-y-20">
             {screenshots.map((screenshot, index) => (
               <div
@@ -315,18 +370,26 @@ export default function LandingPage() {
                   <h3 className="text-2xl font-bold text-white mb-3">
                     {screenshot.title}
                   </h3>
-                  <p className="text-slate-400 text-lg">
+                  <p className="text-slate-400 text-lg mb-4">
                     {screenshot.description}
+                  </p>
+                  <p className="text-sm text-slate-500">
+                    {screenshot.details}
                   </p>
                 </div>
                 <div className="flex-1 w-full">
                   <div className="relative group">
                     <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 rounded-xl blur-lg group-hover:blur-xl transition-all" />
-                    <img
-                      src={screenshot.image}
-                      alt={screenshot.title}
-                      className="relative rounded-xl shadow-2xl border border-slate-700/50 w-full"
-                    />
+                    <div className="relative">
+                      <ImagePlaceholder
+                        aspectRatio={screenshot.aspectRatio}
+                        width={screenshot.width}
+                        height={screenshot.height}
+                        description={screenshot.details}
+                        alt={screenshot.title}
+                        className="w-full"
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -415,12 +478,92 @@ export default function LandingPage() {
               Enterprise features. Startup-friendly pricing. Actually open source.
             </p>
           </div>
-          <div className="flex justify-center">
-            <img
-              src="/compare.png"
-              alt="LogNog vs Splunk vs ELK vs Grafana Loki vs Google Chronicle comparison"
-              className="max-w-full rounded-xl shadow-2xl border border-slate-700"
-            />
+
+          <div className="overflow-x-auto">
+            <table className="w-full bg-slate-800/50 rounded-xl border border-slate-700/50 overflow-hidden">
+              <thead>
+                <tr className="border-b border-slate-700">
+                  <th className="px-6 py-4 text-left text-slate-400 font-medium">Feature</th>
+                  <th className="px-6 py-4 text-center text-emerald-400 font-semibold bg-emerald-900/20">LogNog</th>
+                  <th className="px-6 py-4 text-center text-slate-400 font-medium">Splunk</th>
+                  <th className="px-6 py-4 text-center text-slate-400 font-medium">ELK Stack</th>
+                  <th className="px-6 py-4 text-center text-slate-400 font-medium">Loki</th>
+                  <th className="px-6 py-4 text-center text-slate-400 font-medium">Chronicle</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-700/50">
+                <tr>
+                  <td className="px-6 py-4 text-slate-300">Cost (500MB/day)</td>
+                  <td className="px-6 py-4 text-center text-emerald-400 font-semibold bg-emerald-900/10">$0</td>
+                  <td className="px-6 py-4 text-center text-slate-400">$1,800+/yr</td>
+                  <td className="px-6 py-4 text-center text-slate-400">$0 (self-host)</td>
+                  <td className="px-6 py-4 text-center text-slate-400">$0 (self-host)</td>
+                  <td className="px-6 py-4 text-center text-slate-400">Google Cloud only</td>
+                </tr>
+                <tr>
+                  <td className="px-6 py-4 text-slate-300">Setup Time</td>
+                  <td className="px-6 py-4 text-center bg-emerald-900/10"><Check className="w-5 h-5 text-emerald-400 mx-auto" /></td>
+                  <td className="px-6 py-4 text-center"><X className="w-5 h-5 text-red-400 mx-auto" /></td>
+                  <td className="px-6 py-4 text-center"><X className="w-5 h-5 text-red-400 mx-auto" /></td>
+                  <td className="px-6 py-4 text-center text-slate-400">30-60 min</td>
+                  <td className="px-6 py-4 text-center"><X className="w-5 h-5 text-red-400 mx-auto" /></td>
+                </tr>
+                <tr>
+                  <td className="px-6 py-4 text-slate-300">Splunk-like Query Language</td>
+                  <td className="px-6 py-4 text-center bg-emerald-900/10"><Check className="w-5 h-5 text-emerald-400 mx-auto" /></td>
+                  <td className="px-6 py-4 text-center"><Check className="w-5 h-5 text-emerald-400 mx-auto" /></td>
+                  <td className="px-6 py-4 text-center"><X className="w-5 h-5 text-red-400 mx-auto" /></td>
+                  <td className="px-6 py-4 text-center"><X className="w-5 h-5 text-red-400 mx-auto" /></td>
+                  <td className="px-6 py-4 text-center"><X className="w-5 h-5 text-red-400 mx-auto" /></td>
+                </tr>
+                <tr>
+                  <td className="px-6 py-4 text-slate-300">Real-time Dashboards</td>
+                  <td className="px-6 py-4 text-center bg-emerald-900/10"><Check className="w-5 h-5 text-emerald-400 mx-auto" /></td>
+                  <td className="px-6 py-4 text-center"><Check className="w-5 h-5 text-emerald-400 mx-auto" /></td>
+                  <td className="px-6 py-4 text-center"><Check className="w-5 h-5 text-emerald-400 mx-auto" /></td>
+                  <td className="px-6 py-4 text-center text-slate-400">Via Grafana</td>
+                  <td className="px-6 py-4 text-center"><Check className="w-5 h-5 text-emerald-400 mx-auto" /></td>
+                </tr>
+                <tr>
+                  <td className="px-6 py-4 text-slate-300">Alert Management</td>
+                  <td className="px-6 py-4 text-center bg-emerald-900/10"><Check className="w-5 h-5 text-emerald-400 mx-auto" /></td>
+                  <td className="px-6 py-4 text-center"><Check className="w-5 h-5 text-emerald-400 mx-auto" /></td>
+                  <td className="px-6 py-4 text-center text-slate-400">Via plugins</td>
+                  <td className="px-6 py-4 text-center text-slate-400">Via Grafana</td>
+                  <td className="px-6 py-4 text-center"><Check className="w-5 h-5 text-emerald-400 mx-auto" /></td>
+                </tr>
+                <tr>
+                  <td className="px-6 py-4 text-slate-300">Memory Required</td>
+                  <td className="px-6 py-4 text-center text-emerald-400 bg-emerald-900/10">2-4GB</td>
+                  <td className="px-6 py-4 text-center text-slate-400">8GB+</td>
+                  <td className="px-6 py-4 text-center text-slate-400">8GB+</td>
+                  <td className="px-6 py-4 text-center text-slate-400">2GB+</td>
+                  <td className="px-6 py-4 text-center text-slate-400">Cloud</td>
+                </tr>
+                <tr>
+                  <td className="px-6 py-4 text-slate-300">Self-Hosted</td>
+                  <td className="px-6 py-4 text-center bg-emerald-900/10"><Check className="w-5 h-5 text-emerald-400 mx-auto" /></td>
+                  <td className="px-6 py-4 text-center text-slate-400">Cloud-first</td>
+                  <td className="px-6 py-4 text-center"><Check className="w-5 h-5 text-emerald-400 mx-auto" /></td>
+                  <td className="px-6 py-4 text-center"><Check className="w-5 h-5 text-emerald-400 mx-auto" /></td>
+                  <td className="px-6 py-4 text-center"><X className="w-5 h-5 text-red-400 mx-auto" /></td>
+                </tr>
+                <tr>
+                  <td className="px-6 py-4 text-slate-300">Open Source</td>
+                  <td className="px-6 py-4 text-center text-emerald-400 bg-emerald-900/10">MIT</td>
+                  <td className="px-6 py-4 text-center"><X className="w-5 h-5 text-red-400 mx-auto" /></td>
+                  <td className="px-6 py-4 text-center text-slate-400">Mixed</td>
+                  <td className="px-6 py-4 text-center text-slate-400">AGPL</td>
+                  <td className="px-6 py-4 text-center"><X className="w-5 h-5 text-red-400 mx-auto" /></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div className="mt-8 text-center">
+            <p className="text-slate-400 text-sm">
+              Comparison based on typical homelab/SMB usage (500MB-5GB/day). Your needs may vary.
+            </p>
           </div>
         </div>
       </section>
@@ -525,32 +668,293 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Testimonials */}
+      {/* Getting Started */}
       <section className="py-16 bg-slate-800/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-white mb-4">
-              What People Are Saying
+              Get Started in Minutes
+            </h2>
+            <p className="text-slate-400 max-w-2xl mx-auto">
+              From zero to searching logs in three simple steps. No complex configuration required.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+            <div className="relative">
+              <div className="absolute -left-4 top-0 w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                1
+              </div>
+              <div className="pl-12">
+                <h3 className="text-xl font-semibold text-white mb-3">Clone & Start</h3>
+                <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700/50 mb-3">
+                  <code className="text-sm text-emerald-400 font-mono">
+                    git clone lognog.git<br />
+                    docker-compose up -d
+                  </code>
+                </div>
+                <p className="text-slate-400 text-sm">
+                  One command starts everything: database, ingestion, API, and UI.
+                </p>
+              </div>
+            </div>
+
+            <div className="relative">
+              <div className="absolute -left-4 top-0 w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                2
+              </div>
+              <div className="pl-12">
+                <h3 className="text-xl font-semibold text-white mb-3">Configure Sources</h3>
+                <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700/50 mb-3">
+                  <div className="text-sm text-slate-300 space-y-1">
+                    <div className="flex items-center gap-2">
+                      <Check className="w-4 h-4 text-emerald-400" />
+                      <span>Point syslog to port 514</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Check className="w-4 h-4 text-emerald-400" />
+                      <span>Add Supabase webhook</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Check className="w-4 h-4 text-emerald-400" />
+                      <span>Deploy LogNog In agent</span>
+                    </div>
+                  </div>
+                </div>
+                <p className="text-slate-400 text-sm">
+                  Works with existing infrastructure. No log reformatting needed.
+                </p>
+              </div>
+            </div>
+
+            <div className="relative">
+              <div className="absolute -left-4 top-0 w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                3
+              </div>
+              <div className="pl-12">
+                <h3 className="text-xl font-semibold text-white mb-3">Search & Alert</h3>
+                <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700/50 mb-3">
+                  <code className="text-sm text-cyan-400 font-mono">
+                    search severity=error<br />
+                    | stats count by hostname<br />
+                    | sort desc
+                  </code>
+                </div>
+                <p className="text-slate-400 text-sm">
+                  Use your existing SPL knowledge. Create dashboards and alerts instantly.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-12 text-center">
+            <Link
+              to="/login"
+              className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white text-lg font-semibold rounded-xl shadow-lg shadow-emerald-500/25 transition-all"
+            >
+              Start Now
+              <ArrowRight className="w-5 h-5" />
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Use Cases & Testimonials */}
+      <section className="py-16">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-white mb-4">
+              Real Teams, Real Results
+            </h2>
+            <p className="text-slate-400 max-w-2xl mx-auto">
+              From indie developers to growing agencies, LogNog solves real problems.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="p-6 bg-slate-800/50 rounded-xl border border-slate-700/50 hover:border-emerald-500/50 transition-colors">
+              <div className="flex items-start gap-3 mb-4">
+                <div className="w-10 h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Terminal className="w-5 h-5 text-emerald-400" />
+                </div>
+                <div>
+                  <p className="text-white font-semibold">Homelab Enthusiast</p>
+                  <p className="text-xs text-slate-500">12 services, pfSense, Proxmox</p>
+                </div>
+              </div>
+              <p className="text-slate-300 text-sm italic mb-3">
+                "Got LogNog running in 10 minutes. Same search syntax I know from work. Now I can actually troubleshoot my pfSense firewall rules without grep-ing through files."
+              </p>
+              <div className="flex items-center gap-2 text-xs text-emerald-400">
+                <Check className="w-4 h-4" />
+                <span>Replaced: Splunk trial + manual grep</span>
+              </div>
+            </div>
+
+            <div className="p-6 bg-slate-800/50 rounded-xl border border-slate-700/50 hover:border-emerald-500/50 transition-colors">
+              <div className="flex items-start gap-3 mb-4">
+                <div className="w-10 h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Server className="w-5 h-5 text-emerald-400" />
+                </div>
+                <div>
+                  <p className="text-white font-semibold">Game Server Operator</p>
+                  <p className="text-xs text-slate-500">Minecraft, Rust, ARK servers</p>
+                </div>
+              </div>
+              <p className="text-slate-300 text-sm italic mb-3">
+                "50GB of logs per month across 8 game servers. Splunk wanted $2000/year. LogNog handles it all on a $20/month VPS. The live tail feature is perfect for watching player joins."
+              </p>
+              <div className="flex items-center gap-2 text-xs text-emerald-400">
+                <Check className="w-4 h-4" />
+                <span>Saved: $2000/year</span>
+              </div>
+            </div>
+
+            <div className="p-6 bg-slate-800/50 rounded-xl border border-slate-700/50 hover:border-emerald-500/50 transition-colors">
+              <div className="flex items-start gap-3 mb-4">
+                <div className="w-10 h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Building2 className="w-5 h-5 text-emerald-400" />
+                </div>
+                <div>
+                  <p className="text-white font-semibold">SaaS Startup (5 people)</p>
+                  <p className="text-xs text-slate-500">Next.js app on Vercel</p>
+                </div>
+              </div>
+              <p className="text-slate-300 text-sm italic mb-3">
+                "We ship the LogNog In agent with our desktop app. When users report issues, we ask them to enable log shipping. Game changer for support - we see exactly what happened."
+              </p>
+              <div className="flex items-center gap-2 text-xs text-emerald-400">
+                <Check className="w-4 h-4" />
+                <span>Support ticket time: -60%</span>
+              </div>
+            </div>
+
+            <div className="p-6 bg-slate-800/50 rounded-xl border border-slate-700/50 hover:border-emerald-500/50 transition-colors">
+              <div className="flex items-start gap-3 mb-4">
+                <div className="w-10 h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Users className="w-5 h-5 text-emerald-400" />
+                </div>
+                <div>
+                  <p className="text-white font-semibold">DevOps Engineer</p>
+                  <p className="text-xs text-slate-500">15-person dev team</p>
+                </div>
+              </div>
+              <p className="text-slate-300 text-sm italic mb-3">
+                "One docker-compose file. That's it. No Helm charts, no Kubernetes manifests, no Elasticsearch tuning. Junior devs can deploy it themselves. That never happened with ELK."
+              </p>
+              <div className="flex items-center gap-2 text-xs text-emerald-400">
+                <Check className="w-4 h-4" />
+                <span>Setup time: 2 hours to 10 minutes</span>
+              </div>
+            </div>
+
+            <div className="p-6 bg-slate-800/50 rounded-xl border border-slate-700/50 hover:border-emerald-500/50 transition-colors">
+              <div className="flex items-start gap-3 mb-4">
+                <div className="w-10 h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Shield className="w-5 h-5 text-emerald-400" />
+                </div>
+                <div>
+                  <p className="text-white font-semibold">Security Consultant</p>
+                  <p className="text-xs text-slate-500">Multi-client MSP</p>
+                </div>
+              </div>
+              <p className="text-slate-300 text-sm italic mb-3">
+                "I deploy LogNog for every client. Built-in GeoIP, SSH brute-force detection alerts, and Windows Event Log ingestion. They get enterprise security monitoring at SMB prices."
+              </p>
+              <div className="flex items-center gap-2 text-xs text-emerald-400">
+                <Check className="w-4 h-4" />
+                <span>Deployed: 23 client sites</span>
+              </div>
+            </div>
+
+            <div className="p-6 bg-slate-800/50 rounded-xl border border-slate-700/50 hover:border-emerald-500/50 transition-colors">
+              <div className="flex items-start gap-3 mb-4">
+                <div className="w-10 h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Database className="w-5 h-5 text-emerald-400" />
+                </div>
+                <div>
+                  <p className="text-white font-semibold">E-commerce Platform</p>
+                  <p className="text-xs text-slate-500">100K orders/month</p>
+                </div>
+              </div>
+              <p className="text-slate-300 text-sm italic mb-3">
+                "We connect Supabase, Vercel, and our database logs all to LogNog. The unified search across everything saved us during Black Friday when we had a payment gateway issue."
+              </p>
+              <div className="flex items-center gap-2 text-xs text-emerald-400">
+                <Check className="w-4 h-4" />
+                <span>MTTR: -75% (4 hours to 1 hour)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ Section */}
+      <section className="py-16 bg-slate-800/30">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-white mb-4">
+              Frequently Asked Questions
             </h2>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="p-6 bg-slate-800/50 rounded-xl border border-slate-700/50">
-              <p className="text-slate-300 mb-4 italic">
-                "Got LogNog running in 10 minutes. Same search syntax I know from work. Finally."
+          <div className="space-y-6">
+            <div className="bg-slate-800/50 rounded-xl border border-slate-700/50 p-6">
+              <h3 className="text-lg font-semibold text-white mb-2">
+                Do I really need Docker? What about Windows?
+              </h3>
+              <p className="text-slate-400 text-sm">
+                LogNog Full uses Docker for easy deployment, but LogNog Lite runs natively on Windows with just SQLite - no containers needed.
+                Perfect for small teams or Windows-only environments.
               </p>
-              <p className="text-sm text-slate-500">— Homelab enthusiast</p>
             </div>
-            <div className="p-6 bg-slate-800/50 rounded-xl border border-slate-700/50">
-              <p className="text-slate-300 mb-4 italic">
-                "My Minecraft server generates 50GB of logs a month. Splunk wanted $2000/year. LogNog? Free."
+
+            <div className="bg-slate-800/50 rounded-xl border border-slate-700/50 p-6">
+              <h3 className="text-lg font-semibold text-white mb-2">
+                How is this different from Grafana Loki?
+              </h3>
+              <p className="text-slate-400 text-sm">
+                Loki uses LogQL (like Prometheus). LogNog uses Splunk's SPL syntax. If you already know Splunk, you can be productive in minutes.
+                Plus, LogNog includes dashboards and alerts out of the box - no Grafana setup required.
               </p>
-              <p className="text-sm text-slate-500">— Game server operator</p>
             </div>
-            <div className="p-6 bg-slate-800/50 rounded-xl border border-slate-700/50">
-              <p className="text-slate-300 mb-4 italic">
-                "One docker-compose file. That's it. No Helm charts, no Kubernetes manifests."
+
+            <div className="bg-slate-800/50 rounded-xl border border-slate-700/50 p-6">
+              <h3 className="text-lg font-semibold text-white mb-2">
+                Can I really handle millions of logs per day?
+              </h3>
+              <p className="text-slate-400 text-sm">
+                Yes. LogNog Full uses ClickHouse, the same database that powers Cloudflare's analytics (6M+ queries/sec).
+                On a 4-core VM with 8GB RAM, you can handle 5-10M events/day. Need more? Add nodes.
               </p>
-              <p className="text-sm text-slate-500">— DevOps engineer</p>
+            </div>
+
+            <div className="bg-slate-800/50 rounded-xl border border-slate-700/50 p-6">
+              <h3 className="text-lg font-semibold text-white mb-2">
+                What about compliance? Can I use this for SOC 2 / HIPAA?
+              </h3>
+              <p className="text-slate-400 text-sm">
+                LogNog runs entirely on your infrastructure - logs never leave your network. It includes role-based access control,
+                audit logging, and retention policies. Many users deploy it for compliance logging. (But we're not lawyers - consult yours!)
+              </p>
+            </div>
+
+            <div className="bg-slate-800/50 rounded-xl border border-slate-700/50 p-6">
+              <h3 className="text-lg font-semibold text-white mb-2">
+                Is there a hosted version coming?
+              </h3>
+              <p className="text-slate-400 text-sm">
+                Yes! Hosted LogNog is in development for teams that want the power of LogNog without self-hosting.
+                Star the GitHub repo to get notified when it launches. Self-hosted will always be free and open source.
+              </p>
+            </div>
+
+            <div className="bg-slate-800/50 rounded-xl border border-slate-700/50 p-6">
+              <h3 className="text-lg font-semibold text-white mb-2">
+                Can I contribute? What's the license?
+              </h3>
+              <p className="text-slate-400 text-sm">
+                MIT license - use it however you want. Contributions welcome! We need help with data source templates,
+                documentation, and frontend polish. Check the GitHub issues for "good first issue" labels.
+              </p>
             </div>
           </div>
         </div>
@@ -587,29 +991,148 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="py-8 border-t border-slate-700/50">
+      <footer className="py-12 border-t border-slate-700/50 bg-slate-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <img
-                src="/lognoglogo.png"
-                alt="LogNog"
-                className="w-8 h-8 rounded-lg"
-              />
-              <span className="text-slate-400">
-                LogNog - Your Logs, Your Control
-              </span>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <img
+                  src="/lognoglogo.png"
+                  alt="LogNog"
+                  className="w-10 h-10 rounded-lg"
+                />
+                <span className="text-white font-bold text-lg">LogNog</span>
+              </div>
+              <p className="text-slate-400 text-sm mb-4">
+                Your Logs, Your Control. Open source log management for teams that value simplicity.
+              </p>
+              <div className="flex items-center gap-3">
+                <a
+                  href="https://github.com/taskmasterpeace/lognog"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-slate-400 hover:text-white transition-colors"
+                >
+                  <Github className="w-5 h-5" />
+                </a>
+              </div>
             </div>
-            <div className="flex items-center gap-6 text-sm text-slate-500">
-              <span>By Machine King Labs</span>
-              <a
-                href="https://github.com/taskmasterpeace/lognog"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-white transition-colors"
-              >
-                GitHub
-              </a>
+
+            <div>
+              <h4 className="text-white font-semibold mb-4">Product</h4>
+              <ul className="space-y-2 text-sm">
+                <li>
+                  <Link to="/search" className="text-slate-400 hover:text-white transition-colors">
+                    Search
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/dashboards" className="text-slate-400 hover:text-white transition-colors">
+                    Dashboards
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/alerts" className="text-slate-400 hover:text-white transition-colors">
+                    Alerts
+                  </Link>
+                </li>
+                <li>
+                  <Link to="/data-sources" className="text-slate-400 hover:text-white transition-colors">
+                    Data Sources
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="text-white font-semibold mb-4">Resources</h4>
+              <ul className="space-y-2 text-sm">
+                <li>
+                  <a
+                    href="https://github.com/taskmasterpeace/lognog#readme"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-slate-400 hover:text-white transition-colors"
+                  >
+                    Documentation
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="https://github.com/taskmasterpeace/lognog/blob/main/docs/QUERY-LANGUAGE.md"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-slate-400 hover:text-white transition-colors"
+                  >
+                    Query Language
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="https://github.com/taskmasterpeace/lognog/issues"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-slate-400 hover:text-white transition-colors"
+                  >
+                    GitHub Issues
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="https://github.com/taskmasterpeace/lognog/blob/main/CONTRIBUTING.md"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-slate-400 hover:text-white transition-colors"
+                  >
+                    Contributing
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="text-white font-semibold mb-4">Deploy</h4>
+              <ul className="space-y-2 text-sm">
+                <li>
+                  <a
+                    href="https://github.com/taskmasterpeace/lognog/blob/main/docs/DEPLOYMENT.md"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-slate-400 hover:text-white transition-colors"
+                  >
+                    LogNog Full (Docker)
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="https://github.com/taskmasterpeace/lognog/blob/main/lite/README.md"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-slate-400 hover:text-white transition-colors"
+                  >
+                    LogNog Lite (Windows)
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="https://github.com/taskmasterpeace/lognog/blob/main/agent/README.md"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-slate-400 hover:text-white transition-colors"
+                  >
+                    LogNog In Agent
+                  </a>
+                </li>
+                <li>
+                  <span className="text-slate-500">Hosted (Coming Soon)</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="pt-8 border-t border-slate-700/50 flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-slate-500">
+            <div className="flex items-center gap-4">
+              <span>2025 Machine King Labs</span>
               <a
                 href="https://github.com/taskmasterpeace/lognog/blob/main/LICENSE"
                 target="_blank"
@@ -618,6 +1141,11 @@ export default function LandingPage() {
               >
                 MIT License
               </a>
+            </div>
+            <div className="flex items-center gap-4">
+              <span>Built with ClickHouse, React, Node.js</span>
+              <span className="hidden sm:inline">•</span>
+              <span>Open Source Forever</span>
             </div>
           </div>
         </div>

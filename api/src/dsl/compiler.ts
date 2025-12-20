@@ -64,7 +64,7 @@ export class Compiler {
     if (stages.length === 0) {
       // Default query - recent logs
       return {
-        sql: `SELECT ${DEFAULT_FIELDS.join(', ')} FROM spunk.logs ORDER BY timestamp DESC LIMIT 1000`,
+        sql: `SELECT ${DEFAULT_FIELDS.join(', ')} FROM lognog.logs ORDER BY timestamp DESC LIMIT 1000`,
         params: [],
       };
     }
@@ -194,7 +194,7 @@ export class Compiler {
       sql += selectFields.join(', ');
     }
 
-    sql += ' FROM spunk.logs';
+    sql += ' FROM lognog.logs';
 
     if (whereConditions.length > 0) {
       sql += ' WHERE ' + whereConditions.join(' AND ');

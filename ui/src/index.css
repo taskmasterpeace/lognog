@@ -37,6 +37,7 @@
   /* Buttons */
   .btn {
     @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply active:scale-[0.98] hover:scale-[1.02];
   }
 
   .btn-primary {
@@ -66,7 +67,7 @@
   }
 
   .card-hover {
-    @apply card transition-all duration-200 hover:shadow-md hover:border-slate-300;
+    @apply card transition-all duration-200 hover:shadow-lg hover:border-slate-300 hover:-translate-y-0.5;
     @apply dark:hover:border-slate-600;
   }
 
@@ -142,7 +143,7 @@
   }
 
   .table tbody tr {
-    @apply hover:bg-slate-50 transition-colors;
+    @apply hover:bg-slate-50 transition-all duration-150 hover:shadow-sm;
     @apply dark:hover:bg-slate-800;
   }
 
@@ -160,6 +161,7 @@
   .dropdown {
     @apply absolute z-50 mt-1 bg-white rounded-lg border border-slate-200 shadow-lg overflow-hidden;
     @apply dark:bg-slate-800 dark:border-slate-700;
+    animation: dropdownEnter 0.15s ease-out;
   }
 
   .dropdown-item {
@@ -171,11 +173,13 @@
   .modal-overlay {
     @apply fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50;
     @apply dark:bg-slate-950/70;
+    animation: modalOverlayEnter 0.2s ease-out;
   }
 
   .modal {
     @apply bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 overflow-hidden;
     @apply dark:bg-slate-800 dark:shadow-slate-900/50;
+    animation: modalEnter 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   .modal-header {
@@ -225,6 +229,201 @@
     }
   }
 
+  /* Page transitions */
+  .animate-page-enter {
+    animation: pageEnter 0.25s ease-out;
+  }
+
+  @keyframes pageEnter {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Modal animations */
+  .animate-modal-overlay {
+    animation: modalOverlayEnter 0.2s ease-out;
+  }
+
+  @keyframes modalOverlayEnter {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  .animate-modal-enter {
+    animation: modalEnter 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes modalEnter {
+    from {
+      opacity: 0;
+      transform: scale(0.95) translateY(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+
+  /* Dropdown animations */
+  .animate-dropdown {
+    animation: dropdownEnter 0.15s ease-out;
+  }
+
+  @keyframes dropdownEnter {
+    from {
+      opacity: 0;
+      transform: translateY(-4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Toast/notification animations */
+  .animate-toast-enter {
+    animation: toastEnter 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes toastEnter {
+    from {
+      opacity: 0;
+      transform: translateX(100%);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  .animate-toast-exit {
+    animation: toastExit 0.2s ease-in forwards;
+  }
+
+  @keyframes toastExit {
+    from {
+      opacity: 1;
+      transform: translateX(0);
+    }
+    to {
+      opacity: 0;
+      transform: translateX(100%);
+    }
+  }
+
+  /* Shimmer loading effect */
+  .animate-shimmer {
+    animation: shimmer 2s infinite;
+    background: linear-gradient(
+      90deg,
+      #f1f5f9 0%,
+      #e2e8f0 50%,
+      #f1f5f9 100%
+    );
+    background-size: 200% 100%;
+  }
+
+  @keyframes shimmer {
+    0% {
+      background-position: 200% 0;
+    }
+    100% {
+      background-position: -200% 0;
+    }
+  }
+
+  .dark .animate-shimmer {
+    background: linear-gradient(
+      90deg,
+      #1e293b 0%,
+      #334155 50%,
+      #1e293b 100%
+    );
+    background-size: 200% 100%;
+  }
+
+  /* Skeleton pulse */
+  .animate-skeleton {
+    animation: skeleton 1.5s ease-in-out infinite;
+  }
+
+  @keyframes skeleton {
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.5;
+    }
+  }
+
+  /* Chart entrance animations */
+  .animate-chart-fade {
+    animation: chartFade 0.4s ease-out;
+  }
+
+  @keyframes chartFade {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Slide in from right */
+  .animate-slide-right {
+    animation: slideRight 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes slideRight {
+    from {
+      opacity: 0;
+      transform: translateX(-16px);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  /* Scale bounce */
+  .animate-scale-in {
+    animation: scaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  @keyframes scaleIn {
+    from {
+      opacity: 0;
+      transform: scale(0.9);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  /* Stagger delay utilities for list items */
+  .animate-stagger-1 { animation-delay: 50ms; }
+  .animate-stagger-2 { animation-delay: 100ms; }
+  .animate-stagger-3 { animation-delay: 150ms; }
+  .animate-stagger-4 { animation-delay: 200ms; }
+  .animate-stagger-5 { animation-delay: 250ms; }
+  .animate-stagger-6 { animation-delay: 300ms; }
+  .animate-stagger-7 { animation-delay: 350ms; }
+  .animate-stagger-8 { animation-delay: 400ms; }
+
   /* Text utilities */
   .text-gradient {
     @apply bg-gradient-to-r from-sky-500 to-cyan-500 bg-clip-text text-transparent;
@@ -254,5 +453,16 @@
   mark {
     @apply bg-yellow-200 text-slate-900 px-0.5 rounded;
     @apply dark:bg-yellow-900/50 dark:text-yellow-300;
+  }
+
+  /* Respect prefers-reduced-motion */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }

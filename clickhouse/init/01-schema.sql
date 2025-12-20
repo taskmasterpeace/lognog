@@ -52,8 +52,8 @@ SETTINGS index_granularity = 8192;
 -- Materialized view for fast hostname lookups
 CREATE MATERIALIZED VIEW IF NOT EXISTS lognog.logs_by_host
 ENGINE = SummingMergeTree()
-PARTITION BY toYYYYMM(timestamp)
-ORDER BY (hostname, toStartOfHour(timestamp))
+PARTITION BY toYYYYMM(hour)
+ORDER BY (hostname, hour)
 AS SELECT
     hostname,
     toStartOfHour(timestamp) as hour,
@@ -66,8 +66,8 @@ GROUP BY hostname, hour;
 -- Materialized view for app statistics
 CREATE MATERIALIZED VIEW IF NOT EXISTS lognog.logs_by_app
 ENGINE = SummingMergeTree()
-PARTITION BY toYYYYMM(timestamp)
-ORDER BY (app_name, toStartOfHour(timestamp))
+PARTITION BY toYYYYMM(hour)
+ORDER BY (app_name, hour)
 AS SELECT
     app_name,
     toStartOfHour(timestamp) as hour,

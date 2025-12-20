@@ -24,6 +24,8 @@ import { executeSearch, getSavedSearches, createSavedSearch, aiSearch, getAISugg
 import LogViewer from '../components/LogViewer';
 import TimePicker from '../components/TimePicker';
 import FacetFilters, { Facet } from '../components/FacetFilters';
+import { Tooltip, TooltipWithCode } from '../components/ui/Tooltip';
+import { InfoIcon } from '../components/ui/InfoTip';
 
 const SEVERITY_NAMES = ['Emergency', 'Alert', 'Critical', 'Error', 'Warning', 'Notice', 'Info', 'Debug'];
 
@@ -313,38 +315,60 @@ export default function SearchPage() {
           {/* Title */}
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Search & Explore</h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Search & Explore</h1>
+                <InfoIcon
+                  content={
+                    <div className="space-y-2">
+                      <p className="font-semibold">Search Modes</p>
+                      <p><strong>DSL Mode:</strong> Use powerful query syntax for advanced filtering and aggregation</p>
+                      <p><strong>AI Mode:</strong> Ask questions in natural language and get instant results</p>
+                    </div>
+                  }
+                  placement="right"
+                />
+              </div>
               <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
                 {searchMode === 'ai'
                   ? 'Ask questions in plain English'
-                  : 'Query your logs using Spunk Query Language'}
+                  : 'Query your logs using LogNog Query Language'}
               </p>
             </div>
             <div className="flex items-center gap-3">
               {/* Mode Toggle */}
               <div className="flex items-center bg-slate-100 dark:bg-slate-700 rounded-lg p-1">
-                <button
-                  onClick={() => setSearchMode('dsl')}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                    searchMode === 'dsl'
-                      ? 'bg-white dark:bg-slate-600 text-slate-900 dark:text-slate-100 shadow-sm'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
-                  }`}
+                <Tooltip
+                  content="Use Domain-Specific Language for powerful queries with filtering, aggregation, and transformations"
+                  placement="bottom"
                 >
-                  <Code2 className="w-4 h-4" />
-                  DSL
-                </button>
-                <button
-                  onClick={() => setSearchMode('ai')}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                    searchMode === 'ai'
-                      ? 'bg-white dark:bg-slate-600 text-slate-900 dark:text-slate-100 shadow-sm'
-                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
-                  }`}
+                  <button
+                    onClick={() => setSearchMode('dsl')}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                      searchMode === 'dsl'
+                        ? 'bg-white dark:bg-slate-600 text-slate-900 dark:text-slate-100 shadow-sm'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+                    }`}
+                  >
+                    <Code2 className="w-4 h-4" />
+                    DSL
+                  </button>
+                </Tooltip>
+                <Tooltip
+                  content="Ask questions in plain English and let AI convert them to optimized queries"
+                  placement="bottom"
                 >
-                  <Wand2 className="w-4 h-4" />
-                  AI
-                </button>
+                  <button
+                    onClick={() => setSearchMode('ai')}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                      searchMode === 'ai'
+                        ? 'bg-white dark:bg-slate-600 text-slate-900 dark:text-slate-100 shadow-sm'
+                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
+                    }`}
+                  >
+                    <Wand2 className="w-4 h-4" />
+                    AI
+                  </button>
+                </Tooltip>
               </div>
               <button
                 onClick={() => setShowSaveModal(true)}
@@ -392,15 +416,31 @@ export default function SearchPage() {
               /* DSL Query Input */
               <div className="flex-1 relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                <input
-                  type="text"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="search host=* | stats count by hostname"
-                  className="input-search h-12 pr-24"
-                  autoFocus
-                />
+                <TooltipWithCode
+                  content={
+                    <div className="space-y-2">
+                      <p className="font-semibold">DSL Query Syntax</p>
+                      <p>Start with <code className="bg-gray-800 px-1.5 py-0.5 rounded">search</code> followed by filters, then use pipes (<code className="bg-gray-800 px-1.5 py-0.5 rounded">|</code>) for transformations</p>
+                      <p className="text-xs mt-2 opacity-80">Examples:</p>
+                    </div>
+                  }
+                  code={`search severity<=3
+search host=web* app_name="nginx"
+search * | stats count by hostname
+search error | timechart span=1h count
+search * | top 10 app_name`}
+                  placement="bottom"
+                >
+                  <input
+                    type="text"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder="search host=* | stats count by hostname"
+                    className="input-search h-12 pr-24"
+                    autoFocus
+                  />
+                </TooltipWithCode>
                 <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
                   {query && query !== 'search *' && (
                     <button

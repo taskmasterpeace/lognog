@@ -6,7 +6,7 @@ describe('Compiler', () => {
     const result = parseAndCompile('search host=router');
 
     expect(result.sql).toContain('SELECT');
-    expect(result.sql).toContain('FROM spunk.logs');
+    expect(result.sql).toContain('FROM lognog.logs');
     expect(result.sql).toContain("hostname = 'router'");
   });
 
@@ -14,7 +14,7 @@ describe('Compiler', () => {
     const result = parseAndCompile('search *');
 
     expect(result.sql).toContain('SELECT');
-    expect(result.sql).toContain('FROM spunk.logs');
+    expect(result.sql).toContain('FROM lognog.logs');
     expect(result.sql).toContain('ORDER BY timestamp DESC');
     expect(result.sql).toContain('LIMIT');
   });
@@ -104,7 +104,7 @@ describe('Compiler', () => {
     const result = parseAndCompile('');
 
     expect(result.sql).toContain('SELECT');
-    expect(result.sql).toContain('FROM spunk.logs');
+    expect(result.sql).toContain('FROM lognog.logs');
   });
 
   // OR/AND Logic Tests

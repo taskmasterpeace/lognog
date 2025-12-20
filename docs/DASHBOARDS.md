@@ -11,10 +11,17 @@ Dashboards are where your data comes alive. This guide teaches you how to build 
 1. [Dashboard Philosophy](#dashboard-philosophy)
 2. [Creating Dashboards](#creating-dashboards)
 3. [Panel Types](#panel-types)
-4. [Query Optimization](#query-optimization)
-5. [Layout Best Practices](#layout-best-practices)
-6. [Dashboard Templates](#dashboard-templates)
-7. [Advanced Techniques](#advanced-techniques)
+4. [Drag-and-Drop Layout](#drag-and-drop-layout)
+5. [Dashboard Variables](#dashboard-variables)
+6. [Dashboard Branding](#dashboard-branding)
+7. [Public Sharing](#public-sharing)
+8. [AI Insights](#ai-insights)
+9. [Click-to-Drilldown](#click-to-drilldown)
+10. [Dashboard Templates](#dashboard-templates)
+11. [Export & Import](#export--import)
+12. [Query Optimization](#query-optimization)
+13. [Layout Best Practices](#layout-best-practices)
+14. [Advanced Techniques](#advanced-techniques)
 
 ---
 
@@ -296,6 +303,322 @@ search severity<=3 | stats count
 search severity<=3 | stats count
 # Query 2: Previous period (for delta)
 ```
+
+---
+
+## Drag-and-Drop Layout
+
+LogNog dashboards use react-grid-layout for intuitive panel arrangement.
+
+### Entering Edit Mode
+
+1. Open a dashboard
+2. Click the **Settings** dropdown (gear icon)
+3. Select **Edit Layout**
+4. A yellow banner confirms edit mode is active
+
+### Arranging Panels
+
+In edit mode:
+- **Drag** panel headers to move them
+- **Resize** from panel corners
+- Panels snap to a 12-column grid
+- Layouts auto-save when you make changes
+
+### Layout Grid
+
+The dashboard uses a 12-column grid system:
+
+| Panel Width | Grid Columns | Use Case |
+|-------------|--------------|----------|
+| Small | 3-4 columns | Gauges, stats |
+| Medium | 6 columns | Charts, tables |
+| Full width | 12 columns | Time series, large tables |
+
+### Exiting Edit Mode
+
+Click **Done Editing** in the yellow banner, or click **Edit Layout** again in the settings menu.
+
+---
+
+## Dashboard Variables
+
+Variables let you create dynamic, reusable dashboards with dropdown filters.
+
+### Variable Types
+
+| Type | Description | Example |
+|------|-------------|---------|
+| **Query** | Values from a search | Hostnames from logs |
+| **Custom** | Static list of values | `prod,staging,dev` |
+| **Textbox** | Free-text input | Custom IP address |
+| **Interval** | Time intervals | `5m,1h,1d` |
+
+### Creating Variables
+
+1. Click the **Variables** button (when present) or open **Settings > Edit Variables**
+2. Click **Add Variable**
+3. Configure:
+   - **Name**: Variable identifier (e.g., `host`)
+   - **Label**: Display name (e.g., "Hostname")
+   - **Type**: Query, Custom, Textbox, or Interval
+   - **Query**: For Query type, the search to get values
+   - **Default**: Initial value
+
+### Using Variables in Queries
+
+Reference variables with `$variable$` syntax:
+
+```bash
+# Filter by selected hostname
+search hostname=$host$ | stats count by app_name
+
+# Use multiple variables
+search hostname=$host$ severity>=$severity$ | table timestamp message
+
+# With intervals
+search * | timechart span=$interval$ count by hostname
+```
+
+### Variable Queries
+
+For Query-type variables, use searches that return distinct values:
+
+```bash
+# Get all hostnames
+search * | stats count by hostname | table hostname
+
+# Get all applications
+search * | stats count by app_name | table app_name
+
+# Get severity levels
+search * | stats count by severity | table severity
+```
+
+---
+
+## Dashboard Branding
+
+Customize dashboards with your own branding for team dashboards or client-facing displays.
+
+### Branding Options
+
+| Option | Description |
+|--------|-------------|
+| **Logo URL** | Image URL for dashboard header |
+| **Logo Position** | Left, center, or right |
+| **Accent Color** | Primary accent color |
+| **Header Color** | Dashboard header background |
+| **Description** | Dashboard description text |
+
+### Setting Branding
+
+1. Open dashboard **Settings** dropdown
+2. Click **Branding**
+3. Configure logo and colors
+4. Click **Save**
+
+### Logo Guidelines
+
+- Use logos 120x120px or smaller
+- Transparent backgrounds work best
+- HTTPS URLs required for security
+- Supports PNG, JPG, SVG formats
+
+---
+
+## Public Sharing
+
+Share dashboards publicly without requiring login.
+
+### Enabling Public Access
+
+1. Open dashboard **Settings** dropdown
+2. Click **Share**
+3. Toggle **Enable Public Sharing**
+4. Optionally set:
+   - **Password**: Require password to view
+   - **Expiration**: Auto-disable after date
+5. Copy the public URL
+
+### Public URL Format
+
+```
+https://your-lognog-server/public/dashboard/<token>
+```
+
+### Security Notes
+
+- Public dashboards are read-only
+- Data refreshes on each view
+- Disable sharing to revoke access immediately
+- Expired shares return 404
+
+### Use Cases
+
+- NOC status boards on wall monitors
+- Customer-facing status pages
+- Team dashboards without individual logins
+
+---
+
+## AI Insights
+
+LogNog integrates with Ollama for AI-powered dashboard insights.
+
+### Requirements
+
+- Ollama installed and running (`ollama serve`)
+- A compatible model (default: `llama3.2`)
+
+### Enabling AI Insights
+
+1. Open dashboard **Settings** dropdown
+2. Click **AI Insights**
+3. Insights panel appears above the dashboard
+
+### Insight Types
+
+| Type | Color | Description |
+|------|-------|-------------|
+| **Anomaly** | Red/Orange | Unusual patterns detected |
+| **Trend** | Blue | Notable changes over time |
+| **Suggestion** | Green | Recommended actions |
+
+### Environment Variables
+
+```bash
+# Ollama URL (default: http://localhost:11434)
+OLLAMA_URL=http://localhost:11434
+
+# Model to use (default: llama3.2)
+OLLAMA_MODEL=llama3.2
+```
+
+### Natural Language Queries
+
+Use AI to convert natural language to DSL:
+
+1. Click the AI query builder
+2. Type: "show me errors from the last hour by host"
+3. AI generates: `search severity<=3 | stats count by hostname`
+4. Review and execute
+
+---
+
+## Click-to-Drilldown
+
+Click any chart element to automatically navigate to a filtered search.
+
+### How It Works
+
+1. Click a bar in a bar chart
+2. Click a slice in a pie chart
+3. Click a row in a table
+4. LogNog navigates to Search with filters applied
+
+### Drilldown Behavior
+
+| Chart Type | Drilldown Action |
+|------------|------------------|
+| Bar Chart | Filter by category value |
+| Pie Chart | Filter by slice value |
+| Table | Filter by first column value |
+| Time Series | Filter by time range |
+
+### Example
+
+On a "Logs by Host" bar chart, clicking the "web-01" bar opens:
+
+```
+/search?query=search+hostname%3Dweb-01&earliest=-24h
+```
+
+---
+
+## Dashboard Templates
+
+LogNog includes 7 pre-built templates for common homelab scenarios.
+
+### Available Templates
+
+| Template | Description | Required Sources |
+|----------|-------------|------------------|
+| **pfSense Security** | Firewall monitoring | pfSense syslog |
+| **Docker Health** | Container monitoring | Docker logs |
+| **Windows Security** | Windows security events | LogNog In agent |
+| **Web Server** | Nginx/Apache monitoring | Web server logs |
+| **Minecraft Server** | Game server monitoring | Minecraft logs |
+| **System Overview** | General system health | Any sources |
+| **Ubiquiti Network** | UniFi network monitoring | Ubiquiti syslog |
+
+### Creating from Template
+
+1. Go to **Dashboards**
+2. Click **New from Template**
+3. Select a template
+4. Optionally rename
+5. Click **Create**
+
+### Template Contents
+
+Each template includes:
+- Pre-configured panels with queries
+- Optimized layouts
+- Appropriate visualizations
+- Time range presets
+
+---
+
+## Export & Import
+
+Backup dashboards or share with the community.
+
+### Exporting a Dashboard
+
+1. Open the dashboard
+2. Click **Settings** dropdown
+3. Click **Export**
+4. Save the JSON file
+
+### Export Format
+
+```json
+{
+  "name": "Security Dashboard",
+  "description": "Real-time security monitoring",
+  "logo_url": "https://...",
+  "accent_color": "#0ea5e9",
+  "panels": [
+    {
+      "title": "Error Count",
+      "query": "search severity<=3 | stats count",
+      "visualization": "gauge",
+      "position_x": 0,
+      "position_y": 0,
+      "width": 3,
+      "height": 2
+    }
+  ],
+  "variables": [
+    {
+      "name": "host",
+      "type": "query",
+      "query": "search * | stats count by hostname | table hostname"
+    }
+  ],
+  "exported_at": "2025-01-15T10:30:00Z",
+  "version": "1.0"
+}
+```
+
+### Importing a Dashboard
+
+1. Go to **Dashboards**
+2. Click **Import**
+3. Select JSON file or paste JSON
+4. Optionally rename
+5. Click **Import**
 
 ---
 

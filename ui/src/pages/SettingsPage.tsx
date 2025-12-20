@@ -16,7 +16,10 @@ import {
   Zap,
   Globe,
   MapPin,
+  Download,
+  RefreshCw,
 } from 'lucide-react';
+import { InfoTip } from '../components/ui/InfoTip';
 
 export default function SettingsPage() {
   const { user, logout, getApiKeys, createApiKey, revokeApiKey } = useAuth();
@@ -36,10 +39,23 @@ export default function SettingsPage() {
   const [copied, setCopied] = useState(false);
   const [copiedPrefix, setCopiedPrefix] = useState<string | null>(null);
 
-  // Test data generation
+  // Demo data generation
   const [generatingData, setGeneratingData] = useState(false);
-  const [testDataCount, setTestDataCount] = useState('500');
-  const [testDataResult, setTestDataResult] = useState<string | null>(null);
+  const [demoDataCount, setDemoDataCount] = useState('500');
+  const [demoDataTimeRange, setDemoDataTimeRange] = useState('-1h');
+  const [demoDataTypes, setDemoDataTypes] = useState<string[]>(['syslog', 'nginx', 'auth', 'app', 'firewall', 'database']);
+  const [demoDataResult, setDemoDataResult] = useState<string | null>(null);
+
+  // Demo data stats
+  const [demoStats, setDemoStats] = useState<any>(null);
+  const [loadingStats, setLoadingStats] = useState(false);
+
+  // Clear data
+  const [clearingData, setClearingData] = useState(false);
+  const [clearDataResult, setClearDataResult] = useState<string | null>(null);
+
+  // Export data
+  const [exportingData, setExportingData] = useState(false);
 
   // GeoIP status
   const [geoipStatus, setGeoipStatus] = useState<any>(null);
@@ -52,6 +68,7 @@ export default function SettingsPage() {
   useEffect(() => {
     loadApiKeys();
     loadGeoipStatus();
+    loadDemoStats();
   }, []);
 
   const loadApiKeys = async () => {
@@ -122,34 +139,136 @@ export default function SettingsPage() {
     );
   };
 
-  const handleGenerateTestData = async () => {
+  const loadDemoStats = async () => {
+    setLoadingStats(true);
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch('/api/demo/stats', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setDemoStats(data.stats);
+      }
+    } catch (err) {
+      console.error('Failed to load demo stats:', err);
+    } finally {
+      setLoadingStats(false);
+    }
+  };
+
+  const handleGenerateDemoData = async () => {
     setGeneratingData(true);
-    setTestDataResult(null);
+    setDemoDataResult(null);
+    setClearDataResult(null);
     setError(null);
 
     try {
       const token = localStorage.getItem('auth_token');
-      const response = await fetch('/api/ingest/generate-test-data', {
+      const response = await fetch('/api/demo/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify({ count: parseInt(testDataCount) || 500 }),
+        body: JSON.stringify({
+          count: parseInt(demoDataCount) || 500,
+          timeRange: {
+            start: demoDataTimeRange,
+            end: 'now',
+          },
+          types: demoDataTypes,
+        }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        setTestDataResult(`Successfully generated ${data.generated} log entries!`);
+        setDemoDataResult(`Successfully generated ${data.generated} log entries!`);
+        loadDemoStats(); // Refresh stats
       } else {
-        setError(data.error || 'Failed to generate test data');
+        setError(data.error || 'Failed to generate demo data');
       }
     } catch (err) {
       setError('Failed to connect to server');
     } finally {
       setGeneratingData(false);
     }
+  };
+
+  const handleClearDemoData = async () => {
+    if (!confirm('Are you sure you want to clear ALL log data? This action cannot be undone.')) {
+      return;
+    }
+
+    setClearingData(true);
+    setDemoDataResult(null);
+    setClearDataResult(null);
+    setError(null);
+
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch('/api/demo/clear?confirm=yes', {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        setClearDataResult('Successfully cleared all log data');
+        loadDemoStats(); // Refresh stats
+      } else {
+        setError(data.error || 'Failed to clear data');
+      }
+    } catch (err) {
+      setError('Failed to connect to server');
+    } finally {
+      setClearingData(false);
+    }
+  };
+
+  const handleExportData = async () => {
+    setExportingData(true);
+    setError(null);
+
+    try {
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch('/api/demo/export?limit=1000&earliest=-24h&latest=now', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `lognog-export-${Date.now()}.json`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } else {
+        const data = await response.json();
+        setError(data.error || 'Failed to export data');
+      }
+    } catch (err) {
+      setError('Failed to connect to server');
+    } finally {
+      setExportingData(false);
+    }
+  };
+
+  const toggleDemoType = (type: string) => {
+    setDemoDataTypes((prev) =>
+      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
+    );
   };
 
   const loadGeoipStatus = async () => {
@@ -310,8 +429,12 @@ export default function SettingsPage() {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                   Key Name
+                  <InfoTip
+                    content="Descriptive name to identify this API key (e.g., production server, testing environment)"
+                    placement="right"
+                  />
                 </label>
                 <input
                   type="text"
@@ -323,8 +446,18 @@ export default function SettingsPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                   Permissions
+                  <InfoTip
+                    content={
+                      <div className="space-y-1">
+                        <p><strong>read:</strong> View logs and search data</p>
+                        <p><strong>write:</strong> Ingest logs and create data</p>
+                        <p><strong>admin:</strong> Full access including settings and user management</p>
+                      </div>
+                    }
+                    placement="right"
+                  />
                 </label>
                 <div className="flex flex-wrap gap-2">
                   {['read', 'write', 'admin'].map((perm) => (
@@ -345,8 +478,12 @@ export default function SettingsPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
                   Expires In (days, optional)
+                  <InfoTip
+                    content="Set an expiration time for automatic key rotation. Leave empty for keys that never expire."
+                    placement="right"
+                  />
                 </label>
                 <input
                   type="number"
@@ -645,62 +782,200 @@ export default function SettingsPage() {
         )}
       </section>
 
-      {/* Developer Tools Section */}
+      {/* Demo Data Management Section */}
       <section className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 mt-8">
         <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2 mb-4">
           <Database className="w-5 h-5" />
-          Developer Tools
+          Demo Data Management
         </h2>
 
         <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
-          Generate realistic test data for demos, screenshots, and testing purposes.
+          Generate realistic test data for demos, screenshots, and testing. Export and import log data as JSON.
         </p>
 
-        {/* Success message */}
-        {testDataResult && (
+        {/* Success/Error messages */}
+        {demoDataResult && (
           <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800 flex items-center gap-2 text-green-700 dark:text-green-300 text-sm">
             <Check className="w-4 h-4" />
-            {testDataResult}
+            {demoDataResult}
+          </div>
+        )}
+        {clearDataResult && (
+          <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 flex items-center gap-2 text-blue-700 dark:text-blue-300 text-sm">
+            <Check className="w-4 h-4" />
+            {clearDataResult}
           </div>
         )}
 
-        <div className="flex items-end gap-4">
-          <div className="flex-1 max-w-xs">
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-              Number of Logs
-            </label>
-            <input
-              type="number"
-              value={testDataCount}
-              onChange={(e) => setTestDataCount(e.target.value)}
-              min="10"
-              max="1000"
-              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
-            />
+        {/* Current Stats */}
+        {demoStats && (
+          <div className="mb-6 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                Current Database Stats
+              </h3>
+              <button
+                onClick={loadDemoStats}
+                disabled={loadingStats}
+                className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+                title="Refresh stats"
+              >
+                <RefreshCw className={`w-4 h-4 ${loadingStats ? 'animate-spin' : ''}`} />
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              <div>
+                <span className="text-slate-500 dark:text-slate-400">Total Logs:</span>
+                <div className="font-semibold text-slate-900 dark:text-slate-100">
+                  {demoStats.total.toLocaleString()}
+                </div>
+              </div>
+              {demoStats.oldest && (
+                <div>
+                  <span className="text-slate-500 dark:text-slate-400">Time Range:</span>
+                  <div className="font-mono text-xs text-slate-900 dark:text-slate-100">
+                    {new Date(demoStats.oldest).toLocaleDateString()} - {new Date(demoStats.newest).toLocaleDateString()}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
-          <button
-            onClick={handleGenerateTestData}
-            disabled={generatingData}
-            className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
-          >
-            {generatingData ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Generating...
-              </>
-            ) : (
-              <>
-                <Zap className="w-4 h-4" />
-                Generate Test Data
-              </>
-            )}
-          </button>
+        )}
+
+        {/* Generate Demo Data */}
+        <div className="mb-6">
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">
+            Generate Demo Data
+          </h3>
+
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Number of Logs
+                </label>
+                <input
+                  type="number"
+                  value={demoDataCount}
+                  onChange={(e) => setDemoDataCount(e.target.value)}
+                  min="10"
+                  max="10000"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Time Range
+                </label>
+                <select
+                  value={demoDataTimeRange}
+                  onChange={(e) => setDemoDataTimeRange(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                >
+                  <option value="-1h">Last Hour</option>
+                  <option value="-6h">Last 6 Hours</option>
+                  <option value="-24h">Last 24 Hours</option>
+                  <option value="-7d">Last Week</option>
+                  <option value="-30d">Last Month</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                Log Types
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {['syslog', 'nginx', 'auth', 'app', 'firewall', 'database'].map((type) => (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => toggleDemoType(type)}
+                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                      demoDataTypes.includes(type)
+                        ? 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300'
+                        : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'
+                    }`}
+                  >
+                    {type}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <button
+              onClick={handleGenerateDemoData}
+              disabled={generatingData || demoDataTypes.length === 0}
+              className="flex items-center gap-2 px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+            >
+              {generatingData ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Generating...
+                </>
+              ) : (
+                <>
+                  <Zap className="w-4 h-4" />
+                  Generate Demo Data
+                </>
+              )}
+            </button>
+          </div>
+
+          <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
+            Generates realistic logs from various sources including web servers, databases, firewalls, and more.
+            Includes security events, errors, warnings, and info messages distributed across your selected time range.
+          </p>
         </div>
 
-        <p className="mt-4 text-xs text-slate-400 dark:text-slate-500">
-          Generates realistic logs from various sources including web servers, databases, firewalls, and more.
-          Includes security events, errors, warnings, and info messages.
-        </p>
+        {/* Export/Import Controls */}
+        <div className="pt-6 border-t border-slate-200 dark:border-slate-700">
+          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">
+            Data Export & Clear
+          </h3>
+
+          <div className="flex flex-wrap gap-3">
+            <button
+              onClick={handleExportData}
+              disabled={exportingData}
+              className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+            >
+              {exportingData ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Exporting...
+                </>
+              ) : (
+                <>
+                  <Download className="w-4 h-4" />
+                  Export Data (JSON)
+                </>
+              )}
+            </button>
+
+            <button
+              onClick={handleClearDemoData}
+              disabled={clearingData}
+              className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+            >
+              {clearingData ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Clearing...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4" />
+                  Clear All Data
+                </>
+              )}
+            </button>
+          </div>
+
+          <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
+            Export downloads the last 24 hours of data (max 1000 logs) as JSON. Clear removes all logs from the database (requires confirmation).
+          </p>
+        </div>
       </section>
     </div>
   );

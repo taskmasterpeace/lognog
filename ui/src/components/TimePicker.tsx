@@ -142,9 +142,9 @@ export default function TimePicker({ onRangeChange, defaultRange = '-24h', class
         className="btn-secondary h-12 min-w-[140px] group"
         title={formatDisplayText()}
       >
-        <Clock className="w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-colors" />
+        <Clock className="w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-all duration-200 group-hover:scale-110" />
         <span className="font-medium">{formatShortText()}</span>
-        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {/* Dropdown Menu */}
@@ -158,26 +158,26 @@ export default function TimePicker({ onRangeChange, defaultRange = '-24h', class
                   Time Range
                 </p>
               </div>
-              {TIME_PRESETS.map((preset) => (
+              {TIME_PRESETS.map((preset, index) => (
                 <button
                   key={preset.value}
                   onClick={() => handlePresetSelect(preset)}
-                  className={`dropdown-item flex items-center justify-between ${
+                  className={`dropdown-item flex items-center justify-between transition-all duration-150 animate-fade-in animate-stagger-${Math.min(index + 1, 8)} ${
                     selectedPreset.value === preset.value && !isCustomMode
-                      ? 'bg-sky-50 text-sky-600 font-medium'
-                      : 'text-slate-700'
+                      ? 'bg-sky-50 text-sky-600 font-medium dark:bg-sky-900/20 dark:text-sky-400'
+                      : 'text-slate-700 dark:text-slate-300'
                   }`}
                 >
                   <span>{preset.label}</span>
                   {preset.value === 'custom' && (
-                    <Calendar className="w-4 h-4 text-slate-400" />
+                    <Calendar className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                   )}
                 </button>
               ))}
             </div>
           ) : (
             /* Custom Date/Time Picker */
-            <div className="p-4 space-y-4">
+            <div className="p-4 space-y-4 animate-slide-right">
               <div className="flex items-center justify-between border-b border-slate-100 pb-3">
                 <p className="text-sm font-semibold text-slate-900">Custom Time Range</p>
                 <button
