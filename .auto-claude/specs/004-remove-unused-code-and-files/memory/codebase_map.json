@@ -49,7 +49,17 @@
       "description": "All Python modules in the agent service are actively used. Complete module analysis confirms: 11 core modules (main.py, __init__.py, config.py, buffer.py, agent.py, watcher.py, fim.py, shipper.py, tray.py, gui.py, sound_alerts.py), 2 collector modules (collectors/__init__.py, collectors/windows_events.py), and 3 entry point scripts (run_agent.py, build.py, verify_windows_events.py). No unused Python modules found.",
       "category": "code-analysis",
       "discovered_at": "2025-12-22T04:30:50.296594+00:00"
+    },
+    "api/src/": {
+      "description": "API codebase now has 31 console.log statements remaining, all operational: 4 in index.ts (server startup/shutdown, UI serving), 3 in seed-templates.ts (template seeding), 3 in builtin-templates.ts (template seeding), 2 in alerts.ts (alert triggers), 6 in llamaindex.ts (LlamaIndex initialization), 6 in geoip.ts (GeoIP database loading), 7 in scheduler.ts (SMTP config, report execution). Removed 25 debug-only logs.",
+      "category": "code_quality",
+      "discovered_at": "2025-12-22T04:54:01.364149+00:00"
+    },
+    "ui/src/components/": {
+      "description": "UI cleanup removed 15 unused files: 3 example files, 2 unused components (AIAssistant - superseded by NogChat, NaturalLanguageInput - never imported), 4 unused chart wrappers (app uses recharts directly, only HeatmapChart and GaugeChart are used), 3 unused UI utilities (AnimatedCounter, Skeleton, Toast), and 3 unused barrel exports. Total 2378 lines removed. Remaining files are all actively imported.",
+      "category": "cleanup",
+      "discovered_at": "2025-12-22T05:01:17.993216+00:00"
     }
   },
-  "last_updated": "2025-12-22T04:30:50.296607+00:00"
+  "last_updated": "2025-12-22T05:01:17.993228+00:00"
 }

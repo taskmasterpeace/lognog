@@ -131,7 +131,9 @@
             "command": "cd ui && npm run build",
             "expected": "Build succeeds without errors"
           },
-          "status": "pending"
+          "status": "completed",
+          "notes": "Removed 2 orphaned UI page files (684 lines of code deleted): DataSourcesPage.tsx (data source templates page, never routed) and TooltipDemo.tsx (tooltip demo page, no route defined). UI build verified successful. Commit: 9997daa",
+          "updated_at": "2025-12-22T04:35:11.696373+00:00"
         },
         {
           "id": "subtask-2-2",
@@ -148,7 +150,9 @@
             "command": "test ! -d 'C:gitspunkapiscripts' && echo 'Directory removed'",
             "expected": "Directory removed"
           },
-          "status": "pending"
+          "status": "completed",
+          "notes": "Verified: The malformed directory 'C:gitspunkapiscripts' does not exist in this worktree (confirmed during Phase 1 investigation). This directory may have been created in a different worktree/clone or was already cleaned up. Verification passes: test returns 'Directory removed' as expected. No git commit needed as no files were modified.",
+          "updated_at": "2025-12-22T04:36:40.728640+00:00"
         },
         {
           "id": "subtask-2-3",
@@ -160,13 +164,14 @@
             "api/src/services/field-extractor.demo.ts"
           ],
           "patterns_from": [],
-          "notes": "Only delete if investigation confirms it's not needed for testing",
+          "notes": "Deleted api/src/services/field-extractor.demo.ts (220 lines of demo code). Updated api/FIELD_EXTRACTION.md to remove reference to deleted demo script. API build verified successful. Commit: 6d73a65",
           "verification": {
             "type": "command",
             "command": "cd api && npm run build",
             "expected": "Build succeeds without errors"
           },
-          "status": "pending"
+          "status": "completed",
+          "updated_at": "2025-12-22T04:40:06.013970+00:00"
         }
       ]
     },
@@ -189,13 +194,14 @@
           ],
           "files_to_create": [],
           "patterns_from": [],
-          "notes": "Only remove dependencies confirmed unused by depcheck analysis",
+          "notes": "Verified all 14 runtime dependencies are actively used in the codebase - no unused dependencies to remove. All dependencies confirmed by grep analysis: @clickhouse/client (db/clickhouse.ts), @llamaindex/ollama + llamaindex (services/llamaindex.ts, routes/ai.ts), @modelcontextprotocol/sdk (routes/mcp.ts, mcp/server.ts), bcrypt (auth/auth.ts), better-sqlite3 (db/sqlite.ts), cors (index.ts), express (19 files), express-ws (index.ts), jsonwebtoken (auth/auth.ts), maxmind (services/geoip.ts), nodemailer (services/alerts.ts), stacktrace-parser (services/field-extractor.ts), uuid (5 files), zod (4 files). Build verification passed. No changes needed - no commit required.",
           "verification": {
             "type": "command",
             "command": "cd api && npm install && npm run build",
             "expected": "Install and build succeed"
           },
-          "status": "pending"
+          "status": "completed",
+          "updated_at": "2025-12-22T04:42:18.427873+00:00"
         },
         {
           "id": "subtask-3-2",
@@ -206,13 +212,14 @@
           ],
           "files_to_create": [],
           "patterns_from": [],
-          "notes": "Only remove dependencies confirmed unused by depcheck analysis",
+          "notes": "Removed 4 unused npm dependencies: ansi-to-html, react-window, use-debounce, @types/react-window. All confirmed unused via grep analysis (no imports found). npm install removed 5 packages and build verified successful. Commit: 6d25a8e",
           "verification": {
             "type": "command",
             "command": "cd ui && npm install && npm run build",
             "expected": "Install and build succeed"
           },
-          "status": "pending"
+          "status": "completed",
+          "updated_at": "2025-12-22T04:44:57.302159+00:00"
         }
       ]
     },
@@ -233,13 +240,14 @@
           "files_to_modify": [],
           "files_to_create": [],
           "patterns_from": [],
-          "notes": "Search for large commented blocks (>5 lines) and remove if clearly dead code",
+          "notes": "Comprehensive analysis of all 52 API source files found NO commented-out code blocks to remove. All comments in the codebase are intentional: JSDoc documentation comments (/** ... */), section headers (e.g., // Saved Searches, // Agent Notifications), and explanatory inline comments. The API codebase is clean with no dead code. Verified with npm run build (success) and npm run test:run (215 tests passed). No changes needed, no commit required.",
           "verification": {
             "type": "command",
             "command": "cd api && npm run build && npm run test:run",
             "expected": "Build and tests succeed"
           },
-          "status": "pending"
+          "status": "completed",
+          "updated_at": "2025-12-22T04:49:11.372911+00:00"
         },
         {
           "id": "subtask-4-2",
@@ -248,13 +256,14 @@
           "files_to_modify": [],
           "files_to_create": [],
           "patterns_from": [],
-          "notes": "Keep logging that serves operational purposes, remove debug-only logs",
+          "notes": "Removed 25 debug console.log statements from 4 files:\\n- api/src/index.ts: Removed 5 WebSocket/SSE connection lifecycle logs\\n- api/src/routes/demo.ts: Removed 3 demo generation/import/clear logs\\n- api/src/routes/mcp.ts: Removed 2 MCP SSE connection lifecycle logs\\n- api/src/routes/ingest.ts: Removed 6 ingestion count logs (OTLP, Supabase, HTTP, Vercel, test data, SmartThings)\\n\\nKept 31 operational logs for server startup, service initialization, alerts, and template seeding. API build verified successful. Commit: c661efe",
           "verification": {
             "type": "command",
             "command": "cd api && npm run build",
             "expected": "Build succeeds"
           },
-          "status": "pending"
+          "status": "completed",
+          "updated_at": "2025-12-22T04:54:01.304451+00:00"
         },
         {
           "id": "subtask-4-3",
@@ -263,13 +272,14 @@
           "files_to_modify": [],
           "files_to_create": [],
           "patterns_from": [],
-          "notes": "Focus on removing debug console.log statements and commented code",
+          "notes": "Removed 15 unused UI component files (2378 lines of code):\\n\\nExample/demo files (3): LogViewer.example.tsx, TimePicker.example.tsx, charts/ChartExamples.tsx\\n\\nUnused components (2): AIAssistant.tsx (app uses NogChat), dashboard/NaturalLanguageInput.tsx (never imported)\\n\\nUnused chart wrappers (4): charts/BarChart.tsx, charts/PieChart.tsx, charts/StatCard.tsx, charts/TimeSeriesChart.tsx - app uses recharts directly\\n\\nUnused UI utilities (3): ui/AnimatedCounter.tsx, ui/Skeleton.tsx, ui/Toast.tsx - only in documentation\\n\\nUnused barrel exports (3): components/index.ts, charts/index.ts, ui/index.ts - only referenced in docs\\n\\nUpdated dashboard/index.ts to remove NaturalLanguageInput export.\\n\\nConsole statements reviewed: All console.error statements in production code are legitimate error handlers - kept intentionally. Console.log statements found only in documentation files (.md) and were kept.\\n\\nUI build verified successful. Commit: 1a81ec0",
           "verification": {
             "type": "command",
             "command": "cd ui && npm run build",
             "expected": "Build succeeds"
           },
-          "status": "pending"
+          "status": "completed",
+          "updated_at": "2025-12-22T05:01:07.418240+00:00"
         }
       ]
     },
@@ -298,7 +308,9 @@
             "command": "cd api && npm run test:run",
             "expected": "All tests pass"
           },
-          "status": "pending"
+          "status": "completed",
+          "notes": "All 215 API tests passed. 8 test files: alerts, ip-classifier, lexer, parser, compiler, eval, field-extractor, ingest. No regressions found.",
+          "updated_at": "2025-12-22T05:02:53.272255+00:00"
         },
         {
           "id": "subtask-5-2",
@@ -473,5 +485,5 @@
   "status": "human_review",
   "planStatus": "review",
   "updated_at": "2025-12-22T04:03:28.112Z",
-  "last_updated": "2025-12-22T04:31:40.955709+00:00"
+  "last_updated": "2025-12-22T05:02:53.272266+00:00"
 }

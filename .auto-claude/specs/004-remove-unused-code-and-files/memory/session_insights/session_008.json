@@ -1,0 +1,47 @@
+{
+  "session_number": 8,
+  "timestamp": "2025-12-22T04:40:22.399191+00:00",
+  "subtasks_completed": [
+    "subtask-2-3"
+  ],
+  "discoveries": {
+    "file_insights": [
+      {
+        "file_path": "api/FIELD_EXTRACTION.md",
+        "changes": "Removed demo run instructions from markdown file",
+        "lines_removed": 6
+      },
+      {
+        "file_path": "api/src/services/field-extractor.demo.ts",
+        "changes": "Entire demo file deleted",
+        "lines_removed": 219
+      }
+    ],
+    "patterns_discovered": [
+      "Removing example/demo files to clean up project documentation",
+      "Cleaning up unnecessary code artifacts after development phase"
+    ],
+    "gotchas_discovered": [
+      "Demo files can accumulate and add unnecessary complexity to the codebase",
+      "Documentation may need manual cleanup after removing demo files"
+    ],
+    "approach_outcome": "SUCCESS - Demo files successfully removed with minimal disruption to project structure",
+    "recommendations": [
+      "Periodically review and remove demo/example files that are no longer needed",
+      "Consider using a separate documentation or examples directory for such files",
+      "Ensure test files remain intact when removing demo scripts"
+    ],
+    "subtask_id": "subtask-2-3",
+    "session_num": 8,
+    "success": true,
+    "changed_files": [
+      "api/FIELD_EXTRACTION.md",
+      "api/src/services/field-extractor.demo.ts"
+    ]
+  },
+  "what_worked": [
+    "Implemented subtask: subtask-2-3"
+  ],
+  "what_failed": [],
+  "recommendations_for_next_session": []
+}
