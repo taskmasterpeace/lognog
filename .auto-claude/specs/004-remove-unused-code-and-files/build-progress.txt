@@ -1,0 +1,165 @@
+=== AUTO-BUILD PROGRESS ===
+
+Project: Remove Unused Code and Files
+Spec: 004-remove-unused-code-and-files
+Workspace: C:\git\spunk
+Started: 2025-12-22
+
+Workflow Type: refactor
+Rationale: Code cleanup task that removes unused code without adding new functionality.
+           Follows the Discover → Document → Remove → Verify pattern.
+
+Session 1 (Planner):
+- Created implementation_plan.json
+- Phases: 5
+- Total subtasks: 14
+- Created init.sh
+- Created context.json with cleanup findings
+
+Phase Summary:
+- Phase 1 (Investigation & Discovery): 5 subtasks, depends on []
+  - Analyze API for unused files
+  - Analyze UI for unused components/pages
+  - Check API npm dependencies (depcheck)
+  - Check UI npm dependencies (depcheck)
+  - Analyze agent Python modules
+
+- Phase 2 (Remove Confirmed Unused Files): 3 subtasks, depends on [phase-1]
+  - Remove orphaned UI pages (DataSourcesPage.tsx, TooltipDemo.tsx)
+  - Remove malformed directory (C:gitspunkapiscripts)
+  - Remove demo/example files if confirmed unnecessary
+
+- Phase 3 (Clean Up Unused Dependencies): 2 subtasks, depends on [phase-1]
+  - Remove unused API dependencies from package.json
+  - Remove unused UI dependencies from package.json
+
+- Phase 4 (Remove Dead Code): 3 subtasks, depends on [phase-2]
+  - Remove commented-out code blocks in API
+  - Remove console.log debug statements in API
+  - Clean up UI dead code and console statements
+
+- Phase 5 (Final Verification): 3 subtasks, depends on [phases 2,3,4]
+  - Run all API tests
+  - Verify Docker builds
+  - End-to-end application verification
+
+Services Involved:
+- api: TypeScript/Express backend (port 4000) - Primary cleanup target
+- ui: React/Vite frontend (port 3000) - Secondary cleanup target
+- agent: Python service - Minimal cleanup expected
+
+Cleanup Candidates Identified:
+Confirmed Unused Files:
+  1. ui/src/pages/DataSourcesPage.tsx - Not imported in App.tsx
+  2. ui/src/pages/TooltipDemo.tsx - Not imported in App.tsx
+  3. C:gitspunkapiscripts/ - Empty malformed directory (path escaping bug)
+
+Potentially Unused (Requires Investigation):
+  1. api/src/services/field-extractor.demo.ts - Demo script
+  2. ui/src/components/LogViewer.example.tsx - Documentation example
+  3. ui/src/components/TimePicker.example.tsx - Documentation example
+  4. Root-level: setup-demo-data.js, take-screenshots.js
+  5. Root-level: PHASE*.md files (possibly outdated docs)
+
+Parallelism Analysis:
+- Max parallel phases: 2
+- Recommended workers: 1 (sequential due to file dependency risks)
+- Parallel groups: [phase-3, phase-4] can run in parallel after phase-2
+
+Verification Strategy:
+- Risk level: medium
+- Required verifications:
+  1. cd api && npm run build (must succeed)
+  2. cd ui && npm run build (must succeed)
+  3. cd api && npm run test:run (all tests must pass)
+  4. docker-compose build api ui (must succeed)
+
+=== STARTUP COMMAND ===
+
+To continue building this spec, run:
+
+  source auto-claude/.venv/bin/activate && python auto-claude/run.py --spec 004 --parallel 1
+
+Or on Windows:
+  auto-claude\.venv\Scripts\activate && python auto-claude\run.py --spec 004 --parallel 1
+
+=== END SESSION 1 ===
+
+=== SESSION 2: subtask-1-1 - API Service Analysis ===
+Started: 2025-12-22
+
+Analyzed all 53 files in api/src/:
+- 16 route files (all used)
+- 4 database files (all used)
+- 12 service files
+- 4 authentication files
+- 9 DSL files
+- 3 data files
+- 1 MCP file
+- 8 test files
+
+UNUSED FILES IDENTIFIED:
+
+1. api/src/auth/index.ts
+   Status: UNUSED
+   Evidence: This file re-exports from auth.js and middleware.js, but no file
+             imports from '../auth' or './auth' directly. All consumers import
+             from '../auth/auth.js' or '../auth/middleware.js' explicitly.
+   Verified by: grep for 'auth/index' and '../auth"' returns no matches
+   Recommendation: Safe to delete (barrel file with no consumers)
+
+2. api/src/services/field-extractor.demo.ts
+   Status: UNUSED (standalone demo script)
+   Evidence: Not imported anywhere. Header comment says:
+             "Run with: tsx src/services/field-extractor.demo.ts"
+             This is a CLI demo script, not part of the application.
+   Verified by: grep for 'field-extractor.demo' only matches inside the file itself
+   Recommendation: Safe to delete (demo script not needed for production)
+
+MALFORMED DIRECTORY CHECK:
+- "C:gitspunkapiscripts" directory: NOT FOUND
+  This malformed directory mentioned in the plan does not exist in this worktree.
+
+ALL OTHER FILES VERIFIED AS USED:
+
+Routes (all imported in index.ts):
+✓ search.ts, dashboards.ts, stats.ts, reports.ts, knowledge.ts
+✓ field-extractions.ts, auth.ts, ingest.ts, alerts.ts, geoip.ts
+✓ silences.ts, utils.ts, templates.ts, ai.ts, demo.ts, mcp.ts
+
+Database (imported in routes/services):
+✓ clickhouse.ts, sqlite.ts, backend.ts, sqlite-logs.ts
+
+Services (imported in routes):
+✓ scheduler.ts (index.ts), alerts.ts (alerts route, scheduler)
+✓ field-extractor.ts (search, knowledge, field-extractions routes)
+✓ geoip.ts (geoip route), llamaindex.ts (ai route)
+✓ mock-data.ts (demo route), silence-service.ts (silences route)
+✓ ai-search.ts (search route), templates.ts (templates route)
+✓ ip-classifier.ts (utils route)
+
+Authentication:
+✓ auth.ts (middleware.ts, multiple routes)
+✓ middleware.ts (multiple routes)
+✗ index.ts (UNUSED - no consumers of the barrel export)
+
+DSL:
+✓ compiler.ts, compiler-sqlite.ts, lexer.ts, parser.ts, types.ts, index.ts
+
+Data:
+✓ builtin-templates.ts, seed-templates.ts, dashboard-templates.ts
+
+MCP:
+✓ server.ts (mcp route)
+
+Test files (valid - test corresponding source files):
+✓ ingest.test.ts, alerts.test.ts, field-extractor.test.ts
+✓ ip-classifier.test.ts, compiler.test.ts, eval.test.ts
+✓ lexer.test.ts, parser.test.ts
+
+SUMMARY for Phase 2:
+Files to delete:
+  - api/src/auth/index.ts (unused barrel export)
+  - api/src/services/field-extractor.demo.ts (standalone demo script)
+
+=== END subtask-1-1 ===

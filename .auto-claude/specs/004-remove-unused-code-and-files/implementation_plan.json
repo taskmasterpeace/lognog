@@ -1,0 +1,469 @@
+{
+  "feature": "Remove Unused Code and Files",
+  "workflow_type": "refactor",
+  "workflow_rationale": "This is a code cleanup task that removes unused code without adding new functionality. The refactor workflow ensures we identify, document, and safely remove unused code while preserving all existing functionality. We follow the pattern: Discover \u2192 Document \u2192 Remove \u2192 Verify.",
+  "phases": [
+    {
+      "id": "phase-1-investigation",
+      "name": "Investigation & Discovery",
+      "type": "investigation",
+      "description": "Systematically identify all unused files, dead code, and orphaned dependencies across the monorepo",
+      "depends_on": [],
+      "parallel_safe": false,
+      "subtasks": [
+        {
+          "id": "subtask-1-1",
+          "description": "Analyze API service for unused files and exports",
+          "service": "api",
+          "files_to_modify": [],
+          "files_to_create": [],
+          "patterns_from": [
+            "api/src/index.ts"
+          ],
+          "verification": {
+            "type": "manual",
+            "instructions": "Document findings: List all files in api/src/ that are not imported by any other file"
+          },
+          "expected_output": "List of unused API files with evidence of non-usage",
+          "status": "completed",
+          "notes": "Analyzed all 53 files in api/src/. Found 2 unused files: (1) api/src/auth/index.ts - unused barrel export, (2) api/src/services/field-extractor.demo.ts - standalone demo script. All other files verified as used. Malformed directory 'C:gitspunkapiscripts' not found in this worktree.",
+          "updated_at": "2025-12-22T04:16:19.102602+00:00"
+        },
+        {
+          "id": "subtask-1-2",
+          "description": "Analyze UI components and pages for unused exports",
+          "service": "ui",
+          "files_to_modify": [],
+          "files_to_create": [],
+          "patterns_from": [
+            "ui/src/App.tsx"
+          ],
+          "verification": {
+            "type": "manual",
+            "instructions": "Document findings: List all files in ui/src/ not imported by any other file"
+          },
+          "expected_output": "List of unused UI files with evidence of non-usage",
+          "status": "pending"
+        },
+        {
+          "id": "subtask-1-3",
+          "description": "Check npm dependencies in API service for unused packages",
+          "service": "api",
+          "files_to_modify": [],
+          "files_to_create": [],
+          "patterns_from": [
+            "api/package.json"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd api && npx depcheck --json 2>/dev/null || echo '{}'",
+            "expected": "JSON output with unused dependencies"
+          },
+          "expected_output": "List of unused npm packages in API",
+          "status": "pending"
+        },
+        {
+          "id": "subtask-1-4",
+          "description": "Check npm dependencies in UI service for unused packages",
+          "service": "ui",
+          "files_to_modify": [],
+          "files_to_create": [],
+          "patterns_from": [
+            "ui/package.json"
+          ],
+          "verification": {
+            "type": "command",
+            "command": "cd ui && npx depcheck --json 2>/dev/null || echo '{}'",
+            "expected": "JSON output with unused dependencies"
+          },
+          "expected_output": "List of unused npm packages in UI",
+          "status": "pending"
+        },
+        {
+          "id": "subtask-1-5",
+          "description": "Analyze agent Python service for unused modules",
+          "service": "agent",
+          "files_to_modify": [],
+          "files_to_create": [],
+          "patterns_from": [
+            "agent/src/lognog_in/main.py"
+          ],
+          "verification": {
+            "type": "manual",
+            "instructions": "Check each Python module for imports and usage"
+          },
+          "expected_output": "List of unused Python modules in agent",
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "phase-2-remove-confirmed",
+      "name": "Remove Confirmed Unused Files",
+      "type": "implementation",
+      "description": "Delete files that are confirmed to be unused based on investigation",
+      "depends_on": [
+        "phase-1-investigation"
+      ],
+      "parallel_safe": false,
+      "subtasks": [
+        {
+          "id": "subtask-2-1",
+          "description": "Remove orphaned UI pages (DataSourcesPage.tsx, TooltipDemo.tsx)",
+          "service": "ui",
+          "files_to_modify": [],
+          "files_to_create": [],
+          "files_to_delete": [
+            "ui/src/pages/DataSourcesPage.tsx",
+            "ui/src/pages/TooltipDemo.tsx"
+          ],
+          "patterns_from": [],
+          "verification": {
+            "type": "command",
+            "command": "cd ui && npm run build",
+            "expected": "Build succeeds without errors"
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-2-2",
+          "description": "Remove malformed directory (C:gitspunkapiscripts)",
+          "service": "api",
+          "files_to_modify": [],
+          "files_to_create": [],
+          "files_to_delete": [
+            "C:gitspunkapiscripts"
+          ],
+          "patterns_from": [],
+          "verification": {
+            "type": "command",
+            "command": "test ! -d 'C:gitspunkapiscripts' && echo 'Directory removed'",
+            "expected": "Directory removed"
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-2-3",
+          "description": "Remove demo/example files identified as unnecessary",
+          "service": "api",
+          "files_to_modify": [],
+          "files_to_create": [],
+          "files_to_delete": [
+            "api/src/services/field-extractor.demo.ts"
+          ],
+          "patterns_from": [],
+          "notes": "Only delete if investigation confirms it's not needed for testing",
+          "verification": {
+            "type": "command",
+            "command": "cd api && npm run build",
+            "expected": "Build succeeds without errors"
+          },
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "phase-3-cleanup-dependencies",
+      "name": "Clean Up Unused Dependencies",
+      "type": "implementation",
+      "description": "Remove unused npm packages from package.json files based on depcheck analysis",
+      "depends_on": [
+        "phase-1-investigation"
+      ],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-3-1",
+          "description": "Remove unused dependencies from API package.json",
+          "service": "api",
+          "files_to_modify": [
+            "api/package.json"
+          ],
+          "files_to_create": [],
+          "patterns_from": [],
+          "notes": "Only remove dependencies confirmed unused by depcheck analysis",
+          "verification": {
+            "type": "command",
+            "command": "cd api && npm install && npm run build",
+            "expected": "Install and build succeed"
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-3-2",
+          "description": "Remove unused dependencies from UI package.json",
+          "service": "ui",
+          "files_to_modify": [
+            "ui/package.json"
+          ],
+          "files_to_create": [],
+          "patterns_from": [],
+          "notes": "Only remove dependencies confirmed unused by depcheck analysis",
+          "verification": {
+            "type": "command",
+            "command": "cd ui && npm install && npm run build",
+            "expected": "Install and build succeed"
+          },
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "phase-4-remove-dead-code",
+      "name": "Remove Dead Code",
+      "type": "implementation",
+      "description": "Clean up dead code paths, commented code blocks, and debug statements",
+      "depends_on": [
+        "phase-2-remove-confirmed"
+      ],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-4-1",
+          "description": "Remove commented-out code blocks in API source files",
+          "service": "api",
+          "files_to_modify": [],
+          "files_to_create": [],
+          "patterns_from": [],
+          "notes": "Search for large commented blocks (>5 lines) and remove if clearly dead code",
+          "verification": {
+            "type": "command",
+            "command": "cd api && npm run build && npm run test:run",
+            "expected": "Build and tests succeed"
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-4-2",
+          "description": "Remove console.log debug statements in production code",
+          "service": "api",
+          "files_to_modify": [],
+          "files_to_create": [],
+          "patterns_from": [],
+          "notes": "Keep logging that serves operational purposes, remove debug-only logs",
+          "verification": {
+            "type": "command",
+            "command": "cd api && npm run build",
+            "expected": "Build succeeds"
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-4-3",
+          "description": "Clean up UI dead code and console statements",
+          "service": "ui",
+          "files_to_modify": [],
+          "files_to_create": [],
+          "patterns_from": [],
+          "notes": "Focus on removing debug console.log statements and commented code",
+          "verification": {
+            "type": "command",
+            "command": "cd ui && npm run build",
+            "expected": "Build succeeds"
+          },
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "phase-5-verification",
+      "name": "Final Verification",
+      "type": "integration",
+      "description": "Verify all services build, tests pass, and application runs correctly",
+      "depends_on": [
+        "phase-2-remove-confirmed",
+        "phase-3-cleanup-dependencies",
+        "phase-4-remove-dead-code"
+      ],
+      "parallel_safe": false,
+      "subtasks": [
+        {
+          "id": "subtask-5-1",
+          "description": "Run all API tests to verify no regressions",
+          "all_services": false,
+          "service": "api",
+          "files_to_modify": [],
+          "files_to_create": [],
+          "patterns_from": [],
+          "verification": {
+            "type": "command",
+            "command": "cd api && npm run test:run",
+            "expected": "All tests pass"
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-5-2",
+          "description": "Verify Docker builds for all services",
+          "all_services": true,
+          "files_to_modify": [],
+          "files_to_create": [],
+          "patterns_from": [],
+          "verification": {
+            "type": "command",
+            "command": "docker-compose build api ui",
+            "expected": "Docker build succeeds for api and ui"
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-5-3",
+          "description": "End-to-end verification of application functionality",
+          "all_services": true,
+          "files_to_modify": [],
+          "files_to_create": [],
+          "patterns_from": [],
+          "verification": {
+            "type": "e2e",
+            "steps": [
+              "Start API service with npm run dev",
+              "Start UI service with npm run dev",
+              "Verify API health endpoint returns 200",
+              "Verify UI loads without console errors",
+              "Navigate through main pages to verify no crashes"
+            ]
+          },
+          "status": "pending"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "total_phases": 5,
+    "total_subtasks": 14,
+    "services_involved": [
+      "api",
+      "ui",
+      "agent"
+    ],
+    "parallelism": {
+      "max_parallel_phases": 2,
+      "parallel_groups": [
+        {
+          "phases": [
+            "phase-3-cleanup-dependencies",
+            "phase-4-remove-dead-code"
+          ],
+          "reason": "Both depend only on phases 1 and 2, work on different file sets"
+        }
+      ],
+      "recommended_workers": 1,
+      "speedup_estimate": "Sequential recommended due to file dependency risks"
+    },
+    "startup_command": "source auto-claude/.venv/bin/activate && python auto-claude/run.py --spec 004 --parallel 1"
+  },
+  "verification_strategy": {
+    "risk_level": "medium",
+    "skip_validation": false,
+    "test_creation_phase": "not_required",
+    "test_types_required": [
+      "unit",
+      "integration"
+    ],
+    "security_scanning_required": false,
+    "staging_deployment_required": false,
+    "acceptance_criteria": [
+      "All existing tests pass after cleanup",
+      "API build succeeds (npm run build in api/)",
+      "UI build succeeds (npm run build in ui/)",
+      "Docker build succeeds for all services",
+      "No runtime errors when starting services",
+      "No console errors in browser"
+    ],
+    "verification_steps": [
+      {
+        "name": "API Build",
+        "command": "cd api && npm run build",
+        "expected_outcome": "Build completes with exit code 0",
+        "type": "build",
+        "required": true,
+        "blocking": true
+      },
+      {
+        "name": "UI Build",
+        "command": "cd ui && npm run build",
+        "expected_outcome": "Build completes with exit code 0",
+        "type": "build",
+        "required": true,
+        "blocking": true
+      },
+      {
+        "name": "API Tests",
+        "command": "cd api && npm run test:run",
+        "expected_outcome": "All tests pass",
+        "type": "test",
+        "required": true,
+        "blocking": true
+      },
+      {
+        "name": "Docker Build",
+        "command": "docker-compose build api ui",
+        "expected_outcome": "Docker images build successfully",
+        "type": "build",
+        "required": true,
+        "blocking": true
+      }
+    ],
+    "reasoning": "Code deletion requires thorough build and test validation to ensure no functionality is broken. All builds must succeed and existing tests must pass."
+  },
+  "qa_acceptance": {
+    "unit_tests": {
+      "required": true,
+      "commands": [
+        "cd api && npm run test:run"
+      ],
+      "minimum_coverage": null
+    },
+    "integration_tests": {
+      "required": true,
+      "commands": [
+        "cd api && npm run build",
+        "cd ui && npm run build"
+      ],
+      "services_to_test": [
+        "api",
+        "ui"
+      ]
+    },
+    "e2e_tests": {
+      "required": false,
+      "commands": [],
+      "flows": []
+    },
+    "browser_verification": {
+      "required": true,
+      "pages": [
+        {
+          "url": "http://localhost:3000/",
+          "checks": [
+            "renders",
+            "no-console-errors"
+          ]
+        },
+        {
+          "url": "http://localhost:3000/search",
+          "checks": [
+            "renders",
+            "no-console-errors"
+          ]
+        },
+        {
+          "url": "http://localhost:3000/dashboards",
+          "checks": [
+            "renders",
+            "no-console-errors"
+          ]
+        }
+      ]
+    },
+    "database_verification": {
+      "required": false,
+      "checks": []
+    }
+  },
+  "qa_signoff": null,
+  "status": "human_review",
+  "planStatus": "review",
+  "updated_at": "2025-12-22T04:03:28.112Z",
+  "last_updated": "2025-12-22T04:16:19.102609+00:00"
+}
