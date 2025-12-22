@@ -1,0 +1,333 @@
+{
+  "feature": "Low-Code UI/UX Improvements for LogNog Search Interface",
+  "workflow_type": "feature",
+  "workflow_rationale": "These are additive UI enhancements that improve user experience without changing core functionality. All changes are low-risk, primarily frontend-focused, and can be implemented incrementally.",
+  "phases": [
+    {
+      "id": "phase-1-api-execution-time",
+      "name": "API - Add Execution Time Measurement",
+      "type": "implementation",
+      "description": "Add execution time measurement to the search query API endpoint",
+      "depends_on": [],
+      "parallel_safe": true,
+      "subtasks": [
+        {
+          "id": "subtask-1-1",
+          "description": "Add execution time measurement to search query endpoint",
+          "service": "api",
+          "files_to_modify": [
+            "api/src/routes/search.ts"
+          ],
+          "files_to_create": [],
+          "patterns_from": [],
+          "implementation_details": "Use performance.now() to measure query execution time. Add startTime before executeDSLQuery call, calculate executionTime after, and include in response JSON.",
+          "estimated_lines": 10,
+          "verification": {
+            "type": "api",
+            "method": "POST",
+            "url": "http://localhost:4000/api/search/query",
+            "body": {
+              "query": "search *",
+              "earliest": "-1h"
+            },
+            "expected_status": 200,
+            "expected_fields": [
+              "executionTime"
+            ]
+          },
+          "status": "completed",
+          "notes": "Added execution time measurement using performance.now() to the /query endpoint. The executionTime field (in milliseconds) is now included in the API response. TypeScript compilation verified successfully.",
+          "updated_at": "2025-12-22T04:15:08.650325+00:00"
+        },
+        {
+          "id": "subtask-1-2",
+          "description": "Update SearchResult interface to include executionTime field",
+          "service": "ui",
+          "files_to_modify": [
+            "ui/src/api/client.ts"
+          ],
+          "files_to_create": [],
+          "patterns_from": [],
+          "implementation_details": "Add 'executionTime?: number' to the SearchResult interface (optional for backward compatibility).",
+          "estimated_lines": 2,
+          "verification": {
+            "type": "command",
+            "command": "cd ui && npx tsc --noEmit",
+            "expected": "No TypeScript errors"
+          },
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "phase-2-ui-features",
+      "name": "UI - Core Feature Implementation",
+      "type": "implementation",
+      "description": "Implement the main UI features: Query History, Copy JSON, Execution Time Display, and Relative Time Tooltips",
+      "depends_on": [
+        "phase-1-api-execution-time"
+      ],
+      "parallel_safe": false,
+      "subtasks": [
+        {
+          "id": "subtask-2-1",
+          "description": "Add query history state management and localStorage persistence",
+          "service": "ui",
+          "files_to_modify": [
+            "ui/src/pages/SearchPage.tsx"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "ui/src/components/TimePicker.tsx"
+          ],
+          "implementation_details": "Add queryHistory state initialized from localStorage. Add History icon import. Update handleSearch to save queries (dedupe, limit 10). Add showHistory state for dropdown visibility.",
+          "estimated_lines": 15,
+          "verification": {
+            "type": "manual",
+            "instructions": "Verify localStorage 'lognog_query_history' is populated after search execution"
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-2-2",
+          "description": "Add query history dropdown UI component",
+          "service": "ui",
+          "files_to_modify": [
+            "ui/src/pages/SearchPage.tsx"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "ui/src/components/TimePicker.tsx"
+          ],
+          "implementation_details": "Add History button next to search input. Create dropdown menu showing recent queries. Click to populate search input. Show 'No recent queries' if empty.",
+          "estimated_lines": 25,
+          "verification": {
+            "type": "browser",
+            "url": "http://localhost:3000/search",
+            "checks": [
+              "History button visible",
+              "Dropdown opens on click",
+              "Queries populate input when selected"
+            ]
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-2-3",
+          "description": "Add Copy as JSON button functionality",
+          "service": "ui",
+          "files_to_modify": [
+            "ui/src/pages/SearchPage.tsx"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "ui/src/pages/SearchPage.tsx"
+          ],
+          "implementation_details": "Add Copy icon import. Create copyAsJSON handler using navigator.clipboard.writeText with JSON.stringify(data, null, 2). Add button next to Export CSV in results toolbar. Show success/error feedback.",
+          "estimated_lines": 15,
+          "verification": {
+            "type": "browser",
+            "url": "http://localhost:3000/search",
+            "checks": [
+              "Copy JSON button visible when results exist",
+              "Clicking copies formatted JSON to clipboard"
+            ]
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-2-4",
+          "description": "Add execution time display in results header",
+          "service": "ui",
+          "files_to_modify": [
+            "ui/src/pages/SearchPage.tsx"
+          ],
+          "files_to_create": [],
+          "patterns_from": [],
+          "implementation_details": "Display executionTime from searchMutation.data in results stats area. Format as 'in {X}ms'. Only show if executionTime is present. Style with text-slate-500.",
+          "estimated_lines": 8,
+          "verification": {
+            "type": "browser",
+            "url": "http://localhost:3000/search",
+            "checks": [
+              "Execution time displays after search (e.g., '1,234 results in 42ms')"
+            ]
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-2-5",
+          "description": "Add relative time tooltips to time picker presets",
+          "service": "ui",
+          "files_to_modify": [
+            "ui/src/components/TimePicker.tsx"
+          ],
+          "files_to_create": [],
+          "patterns_from": [
+            "ui/src/components/ui/Tooltip.tsx"
+          ],
+          "implementation_details": "Import Tooltip component. Create getRelativeDescription helper function to convert preset values (e.g., '-5m' -> '5 minutes ago'). Wrap each TIME_PRESETS button with Tooltip component.",
+          "estimated_lines": 15,
+          "verification": {
+            "type": "browser",
+            "url": "http://localhost:3000/search",
+            "checks": [
+              "Hovering over time presets shows tooltip with relative time description"
+            ]
+          },
+          "status": "pending"
+        }
+      ]
+    },
+    {
+      "id": "phase-3-integration",
+      "name": "Integration and Verification",
+      "type": "integration",
+      "description": "Verify all features work together and no regressions",
+      "depends_on": [
+        "phase-2-ui-features"
+      ],
+      "parallel_safe": false,
+      "subtasks": [
+        {
+          "id": "subtask-3-1",
+          "description": "End-to-end verification of all 4 new features",
+          "all_services": true,
+          "files_to_modify": [],
+          "files_to_create": [],
+          "patterns_from": [],
+          "verification": {
+            "type": "e2e",
+            "steps": [
+              "Execute a search query and verify execution time displays",
+              "Verify query is saved to history",
+              "Open history dropdown and select previous query",
+              "Switch to JSON view and click Copy JSON",
+              "Hover over time picker presets to verify tooltips",
+              "Verify no console errors throughout"
+            ]
+          },
+          "status": "pending"
+        },
+        {
+          "id": "subtask-3-2",
+          "description": "Verify existing features still work (regression test)",
+          "all_services": true,
+          "files_to_modify": [],
+          "files_to_create": [],
+          "patterns_from": [],
+          "verification": {
+            "type": "e2e",
+            "steps": [
+              "Ctrl+Enter executes search",
+              "Search input has auto-focus",
+              "Clear button (X) resets search",
+              "Time range is remembered on page reload",
+              "Empty state shows helpful suggestions",
+              "Export CSV downloads file"
+            ]
+          },
+          "status": "pending"
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "total_phases": 3,
+    "total_subtasks": 9,
+    "services_involved": [
+      "api",
+      "ui"
+    ],
+    "parallelism": {
+      "max_parallel_phases": 1,
+      "parallel_groups": [],
+      "recommended_workers": 1,
+      "speedup_estimate": "N/A - sequential dependencies"
+    },
+    "startup_command": "python auto-claude/run.py --spec 003 --parallel 1"
+  },
+  "verification_strategy": {
+    "risk_level": "low",
+    "skip_validation": false,
+    "test_creation_phase": "post_implementation",
+    "test_types_required": [
+      "unit"
+    ],
+    "security_scanning_required": false,
+    "staging_deployment_required": false,
+    "acceptance_criteria": [
+      "All existing tests pass (if any)",
+      "No TypeScript compilation errors",
+      "No console errors in browser",
+      "All 4 new features functional"
+    ],
+    "verification_steps": [
+      {
+        "name": "TypeScript Compilation",
+        "command": "cd ui && npx tsc --noEmit",
+        "expected_outcome": "No errors",
+        "type": "build",
+        "required": true,
+        "blocking": true
+      },
+      {
+        "name": "API TypeScript Compilation",
+        "command": "cd api && npx tsc --noEmit",
+        "expected_outcome": "No errors",
+        "type": "build",
+        "required": true,
+        "blocking": true
+      },
+      {
+        "name": "Browser Verification",
+        "command": "Navigate to http://localhost:3000/search",
+        "expected_outcome": "All features visible and functional",
+        "type": "manual",
+        "required": true,
+        "blocking": true
+      }
+    ],
+    "reasoning": "Low risk UI enhancements with no auth, database, or API structure changes. TypeScript compilation and browser verification sufficient."
+  },
+  "qa_acceptance": {
+    "unit_tests": {
+      "required": false,
+      "commands": [],
+      "minimum_coverage": null
+    },
+    "integration_tests": {
+      "required": false,
+      "commands": [],
+      "services_to_test": []
+    },
+    "e2e_tests": {
+      "required": false,
+      "commands": [],
+      "flows": []
+    },
+    "browser_verification": {
+      "required": true,
+      "pages": [
+        {
+          "url": "http://localhost:3000/search",
+          "checks": [
+            "All 4 features visible and functional",
+            "No console errors",
+            "Existing features not broken"
+          ]
+        }
+      ]
+    },
+    "database_verification": {
+      "required": false,
+      "checks": []
+    }
+  },
+  "qa_signoff": null,
+  "created_at": "2025-12-22T03:47:58.095Z",
+  "updated_at": "2025-12-22T04:02:54.161Z",
+  "status": "human_review",
+  "planStatus": "review",
+  "last_updated": "2025-12-22T04:15:08.650332+00:00"
+}

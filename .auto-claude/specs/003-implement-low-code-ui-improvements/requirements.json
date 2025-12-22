@@ -1,0 +1,4 @@
+{
+  "task_description": "These are some low code improvements, impliment aall of them\n\n1. Keyboard shortcut (Ctrl+Enter) - 5-10 lines\n2. Auto-focus search input - 5 lines\n3. Clear search button - 10 lines\n4. Remember time range - 8 lines\n5. Query history dropdown - 30 lines\n6. Relative time tooltips - 5 lines\n7. Better empty state - 15 lines\n8. Copy as JSON - 10 lines\n9. Export to CSV - 25 lines\n10. Show execution time - 10 lines",
+  "workflow_type": "feature"
+}

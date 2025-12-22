@@ -1,0 +1,66 @@
+{
+  "task_description": "Implement 4 remaining low-code UI/UX improvements for LogNog search interface: Query History Dropdown, Relative Time Tooltips, Copy as JSON, and Show Execution Time",
+  "scoped_services": ["ui", "api"],
+  "files_to_modify": {
+    "ui": [
+      "ui/src/pages/SearchPage.tsx",
+      "ui/src/components/TimePicker.tsx",
+      "ui/src/api/client.ts"
+    ],
+    "api": [
+      "api/src/routes/search.ts"
+    ]
+  },
+  "files_to_reference": [
+    "ui/src/components/ui/Tooltip.tsx",
+    "ui/src/components/TimePicker.tsx"
+  ],
+  "patterns": {
+    "localStorage_pattern": {
+      "description": "Use lognog_ prefix for localStorage keys, initialize from localStorage with fallback",
+      "example": "const [history, setHistory] = useState<string[]>(() => { const saved = localStorage.getItem('lognog_query_history'); return saved ? JSON.parse(saved) : []; });"
+    },
+    "tooltip_import": {
+      "description": "Import Tooltip from components/ui/Tooltip.tsx",
+      "example": "import { Tooltip } from '../components/ui/Tooltip';"
+    },
+    "tooltip_usage": {
+      "description": "Wrap elements with Tooltip for hover descriptions",
+      "example": "<Tooltip content=\"5 minutes ago\" placement=\"right\"><button>Last 5m</button></Tooltip>"
+    },
+    "button_styling": {
+      "description": "Use btn-ghost, btn-primary, btn-secondary with lucide-react icons",
+      "example": "<button className=\"btn-ghost text-xs\" title=\"Copy JSON\"><Copy className=\"w-4 h-4\" /> Copy JSON</button>"
+    },
+    "icon_import": {
+      "description": "Import icons from lucide-react",
+      "example": "import { History, Copy, Clock } from 'lucide-react';"
+    },
+    "clipboard_api": {
+      "description": "Use native Clipboard API for copy functionality",
+      "example": "await navigator.clipboard.writeText(JSON.stringify(data, null, 2));"
+    }
+  },
+  "existing_implementations": {
+    "already_implemented": [
+      "Keyboard shortcut (Ctrl+Enter) - SearchPage.tsx lines 115-123",
+      "Auto-focus search input - autoFocus attribute on inputs",
+      "Clear search button - X button on search inputs",
+      "Remember time range - localStorage in TimePicker.tsx",
+      "Better empty state - SearchPage.tsx lines 675-697",
+      "Export to CSV - exportToCSV function in SearchPage.tsx"
+    ],
+    "to_implement": [
+      "Query history dropdown (~30 lines)",
+      "Relative time tooltips (~5 lines)",
+      "Copy as JSON (~10 lines)",
+      "Show execution time (~10 lines API + ~10 lines UI)"
+    ]
+  },
+  "icons_to_use": {
+    "query_history": "History",
+    "copy_json": "Copy",
+    "time": "Clock"
+  },
+  "created_at": "2025-12-22T03:52:54.619443"
+}

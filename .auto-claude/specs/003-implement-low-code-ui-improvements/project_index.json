@@ -1,0 +1,3675 @@
+{
+  "project_root": "C:\\git\\spunk",
+  "project_type": "monorepo",
+  "services": {
+    "agent": {
+      "name": "agent",
+      "path": "C:\\git\\spunk\\agent",
+      "language": "Python",
+      "framework": null,
+      "type": "unknown",
+      "package_manager": "pip",
+      "key_directories": {
+        "src": {
+          "path": "src",
+          "purpose": "Source code"
+        },
+        "tests": {
+          "path": "tests",
+          "purpose": "Tests"
+        }
+      },
+      "testing": "pytest",
+      "test_directory": "tests",
+      "environment": {
+        "variables": {
+          "TUNNEL_TOKEN": {
+            "value": null,
+            "source": "../docker-compose.yml",
+            "type": "string",
+            "sensitive": false,
+            "required": false
+          },
+          "OLLAMA_HOST": {
+            "value": null,
+            "source": "../docker-compose.yml",
+            "type": "string",
+            "sensitive": false,
+            "required": false
+          }
+        },
+        "required_count": 0,
+        "optional_count": 0,
+        "detected_count": 2
+      }
+    },
+    "api": {
+      "name": "api",
+      "path": "C:\\git\\spunk\\api",
+      "language": "TypeScript",
+      "framework": "Express",
+      "type": "backend",
+      "package_manager": "npm",
+      "default_port": 4000,
+      "dev_command": "npm run dev",
+      "key_directories": {
+        "src": {
+          "path": "src",
+          "purpose": "Source code"
+        }
+      },
+      "entry_point": "src/index.ts",
+      "dependencies": [
+        "@clickhouse/client",
+        "@llamaindex/ollama",
+        "@modelcontextprotocol/sdk",
+        "bcrypt",
+        "better-sqlite3",
+        "cors",
+        "express",
+        "express-ws",
+        "jsonwebtoken",
+        "llamaindex",
+        "maxmind",
+        "nodemailer",
+        "stacktrace-parser",
+        "uuid",
+        "zod"
+      ],
+      "dev_dependencies": [
+        "@types/bcrypt",
+        "@types/better-sqlite3",
+        "@types/cors",
+        "@types/express",
+        "@types/express-ws",
+        "@types/jsonwebtoken",
+        "@types/node",
+        "@types/nodemailer",
+        "@types/supertest",
+        "@types/uuid"
+      ],
+      "testing": "Vitest",
+      "dockerfile": "Dockerfile",
+      "environment": {
+        "variables": {
+          "TUNNEL_TOKEN": {
+            "value": null,
+            "source": "../docker-compose.yml",
+            "type": "string",
+            "sensitive": false,
+            "required": false
+          },
+          "OLLAMA_HOST": {
+            "value": null,
+            "source": "../docker-compose.yml",
+            "type": "string",
+            "sensitive": false,
+            "required": false
+          }
+        },
+        "required_count": 0,
+        "optional_count": 0,
+        "detected_count": 2
+      },
+      "api": {
+        "routes": [
+          {
+            "path": "/health",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\index.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/sse/tail",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\index.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "*",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\index.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/generate-query",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\ai.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/insights",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\ai.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/status",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\ai.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/interview",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\ai.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/interview/:id",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\ai.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/interview/start",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\ai.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/interview/:id/questionnaire",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\ai.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/interview/:id/respond",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\ai.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/interview/:id/follow-up",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\ai.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/interview/:id/generate",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\ai.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/interview/:id/complete",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\ai.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/interview/:id",
+            "methods": [
+              "DELETE"
+            ],
+            "file": "dist\\routes\\ai.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/rag/documents",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\ai.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/rag/documents/:id",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\ai.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/rag/documents",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\ai.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/rag/documents/:id",
+            "methods": [
+              "DELETE"
+            ],
+            "file": "dist\\routes\\ai.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/rag/search",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\ai.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/rag/query",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\ai.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/rag/index-logs",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\ai.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/rag/clear",
+            "methods": [
+              "DELETE"
+            ],
+            "file": "dist\\routes\\ai.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/rag/stats",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\ai.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/llama/stats",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\ai.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/llama/documents",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\ai.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/llama/query",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\ai.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/llama/chat",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\ai.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/llama/clear",
+            "methods": [
+              "DELETE"
+            ],
+            "file": "dist\\routes\\ai.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/llama/seed-docs",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\ai.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/assistant/chat",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\ai.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/nogchat",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\ai.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\alerts.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\alerts.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\alerts.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id",
+            "methods": [
+              "PUT"
+            ],
+            "file": "dist\\routes\\alerts.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id",
+            "methods": [
+              "DELETE"
+            ],
+            "file": "dist\\routes\\alerts.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id/toggle",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\alerts.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id/evaluate",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\alerts.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/test",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\alerts.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/evaluate-all",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\alerts.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/history",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\alerts.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id/history",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\alerts.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/history/:id/acknowledge",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\alerts.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/setup-required",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\auth.js",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/setup",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\auth.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/login",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\auth.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/refresh",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\auth.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/logout",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\auth.js",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/me",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\auth.js",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/change-password",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\auth.js",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/api-keys",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\auth.js",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/api-keys",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\auth.js",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/api-keys/:id/revoke",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\auth.js",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/api-keys/:id",
+            "methods": [
+              "DELETE"
+            ],
+            "file": "dist\\routes\\auth.js",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/users",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\auth.js",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/users",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\auth.js",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/users/:id/role",
+            "methods": [
+              "PATCH"
+            ],
+            "file": "dist\\routes\\auth.js",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/users/:id/deactivate",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\auth.js",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/users/:id/activate",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\auth.js",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/audit-log",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\auth.js",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\dashboards.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\dashboards.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\dashboards.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id/panels",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\dashboards.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id/panels/:panelId",
+            "methods": [
+              "PUT"
+            ],
+            "file": "dist\\routes\\dashboards.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id/panels/:panelId",
+            "methods": [
+              "DELETE"
+            ],
+            "file": "dist\\routes\\dashboards.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id",
+            "methods": [
+              "DELETE"
+            ],
+            "file": "dist\\routes\\dashboards.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id",
+            "methods": [
+              "PUT"
+            ],
+            "file": "dist\\routes\\dashboards.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id/branding",
+            "methods": [
+              "PUT"
+            ],
+            "file": "dist\\routes\\dashboards.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id/layout",
+            "methods": [
+              "PUT"
+            ],
+            "file": "dist\\routes\\dashboards.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id/share",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\dashboards.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id/share",
+            "methods": [
+              "DELETE"
+            ],
+            "file": "dist\\routes\\dashboards.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id/variables",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\dashboards.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id/variables",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\dashboards.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id/variables/:varId",
+            "methods": [
+              "PUT"
+            ],
+            "file": "dist\\routes\\dashboards.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id/variables/:varId",
+            "methods": [
+              "DELETE"
+            ],
+            "file": "dist\\routes\\dashboards.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id/annotations",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\dashboards.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id/annotations",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\dashboards.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id/annotations/:annotationId",
+            "methods": [
+              "DELETE"
+            ],
+            "file": "dist\\routes\\dashboards.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id/export",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\dashboards.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/import",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\dashboards.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/templates",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\dashboards.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/templates/:templateId",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\dashboards.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/templates/:templateId/create",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\dashboards.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/generate",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\demo.js",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/import",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\demo.js",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/export",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\demo.js",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/clear",
+            "methods": [
+              "DELETE"
+            ],
+            "file": "dist\\routes\\demo.js",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/stats",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\demo.js",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\field-extractions.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\field-extractions.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\field-extractions.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id",
+            "methods": [
+              "PUT"
+            ],
+            "file": "dist\\routes\\field-extractions.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id",
+            "methods": [
+              "DELETE"
+            ],
+            "file": "dist\\routes\\field-extractions.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/test",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\field-extractions.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/built-in/patterns",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\field-extractions.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/built-in/seed",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\field-extractions.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/status",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\geoip.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/lookup/:ip",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\geoip.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/lookup",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\geoip.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/cache/stats",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\geoip.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/cache/clear",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\geoip.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/agent",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\ingest.js",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/health",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\ingest.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/notifications",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\ingest.js",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/notifications/:id/ack",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\ingest.js",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/otlp/v1/logs",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\ingest.js",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/supabase",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\ingest.js",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/http",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\ingest.js",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/vercel",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\ingest.js",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/generate-test-data",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\ingest.js",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/smartthings",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\ingest.js",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/otlp/v1/logs",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\ingest.test.js",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/field-extractions",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\knowledge.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/field-extractions",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\knowledge.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/field-extractions/:id",
+            "methods": [
+              "PUT"
+            ],
+            "file": "dist\\routes\\knowledge.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/field-extractions/:id",
+            "methods": [
+              "DELETE"
+            ],
+            "file": "dist\\routes\\knowledge.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/field-extractions/:id/test",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\knowledge.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/event-types",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\knowledge.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/event-types",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\knowledge.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/event-types/:id",
+            "methods": [
+              "PUT"
+            ],
+            "file": "dist\\routes\\knowledge.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/event-types/:id",
+            "methods": [
+              "DELETE"
+            ],
+            "file": "dist\\routes\\knowledge.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/tags",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\knowledge.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/tags/by-value",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\knowledge.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/tags",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\knowledge.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/tags/:id",
+            "methods": [
+              "DELETE"
+            ],
+            "file": "dist\\routes\\knowledge.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/lookups",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\knowledge.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/lookups/by-name/:name",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\knowledge.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/lookups",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\knowledge.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/lookups/:id",
+            "methods": [
+              "PUT"
+            ],
+            "file": "dist\\routes\\knowledge.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/lookups/:id",
+            "methods": [
+              "DELETE"
+            ],
+            "file": "dist\\routes\\knowledge.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/lookups/:id/search",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\knowledge.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/workflow-actions",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\knowledge.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/workflow-actions",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\knowledge.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/workflow-actions/:id",
+            "methods": [
+              "PUT"
+            ],
+            "file": "dist\\routes\\knowledge.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/workflow-actions/:id",
+            "methods": [
+              "DELETE"
+            ],
+            "file": "dist\\routes\\knowledge.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/workflow-actions/:id/execute",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\knowledge.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/scripts/test",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\knowledge.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/sse",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\mcp.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/messages",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\mcp.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/status",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\mcp.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/health",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\mcp.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\reports.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\reports.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id",
+            "methods": [
+              "PUT"
+            ],
+            "file": "dist\\routes\\reports.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id/trigger",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\reports.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id",
+            "methods": [
+              "DELETE"
+            ],
+            "file": "dist\\routes\\reports.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/generate",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\reports.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/query",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\search.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/parse",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\search.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/ai",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\search.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/ai/suggestions",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\search.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/validate",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\search.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/fields",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\search.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/fields/:field/values",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\search.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/backend",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\search.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/saved",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\search.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/saved/:id",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\search.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/saved",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\search.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/saved/:id",
+            "methods": [
+              "PUT"
+            ],
+            "file": "dist\\routes\\search.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/saved/:id",
+            "methods": [
+              "DELETE"
+            ],
+            "file": "dist\\routes\\search.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\silences.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\silences.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\silences.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id",
+            "methods": [
+              "DELETE"
+            ],
+            "file": "dist\\routes\\silences.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/check",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\silences.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/cleanup",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\silences.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/overview",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\stats.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/timeseries",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\stats.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/severity",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\stats.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/indexes",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\stats.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\templates.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/by-category",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\templates.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/stats",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\templates.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\templates.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id/test",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\templates.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\templates.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id",
+            "methods": [
+              "PUT"
+            ],
+            "file": "dist\\routes\\templates.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id",
+            "methods": [
+              "DELETE"
+            ],
+            "file": "dist\\routes\\templates.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/classify-ip",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\utils.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/classify-ip",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\utils.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/classify-ips",
+            "methods": [
+              "POST"
+            ],
+            "file": "dist\\routes\\utils.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/ip-info",
+            "methods": [
+              "GET"
+            ],
+            "file": "dist\\routes\\utils.js",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/health",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\index.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/sse/tail",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\index.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "*",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\index.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/generate-query",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\ai.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/insights",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\ai.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/status",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\ai.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/interview",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\ai.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/interview/:id",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\ai.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/interview/start",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\ai.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/interview/:id/questionnaire",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\ai.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/interview/:id/respond",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\ai.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/interview/:id/follow-up",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\ai.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/interview/:id/generate",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\ai.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/interview/:id/complete",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\ai.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/interview/:id",
+            "methods": [
+              "DELETE"
+            ],
+            "file": "src\\routes\\ai.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/rag/documents",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\ai.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/rag/documents/:id",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\ai.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/rag/documents",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\ai.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/rag/documents/:id",
+            "methods": [
+              "DELETE"
+            ],
+            "file": "src\\routes\\ai.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/rag/search",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\ai.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/rag/query",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\ai.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/rag/index-logs",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\ai.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/rag/clear",
+            "methods": [
+              "DELETE"
+            ],
+            "file": "src\\routes\\ai.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/rag/stats",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\ai.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/llama/stats",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\ai.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/llama/documents",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\ai.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/llama/query",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\ai.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/llama/chat",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\ai.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/llama/clear",
+            "methods": [
+              "DELETE"
+            ],
+            "file": "src\\routes\\ai.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/llama/seed-docs",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\ai.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/assistant/chat",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\ai.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/nogchat",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\ai.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\alerts.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\alerts.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\alerts.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id",
+            "methods": [
+              "PUT"
+            ],
+            "file": "src\\routes\\alerts.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id",
+            "methods": [
+              "DELETE"
+            ],
+            "file": "src\\routes\\alerts.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id/toggle",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\alerts.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id/evaluate",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\alerts.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/test",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\alerts.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/evaluate-all",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\alerts.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/history",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\alerts.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id/history",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\alerts.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/history/:id/acknowledge",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\alerts.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/setup-required",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\auth.ts",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/setup",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\auth.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/login",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\auth.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/refresh",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\auth.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/logout",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\auth.ts",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/me",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\auth.ts",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/change-password",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\auth.ts",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/api-keys",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\auth.ts",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/api-keys",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\auth.ts",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/api-keys/:id/revoke",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\auth.ts",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/api-keys/:id",
+            "methods": [
+              "DELETE"
+            ],
+            "file": "src\\routes\\auth.ts",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/users",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\auth.ts",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/users",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\auth.ts",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/users/:id/role",
+            "methods": [
+              "PATCH"
+            ],
+            "file": "src\\routes\\auth.ts",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/users/:id/deactivate",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\auth.ts",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/users/:id/activate",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\auth.ts",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/audit-log",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\auth.ts",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\dashboards.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\dashboards.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\dashboards.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id/panels",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\dashboards.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id/panels/:panelId",
+            "methods": [
+              "PUT"
+            ],
+            "file": "src\\routes\\dashboards.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id/panels/:panelId",
+            "methods": [
+              "DELETE"
+            ],
+            "file": "src\\routes\\dashboards.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id",
+            "methods": [
+              "DELETE"
+            ],
+            "file": "src\\routes\\dashboards.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id",
+            "methods": [
+              "PUT"
+            ],
+            "file": "src\\routes\\dashboards.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id/branding",
+            "methods": [
+              "PUT"
+            ],
+            "file": "src\\routes\\dashboards.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id/layout",
+            "methods": [
+              "PUT"
+            ],
+            "file": "src\\routes\\dashboards.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id/share",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\dashboards.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id/share",
+            "methods": [
+              "DELETE"
+            ],
+            "file": "src\\routes\\dashboards.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id/variables",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\dashboards.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id/variables",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\dashboards.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id/variables/:varId",
+            "methods": [
+              "PUT"
+            ],
+            "file": "src\\routes\\dashboards.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id/variables/:varId",
+            "methods": [
+              "DELETE"
+            ],
+            "file": "src\\routes\\dashboards.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id/annotations",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\dashboards.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id/annotations",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\dashboards.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id/annotations/:annotationId",
+            "methods": [
+              "DELETE"
+            ],
+            "file": "src\\routes\\dashboards.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id/export",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\dashboards.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/import",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\dashboards.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/templates",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\dashboards.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/templates/:templateId",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\dashboards.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/templates/:templateId/create",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\dashboards.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/generate",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\demo.ts",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/import",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\demo.ts",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/export",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\demo.ts",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/clear",
+            "methods": [
+              "DELETE"
+            ],
+            "file": "src\\routes\\demo.ts",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/stats",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\demo.ts",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\field-extractions.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\field-extractions.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\field-extractions.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id",
+            "methods": [
+              "PUT"
+            ],
+            "file": "src\\routes\\field-extractions.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id",
+            "methods": [
+              "DELETE"
+            ],
+            "file": "src\\routes\\field-extractions.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/test",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\field-extractions.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/built-in/patterns",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\field-extractions.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/built-in/seed",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\field-extractions.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/status",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\geoip.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/lookup/:ip",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\geoip.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/lookup",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\geoip.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/cache/stats",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\geoip.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/cache/clear",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\geoip.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/otlp/v1/logs",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\ingest.test.ts",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/health",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\ingest.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/otlp/v1/logs",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\ingest.ts",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/supabase",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\ingest.ts",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/http",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\ingest.ts",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/vercel",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\ingest.ts",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/generate-test-data",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\ingest.ts",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/smartthings",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\ingest.ts",
+            "framework": "Express",
+            "requires_auth": true
+          },
+          {
+            "path": "/field-extractions",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\knowledge.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/field-extractions",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\knowledge.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/field-extractions/:id",
+            "methods": [
+              "PUT"
+            ],
+            "file": "src\\routes\\knowledge.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/field-extractions/:id",
+            "methods": [
+              "DELETE"
+            ],
+            "file": "src\\routes\\knowledge.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/field-extractions/:id/test",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\knowledge.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/event-types",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\knowledge.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/event-types",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\knowledge.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/event-types/:id",
+            "methods": [
+              "PUT"
+            ],
+            "file": "src\\routes\\knowledge.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/event-types/:id",
+            "methods": [
+              "DELETE"
+            ],
+            "file": "src\\routes\\knowledge.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/tags",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\knowledge.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/tags/by-value",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\knowledge.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/tags",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\knowledge.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/tags/:id",
+            "methods": [
+              "DELETE"
+            ],
+            "file": "src\\routes\\knowledge.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/lookups",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\knowledge.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/lookups/by-name/:name",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\knowledge.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/lookups",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\knowledge.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/lookups/:id",
+            "methods": [
+              "PUT"
+            ],
+            "file": "src\\routes\\knowledge.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/lookups/:id",
+            "methods": [
+              "DELETE"
+            ],
+            "file": "src\\routes\\knowledge.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/lookups/:id/search",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\knowledge.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/workflow-actions",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\knowledge.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/workflow-actions",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\knowledge.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/workflow-actions/:id",
+            "methods": [
+              "PUT"
+            ],
+            "file": "src\\routes\\knowledge.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/workflow-actions/:id",
+            "methods": [
+              "DELETE"
+            ],
+            "file": "src\\routes\\knowledge.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/workflow-actions/:id/execute",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\knowledge.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/scripts/test",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\knowledge.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/sse",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\mcp.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/messages",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\mcp.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/status",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\mcp.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/health",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\mcp.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\reports.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\reports.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id",
+            "methods": [
+              "PUT"
+            ],
+            "file": "src\\routes\\reports.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id/trigger",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\reports.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id",
+            "methods": [
+              "DELETE"
+            ],
+            "file": "src\\routes\\reports.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/generate",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\reports.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/query",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\search.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/parse",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\search.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/ai",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\search.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/ai/suggestions",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\search.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/validate",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\search.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/fields",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\search.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/fields/:field/values",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\search.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/backend",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\search.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/saved",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\search.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/saved/:id",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\search.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/saved",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\search.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/saved/:id",
+            "methods": [
+              "PUT"
+            ],
+            "file": "src\\routes\\search.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/saved/:id",
+            "methods": [
+              "DELETE"
+            ],
+            "file": "src\\routes\\search.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\silences.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\silences.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\silences.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id",
+            "methods": [
+              "DELETE"
+            ],
+            "file": "src\\routes\\silences.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/check",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\silences.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/cleanup",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\silences.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/overview",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\stats.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/timeseries",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\stats.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/severity",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\stats.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/indexes",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\stats.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\templates.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/by-category",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\templates.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/stats",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\templates.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\templates.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id/test",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\templates.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\templates.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id",
+            "methods": [
+              "PUT"
+            ],
+            "file": "src\\routes\\templates.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/:id",
+            "methods": [
+              "DELETE"
+            ],
+            "file": "src\\routes\\templates.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/classify-ip",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\utils.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/classify-ip",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\utils.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/classify-ips",
+            "methods": [
+              "POST"
+            ],
+            "file": "src\\routes\\utils.ts",
+            "framework": "Express",
+            "requires_auth": false
+          },
+          {
+            "path": "/ip-info",
+            "methods": [
+              "GET"
+            ],
+            "file": "src\\routes\\utils.ts",
+            "framework": "Express",
+            "requires_auth": false
+          }
+        ],
+        "total_routes": 365,
+        "methods": [
+          "PATCH",
+          "DELETE",
+          "POST",
+          "PUT",
+          "GET"
+        ],
+        "protected_routes": [
+          "/setup-required",
+          "/logout",
+          "/me",
+          "/change-password",
+          "/api-keys",
+          "/api-keys",
+          "/api-keys/:id/revoke",
+          "/api-keys/:id",
+          "/users",
+          "/users",
+          "/users/:id/role",
+          "/users/:id/deactivate",
+          "/users/:id/activate",
+          "/audit-log",
+          "/generate",
+          "/import",
+          "/export",
+          "/clear",
+          "/stats",
+          "/agent",
+          "/notifications",
+          "/notifications/:id/ack",
+          "/otlp/v1/logs",
+          "/supabase",
+          "/http",
+          "/vercel",
+          "/generate-test-data",
+          "/smartthings",
+          "/otlp/v1/logs",
+          "/setup-required",
+          "/logout",
+          "/me",
+          "/change-password",
+          "/api-keys",
+          "/api-keys",
+          "/api-keys/:id/revoke",
+          "/api-keys/:id",
+          "/users",
+          "/users",
+          "/users/:id/role",
+          "/users/:id/deactivate",
+          "/users/:id/activate",
+          "/audit-log",
+          "/generate",
+          "/import",
+          "/export",
+          "/clear",
+          "/stats",
+          "/otlp/v1/logs",
+          "/otlp/v1/logs",
+          "/supabase",
+          "/http",
+          "/vercel",
+          "/generate-test-data",
+          "/smartthings"
+        ]
+      },
+      "services": {
+        "databases": [
+          {
+            "type": "sqlite",
+            "client": "better-sqlite3"
+          }
+        ],
+        "email": [
+          {
+            "provider": "smtp",
+            "client": "nodemailer"
+          }
+        ],
+        "auth_providers": [
+          {
+            "type": "jwt",
+            "client": "jsonwebtoken"
+          }
+        ]
+      },
+      "auth": {
+        "strategies": [
+          "jwt"
+        ],
+        "libraries": [
+          "jsonwebtoken"
+        ],
+        "user_model": null,
+        "middleware": []
+      },
+      "monitoring": {
+        "health_checks": [
+          "/health",
+          "/health",
+          "/health",
+          "/health",
+          "/health",
+          "/health"
+        ]
+      }
+    },
+    "log-generator": {
+      "name": "log-generator",
+      "path": "C:\\git\\spunk\\log-generator",
+      "language": "JavaScript",
+      "framework": null,
+      "type": "unknown",
+      "package_manager": "npm",
+      "dev_command": "npm run start",
+      "dependencies": [],
+      "dev_dependencies": [],
+      "dockerfile": "Dockerfile",
+      "environment": {
+        "variables": {
+          "TUNNEL_TOKEN": {
+            "value": null,
+            "source": "../docker-compose.yml",
+            "type": "string",
+            "sensitive": false,
+            "required": false
+          },
+          "OLLAMA_HOST": {
+            "value": null,
+            "source": "../docker-compose.yml",
+            "type": "string",
+            "sensitive": false,
+            "required": false
+          }
+        },
+        "required_count": 0,
+        "optional_count": 0,
+        "detected_count": 2
+      }
+    },
+    "test-data-generator": {
+      "name": "test-data-generator",
+      "path": "C:\\git\\spunk\\test-data-generator",
+      "language": "TypeScript",
+      "framework": null,
+      "type": "unknown",
+      "package_manager": "npm",
+      "dev_command": "npm run dev",
+      "key_directories": {
+        "src": {
+          "path": "src",
+          "purpose": "Source code"
+        }
+      },
+      "entry_point": "src/index.ts",
+      "dependencies": [
+        "commander"
+      ],
+      "dev_dependencies": [
+        "@types/node",
+        "tsx",
+        "typescript"
+      ],
+      "environment": {
+        "variables": {
+          "TUNNEL_TOKEN": {
+            "value": null,
+            "source": "../docker-compose.yml",
+            "type": "string",
+            "sensitive": false,
+            "required": false
+          },
+          "OLLAMA_HOST": {
+            "value": null,
+            "source": "../docker-compose.yml",
+            "type": "string",
+            "sensitive": false,
+            "required": false
+          }
+        },
+        "required_count": 0,
+        "optional_count": 0,
+        "detected_count": 2
+      }
+    },
+    "ui": {
+      "name": "ui",
+      "path": "C:\\git\\spunk\\ui",
+      "language": "TypeScript",
+      "framework": "React",
+      "type": "frontend",
+      "package_manager": "npm",
+      "default_port": 3000,
+      "build_tool": "Vite",
+      "styling": "Tailwind CSS",
+      "dev_command": "npm run dev",
+      "key_directories": {
+        "src": {
+          "path": "src",
+          "purpose": "Source code"
+        }
+      },
+      "entry_point": "src/App.tsx",
+      "dependencies": [
+        "@floating-ui/react",
+        "@tanstack/react-query",
+        "@types/react-datepicker",
+        "@types/react-grid-layout",
+        "ansi-to-html",
+        "echarts",
+        "echarts-for-react",
+        "lucide-react",
+        "react",
+        "react-datepicker",
+        "react-dom",
+        "react-grid-layout",
+        "react-router-dom",
+        "react-window",
+        "recharts",
+        "use-debounce"
+      ],
+      "dev_dependencies": [
+        "@types/react",
+        "@types/react-dom",
+        "@types/react-window",
+        "@vitejs/plugin-react",
+        "autoprefixer",
+        "postcss",
+        "tailwindcss",
+        "typescript",
+        "vite"
+      ],
+      "dockerfile": "Dockerfile",
+      "environment": {
+        "variables": {
+          "TUNNEL_TOKEN": {
+            "value": null,
+            "source": "../docker-compose.yml",
+            "type": "string",
+            "sensitive": false,
+            "required": false
+          },
+          "OLLAMA_HOST": {
+            "value": null,
+            "source": "../docker-compose.yml",
+            "type": "string",
+            "sensitive": false,
+            "required": false
+          }
+        },
+        "required_count": 0,
+        "optional_count": 0,
+        "detected_count": 2
+      },
+      "consumes": [
+        "api.api"
+      ]
+    }
+  },
+  "infrastructure": {
+    "docker_compose": "docker-compose.yml",
+    "docker_services": [
+      "clickhouse",
+      "vector",
+      "api",
+      "ui",
+      "nginx",
+      "log-generator",
+      "cloudflared",
+      "ollama"
+    ]
+  },
+  "conventions": {}
+}
