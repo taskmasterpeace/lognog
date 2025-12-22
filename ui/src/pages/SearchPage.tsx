@@ -19,6 +19,7 @@ import {
   PanelLeftClose,
   PanelLeft,
   Download,
+  History,
 } from 'lucide-react';
 import { executeSearch, getSavedSearches, createSavedSearch, aiSearch, getAISuggestions } from '../api/client';
 import LogViewer from '../components/LogViewer';
@@ -52,6 +53,18 @@ export default function SearchPage() {
     return saved !== null ? saved === 'true' : true;
   });
   const [selectedFilters, setSelectedFilters] = useState<Record<string, string[]>>({});
+  const [queryHistory, setQueryHistory] = useState<string[]>(() => {
+    const saved = localStorage.getItem('lognog_query_history');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  });
+  const [showHistory, setShowHistory] = useState(false);
 
   // Persist sidebar state to localStorage
   useEffect(() => {
@@ -103,8 +116,20 @@ export default function SearchPage() {
   });
 
   const handleSearch = useCallback(() => {
+    // Add to query history (dedupe, limit to 10)
+    if (query && query.trim() !== 'search *') {
+      setQueryHistory(prev => {
+        const updated = [query, ...prev.filter(q => q !== query)].slice(0, 10);
+        try {
+          localStorage.setItem('lognog_query_history', JSON.stringify(updated));
+        } catch {
+          // Gracefully handle localStorage errors (e.g., quota exceeded)
+        }
+        return updated;
+      });
+    }
     searchMutation.mutate();
-  }, [searchMutation]);
+  }, [query, searchMutation]);
 
   const handleAISearch = useCallback(() => {
     if (aiQuestion.trim()) {
@@ -458,6 +483,17 @@ search * | top 10 app_name`}
                   </kbd>
                 </div>
               </div>
+            )}
+
+            {/* Query History Button - dropdown added in subtask 2-2 */}
+            {searchMode === 'dsl' && queryHistory.length > 0 && (
+              <button
+                onClick={() => setShowHistory(!showHistory)}
+                className="btn-secondary h-12"
+                title="Query history"
+              >
+                <History className="w-4 h-4" />
+              </button>
             )}
 
             {/* Time Range */}
