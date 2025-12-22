@@ -161,7 +161,9 @@
               "Execution time displays after search (e.g., '1,234 results in 42ms')"
             ]
           },
-          "status": "pending"
+          "status": "completed",
+          "notes": "Added execution time display in results header. Shows format like '1,234 results in 42ms'. The executionTime is extracted from searchMutation.data and only displayed when present. Added proper dark mode styling with text-slate-500/400 for the execution time text. TypeScript compilation verified.",
+          "updated_at": "2025-12-22T04:29:01.607919+00:00"
         },
         {
           "id": "subtask-2-5",
@@ -337,5 +339,5 @@
   "updated_at": "2025-12-22T04:02:54.161Z",
   "status": "human_review",
   "planStatus": "review",
-  "last_updated": "2025-12-22T04:26:51.840265+00:00"
+  "last_updated": "2025-12-22T04:29:01.607931+00:00"
 }

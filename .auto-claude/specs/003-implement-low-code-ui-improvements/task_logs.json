@@ -1,7 +1,7 @@
 {
   "spec_id": "003-implement-low-code-ui-improvements",
   "created_at": "2025-12-22T03:51:09.795917+00:00",
-  "updated_at": "2025-12-22T04:28:58.822639+00:00",
+  "updated_at": "2025-12-22T04:31:08.288606+00:00",
   "phases": {
     "planning": {
       "phase": "planning",
@@ -2593,6 +2593,199 @@
           "tool_name": "mcp__auto-claude__update_subtask_status",
           "subtask_id": "subtask-2-4",
           "session": 6
+        },
+        {
+          "timestamp": "2025-12-22T04:29:01.599957+00:00",
+          "type": "tool_end",
+          "content": "[mcp__auto-claude__update_subtask_status] Done",
+          "phase": "coding",
+          "tool_name": "mcp__auto-claude__update_subtask_status",
+          "subtask_id": "subtask-2-4",
+          "session": 6,
+          "collapsed": true
+        },
+        {
+          "timestamp": "2025-12-22T04:29:10.051143+00:00",
+          "type": "text",
+          "content": "## Subtask 2-4 Completed ✓\n\nI've successfully added execution time display in the results header on the SearchPage.\n\n### Changes Made\n\n**File: `ui/src/pages/SearchPage.tsx`**\n- Extracted `executionTime` from `searchMutation.data` \n- Updated the results stats display to show execution time after the count\n- Format: `1,234 results in 42ms` (numbers formatted with locale-specific separators)\n- Only displays execution time when the field is present in the API response\n- Added proper dark mode styling with `text-slate-500 dark:text-slate-400`\n\n### Verification\n- ✅ TypeScript compilation successful\n- ✅ Build completed without errors\n- ✅ Changes committed with descriptive message\n- ✅ Subtask status updated to completed\n\n### Visual Result\nThe results header will now display something like:\n> **1,234** results in 42ms\n\nThe execution time is styled in a subtle gray color to differentiate it from the main result count.",
+          "phase": "coding",
+          "subtask_id": "subtask-2-4",
+          "session": 6
+        },
+        {
+          "timestamp": "2025-12-22T04:29:45.756859+00:00",
+          "type": "tool_start",
+          "content": "[Read] ./ui/src/components/TimePicker.tsx",
+          "phase": "coding",
+          "tool_name": "Read",
+          "tool_input": "./ui/src/components/TimePicker.tsx",
+          "subtask_id": "subtask-2-5",
+          "session": 7
+        },
+        {
+          "timestamp": "2025-12-22T04:29:46.295764+00:00",
+          "type": "tool_start",
+          "content": "[Read] ./ui/src/components/ui/Tooltip.tsx",
+          "phase": "coding",
+          "tool_name": "Read",
+          "tool_input": "./ui/src/components/ui/Tooltip.tsx",
+          "subtask_id": "subtask-2-5",
+          "session": 7
+        },
+        {
+          "timestamp": "2025-12-22T04:29:51.068574+00:00",
+          "type": "tool_end",
+          "content": "[Read] Done",
+          "phase": "coding",
+          "tool_name": "Read",
+          "subtask_id": "subtask-2-5",
+          "session": 7,
+          "detail": "     1→import { useState, useRef, useEffect } from 'react';\n     2→import DatePicker from 'react-datepicker';\n     3→import 'react-datepicker/dist/react-datepicker.css';\n     4→import './TimePicker.css';\n     5→import { Clock, Calendar, ChevronDown, X } from 'lucide-react';\n     6→\n     7→interface TimeRange {\n     8→  label: string;\n     9→  value: string;\n    10→  earliest: string;\n    11→  latest?: string;\n    12→}\n    13→\n    14→interface TimePickerProps {\n    15→  onRangeChange: (earliest: string, latest?: string) => void;\n    16→  defaultRange?: string;\n    17→  className?: string;\n    18→}\n    19→\n    20→const TIME_PRESETS: TimeRange[] = [\n    21→  { label: 'Last 5 minutes', value: '-5m', earliest: '-5m' },\n    22→  { label: 'Last 15 minutes', value: '-15m', earliest: '-15m' },\n    23→  { label: 'Last 30 minutes', value: '-30m', earliest: '-30m' },\n    24→  { label: 'Last 1 hour', value: '-1h', earliest: '-1h' },\n    25→  { label: 'Last 4 hours', value: '-4h', earliest: '-4h' },\n    26→  { label: 'Last 12 hours', value: '-12h', earliest: '-12h' },\n    27→  { label: 'Last 24 hours', value: '-24h', earliest: '-24h' },\n    28→  { label: 'Last 7 days', value: '-7d', earliest: '-7d' },\n    29→  { label: 'Last 30 days', value: '-30d', earliest: '-30d' },\n    30→  { label: 'All time', value: 'all', earliest: '' },\n    31→  { label: 'Custom range', value: 'custom', earliest: 'custom' },\n    32→];\n    33→\n    34→export default function TimePicker({ onRangeChange, defaultRange = '-24h', className = '' }: TimePickerProps) {\n    35→  const [isOpen, setIsOpen] = useState(false);\n    36→  const [selectedPreset, setSelectedPreset] = useState<TimeRange>(() => {\n    37→    // Check localStorage for saved preference\n    38→    const saved = localStorage.getItem('lognog_time_range');\n    39→    if (saved) {\n    40→      const preset = TIME_PRESETS.find(p => p.value === saved);\n    41→      if (preset) return preset;\n    42→    }\n    43→    return TIME_PRESETS.find(p => p.value === defaultRange) || TIME_PRESETS[6];\n    44→  });\n    45→  const [isCustomMode, setIsCustomMode] = useState(false);\n    46→  const [startDate, setStartDate] = useState<Date | null>(new Date(Date.now() - 24 * 60 * 60 * 1000));\n    47→  const [endDate, setEndDate] = useState<Date | null>(new Date());\n    48→\n    49→  const dropdownRef = useRef<HTMLDivElement>(null);\n    50→\n    51→  // Initialize with saved time range on mount\n    52→  useEffect(() => {\n    53→    const saved = localStorage.getItem('lognog_time_range');\n    54→    if (saved && saved !== 'custom') {\n    55→      const preset = TIME_PRESETS.find(p => p.value === saved);\n    56→      if (preset) {\n    57→        onRangeChange(preset.earliest, preset.latest);\n    58→      }\n    59→    }\n    60→  }, []);\n    61→\n    62→  // Close dropdown when clicking outside\n    63→  useEffect(() => {\n    64→    const handleClickOutside = (event: MouseEvent) => {\n    65→      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {\n    66→        setIsOpen(false);\n    67→      }\n    68→    };\n    69→\n    70→    if (isOpen) {\n    71→      document.addEventListener('mousedown', handleClickOutside);\n    72→      return () => document.removeEventListener('mousedown', handleClickOutside);\n    73→    }\n    74→  }, [isOpen]);\n    75→\n    76→  const handlePresetSelect = (preset: TimeRange) => {\n    77→    if (preset.value === 'custom') {\n    78→      setIsCustomMode(true);\n    79→      setSelectedPreset(preset);\n    80→    } else {\n    81→      setIsCustomMode(false);\n    82→      setSelectedPreset(preset);\n    83→      setIsOpen(false);\n    84→      // Save to localStorage\n    85→      localStorage.setItem('lognog_time_range', preset.value);\n    86→      onRangeChange(preset.earliest, preset.latest);\n    87→    }\n    88→  };\n    89→\n    90→  const handleCustomApply = () => {\n    91→    if (startDate && endDate) {\n    92→      const earliest = startDate.toISOString();\n    93→      const latest = endDate.toISOString();\n    94→      setIsOpen(false);\n    95→      setIsCustomMode(false);\n    96→\n    97→      // Update the selected preset to show custom with dates\n    98→      setSelectedPreset({\n    99→        label: 'Custom range',\n   100→        value: 'custom',\n   101→        earliest,\n   102→        latest,\n   103→      });\n   104→\n   105→      onRangeChange(earliest, latest);\n   106→    }\n   107→  };\n   108→\n   109→  const handleCustomCancel = () => {\n   110→    setIsCustomMode(false);\n   111→    // Reset to last selected non-custom preset\n   112→    const lastPreset = TIME_PRESETS.find(p => p.value === selectedPreset.value && p.value !== 'custom') || TIME_PRESETS[6];\n   113→    setSelectedPreset(lastPreset);\n   114→  };\n   115→\n   116→  const formatDisplayText = () => {\n   117→    if (selectedPreset.value === 'custom' && selectedPreset.latest) {\n   118→      // Show custom date range\n   119→      const start = new Date(selectedPreset.earliest);\n   120→      const end = new Date(selectedPreset.latest);\n   121→      return `${start.toLocaleDateString()} - ${end.toLocaleDateString()}`;\n   122→    }\n   123→    return selectedPreset.label;\n   124→  };\n   125→\n   126→  const formatShortText = () => {\n   127→    if (selectedPreset.value === 'custom' && selectedPreset.latest) {\n   128→      return 'Custom';\n   129→    }\n   130→    if (selectedPreset.value === 'all') {\n   131→      return 'All';\n   132→    }\n   133→    // Extract short form (e.g., \"-24h\" -> \"24h\")\n   134→    return selectedPreset.value.replace('-', '');\n   135→  };\n   136→\n   137→  return (\n   138→    <div className={`relative ${className}`} ref={dropdownRef}>\n   139→      {/* Main Button */}\n   140→      <button\n   141→        onClick={() => setIsOpen(!isOpen)}\n   142→        className=\"btn-secondary h-12 min-w-[140px] group\"\n   143→        title={formatDisplayText()}\n   144→      >\n   145→        <Clock className=\"w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-all duration-200 group-hover:scale-110\" />\n   146→        <span className=\"font-medium\">{formatShortText()}</span>\n   147→        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />\n   148→      </button>\n   149→\n   150→      {/* Dropdown Menu */}\n   151→      {isOpen && (\n   152→        <div className=\"dropdown right-0 w-80 animate-fade-in\">\n   153→          {!isCustomMode ? (\n   154→            /* Preset Selection */\n   155→            <div className=\"py-2\">\n   156→              <div className=\"px-4 py-2 border-b border-slate-100\">\n   157→                <p className=\"text-xs font-semibold text-slate-400 uppercase tracking-wider\">\n   158→                  Time Range\n   159→                </p>\n   160→              </div>\n   161→              {TIME_PRESETS.map((preset, index) => (\n   162→                <button\n   163→                  key={preset.value}\n   164→                  onClick={() => handlePresetSelect(preset)}\n   165→                  className={`dropdown-item flex items-center justify-between transition-all duration-150 animate-fade-in animate-stagger-${Math.min(index + 1, 8)} ${\n   166→                    selectedPreset.value === preset.value && !isCustomMode\n   167→                      ? 'bg-sky-50 text-sky-600 font-medium dark:bg-sky-900/20 dark:text-sky-400'\n   168→                      : 'text-slate-700 dark:text-slate-300'\n   169→                  }`}\n   170→                >\n   171→                  <span>{preset.label}</span>\n   172→                  {preset.value === 'custom' && (\n   173→                    <Calendar className=\"w-4 h-4 text-slate-400 dark:text-slate-500\" />\n   174→                  )}\n   175→                </button>\n   176→              ))}\n   177→            </div>\n   178→          ) : (\n   179→            /* Custom Date/Time Picker */\n   180→            <div className=\"p-4 space-y-4 animate-slide-right\">\n   181→              <div className=\"flex items-center justify-between border-b border-slate-100 pb-3\">\n   182→                <p className=\"text-sm font-semibold text-slate-900\">Custom Time Range</p>\n   183→                <button\n   184→                  onClick={handleCustomCancel}\n   185→                  className=\"btn-ghost p-1 rounded-md\"\n   186→                  title=\"Cancel\"\n   187→                >\n   188→                  <X className=\"w-4 h-4\" />\n   189→                </button>\n   190→              </div>\n   191→\n   192→              {/* Start Date */}\n   193→              <div>\n   194→                <label className=\"block text-xs font-medium text-slate-700 mb-1.5\">\n   195→                  Start Date & Time\n   196→                </label>\n   197→                <DatePicker\n   198→                  selected={startDate}\n   199→                  onChange={(date: Date | null) => setStartDate(date)}\n   200→                  showTimeSelect\n   201→                  timeFormat=\"HH:mm\"\n   202→                  timeIntervals={15}\n   203→                  dateFormat=\"MMM d, yyyy h:mm aa\"\n   204→                  maxDate={endDate || undefined}\n   205→                  className=\"input text-sm\"\n   206→                  placeholderText=\"Select start date\"\n   207→                  wrapperClassName=\"w-full\"\n   208→                />\n   209→              </div>\n   210→\n   211→              {/* End Date */}\n   212→              <div>\n   213→                <label className=\"block text-xs font-medium text-slate-700 mb-1.5\">\n   214→                  End Date & Time\n   215→                </label>\n   216→                <DatePicker\n   217→                  selected={endDate}\n   218→                  onChange={(date: Date | null) => setEndDate(date)}\n   219→                  showTimeSelect\n   220→                  timeFormat=\"HH:mm\"\n   221→                  timeIntervals={15}\n   222→                  dateFormat=\"MMM d, yyyy h:mm aa\"\n   223→                  minDate={startDate || undefined}\n   224→                  maxDate={new Date()}\n   225→                  className=\"input text-sm\"\n   226→                  placeholderText=\"Select end date\"\n   227→                  wrapperClassName=\"w-full\"\n   228→                />\n   229→              </div>\n   230→\n   231→              {/* Visual Di\n\n... [truncated - full output was 12861 chars]",
+          "collapsed": true
+        },
+        {
+          "timestamp": "2025-12-22T04:29:58.657387+00:00",
+          "type": "text",
+          "content": "Now I understand the current implementation. I need to:\n1. Import the `Tooltip` component\n2. Add a helper function to generate relative time descriptions\n3. Wrap each time preset button with a Tooltip\n\nLet me implement the changes:",
+          "phase": "coding",
+          "subtask_id": "subtask-2-5",
+          "session": 7
+        },
+        {
+          "timestamp": "2025-12-22T04:30:02.584327+00:00",
+          "type": "tool_start",
+          "content": "[Edit] ./ui/src/components/TimePicker.tsx",
+          "phase": "coding",
+          "tool_name": "Edit",
+          "tool_input": "./ui/src/components/TimePicker.tsx",
+          "subtask_id": "subtask-2-5",
+          "session": 7
+        },
+        {
+          "timestamp": "2025-12-22T04:30:04.691185+00:00",
+          "type": "tool_end",
+          "content": "[Edit] Done",
+          "phase": "coding",
+          "tool_name": "Edit",
+          "subtask_id": "subtask-2-5",
+          "session": 7,
+          "detail": "The file ./ui/src/components/TimePicker.tsx has been updated. Here's the result of running `cat -n` on a snippet of the edited file:\n     1→import { useState, useRef, useEffect } from 'react';\n     2→import DatePicker from 'react-datepicker';\n     3→import 'react-datepicker/dist/react-datepicker.css';\n     4→import './TimePicker.css';\n     5→import { Clock, Calendar, ChevronDown, X } from 'lucide-react';\n     6→import { Tooltip } from './ui/Tooltip';\n     7→\n     8→interface TimeRange {\n     9→  label: string;\n    10→  value: string;",
+          "collapsed": true
+        },
+        {
+          "timestamp": "2025-12-22T04:30:08.444528+00:00",
+          "type": "text",
+          "content": "Now let me add the helper function for generating tooltip descriptions:",
+          "phase": "coding",
+          "subtask_id": "subtask-2-5",
+          "session": 7
+        },
+        {
+          "timestamp": "2025-12-22T04:30:23.091974+00:00",
+          "type": "tool_start",
+          "content": "[Edit] ./ui/src/components/TimePicker.tsx",
+          "phase": "coding",
+          "tool_name": "Edit",
+          "tool_input": "./ui/src/components/TimePicker.tsx",
+          "subtask_id": "subtask-2-5",
+          "session": 7
+        },
+        {
+          "timestamp": "2025-12-22T04:30:25.048162+00:00",
+          "type": "tool_end",
+          "content": "[Edit] Done",
+          "phase": "coding",
+          "tool_name": "Edit",
+          "subtask_id": "subtask-2-5",
+          "session": 7,
+          "detail": "The file ./ui/src/components/TimePicker.tsx has been updated. Here's the result of running `cat -n` on a snippet of the edited file:\n    17→  defaultRange?: string;\n    18→  className?: string;\n    19→}\n    20→\n    21→const TIME_PRESETS: TimeRange[] = [\n    22→  { label: 'Last 5 minutes', value: '-5m', earliest: '-5m' },\n    23→  { label: 'Last 15 minutes', value: '-15m', earliest: '-15m' },\n    24→  { label: 'Last 30 minutes', value: '-30m', earliest: '-30m' },\n    25→  { label: 'Last 1 hour', value: '-1h', earliest: '-1h' },\n    26→  { label: 'Last 4 hours', value: '-4h', earliest: '-4h' },\n    27→  { label: 'Last 12 hours', value: '-12h', earliest: '-12h' },\n    28→  { label: 'Last 24 hours', value: '-24h', earliest: '-24h' },\n    29→  { label: 'Last 7 days', value: '-7d', earliest: '-7d' },\n    30→  { label: 'Last 30 days', value: '-30d', earliest: '-30d' },\n    31→  { label: 'All time', value: 'all', earliest: '' },\n    32→  { label: 'Custom range', value: 'custom', earliest: 'custom' },\n    33→];\n    34→\n    35→/**\n    36→ * Generates a relative time tooltip description for a time preset\n    37→ */\n    38→function getPresetTooltip(preset: TimeRange): string {\n    39→  if (preset.value === 'all') {\n    40→    return 'Show all available logs without time restriction';\n    41→  }\n    42→  if (preset.value === 'custom') {\n    43→    return 'Select a custom date and time range';\n    44→  }\n    45→\n    46→  // Parse the value to get the unit and amount\n    47→  const match = preset.value.match(/^-(\\d+)([mhd])$/);\n    48→  if (!match) return preset.label;\n    49→\n    50→  const amount = parseInt(match[1], 10);\n    51→  const unit = match[2];\n    52→\n    53→  const unitNames: Record<string, { singular: string; plural: string }> = {\n    54→    'm': { singular: 'minute', plural: 'minutes' },\n    55→    'h': { singular: 'hour', plural: 'hours' },\n    56→    'd': { singular: 'day', plural: 'days' },\n    57→  };\n    58→\n    59→  const unitName = amount === 1 ? unitNames[unit].singular : unitNames[unit].plural;\n    60→\n    61→  return `Shows logs from ${amount} ${unitName} ago to now`;\n    62→}\n    63→\n    64→export default function TimePicker({ onRangeChange, defaultRange = '-24h', className = '' }: TimePickerProps) {\n    65→  const [isOpen, setIsOpen] = useState(false);\n    66→  const [selectedPreset, setSelectedPreset] = useState<TimeRange>(() => {",
+          "collapsed": true
+        },
+        {
+          "timestamp": "2025-12-22T04:30:29.047323+00:00",
+          "type": "text",
+          "content": "Now let me wrap the preset buttons with the Tooltip component:",
+          "phase": "coding",
+          "subtask_id": "subtask-2-5",
+          "session": 7
+        },
+        {
+          "timestamp": "2025-12-22T04:30:38.883277+00:00",
+          "type": "tool_start",
+          "content": "[Edit] ./ui/src/components/TimePicker.tsx",
+          "phase": "coding",
+          "tool_name": "Edit",
+          "tool_input": "./ui/src/components/TimePicker.tsx",
+          "subtask_id": "subtask-2-5",
+          "session": 7
+        },
+        {
+          "timestamp": "2025-12-22T04:30:41.053861+00:00",
+          "type": "tool_end",
+          "content": "[Edit] Done",
+          "phase": "coding",
+          "tool_name": "Edit",
+          "subtask_id": "subtask-2-5",
+          "session": 7,
+          "detail": "The file ./ui/src/components/TimePicker.tsx has been updated. Here's the result of running `cat -n` on a snippet of the edited file:\n   187→                <p className=\"text-xs font-semibold text-slate-400 uppercase tracking-wider\">\n   188→                  Time Range\n   189→                </p>\n   190→              </div>\n   191→              {TIME_PRESETS.map((preset, index) => (\n   192→                <Tooltip\n   193→                  key={preset.value}\n   194→                  content={getPresetTooltip(preset)}\n   195→                  placement=\"left\"\n   196→                  delay={300}\n   197→                >\n   198→                  <button\n   199→                    onClick={() => handlePresetSelect(preset)}\n   200→                    className={`dropdown-item flex items-center justify-between transition-all duration-150 animate-fade-in animate-stagger-${Math.min(index + 1, 8)} ${\n   201→                      selectedPreset.value === preset.value && !isCustomMode\n   202→                        ? 'bg-sky-50 text-sky-600 font-medium dark:bg-sky-900/20 dark:text-sky-400'\n   203→                        : 'text-slate-700 dark:text-slate-300'\n   204→                    }`}\n   205→                  >\n   206→                    <span>{preset.label}</span>\n   207→                    {preset.value === 'custom' && (\n   208→                      <Calendar className=\"w-4 h-4 text-slate-400 dark:text-slate-500\" />\n   209→                    )}\n   210→                  </button>\n   211→                </Tooltip>\n   212→              ))}\n   213→            </div>\n   214→          ) : (\n   215→            /* Custom Date/Time Picker */\n   216→            <div className=\"p-4 space-y-4 animate-slide-right\">",
+          "collapsed": true
+        },
+        {
+          "timestamp": "2025-12-22T04:30:45.135170+00:00",
+          "type": "text",
+          "content": "Let me verify the changes are correct by reading the complete file and running TypeScript compilation:",
+          "phase": "coding",
+          "subtask_id": "subtask-2-5",
+          "session": 7
+        },
+        {
+          "timestamp": "2025-12-22T04:30:46.389513+00:00",
+          "type": "tool_start",
+          "content": "[Read] ./ui/src/components/TimePicker.tsx",
+          "phase": "coding",
+          "tool_name": "Read",
+          "tool_input": "./ui/src/components/TimePicker.tsx",
+          "subtask_id": "subtask-2-5",
+          "session": 7
+        },
+        {
+          "timestamp": "2025-12-22T04:30:47.679821+00:00",
+          "type": "tool_start",
+          "content": "[Bash] cd ./ui && npx tsc --noEmit 2>&1 | head -50",
+          "phase": "coding",
+          "tool_name": "Bash",
+          "tool_input": "cd ./ui && npx tsc --noEmit 2>&1 | head -50",
+          "subtask_id": "subtask-2-5",
+          "session": 7
+        },
+        {
+          "timestamp": "2025-12-22T04:30:50.121188+00:00",
+          "type": "tool_end",
+          "content": "[Bash] Done",
+          "phase": "coding",
+          "tool_name": "Bash",
+          "subtask_id": "subtask-2-5",
+          "session": 7,
+          "detail": "     1→import { useState, useRef, useEffect } from 'react';\n     2→import DatePicker from 'react-datepicker';\n     3→import 'react-datepicker/dist/react-datepicker.css';\n     4→import './TimePicker.css';\n     5→import { Clock, Calendar, ChevronDown, X } from 'lucide-react';\n     6→import { Tooltip } from './ui/Tooltip';\n     7→\n     8→interface TimeRange {\n     9→  label: string;\n    10→  value: string;\n    11→  earliest: string;\n    12→  latest?: string;\n    13→}\n    14→\n    15→interface TimePickerProps {\n    16→  onRangeChange: (earliest: string, latest?: string) => void;\n    17→  defaultRange?: string;\n    18→  className?: string;\n    19→}\n    20→\n    21→const TIME_PRESETS: TimeRange[] = [\n    22→  { label: 'Last 5 minutes', value: '-5m', earliest: '-5m' },\n    23→  { label: 'Last 15 minutes', value: '-15m', earliest: '-15m' },\n    24→  { label: 'Last 30 minutes', value: '-30m', earliest: '-30m' },\n    25→  { label: 'Last 1 hour', value: '-1h', earliest: '-1h' },\n    26→  { label: 'Last 4 hours', value: '-4h', earliest: '-4h' },\n    27→  { label: 'Last 12 hours', value: '-12h', earliest: '-12h' },\n    28→  { label: 'Last 24 hours', value: '-24h', earliest: '-24h' },\n    29→  { label: 'Last 7 days', value: '-7d', earliest: '-7d' },\n    30→  { label: 'Last 30 days', value: '-30d', earliest: '-30d' },\n    31→  { label: 'All time', value: 'all', earliest: '' },\n    32→  { label: 'Custom range', value: 'custom', earliest: 'custom' },\n    33→];\n    34→\n    35→/**\n    36→ * Generates a relative time tooltip description for a time preset\n    37→ */\n    38→function getPresetTooltip(preset: TimeRange): string {\n    39→  if (preset.value === 'all') {\n    40→    return 'Show all available logs without time restriction';\n    41→  }\n    42→  if (preset.value === 'custom') {\n    43→    return 'Select a custom date and time range';\n    44→  }\n    45→\n    46→  // Parse the value to get the unit and amount\n    47→  const match = preset.value.match(/^-(\\d+)([mhd])$/);\n    48→  if (!match) return preset.label;\n    49→\n    50→  const amount = parseInt(match[1], 10);\n    51→  const unit = match[2];\n    52→\n    53→  const unitNames: Record<string, { singular: string; plural: string }> = {\n    54→    'm': { singular: 'minute', plural: 'minutes' },\n    55→    'h': { singular: 'hour', plural: 'hours' },\n    56→    'd': { singular: 'day', plural: 'days' },\n    57→  };\n    58→\n    59→  const unitName = amount === 1 ? unitNames[unit].singular : unitNames[unit].plural;\n    60→\n    61→  return `Shows logs from ${amount} ${unitName} ago to now`;\n    62→}\n    63→\n    64→export default function TimePicker({ onRangeChange, defaultRange = '-24h', className = '' }: TimePickerProps) {\n    65→  const [isOpen, setIsOpen] = useState(false);\n    66→  const [selectedPreset, setSelectedPreset] = useState<TimeRange>(() => {\n    67→    // Check localStorage for saved preference\n    68→    const saved = localStorage.getItem('lognog_time_range');\n    69→    if (saved) {\n    70→      const preset = TIME_PRESETS.find(p => p.value === saved);\n    71→      if (preset) return preset;\n    72→    }\n    73→    return TIME_PRESETS.find(p => p.value === defaultRange) || TIME_PRESETS[6];\n    74→  });\n    75→  const [isCustomMode, setIsCustomMode] = useState(false);\n    76→  const [startDate, setStartDate] = useState<Date | null>(new Date(Date.now() - 24 * 60 * 60 * 1000));\n    77→  const [endDate, setEndDate] = useState<Date | null>(new Date());\n    78→\n    79→  const dropdownRef = useRef<HTMLDivElement>(null);\n    80→\n    81→  // Initialize with saved time range on mount\n    82→  useEffect(() => {\n    83→    const saved = localStorage.getItem('lognog_time_range');\n    84→    if (saved && saved !== 'custom') {\n    85→      const preset = TIME_PRESETS.find(p => p.value === saved);\n    86→      if (preset) {\n    87→        onRangeChange(preset.earliest, preset.latest);\n    88→      }\n    89→    }\n    90→  }, []);\n    91→\n    92→  // Close dropdown when clicking outside\n    93→  useEffect(() => {\n    94→    const handleClickOutside = (event: MouseEvent) => {\n    95→      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {\n    96→        setIsOpen(false);\n    97→      }\n    98→    };\n    99→\n   100→    if (isOpen) {\n   101→      document.addEventListener('mousedown', handleClickOutside);\n   102→      return () => document.removeEventListener('mousedown', handleClickOutside);\n   103→    }\n   104→  }, [isOpen]);\n   105→\n   106→  const handlePresetSelect = (preset: TimeRange) => {\n   107→    if (preset.value === 'custom') {\n   108→      setIsCustomMode(true);\n   109→      setSelectedPreset(preset);\n   110→    } else {\n   111→      setIsCustomMode(false);\n   112→      setSelectedPreset(preset);\n   113→      setIsOpen(false);\n   114→      // Save to localStorage\n   115→      localStorage.setItem('lognog_time_range', preset.value);\n   116→      onRangeChange(preset.earliest, preset.latest);\n   117→    }\n   118→  };\n   119→\n   120→  const handleCustomApply = () => {\n   121→    if (startDate && endDate) {\n   122→      const earliest = startDate.toISOString();\n   123→      const latest = endDate.toISOString();\n   124→      setIsOpen(false);\n   125→      setIsCustomMode(false);\n   126→\n   127→      // Update the selected preset to show custom with dates\n   128→      setSelectedPreset({\n   129→        label: 'Custom range',\n   130→        value: 'custom',\n   131→        earliest,\n   132→        latest,\n   133→      });\n   134→\n   135→      onRangeChange(earliest, latest);\n   136→    }\n   137→  };\n   138→\n   139→  const handleCustomCancel = () => {\n   140→    setIsCustomMode(false);\n   141→    // Reset to last selected non-custom preset\n   142→    const lastPreset = TIME_PRESETS.find(p => p.value === selectedPreset.value && p.value !== 'custom') || TIME_PRESETS[6];\n   143→    setSelectedPreset(lastPreset);\n   144→  };\n   145→\n   146→  const formatDisplayText = () => {\n   147→    if (selectedPreset.value === 'custom' && selectedPreset.latest) {\n   148→      // Show custom date range\n   149→      const start = new Date(selectedPreset.earliest);\n   150→      const end = new Date(selectedPreset.latest);\n   151→      return `${start.toLocaleDateString()} - ${end.toLocaleDateString()}`;\n   152→    }\n   153→    return selectedPreset.label;\n   154→  };\n   155→\n   156→  const formatShortText = () => {\n   157→    if (selectedPreset.value === 'custom' && selectedPreset.latest) {\n   158→      return 'Custom';\n   159→    }\n   160→    if (selectedPreset.value === 'all') {\n   161→      return 'All';\n   162→    }\n   163→    // Extract short form (e.g., \"-24h\" -> \"24h\")\n   164→    return selectedPreset.value.replace('-', '');\n   165→  };\n   166→\n   167→  return (\n   168→    <div className={`relative ${className}`} ref={dropdownRef}>\n   169→      {/* Main Button */}\n   170→      <button\n   171→        onClick={() => setIsOpen(!isOpen)}\n   172→        className=\"btn-secondary h-12 min-w-[140px] group\"\n   173→        title={formatDisplayText()}\n   174→      >\n   175→        <Clock className=\"w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-all duration-200 group-hover:scale-110\" />\n   176→        <span className=\"font-medium\">{formatShortText()}</span>\n   177→        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />\n   178→      </button>\n   179→\n   180→      {/* Dropdown Menu */}\n   181→      {isOpen && (\n   182→        <div className=\"dropdown right-0 w-80 animate-fade-in\">\n   183→          {!isCustomMode ? (\n   184→            /* Preset Selection */\n   185→            <div className=\"py-2\">\n   186→              <div className=\"px-4 py-2 border-b border-slate-100\">\n   187→                <p className=\"text-xs font-semibold text-slate-400 uppercase tracking-wider\">\n   188→                  Time Range\n   189→                </p>\n   190→              </div>\n   191→              {TIME_PRESETS.map((preset, index) => (\n   192→                <Tooltip\n   193→                  key={preset.value}\n   194→                  content={getPresetTooltip(preset)}\n   195→                  placement=\"left\"\n   196→                  delay={300}\n   197→                >\n   198→                  <button\n   199→                    onClick={() => handlePresetSelect(preset)}\n   200→                    className={`dropdown-item flex items-center justify-between transition-all duration-150 animate-fade-in animate-stagger-${Math.min(index + 1, 8)} ${\n   201→                      selectedPreset.value === preset.value && !isCustomMode\n   202→                        ? 'bg-sky-50 text-sky-600 font-medium dark:bg-sky-900/20 dark:text-sky-400'\n   203→                        : 'text-slate-700 dark:text-slate-300'\n   204→                    }`}\n   205→                  >\n   206→                    <span>{preset.label}</span>\n   207→                    {preset.value === 'custom' && (\n   208→                      <Calendar className=\"w-4 h-4 text-slate-400 dark:text-slate-500\" />\n   209→                    )}\n   210→                  </button>\n   211→                </Tooltip>\n   212→              ))}\n   213→            </div>\n   214→          ) : (\n   215→            /* Custom Date/Time Picker */\n   216→            <div className=\"p-4 space-y-4 animate-slide-right\">\n   217→              <div className=\"flex items-center justify-between border-b border-slate-100 pb-3\">\n   218→                <p className=\"text-sm font-semibold text-slate-900\">Custom Time Range</p>\n   219→                <button\n   220→                  onClick={handleCustomCancel}\n   221→className=\"btn-ghost p-1 rounded-md\"\n   222→                  title=\"Cancel\"\n   223→                >\n   224→                  <X className=\"w-4 h-4\" />\n   225→                </button>\n   226→              </div>\n   227→\n   228→              {/* Start Date */}\n   229→              <div>\n   230→                <label className=\"block text-xs font-medium text-slate-700 mb-1.5\">\n   231→                  Start Date & Time\n   232→                </label>\n   233→                <DatePicker\n   234→                  selected={startDate}\n   235→                  onChange={(date: Date | null) => setStartDate(date)}\n   236→\n\n... [truncated - full output was 14252 chars]",
+          "collapsed": true
+        },
+        {
+          "timestamp": "2025-12-22T04:31:07.563992+00:00",
+          "type": "text",
+          "content": "TypeScript compilation passed (no errors). Now let me commit the changes and update the subtask status:",
+          "phase": "coding",
+          "subtask_id": "subtask-2-5",
+          "session": 7
+        },
+        {
+          "timestamp": "2025-12-22T04:31:08.288566+00:00",
+          "type": "tool_start",
+          "content": "[Bash] cd . && git add . && git status",
+          "phase": "coding",
+          "tool_name": "Bash",
+          "tool_input": "cd . && git add . && git status",
+          "subtask_id": "subtask-2-5",
+          "session": 7
         }
       ]
     },
