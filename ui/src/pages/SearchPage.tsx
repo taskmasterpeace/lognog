@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import {
   Search,
@@ -65,6 +65,22 @@ export default function SearchPage() {
     return [];
   });
   const [showHistory, setShowHistory] = useState(false);
+
+  const historyDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close history dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (historyDropdownRef.current && !historyDropdownRef.current.contains(event.target as Node)) {
+        setShowHistory(false);
+      }
+    };
+
+    if (showHistory) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showHistory]);
 
   // Persist sidebar state to localStorage
   useEffect(() => {
@@ -485,15 +501,58 @@ search * | top 10 app_name`}
               </div>
             )}
 
-            {/* Query History Button - dropdown added in subtask 2-2 */}
+            {/* Query History Dropdown */}
             {searchMode === 'dsl' && queryHistory.length > 0 && (
-              <button
-                onClick={() => setShowHistory(!showHistory)}
-                className="btn-secondary h-12"
-                title="Query history"
-              >
-                <History className="w-4 h-4" />
-              </button>
+              <div className="relative" ref={historyDropdownRef}>
+                <button
+                  onClick={() => setShowHistory(!showHistory)}
+                  className="btn-secondary h-12 group"
+                  title="Query history"
+                >
+                  <History className="w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-all duration-200 group-hover:scale-110" />
+                </button>
+
+                {/* History Dropdown Menu */}
+                {showHistory && (
+                  <div className="dropdown right-0 w-96 animate-fade-in">
+                    <div className="py-2">
+                      <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-700">
+                        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                          Recent Queries
+                        </p>
+                      </div>
+                      {queryHistory.map((historyQuery, index) => (
+                        <button
+                          key={index}
+                          onClick={() => {
+                            setQuery(historyQuery);
+                            setShowHistory(false);
+                          }}
+                          className={`dropdown-item flex items-center gap-3 text-left transition-all duration-150 animate-fade-in text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700`}
+                          style={{ animationDelay: `${index * 30}ms` }}
+                        >
+                          <History className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                          <span className="font-mono text-sm truncate flex-1">{historyQuery}</span>
+                        </button>
+                      ))}
+                      {queryHistory.length > 0 && (
+                        <div className="border-t border-slate-100 dark:border-slate-700 mt-2 pt-2 px-4">
+                          <button
+                            onClick={() => {
+                              setQueryHistory([]);
+                              localStorage.removeItem('lognog_query_history');
+                              setShowHistory(false);
+                            }}
+                            className="text-xs text-slate-500 hover:text-red-600 transition-colors"
+                          >
+                            Clear history
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
 
             {/* Time Range */}
