@@ -73,7 +73,6 @@ app.use('/mcp', mcpRouter);
 const liveTailClients: Set<WebSocket> = new Set();
 
 app.ws('/ws/tail', (ws: WebSocket) => {
-  console.log('Client connected to live tail');
   liveTailClients.add(ws);
 
   ws.on('message', (msg: string) => {
@@ -81,8 +80,7 @@ app.ws('/ws/tail', (ws: WebSocket) => {
       const data = JSON.parse(msg);
       if (data.type === 'subscribe') {
         // Client wants to subscribe to live logs
-        // In a real implementation, you'd filter based on query
-        console.log('Client subscribed to:', data.query || '*');
+        // Store query for filtering (future enhancement)
       }
     } catch (e) {
       console.error('Invalid WebSocket message:', e);
@@ -90,7 +88,6 @@ app.ws('/ws/tail', (ws: WebSocket) => {
   });
 
   ws.on('close', () => {
-    console.log('Client disconnected from live tail');
     liveTailClients.delete(ws);
   });
 
@@ -162,7 +159,6 @@ app.get('/sse/tail', (req: express.Request, res: express.Response) => {
   };
 
   sseClients.add(client);
-  console.log(`SSE client connected (${sseClients.size} total), query: ${query}`);
 
   // Send initial connection message
   res.write(`data: ${JSON.stringify({ type: 'connected', message: 'Live tail connected' })}\n\n`);
@@ -170,7 +166,6 @@ app.get('/sse/tail', (req: express.Request, res: express.Response) => {
   // Handle client disconnect
   req.on('close', () => {
     sseClients.delete(client);
-    console.log(`SSE client disconnected (${sseClients.size} remaining)`);
   });
 });
 

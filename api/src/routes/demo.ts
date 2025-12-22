@@ -55,8 +55,6 @@ router.post('/generate', authenticate, requirePermission('write'), async (req, r
       count: logs.length,
     });
 
-    console.log(`Generated ${logs.length} demo logs`);
-
     res.json({
       success: true,
       generated: logs.length,
@@ -124,8 +122,6 @@ router.post('/import', authenticate, requirePermission('write'), async (req, res
     logAuthEvent(req.user!.id, 'demo_import', req.ip, req.get('user-agent'), {
       count: logs.length,
     });
-
-    console.log(`Imported ${logs.length} logs`);
 
     res.json({
       success: true,
@@ -284,8 +280,6 @@ router.delete('/clear', authenticate, requirePermission('admin'), async (req, re
     logAuthEvent(req.user!.id, 'demo_clear', req.ip, req.get('user-agent'), {
       index: index || 'all',
     });
-
-    console.log(`Cleared ${index ? `index: ${index}` : 'all logs'}`);
 
     res.json({
       success: true,

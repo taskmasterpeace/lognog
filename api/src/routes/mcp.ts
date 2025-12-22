@@ -53,8 +53,6 @@ router.get('/sse', async (req: Request, res: Response) => {
     const transport = new SSEServerTransport('/mcp/messages', res);
     activeConnections.set(connectionId, transport);
 
-    console.log(`[MCP] SSE client connected: ${connectionId} (userId: ${keyInfo.userId})`);
-
     // Create and connect MCP server
     const server = createMCPServer();
     await server.connect(transport);
@@ -62,7 +60,6 @@ router.get('/sse', async (req: Request, res: Response) => {
     // Handle client disconnect
     req.on('close', () => {
       activeConnections.delete(connectionId);
-      console.log(`[MCP] SSE client disconnected: ${connectionId}`);
     });
 
   } catch (error) {

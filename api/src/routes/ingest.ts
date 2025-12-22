@@ -363,8 +363,6 @@ router.post('/otlp/v1/logs', authenticateIngestion, async (req, res) => {
     // Insert into database
     await insertLogs(logs);
 
-    console.log(`OTLP: Ingested ${logs.length} log records`);
-
     // Log ingestion event if authenticated
     if (req.user) {
       logAuthEvent(req.user.id, 'otlp_ingest', req.ip, req.get('user-agent'), {
@@ -586,8 +584,6 @@ router.post('/supabase', authenticateIngestion, async (req, res) => {
     // Insert into database
     await insertLogs(logs);
 
-    console.log(`Supabase: Ingested ${logs.length} log events`);
-
     // Log ingestion event if authenticated
     if (req.user) {
       logAuthEvent(req.user.id, 'supabase_ingest', req.ip, req.get('user-agent'), {
@@ -686,8 +682,6 @@ router.post('/http', authenticateIngestion, async (req, res) => {
     }
 
     await insertLogs(logs);
-
-    console.log(`HTTP: Ingested ${logs.length} log events`);
 
     if (req.user) {
       logAuthEvent(req.user.id, 'http_ingest', req.ip, req.get('user-agent'), {
@@ -919,8 +913,6 @@ router.post('/vercel', authenticateIngestion, async (req, res) => {
     // Insert into database
     await insertLogs(logs);
 
-    console.log(`Vercel: Ingested ${logs.length} log events`);
-
     // Log ingestion event if authenticated
     if (req.user) {
       logAuthEvent(req.user.id, 'vercel_ingest', req.ip, req.get('user-agent'), {
@@ -1113,8 +1105,6 @@ router.post('/generate-test-data', authenticate, async (req, res) => {
 
     await insertLogs(logs);
 
-    console.log(`Generated ${count} test logs`);
-
     res.json({
       success: true,
       generated: count,
@@ -1220,7 +1210,6 @@ router.post('/smartthings', authenticateIngestion, async (req, res) => {
       if (payload.confirmationUrl) {
         try {
           await fetch(payload.confirmationUrl);
-          console.log('SmartThings webhook confirmed');
         } catch (error) {
           console.error('Failed to confirm SmartThings webhook:', error);
         }
