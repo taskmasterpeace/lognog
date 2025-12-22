@@ -391,3 +391,63 @@ NO unused npm packages to remove from api/package.json.
 Phase 3 subtask-3-1 can be marked as "skipped" or "completed" with no changes needed.
 
 === END subtask-1-3 ===
+
+=== SESSION 5: subtask-1-4 - UI npm Dependency Analysis ===
+Started: 2025-12-22
+
+Ran depcheck analysis on ui/package.json:
+  Command: cd ui && npx depcheck --json
+
+=== DEPCHECK RESULTS ===
+
+UNUSED RUNTIME DEPENDENCIES (confirmed):
+  1. ansi-to-html - Not imported anywhere in the codebase
+  2. react-window - Not imported anywhere in the codebase
+  3. use-debounce - Not imported anywhere in the codebase
+
+UNUSED DEV DEPENDENCIES (confirmed):
+  1. @types/react-window - Type definitions for unused react-window package
+
+DEV DEPENDENCIES FLAGGED BUT ACTUALLY USED (false positives):
+  - autoprefixer: USED in postcss.config.js (plugins: { autoprefixer: {} })
+  - postcss: USED by Vite via postcss.config.js
+  - tailwindcss: USED in postcss.config.js and tailwind.config.js
+  - typescript: USED by tsconfig.json and "build" npm script
+
+MISSING DEPENDENCIES (issue to resolve):
+  1. react-resizable - Used in ui/src/components/dashboard/DashboardGrid.tsx
+     Import: import 'react-resizable/css/styles.css';
+     Status: Not listed in package.json, likely a transitive dep of react-grid-layout
+
+=== VERIFICATION OF CONFIG FILES ===
+
+postcss.config.js uses:
+  - tailwindcss (explicit plugin)
+  - autoprefixer (explicit plugin)
+
+tailwind.config.js uses:
+  - tailwindcss (implicit via @type import)
+
+tsconfig.json:
+  - typescript (implicit for compilation)
+
+=== PACKAGES TO REMOVE FROM ui/package.json ===
+
+Dependencies to remove:
+  1. ansi-to-html - v0.7.2
+  2. react-window - v2.2.3
+  3. use-debounce - v10.0.6
+
+DevDependencies to remove:
+  1. @types/react-window - v1.8.8
+
+Total packages to remove: 4
+
+=== CONCLUSION ===
+
+Phase 3 subtask-3-2 should:
+1. Remove the 4 unused packages identified above
+2. Optionally add react-resizable as explicit dependency (currently works as
+   transitive dependency of react-grid-layout)
+
+=== END subtask-1-4 ===
