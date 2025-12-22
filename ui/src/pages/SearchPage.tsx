@@ -821,6 +821,8 @@ search * | top 10 app_name`}
 
           if (!results || results.length === 0) return null;
 
+          const executionTime = searchMutation.data?.executionTime;
+
           return (
             <div className="animate-slide-up">
               {/* Result Stats */}
@@ -837,11 +839,16 @@ search * | top 10 app_name`}
                       <PanelLeft className="w-5 h-5" />
                     )}
                   </button>
-                  <p className="text-sm font-medium text-slate-700">
-                    <span className="text-2xl font-bold text-slate-900">
+                  <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                    <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">
                       {count.toLocaleString()}
                     </span>
-                    {' '}results found
+                    {' '}results
+                    {executionTime !== undefined && (
+                      <span className="text-slate-500 dark:text-slate-400">
+                        {' '}in {executionTime.toLocaleString()}ms
+                      </span>
+                    )}
                   </p>
                 </div>
 

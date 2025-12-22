@@ -55,7 +55,9 @@
             "command": "cd ui && npx tsc --noEmit",
             "expected": "No TypeScript errors"
           },
-          "status": "pending"
+          "status": "completed",
+          "notes": "Added executionTime?: number field to SearchResult interface. TypeScript compilation verified.",
+          "updated_at": "2025-12-22T04:16:36.747409+00:00"
         }
       ]
     },
@@ -86,7 +88,9 @@
             "type": "manual",
             "instructions": "Verify localStorage 'lognog_query_history' is populated after search execution"
           },
-          "status": "pending"
+          "status": "completed",
+          "notes": "Added query history state management with localStorage persistence. State initialized from localStorage with JSON parsing and error handling. handleSearch now saves queries (dedupe, limit 10) to history. Added History button placeholder (dropdown UI to be added in subtask 2-2). TypeScript compilation and build verified.",
+          "updated_at": "2025-12-22T04:20:29.371245+00:00"
         },
         {
           "id": "subtask-2-2",
@@ -110,7 +114,9 @@
               "Queries populate input when selected"
             ]
           },
-          "status": "pending"
+          "status": "completed",
+          "notes": "Implemented query history dropdown UI component. Added useRef with click-outside detection following TimePicker pattern. Dropdown shows recent queries with staggered animations, populates input on selection, and includes clear history functionality. Build and TypeScript checks pass.",
+          "updated_at": "2025-12-22T04:23:55.218501+00:00"
         },
         {
           "id": "subtask-2-3",
@@ -133,7 +139,9 @@
               "Clicking copies formatted JSON to clipboard"
             ]
           },
-          "status": "pending"
+          "status": "completed",
+          "notes": "Added Copy as JSON button with clipboard functionality. Button shows visual feedback (checkmark and \"Copied!\") for 2 seconds after copying. Includes fallback for browsers without clipboard API support.",
+          "updated_at": "2025-12-22T04:26:51.840252+00:00"
         },
         {
           "id": "subtask-2-4",
@@ -329,5 +337,5 @@
   "updated_at": "2025-12-22T04:02:54.161Z",
   "status": "human_review",
   "planStatus": "review",
-  "last_updated": "2025-12-22T04:15:08.650332+00:00"
+  "last_updated": "2025-12-22T04:26:51.840265+00:00"
 }

@@ -1,0 +1,10 @@
+{
+  "discovered_files": {
+    "ui/src/pages/SearchPage.tsx": {
+      "description": "Query history dropdown implemented following TimePicker.tsx pattern - uses useRef for click-outside detection, shows recent queries with staggered animations, and includes clear history button",
+      "category": "ui-pattern",
+      "discovered_at": "2025-12-22T04:24:05.717209+00:00"
+    }
+  },
+  "last_updated": "2025-12-22T04:24:05.717220+00:00"
+}
