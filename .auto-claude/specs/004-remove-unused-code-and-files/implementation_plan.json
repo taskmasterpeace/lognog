@@ -81,7 +81,9 @@
             "expected": "JSON output with unused dependencies"
           },
           "expected_output": "List of unused npm packages in UI",
-          "status": "pending"
+          "status": "completed",
+          "notes": "Identified 4 unused packages: ansi-to-html, react-window, use-debounce, @types/react-window. Verified that autoprefixer, postcss, tailwindcss, and typescript are actually used by config files (false positives). Found react-resizable is missing from package.json but works as transitive dependency of react-grid-layout.",
+          "updated_at": "2025-12-22T04:28:38.226923+00:00"
         },
         {
           "id": "subtask-1-5",
@@ -97,7 +99,9 @@
             "instructions": "Check each Python module for imports and usage"
           },
           "expected_output": "List of unused Python modules in agent",
-          "status": "pending"
+          "status": "completed",
+          "notes": "Analyzed all 22 Python files in agent/ directory. All modules are actively used - no unused modules found. The codebase is well-organized with clean import chains from entry points (main.py, run_agent.py, build.py, verify_windows_events.py) through core modules to collectors.",
+          "updated_at": "2025-12-22T04:31:40.955695+00:00"
         }
       ]
     },
@@ -469,5 +473,5 @@
   "status": "human_review",
   "planStatus": "review",
   "updated_at": "2025-12-22T04:03:28.112Z",
-  "last_updated": "2025-12-22T04:26:06.623008+00:00"
+  "last_updated": "2025-12-22T04:31:40.955709+00:00"
 }

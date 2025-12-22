@@ -451,3 +451,96 @@ Phase 3 subtask-3-2 should:
    transitive dependency of react-grid-layout)
 
 === END subtask-1-4 ===
+
+=== SESSION 6: subtask-1-5 - Agent Python Service Analysis ===
+Started: 2025-12-22
+
+Analyzed all 22 Python files in agent/ directory:
+- 11 core modules in src/lognog_in/
+- 2 collector modules in src/lognog_in/collectors/
+- 3 entry point scripts
+- 6 test files
+
+=== MODULE DEPENDENCY ANALYSIS ===
+
+Entry Points:
+┌─────────────────────────────┬───────────────────────────────────────────┬────────┐
+│ File                        │ Purpose                                   │ Status │
+├─────────────────────────────┼───────────────────────────────────────────┼────────┤
+│ run_agent.py                │ PyInstaller entry point                   │ USED   │
+│ build.py                    │ Build script for PyInstaller              │ USED   │
+│ verify_windows_events.py    │ Windows Event collection verification     │ USED   │
+└─────────────────────────────┴───────────────────────────────────────────┴────────┘
+
+Core Package (src/lognog_in/):
+┌─────────────────────────┬────────────────────────────────────────────────────────┬────────┐
+│ Module                  │ Imported By                                            │ Status │
+├─────────────────────────┼────────────────────────────────────────────────────────┼────────┤
+│ __init__.py             │ main.py (__version__)                                  │ USED   │
+│ main.py                 │ Entry point, run_agent.py                              │ USED   │
+│ config.py               │ agent.py, main.py, buffer.py, fim.py, shipper.py,      │ USED   │
+│                         │ watcher.py, gui.py, windows_events.py, verify_*.py     │        │
+│ buffer.py               │ agent.py, shipper.py, fim.py, watcher.py,              │ USED   │
+│                         │ windows_events.py                                       │        │
+│ agent.py                │ main.py                                                │ USED   │
+│ watcher.py              │ agent.py                                               │ USED   │
+│ fim.py                  │ agent.py                                               │ USED   │
+│ shipper.py              │ agent.py, tray.py (ConnectionStatus)                   │ USED   │
+│ tray.py                 │ agent.py                                               │ USED   │
+│ gui.py                  │ agent.py (ConfigWindow, AlertHistoryWindow)            │ USED   │
+│ sound_alerts.py         │ agent.py, gui.py                                       │ USED   │
+└─────────────────────────┴────────────────────────────────────────────────────────┴────────┘
+
+Collectors Package (src/lognog_in/collectors/):
+┌─────────────────────────┬────────────────────────────────────────────────────────┬────────┐
+│ Module                  │ Imported By                                            │ Status │
+├─────────────────────────┼────────────────────────────────────────────────────────┼────────┤
+│ __init__.py             │ Conditional export of WindowsEventCollector            │ USED   │
+│ windows_events.py       │ agent.py (conditional on Windows platform)             │ USED   │
+└─────────────────────────┴────────────────────────────────────────────────────────┴────────┘
+
+Test Files:
+┌─────────────────────────────┬────────────────────────────────────────┬────────┐
+│ File                        │ Tests                                  │ Status │
+├─────────────────────────────┼────────────────────────────────────────┼────────┤
+│ tests/__init__.py           │ Package marker                         │ USED   │
+│ tests/test_buffer.py        │ buffer.py                              │ USED   │
+│ tests/test_config.py        │ config.py                              │ USED   │
+│ tests/test_fim.py           │ fim.py                                 │ USED   │
+│ tests/test_sound_alerts.py  │ sound_alerts.py                        │ USED   │
+│ tests/test_watcher.py       │ watcher.py                             │ USED   │
+│ tests/test_windows_events.py│ windows_events.py                      │ USED   │
+└─────────────────────────────┴────────────────────────────────────────┴────────┘
+
+=== IMPORT CHAIN VERIFICATION ===
+
+Starting from main.py (entry point):
+main.py
+├── __version__ (from __init__.py)
+├── Config, WatchPath, FIMPath (from config.py)
+└── Agent (from agent.py)
+    ├── Config (from config.py)
+    ├── EventBuffer, LogEvent, FIMEvent (from buffer.py)
+    ├── FileWatcher (from watcher.py)
+    ├── FileIntegrityMonitor (from fim.py)
+    ├── HTTPShipper, ConnectionStatus (from shipper.py)
+    ├── SystemTray (from tray.py)
+    ├── ConfigWindow, AlertHistoryWindow (from gui.py)
+    ├── SoundAlertManager (from sound_alerts.py)
+    └── WindowsEventCollector (from collectors/windows_events.py) [conditional]
+
+All modules are reachable from entry points.
+
+=== CONCLUSION ===
+
+NO unused Python modules found in the agent service.
+
+All 22 Python files serve a specific purpose:
+- Core modules: All interconnected via import chain
+- Collectors: Platform-specific Windows Event collection
+- Tests: Test corresponding source modules
+- Scripts: Entry points for running/building/verifying
+
+The agent Python codebase is well-organized with no dead code at the module level.
+
+=== END subtask-1-5 ===
