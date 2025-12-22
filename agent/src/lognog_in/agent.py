@@ -21,6 +21,7 @@ from .fim import FileIntegrityMonitor
 from .shipper import HTTPShipper, ConnectionStatus
 from .tray import SystemTray
 from .gui import ConfigWindow, AlertHistoryWindow
+from .wizard import SetupWizard
 from .sound_alerts import SoundAlertManager
 
 # Import Windows Event collector only on Windows
@@ -161,6 +162,10 @@ class Agent:
         self._alert_history: list[dict] = []
         self._max_alert_history = 100
 
+        # Wizard instance
+        self._wizard: Optional[SetupWizard] = None
+        self._wizard_shown = False
+
         # Setup logging
         self._setup_logging()
 
@@ -268,6 +273,39 @@ class Agent:
         self.alert_history_window = AlertHistoryWindow(alerts=self._alert_history)
         self.alert_history_window.show()
 
+    def _show_setup_wizard(self) -> None:
+        """Show the setup wizard for first-run configuration."""
+        if self._wizard_shown:
+            return
+        self._wizard_shown = True
+        logger.info("Showing setup wizard")
+        self._wizard = SetupWizard(
+            config=self.config,
+            on_complete=self._on_wizard_complete,
+            on_skip=self._on_wizard_skip,
+        )
+        self._wizard.show()
+
+    def _on_wizard_complete(self, config: Config) -> None:
+        """Handle wizard completion with new config."""
+        logger.info("Setup wizard completed")
+        self.config = config
+        self.config.mark_wizard_complete()
+        # Update components with new config
+        self.shipper.config = config
+        self.watcher.config = config
+        self.sound_manager.update_config(config)
+
+    def _on_wizard_skip(self) -> None:
+        """Handle wizard skip."""
+        logger.info("Setup wizard skipped")
+        self.config.mark_wizard_skipped()
+
+    def show_wizard(self) -> None:
+        """Manually show the setup wizard (from tray menu)."""
+        self._wizard_shown = False  # Allow re-showing
+        self._show_setup_wizard()
+
     def _on_view_logs(self) -> None:
         """Handle view logs action - opens log file."""
         log_file = Config.get_log_dir() / "agent.log"
@@ -313,6 +351,11 @@ class Agent:
 
         logger.info("Starting LogNog In agent...")
 
+        # Check if wizard is needed (first run, unconfigured)
+        if not self.headless and self.config.needs_wizard():
+            logger.info("First run detected - showing setup wizard")
+            self._show_setup_wizard()
+
         # Check configuration
         if not self.config.is_configured():
             logger.warning("Agent not fully configured (missing server URL or API key)")
@@ -326,6 +369,7 @@ class Agent:
                 on_quit=self._on_quit,
                 on_view_logs=self._on_view_logs,
                 on_view_alerts=self._on_view_alerts,
+                on_run_wizard=self.show_wizard,
             )
             self.tray.start()
 

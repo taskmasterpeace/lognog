@@ -64,3 +64,6 @@ CLAUDE.md
 
 # Temporary script files
 take-screenshots.js
+
+# Auto Claude data directory
+.auto-claude/

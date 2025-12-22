@@ -102,6 +102,7 @@ class SystemTray:
         on_view_logs: Optional[Callable[[], None]] = None,
         on_view_alerts: Optional[Callable[[], None]] = None,
         on_double_click: Optional[Callable[[], None]] = None,
+        on_run_wizard: Optional[Callable[[], None]] = None,
     ):
         self.on_configure = on_configure
         self.on_pause = on_pause
@@ -109,6 +110,7 @@ class SystemTray:
         self.on_quit = on_quit
         self.on_view_logs = on_view_logs
         self.on_view_alerts = on_view_alerts
+        self.on_run_wizard = on_run_wizard
         # Double-click defaults to configure if not specified
         self.on_double_click = on_double_click or on_configure
 
@@ -179,6 +181,11 @@ class SystemTray:
 
         if self.on_view_alerts:
             items.append(pystray.MenuItem("View Alerts", lambda: self.on_view_alerts()))
+
+        items.append(pystray.Menu.SEPARATOR)
+
+        if self.on_run_wizard:
+            items.append(pystray.MenuItem("Run Setup Wizard...", lambda: self.on_run_wizard()))
 
         items.append(pystray.Menu.SEPARATOR)
 

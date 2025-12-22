@@ -118,9 +118,9 @@ def cmd_test(args: argparse.Namespace) -> int:
         # Test health endpoint
         response = httpx.get(f"{config.server_url}/health", timeout=10.0)
         if response.status_code == 200:
-            print("✓ Server health check passed")
+            print("[OK] Server health check passed")
         else:
-            print(f"✗ Server returned: {response.status_code}")
+            print(f"[FAIL] Server returned: {response.status_code}")
             return 1
 
         # Test authentication
@@ -131,22 +131,22 @@ def cmd_test(args: argparse.Namespace) -> int:
         )
         if response.status_code == 200:
             user = response.json()
-            print(f"✓ Authenticated as: {user.get('username', 'unknown')}")
+            print(f"[OK] Authenticated as: {user.get('username', 'unknown')}")
         elif response.status_code == 401:
-            print("✗ Authentication failed - check API key")
+            print("[FAIL] Authentication failed - check API key")
             return 1
         else:
-            print(f"✗ Auth check returned: {response.status_code}")
+            print(f"[FAIL] Auth check returned: {response.status_code}")
             return 1
 
         print("\nConnection test successful!")
         return 0
 
     except httpx.ConnectError as e:
-        print(f"✗ Connection failed: {e}")
+        print(f"[FAIL] Connection failed: {e}")
         return 1
     except Exception as e:
-        print(f"✗ Error: {e}")
+        print(f"[FAIL] Error: {e}")
         return 1
 
 
@@ -167,13 +167,13 @@ def cmd_status(args: argparse.Namespace) -> int:
     print()
     print(f"Watch paths: {len(config.watch_paths)}")
     for wp in config.watch_paths:
-        status = "✓" if wp.enabled else "✗"
+        status = "[+]" if wp.enabled else "[-]"
         print(f"  {status} {wp.path} ({wp.pattern})")
     print()
     print(f"FIM enabled: {'Yes' if config.fim_enabled else 'No'}")
     print(f"FIM paths: {len(config.fim_paths)}")
     for fp in config.fim_paths:
-        status = "✓" if fp.enabled else "✗"
+        status = "[+]" if fp.enabled else "[-]"
         print(f"  {status} {fp.path} ({fp.pattern})")
 
     return 0

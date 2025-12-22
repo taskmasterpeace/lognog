@@ -79,6 +79,10 @@ class Config:
     # Internal: track where config was loaded from
     _config_path: Optional[Path] = field(default=None, repr=False)
 
+    # Wizard state tracking
+    _wizard_completed: bool = field(default=False, repr=False)
+    _wizard_skipped: bool = field(default=False, repr=False)
+
     @classmethod
     def get_config_dir(cls) -> Path:
         """Get the configuration directory."""
@@ -160,6 +164,8 @@ class Config:
             sound_info=data.get("sound_info", "default"),
             sound_volume=data.get("sound_volume", 100),
             _config_path=config_path,
+            _wizard_completed=data.get("_wizard_completed", False),
+            _wizard_skipped=data.get("_wizard_skipped", False),
         )
         return config
 
@@ -210,6 +216,8 @@ class Config:
             "sound_warning": self.sound_warning,
             "sound_info": self.sound_info,
             "sound_volume": self.sound_volume,
+            "_wizard_completed": self._wizard_completed,
+            "_wizard_skipped": self._wizard_skipped,
         }
 
         with open(config_path, "w") as f:
@@ -218,3 +226,23 @@ class Config:
     def is_configured(self) -> bool:
         """Check if the agent is properly configured."""
         return bool(self.server_url and self.api_key)
+
+    def needs_wizard(self) -> bool:
+        """Check if the setup wizard should be shown."""
+        return not self.is_configured() and not self._wizard_completed and not self._wizard_skipped
+
+    def mark_wizard_complete(self) -> None:
+        """Mark the setup wizard as completed."""
+        self._wizard_completed = True
+        self.save()
+
+    def mark_wizard_skipped(self) -> None:
+        """Mark the setup wizard as skipped."""
+        self._wizard_skipped = True
+        self.save()
+
+    def reset_wizard_state(self) -> None:
+        """Reset wizard state to allow re-running."""
+        self._wizard_completed = False
+        self._wizard_skipped = False
+        self.save()

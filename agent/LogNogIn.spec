@@ -48,6 +48,7 @@ a = Analysis(
         'lognog_in.tray',
         'lognog_in.watcher',
         'lognog_in.sound_alerts',
+        'lognog_in.wizard',
         'lognog_in.main',
         'lognog_in.collectors',
         'lognog_in.collectors.windows_events',
