@@ -152,3 +152,73 @@ All 4 features have been implemented correctly following established patterns.
 All code compiles and builds without errors.
 
 === END E2E VERIFICATION SESSION ===
+
+=== SESSION: REGRESSION TESTING (subtask-3-2) ===
+
+Date: 2025-12-22
+Subtask: subtask-3-2 - Verify existing features still work (regression test)
+
+## Pre-existing Features Verified:
+
+### 1. Ctrl+Enter Executes Search ✅
+Location: ui/src/pages/SearchPage.tsx (line 160)
+- handleKeyDown checks for e.key === 'Enter' && (e.ctrlKey || e.metaKey)
+- Triggers handleSearch() for DSL mode, handleAISearch() for AI mode
+
+### 2. Search Input Has Auto-Focus ✅
+Location: ui/src/pages/SearchPage.tsx (lines 464, 509)
+- Both AI mode and DSL mode inputs have autoFocus attribute
+
+### 3. Clear Button (X) Resets Search ✅
+Location: ui/src/pages/SearchPage.tsx (lines 513-521)
+- X button visible when query !== 'search *'
+- onClick calls setQuery('search *') to reset
+
+### 4. Time Range is Remembered on Page Reload ✅
+Location: ui/src/components/TimePicker.tsx (lines 68, 83, 115)
+- localStorage key: 'lognog_time_range'
+- Reads on component mount (line 68)
+- Writes on preset selection (line 115)
+- Initializes callback with saved preference (lines 82-90)
+
+### 5. Empty State Shows Helpful Suggestions ✅
+Location: ui/src/pages/SearchPage.tsx
+- No results state (lines 797-819): Shows suggestions for broader queries
+- Initial empty state (lines 1008-1072): Shows example queries
+
+### 6. Export CSV Downloads File ✅
+Location: ui/src/pages/SearchPage.tsx (lines 189-218, 923)
+- exportToCSV function creates Blob with text/csv type
+- Generates timestamped filename
+- Creates temporary download link and triggers click
+- Properly cleans up with URL.revokeObjectURL
+
+## Test Suite Results:
+
+### DSL Lexer Tests: 8/8 PASSED
+### DSL Parser Tests: 26/26 PASSED
+### DSL Compiler Tests: 45/45 PASSED
+
+## Build Verification:
+
+### UI Build: PASSED
+- vite build completed successfully
+- No TypeScript errors
+
+### API Build: PASSED
+- tsc completed successfully
+- No TypeScript errors
+
+## Regression Test Summary:
+
+All 6 pre-existing features verified:
+1. ✅ Ctrl+Enter executes search
+2. ✅ Search input has auto-focus
+3. ✅ Clear button (X) resets search
+4. ✅ Time range is remembered on page reload
+5. ✅ Empty state shows helpful suggestions
+6. ✅ Export CSV downloads file
+
+No regressions detected. All existing functionality intact.
+
+=== END REGRESSION TESTING SESSION ===

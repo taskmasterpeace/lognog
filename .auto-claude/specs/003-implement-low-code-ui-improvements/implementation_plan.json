@@ -241,7 +241,9 @@
               "Export CSV downloads file"
             ]
           },
-          "status": "pending"
+          "status": "completed",
+          "notes": "Regression testing completed. All 6 pre-existing features verified: Ctrl+Enter, auto-focus, clear button, time range persistence, empty state suggestions, and CSV export. All 79 tests pass (DSL lexer, parser, compiler). Both UI and API build successfully with no TypeScript errors.",
+          "updated_at": "2025-12-22T04:43:46.483566+00:00"
         }
       ]
     }
@@ -343,5 +345,5 @@
   "updated_at": "2025-12-22T04:02:54.161Z",
   "status": "human_review",
   "planStatus": "review",
-  "last_updated": "2025-12-22T04:35:01.172206+00:00"
+  "last_updated": "2025-12-22T04:43:46.483577+00:00"
 }
