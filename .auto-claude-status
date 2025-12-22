@@ -3,7 +3,7 @@
   "spec": "004-remove-unused-code-and-files",
   "state": "building",
   "subtasks": {
-    "completed": 13,
+    "completed": 15,
     "total": 16,
     "in_progress": 1,
     "failed": 0
@@ -18,8 +18,8 @@
     "max": 1
   },
   "session": {
-    "number": 15,
+    "number": 17,
     "started_at": "2025-12-21T23:12:58.015970"
   },
-  "last_update": "2025-12-22T00:02:13.951156"
+  "last_update": "2025-12-22T00:07:14.041070"
 }
