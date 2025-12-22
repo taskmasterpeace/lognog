@@ -337,3 +337,57 @@ Notes:
 - Dashboard barrel export (components/dashboard/index.ts) IS used - keep file
 
 === END subtask-1-2 ===
+
+=== SESSION 4: subtask-1-3 - API npm Dependency Analysis ===
+Started: 2025-12-22
+
+Ran depcheck analysis on api/package.json:
+  Command: cd api && npx depcheck --json
+
+=== DEPCHECK RESULTS ===
+
+UNUSED RUNTIME DEPENDENCIES: None
+  ✓ All 14 runtime dependencies are actively used in the codebase
+
+UNUSED DEV DEPENDENCIES (FALSE POSITIVES):
+  - tsx: Flagged by depcheck but USED in npm script "dev": "tsx watch src/index.ts"
+  - typescript: Flagged by depcheck but USED by npm script "build": "tsc"
+  These are correctly included as dev dependencies for build tooling.
+
+MISSING DEPENDENCIES:
+  - ws: Imported in src/index.ts as "import { WebSocket } from 'ws';"
+        However, this is a transitive dependency provided by express-ws package.
+        Not a real issue - express-ws includes ws as a dependency.
+
+=== DEPENDENCY USAGE VERIFICATION ===
+
+Runtime Dependencies (all verified as used):
+✓ @clickhouse/client - db/clickhouse.ts
+✓ @llamaindex/ollama - services/llamaindex.ts
+✓ @modelcontextprotocol/sdk - routes/mcp.ts, mcp/server.ts
+✓ bcrypt - routes/dashboards.ts, auth/auth.ts
+✓ better-sqlite3 - db/sqlite-logs.ts, db/sqlite.ts
+✓ cors - index.ts
+✓ express - index.ts, 18 route files
+✓ express-ws - index.ts
+✓ jsonwebtoken - auth/auth.ts
+✓ llamaindex - services/llamaindex.ts
+✓ maxmind - services/geoip.ts
+✓ nodemailer - services/alerts.ts, services/scheduler.ts
+✓ stacktrace-parser - services/field-extractor.ts
+✓ uuid - routes/dashboards.ts, routes/reports.ts, db/*.ts, auth/auth.ts
+✓ zod - routes/auth.ts, routes/demo.ts, routes/ingest.ts, routes/utils.ts
+
+Dev Dependencies (all verified as used):
+✓ @types/* - Type definitions for corresponding packages
+✓ supertest - routes/ingest.test.ts
+✓ tsx - npm dev script
+✓ typescript - npm build script
+✓ vitest - 8 test files
+
+=== CONCLUSION ===
+
+NO unused npm packages to remove from api/package.json.
+Phase 3 subtask-3-1 can be marked as "skipped" or "completed" with no changes needed.
+
+=== END subtask-1-3 ===

@@ -1,0 +1,96 @@
+{
+  "complexity": "standard",
+  "workflow_type": "refactor",
+  "confidence": 0.80,
+  "reasoning": "Code cleanup task requires systematic analysis across a 5-service monorepo to identify unused code/files. Cross-cutting scope affecting multiple services, but no external integrations or infrastructure changes needed. Primary risk is accidentally removing code that appears unused but is dynamically referenced.",
+
+  "analysis": {
+    "scope": {
+      "estimated_files": 10,
+      "estimated_services": 5,
+      "is_cross_cutting": true,
+      "notes": "Must analyze all services (agent, api, log-generator, test-data-generator, ui) to identify orphaned files, dead code, and unused dependencies. Deletion scope depends on investigation findings."
+    },
+    "integrations": {
+      "external_services": [],
+      "new_dependencies": [],
+      "research_needed": false,
+      "notes": "No external integrations. May leverage existing tools like tsc, eslint, or depcheck for static analysis but these are standard developer tools."
+    },
+    "infrastructure": {
+      "docker_changes": false,
+      "database_changes": false,
+      "config_changes": true,
+      "notes": "Potential package.json/requirements.txt changes if unused dependencies are found. Docker Compose unlikely to change unless entire services are deprecated."
+    },
+    "knowledge": {
+      "patterns_exist": true,
+      "research_required": false,
+      "unfamiliar_tech": [],
+      "notes": "Standard code cleanup patterns apply. TypeScript/Python static analysis is well-understood. Codebase uses common frameworks (Express, React, Vite)."
+    },
+    "risk": {
+      "level": "medium",
+      "concerns": [
+        "Dynamic imports may hide usage patterns",
+        "Runtime-loaded modules could appear unused",
+        "Config files might reference code not traceable via static analysis",
+        "Test files may have different import patterns",
+        "Build artifacts in dist/ must not be confused with source"
+      ],
+      "notes": "Must validate builds and tests pass after each deletion. Version control provides safety net for recovery."
+    }
+  },
+
+  "recommended_phases": [
+    "discovery",
+    "requirements",
+    "context",
+    "spec_writing",
+    "planning",
+    "validation"
+  ],
+
+  "flags": {
+    "needs_research": false,
+    "needs_self_critique": false,
+    "needs_infrastructure_setup": false
+  },
+
+  "validation_recommendations": {
+    "risk_level": "medium",
+    "skip_validation": false,
+    "minimal_mode": false,
+    "test_types_required": ["unit", "integration"],
+    "security_scan_required": false,
+    "staging_deployment_required": false,
+    "reasoning": "Code deletion requires thorough validation to ensure no functionality is broken. Unit tests verify individual modules still work, integration tests verify cross-service communication. Build validation is critical - all services must compile/build successfully after changes."
+  },
+
+  "special_considerations": {
+    "investigation_required": true,
+    "investigation_scope": [
+      "Identify unreferenced source files via import/require analysis",
+      "Find unused exports within modules",
+      "Detect orphaned test files for deleted code",
+      "Check for unused npm/pip dependencies",
+      "Look for commented-out or dead code blocks",
+      "Identify unused TypeScript types/interfaces",
+      "Check for duplicate or redundant utility functions"
+    ],
+    "validation_approach": [
+      "Run TypeScript compilation (tsc) to catch broken imports",
+      "Run existing test suites",
+      "Verify Docker builds complete successfully",
+      "Manual review of each deletion for dynamic usage"
+    ],
+    "safety_measures": [
+      "Commit frequently with descriptive messages",
+      "Delete in small batches, not all at once",
+      "Test after each batch of deletions",
+      "Keep backup branch before cleanup begins"
+    ]
+  },
+
+  "created_at": "2025-12-21T00:00:00.000Z"
+}

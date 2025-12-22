@@ -39,7 +39,12 @@
       "description": "Unused component. App.tsx uses NogChat instead as the AI assistant. Safe to delete.",
       "category": "unused_file",
       "discovered_at": "2025-12-22T04:23:37.269003+00:00"
+    },
+    "api/package.json": {
+      "description": "API npm depcheck analysis: All runtime dependencies are used. Dev dependencies tsx/typescript flagged as unused are false positives (used in npm scripts). Missing explicit 'ws' dependency - imported in index.ts but provided transitively by express-ws package.",
+      "category": "npm-dependencies",
+      "discovered_at": "2025-12-22T04:25:37.125883+00:00"
     }
   },
-  "last_updated": "2025-12-22T04:23:37.269017+00:00"
+  "last_updated": "2025-12-22T04:25:37.125895+00:00"
 }
