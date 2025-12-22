@@ -20,6 +20,8 @@ import {
   PanelLeft,
   Download,
   History,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { executeSearch, getSavedSearches, createSavedSearch, aiSearch, getAISuggestions } from '../api/client';
 import LogViewer from '../components/LogViewer';
@@ -65,6 +67,7 @@ export default function SearchPage() {
     return [];
   });
   const [showHistory, setShowHistory] = useState(false);
+  const [jsonCopied, setJsonCopied] = useState(false);
 
   const historyDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -212,6 +215,30 @@ export default function SearchPage() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+  }, []);
+
+  // Copy results to clipboard as JSON
+  const copyToClipboard = useCallback(async (data: Record<string, unknown>[]) => {
+    if (!data || data.length === 0) return;
+
+    try {
+      const jsonContent = JSON.stringify(data, null, 2);
+      await navigator.clipboard.writeText(jsonContent);
+      setJsonCopied(true);
+      setTimeout(() => setJsonCopied(false), 2000);
+    } catch {
+      // Fallback for browsers that don't support clipboard API
+      const textArea = document.createElement('textarea');
+      textArea.value = JSON.stringify(data, null, 2);
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      setJsonCopied(true);
+      setTimeout(() => setJsonCopied(false), 2000);
+    }
   }, []);
 
   // Calculate facets from results
@@ -868,6 +895,23 @@ search * | top 10 app_name`}
                       {showSqlPreview ? 'Hide SQL' : 'Show SQL'}
                     </button>
                   )}
+                  <button
+                    onClick={() => copyToClipboard(results as Record<string, unknown>[])}
+                    className="btn-ghost text-xs"
+                    title="Copy as JSON"
+                  >
+                    {jsonCopied ? (
+                      <>
+                        <Check className="w-4 h-4 text-green-500" />
+                        Copied!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-4 h-4" />
+                        Copy JSON
+                      </>
+                    )}
+                  </button>
                   <button
                     onClick={() => exportToCSV(results as Record<string, unknown>[])}
                     className="btn-ghost text-xs"
