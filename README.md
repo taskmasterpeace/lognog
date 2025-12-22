@@ -126,7 +126,7 @@
 
 Need to access LogNog from outside your network? See our **[Deployment Guide](docs/DEPLOYMENT-GUIDE.md)** for:
 
-- **Cloudflare Tunnel** - Free, secure, no port forwarding needed
+- **Cloudflare Tunnel** - Free, secure, no port forwarding needed ([Setup Guide](docs/CLOUDFLARE-TUNNEL-SETUP.md))
 - **Tailscale** - Private mesh network for team access
 - **VPS Deployment** - Run on Hetzner, DigitalOcean, etc.
 - **Self-hosted tunnels** - FRP, Rathole, Headscale options
@@ -195,14 +195,16 @@ Need to access LogNog from outside your network? See our **[Deployment Guide](do
 
 ## Integrations
 
-LogNog integrates with popular platforms via Log Drains:
+LogNog integrates with popular platforms via Log Drains and webhooks:
 
 | Platform | Endpoint | Documentation |
 |----------|----------|---------------|
 | **Supabase** | `POST /api/ingest/supabase` | [Supabase Integration](docs/SUPABASE-INTEGRATION.md) |
 | **Vercel** | `POST /api/ingest/vercel` | [Vercel Integration](docs/VERCEL-INTEGRATION.md) |
+| **SmartThings** | `POST /api/ingest/smartthings` | IoT device events and health |
 | **Generic HTTP** | `POST /api/ingest/http` | Accepts any JSON array of logs |
 | **OpenTelemetry** | `POST /api/ingest/otlp/v1/logs` | [OTLP Authentication](docs/OTLP_AUTHENTICATION.md) |
+| **Claude Desktop** | SSE `/mcp/sse` | [MCP Integration](docs/MCP-INTEGRATION.md) |
 
 ### Supabase Log Drains
 Ingest logs from your Supabase projects (database, auth, storage, edge functions):
@@ -217,6 +219,15 @@ Ingest logs from Vercel deployments (serverless functions, edge, builds):
 2. Add Log Drain → Custom HTTP endpoint
 3. URL: `https://your-lognog-server/api/ingest/vercel`
 4. Headers: `X-API-Key: your-lognog-api-key`
+
+### SmartThings (IoT)
+Ingest device events from Samsung SmartThings:
+1. Create a SmartApp in SmartThings Developer Workspace
+2. Register a Webhook SmartApp pointing to: `https://your-lognog-server/api/ingest/smartthings`
+3. Add header: `X-API-Key: your-lognog-api-key`
+4. Subscribe to device events, health events, and lifecycle events
+
+**Event types captured:** Device state changes, health status, hub events, lifecycle events
 
 ### Claude Desktop (MCP)
 Connect LogNog to Claude Desktop for AI-powered log management:
@@ -531,6 +542,7 @@ Access templates at **Data Sources** in the UI or via API at `GET /api/templates
 | [Supabase Integration](docs/SUPABASE-INTEGRATION.md) | Supabase Log Drains setup |
 | [Vercel Integration](docs/VERCEL-INTEGRATION.md) | Vercel Log Drains setup |
 | [MCP Integration](docs/MCP-INTEGRATION.md) | Claude Desktop / AI integration |
+| [Cloudflare Tunnel](docs/CLOUDFLARE-TUNNEL-SETUP.md) | Secure remote access via Cloudflare |
 | [IP Classification](docs/IP-CLASSIFICATION.md) | IP categorization features |
 | [GeoIP Implementation](docs/GEOIP-IMPLEMENTATION.md) | GeoIP lookup setup |
 | [OTLP Authentication](docs/OTLP_AUTHENTICATION.md) | OpenTelemetry auth config |
@@ -539,6 +551,7 @@ Access templates at **Data Sources** in the UI or via API at `GET /api/templates
 | [Agent Guide](agent/README.md) | LogNog In agent documentation |
 | [Feature Gap Analysis](docs/FEATURE-GAP-ANALYSIS.md) | Splunk comparison & roadmap |
 | [Deployment Guide](docs/DEPLOYMENT-GUIDE.md) | Secure remote access setup |
+| [Alert Variables](docs/ALERT-VARIABLES.md) | Dynamic variables in alert templates |
 
 ---
 
@@ -592,6 +605,11 @@ python build.py  # Creates dist/LogNogIn.exe (84 MB)
 # API Port
 PORT=4000
 
+# Security (REQUIRED in production)
+JWT_SECRET=your-secure-random-secret
+JWT_REFRESH_SECRET=your-secure-refresh-secret
+NODE_ENV=production
+
 # OTLP Authentication (optional)
 OTLP_REQUIRE_AUTH=true
 
@@ -601,7 +619,13 @@ SMTP_PORT=587
 SMTP_USER=reports@example.com
 SMTP_PASS=your-password
 SMTP_FROM=reports@example.com
+
+# AI Features (optional)
+OLLAMA_URL=http://localhost:11434
+OLLAMA_MODEL=llama3.2
 ```
+
+> **Security Note:** In production, `JWT_SECRET` and `JWT_REFRESH_SECRET` must be set or the API will refuse to start. Use strong, random secrets (e.g., `openssl rand -base64 32`).
 
 ---
 
@@ -643,6 +667,10 @@ SMTP_FROM=reports@example.com
 - [x] **Natural language to query** (via Ollama)
 - [x] **AI dashboard insights** (anomalies, trends, suggestions via Ollama)
 - [x] **Codebase Interview Wizard** - Generate questionnaires, AI-powered implementation guides
+- [x] **Cloudflare Tunnel documentation** - Step-by-step secure remote access
+- [x] **SmartThings integration** - IoT device event ingestion
+- [x] **MCP Server** - Claude Desktop integration for AI-powered log analysis
+- [x] **Production security hardening** - JWT secret validation, async auth middleware
 
 ### Planned - Short Term
 - [ ] JSON batch import via UI
@@ -653,7 +681,6 @@ SMTP_FROM=reports@example.com
 - [ ] Sigma rule importer (3000+ security rules)
 - [ ] Lookup tables (CSV enrichment)
 - [ ] macOS/Linux agent packages
-- [ ] Cloudflare Tunnel setup guide
 
 ### Planned - Data Sources
 - [ ] AWS CloudWatch Logs integration

@@ -142,7 +142,7 @@ export default function SettingsPage() {
   const loadDemoStats = async () => {
     setLoadingStats(true);
     try {
-      const token = localStorage.getItem('auth_token');
+      const token = localStorage.getItem('lognog_access_token');
       const response = await fetch('/api/demo/stats', {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -166,7 +166,7 @@ export default function SettingsPage() {
     setError(null);
 
     try {
-      const token = localStorage.getItem('auth_token');
+      const token = localStorage.getItem('lognog_access_token');
       const response = await fetch('/api/demo/generate', {
         method: 'POST',
         headers: {
@@ -209,7 +209,7 @@ export default function SettingsPage() {
     setError(null);
 
     try {
-      const token = localStorage.getItem('auth_token');
+      const token = localStorage.getItem('lognog_access_token');
       const response = await fetch('/api/demo/clear?confirm=yes', {
         method: 'DELETE',
         headers: {
@@ -237,7 +237,7 @@ export default function SettingsPage() {
     setError(null);
 
     try {
-      const token = localStorage.getItem('auth_token');
+      const token = localStorage.getItem('lognog_access_token');
       const response = await fetch('/api/demo/export?limit=1000&earliest=-24h&latest=now', {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -273,7 +273,7 @@ export default function SettingsPage() {
 
   const loadGeoipStatus = async () => {
     try {
-      const token = localStorage.getItem('auth_token');
+      const token = localStorage.getItem('lognog_access_token');
       const response = await fetch('/api/geoip/status', {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -293,7 +293,7 @@ export default function SettingsPage() {
     setGeoipTestResult(null);
 
     try {
-      const token = localStorage.getItem('auth_token');
+      const token = localStorage.getItem('lognog_access_token');
       const response = await fetch(`/api/geoip/lookup/${geoipTestIp}`, {
         headers: {
           'Authorization': `Bearer ${token}`,

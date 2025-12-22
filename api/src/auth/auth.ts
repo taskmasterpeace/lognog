@@ -4,8 +4,20 @@ import { v4 as uuidv4 } from 'uuid';
 import { getSQLiteDB } from '../db/sqlite.js';
 
 // Environment configuration
-const JWT_SECRET = process.env.JWT_SECRET || 'lognog-dev-secret-change-in-production';
-const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'lognog-refresh-secret-change-in-production';
+// SECURITY: JWT secrets must be configured via environment variables in production
+const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET;
+
+if (!JWT_SECRET || !JWT_REFRESH_SECRET) {
+  if (process.env.NODE_ENV === 'production') {
+    throw new Error('FATAL: JWT_SECRET and JWT_REFRESH_SECRET environment variables must be set in production');
+  }
+  console.warn('WARNING: JWT_SECRET/JWT_REFRESH_SECRET not set - using insecure defaults (dev only)');
+}
+
+// Getter functions that apply defaults only in development
+const getJwtSecret = (): string => JWT_SECRET || 'lognog-dev-secret-INSECURE';
+const getJwtRefreshSecret = (): string => JWT_REFRESH_SECRET || 'lognog-refresh-secret-INSECURE';
 const ACCESS_TOKEN_EXPIRY = '15m';
 const REFRESH_TOKEN_EXPIRY = '7d';
 const SALT_ROUNDS = 12;
@@ -293,11 +305,11 @@ export async function generateTokenPair(user: User | UserPublic): Promise<TokenP
     type: 'refresh',
   };
 
-  const accessToken = jwt.sign(accessPayload, JWT_SECRET, {
+  const accessToken = jwt.sign(accessPayload, getJwtSecret(), {
     expiresIn: ACCESS_TOKEN_EXPIRY,
   });
 
-  const refreshToken = jwt.sign(refreshPayload, JWT_REFRESH_SECRET, {
+  const refreshToken = jwt.sign(refreshPayload, getJwtRefreshSecret(), {
     expiresIn: REFRESH_TOKEN_EXPIRY,
   });
 
@@ -328,7 +340,7 @@ export async function generateTokenPair(user: User | UserPublic): Promise<TokenP
 
 export function verifyAccessToken(token: string): JwtPayload | null {
   try {
-    const payload = jwt.verify(token, JWT_SECRET) as JwtPayload;
+    const payload = jwt.verify(token, getJwtSecret()) as JwtPayload;
     if (payload.type !== 'access') return null;
     return payload;
   } catch {
@@ -338,7 +350,7 @@ export function verifyAccessToken(token: string): JwtPayload | null {
 
 export async function refreshTokens(refreshToken: string): Promise<TokenPair | null> {
   try {
-    const payload = jwt.verify(refreshToken, JWT_REFRESH_SECRET) as JwtPayload;
+    const payload = jwt.verify(refreshToken, getJwtRefreshSecret()) as JwtPayload;
     if (payload.type !== 'refresh') return null;
 
     const user = getUserById(payload.userId);

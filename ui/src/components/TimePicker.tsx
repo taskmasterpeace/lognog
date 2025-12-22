@@ -196,7 +196,7 @@ export default function TimePicker({ onRangeChange, defaultRange = '-24h', class
                 </label>
                 <DatePicker
                   selected={startDate}
-                  onChange={(date) => setStartDate(date)}
+                  onChange={(date: Date | null) => setStartDate(date)}
                   showTimeSelect
                   timeFormat="HH:mm"
                   timeIntervals={15}
@@ -215,7 +215,7 @@ export default function TimePicker({ onRangeChange, defaultRange = '-24h', class
                 </label>
                 <DatePicker
                   selected={endDate}
-                  onChange={(date) => setEndDate(date)}
+                  onChange={(date: Date | null) => setEndDate(date)}
                   showTimeSelect
                   timeFormat="HH:mm"
                   timeIntervals={15}

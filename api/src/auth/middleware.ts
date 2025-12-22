@@ -20,7 +20,7 @@ declare global {
  * Authentication middleware
  * Supports both JWT tokens and API keys
  */
-export function authenticate(req: Request, res: Response, next: NextFunction): void {
+export async function authenticate(req: Request, res: Response, next: NextFunction): Promise<void> {
   const authHeader = req.headers.authorization;
 
   if (!authHeader) {
@@ -52,31 +52,30 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
   if (authHeader.startsWith('ApiKey ')) {
     const apiKey = authHeader.slice(7);
 
-    validateApiKey(apiKey)
-      .then((result) => {
-        if (!result) {
-          res.status(401).json({ error: 'Invalid API key' });
-          return;
-        }
+    try {
+      const result = await validateApiKey(apiKey);
+      if (!result) {
+        res.status(401).json({ error: 'Invalid API key' });
+        return;
+      }
 
-        const user = getUserById(result.userId);
-        if (!user || !user.is_active) {
-          res.status(401).json({ error: 'User account is disabled' });
-          return;
-        }
+      const user = getUserById(result.userId);
+      if (!user || !user.is_active) {
+        res.status(401).json({ error: 'User account is disabled' });
+        return;
+      }
 
-        req.user = {
-          id: user.id,
-          username: user.username,
-          role: user.role,
-        };
-        req.authMethod = 'apikey';
-        req.apiKeyPermissions = result.permissions;
-        next();
-      })
-      .catch(() => {
-        res.status(500).json({ error: 'Authentication error' });
-      });
+      req.user = {
+        id: user.id,
+        username: user.username,
+        role: user.role,
+      };
+      req.authMethod = 'apikey';
+      req.apiKeyPermissions = result.permissions;
+      next();
+    } catch {
+      res.status(500).json({ error: 'Authentication error' });
+    }
     return;
   }
 
@@ -86,7 +85,7 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
 /**
  * Optional authentication - attaches user if token present, but doesn't require it
  */
-export function optionalAuth(req: Request, res: Response, next: NextFunction): void {
+export async function optionalAuth(req: Request, res: Response, next: NextFunction): Promise<void> {
   const authHeader = req.headers.authorization;
 
   if (!authHeader) {
@@ -115,25 +114,24 @@ export function optionalAuth(req: Request, res: Response, next: NextFunction): v
   if (authHeader.startsWith('ApiKey ')) {
     const apiKey = authHeader.slice(7);
 
-    validateApiKey(apiKey)
-      .then((result) => {
-        if (result) {
-          const user = getUserById(result.userId);
-          if (user && user.is_active) {
-            req.user = {
-              id: user.id,
-              username: user.username,
-              role: user.role,
-            };
-            req.authMethod = 'apikey';
-            req.apiKeyPermissions = result.permissions;
-          }
+    try {
+      const result = await validateApiKey(apiKey);
+      if (result) {
+        const user = getUserById(result.userId);
+        if (user && user.is_active) {
+          req.user = {
+            id: user.id,
+            username: user.username,
+            role: user.role,
+          };
+          req.authMethod = 'apikey';
+          req.apiKeyPermissions = result.permissions;
         }
-        next();
-      })
-      .catch(() => {
-        next();
-      });
+      }
+    } catch {
+      // Ignore errors in optional auth
+    }
+    next();
     return;
   }
 

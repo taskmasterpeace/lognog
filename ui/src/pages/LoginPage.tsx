@@ -1,4 +1,4 @@
-import { useState, FormEvent } from 'react';
+import { useState, useEffect, FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Lock, User, Mail, AlertCircle, Loader2, ArrowLeft } from 'lucide-react';
@@ -16,9 +16,11 @@ export default function LoginPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
 
   // Automatically switch to setup mode if required
-  if (setupRequired && !isSetupMode) {
-    setIsSetupMode(true);
-  }
+  useEffect(() => {
+    if (setupRequired && !isSetupMode) {
+      setIsSetupMode(true);
+    }
+  }, [setupRequired, isSetupMode]);
 
   const handleLogin = async (e: FormEvent) => {
     e.preventDefault();
