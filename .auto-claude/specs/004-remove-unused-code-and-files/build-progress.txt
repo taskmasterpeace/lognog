@@ -163,3 +163,177 @@ Files to delete:
   - api/src/services/field-extractor.demo.ts (standalone demo script)
 
 === END subtask-1-1 ===
+
+=== SESSION 3: subtask-1-2 - UI Service Analysis ===
+Started: 2025-12-22
+
+Analyzed all 52 TSX files and 5 TS files in ui/src/:
+- 12 page files
+- 28 component files
+- 4 barrel exports (index.ts files)
+- 2 context files
+- 1 API client
+- 1 main entry point
+
+=== UNUSED FILES IDENTIFIED ===
+
+CATEGORY 1: ORPHANED PAGES (not imported in App.tsx or routed)
+--------------------------------------------------------------
+1. ui/src/pages/DataSourcesPage.tsx
+   Status: UNUSED
+   Evidence: Not imported in App.tsx, no route defined
+   Verified by: grep 'DataSourcesPage' - only matches own file export
+
+2. ui/src/pages/TooltipDemo.tsx
+   Status: UNUSED
+   Evidence: Not imported in App.tsx, no route defined
+   Verified by: grep 'TooltipDemo' - only matches own file export
+
+CATEGORY 2: EXAMPLE/DEMO FILES (never imported in production code)
+------------------------------------------------------------------
+3. ui/src/components/LogViewer.example.tsx
+   Status: UNUSED (example file)
+   Evidence: Only referenced in README/documentation, never imported
+   Verified by: grep 'LogViewer.example' - only matches documentation files
+
+4. ui/src/components/TimePicker.example.tsx
+   Status: UNUSED (example file)
+   Evidence: Only referenced in documentation, never imported
+   Verified by: grep 'TimePicker.example' - only matches documentation files
+
+5. ui/src/components/charts/ChartExamples.tsx
+   Status: UNUSED (demo file)
+   Evidence: Only referenced in documentation (README, QUICKSTART, SUMMARY)
+   Verified by: grep 'ChartExamples' - only matches .md files
+
+CATEGORY 3: UNUSED COMPONENTS (never imported anywhere)
+-------------------------------------------------------
+6. ui/src/components/AIAssistant.tsx
+   Status: UNUSED
+   Evidence: Never imported by any file
+   Verified by: grep 'AIAssistant' - only matches own file export
+   Note: App.tsx uses NogChat instead as the AI assistant
+
+7. ui/src/components/dashboard/NaturalLanguageInput.tsx
+   Status: UNUSED
+   Evidence: Exported from index.ts but <NaturalLanguageInput never used
+   Verified by: grep '<NaturalLanguageInput' - no matches
+
+CATEGORY 4: CHART COMPONENTS (app uses recharts directly instead)
+-----------------------------------------------------------------
+8. ui/src/components/charts/TimeSeriesChart.tsx
+   Status: UNUSED
+   Evidence: Never imported (only referenced in ChartExamples which is unused)
+   Verified by: grep "components/charts/TimeSeriesChart" - no matches
+
+9. ui/src/components/charts/BarChart.tsx
+   Status: UNUSED
+   Evidence: Never imported directly. DashboardViewPage and StatsPage import
+             BarChart from 'recharts' library, not from this component
+   Verified by: grep "components/charts/BarChart" - no matches
+
+10. ui/src/components/charts/PieChart.tsx
+    Status: UNUSED
+    Evidence: Never imported directly. Pages import PieChart from 'recharts'
+    Verified by: grep "components/charts/PieChart" - no matches
+
+11. ui/src/components/charts/StatCard.tsx
+    Status: UNUSED
+    Evidence: StatsPage.tsx defines its own local StatCard function
+    Verified by: grep "components/charts/StatCard" - no matches
+
+CATEGORY 5: UNUSED UI UTILITY COMPONENTS
+----------------------------------------
+12. ui/src/components/ui/AnimatedCounter.tsx
+    Status: UNUSED
+    Evidence: Never imported anywhere (only exported from index.ts)
+    Verified by: grep 'AnimatedCounter' - only matches own file and index.ts
+
+13. ui/src/components/ui/Skeleton.tsx
+    Status: UNUSED
+    Evidence: Only referenced in documentation (animations.md)
+    Verified by: grep 'Skeleton' - no imports from actual code files
+
+14. ui/src/components/ui/Toast.tsx
+    Status: UNUSED
+    Evidence: Only referenced in documentation (animations.md)
+    Verified by: grep for Toast imports - only documentation references
+
+CATEGORY 6: UNUSED BARREL EXPORTS (index.ts files)
+--------------------------------------------------
+15. ui/src/components/index.ts
+    Status: UNUSED
+    Evidence: No file imports from './components' or '../components'
+    Verified by: grep for "components'" imports - all use direct paths
+
+16. ui/src/components/charts/index.ts
+    Status: UNUSED
+    Evidence: Only used by components/index.ts which is itself unused
+    Verified by: grep for "components/charts'" - all use direct chart paths
+
+17. ui/src/components/ui/index.ts
+    Status: UNUSED
+    Evidence: All consumers import directly from component files
+    Verified by: grep for "components/ui'" - all use direct paths like
+                ../components/ui/InfoTip, ../components/ui/Tooltip
+
+=== FILES VERIFIED AS USED ===
+
+Pages (all imported in App.tsx):
+✓ SearchPage, DashboardsPage, DashboardViewPage, StatsPage, ReportsPage
+✓ DocsPage, KnowledgePage, LoginPage, LandingPage, SettingsPage
+✓ AlertsPage, SilencesPage
+
+Components (imported by pages or App.tsx):
+✓ NogChat (App.tsx), ThemeToggle (App.tsx), LogViewer (SearchPage)
+✓ FacetFilters (SearchPage), TimePicker (SearchPage)
+✓ VariableHelper (AlertsPage), ImagePlaceholder (LandingPage)
+
+UI Components:
+✓ AnimatedPage (App.tsx), InfoTip (AlertsPage, SearchPage, DashboardViewPage, SettingsPage)
+✓ Tooltip (SearchPage, DashboardViewPage, TooltipDemo)
+
+Charts (used directly from our custom components):
+✓ HeatmapChart (DashboardViewPage), GaugeChart (DashboardViewPage)
+
+Dashboard Components (via barrel export '../components/dashboard'):
+✓ DashboardGrid, DashboardHeader, DashboardBrandingModal
+✓ DashboardShareModal, DashboardVariablesBar, VariableEditorModal
+✓ PaginatedTable, useDrilldown (hook), AIInsightsPanel
+✓ DashboardAnnotations
+
+Contexts:
+✓ ThemeContext (App.tsx, ThemeToggle)
+✓ AuthContext (App.tsx, LoginPage, SettingsPage)
+
+API:
+✓ api/client.ts (multiple pages)
+
+=== SUMMARY FOR PHASE 2 ===
+
+Files to delete from ui/src/:
+1. pages/DataSourcesPage.tsx
+2. pages/TooltipDemo.tsx
+3. components/LogViewer.example.tsx
+4. components/TimePicker.example.tsx
+5. components/charts/ChartExamples.tsx
+6. components/AIAssistant.tsx
+7. components/dashboard/NaturalLanguageInput.tsx
+8. components/charts/TimeSeriesChart.tsx
+9. components/charts/BarChart.tsx
+10. components/charts/PieChart.tsx
+11. components/charts/StatCard.tsx
+12. components/ui/AnimatedCounter.tsx
+13. components/ui/Skeleton.tsx
+14. components/ui/Toast.tsx
+15. components/index.ts
+16. components/charts/index.ts
+17. components/ui/index.ts
+
+Total: 17 unused files in UI service
+
+Notes:
+- DrilldownHandler.tsx exports useDrilldown hook which IS used - keep file
+- Dashboard barrel export (components/dashboard/index.ts) IS used - keep file
+
+=== END subtask-1-2 ===

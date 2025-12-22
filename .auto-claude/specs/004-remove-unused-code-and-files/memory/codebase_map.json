@@ -1,0 +1,45 @@
+{
+  "discovered_files": {
+    "api/src/auth/index.ts": {
+      "description": "Unused barrel export file. Re-exports from auth.js and middleware.js but no file imports from '../auth' directly. All consumers use explicit paths like '../auth/auth.js'. Safe to delete.",
+      "category": "unused-file",
+      "discovered_at": "2025-12-22T04:16:10.356183+00:00"
+    },
+    "api/src/services/field-extractor.demo.ts": {
+      "description": "Standalone CLI demo script not imported anywhere. Header says 'Run with: tsx src/services/field-extractor.demo.ts'. Not part of production app. Safe to delete.",
+      "category": "unused-file",
+      "discovered_at": "2025-12-22T04:16:10.430543+00:00"
+    },
+    "api/src/index.ts": {
+      "description": "Main API entry point. Imports 16 route files, 4 db modules, 2 services, and 2 data seed files. All imports verified as necessary.",
+      "category": "entry-point",
+      "discovered_at": "2025-12-22T04:16:10.476977+00:00"
+    },
+    "ui/src/pages/DataSourcesPage.tsx": {
+      "description": "Unused page component. Not imported in App.tsx and no route defined. Safe to delete.",
+      "category": "unused_file",
+      "discovered_at": "2025-12-22T04:23:36.981496+00:00"
+    },
+    "ui/src/pages/TooltipDemo.tsx": {
+      "description": "Unused demo page. Not imported in App.tsx and no route defined. Safe to delete.",
+      "category": "unused_file",
+      "discovered_at": "2025-12-22T04:23:37.056115+00:00"
+    },
+    "ui/src/components/charts/": {
+      "description": "Custom chart components (TimeSeriesChart, BarChart, PieChart, StatCard) are unused. App uses recharts directly. Only HeatmapChart and GaugeChart are actually used. ChartExamples.tsx is also unused demo file.",
+      "category": "unused_file",
+      "discovered_at": "2025-12-22T04:23:37.132239+00:00"
+    },
+    "ui/src/components/index.ts": {
+      "description": "Unused barrel export file. All consumers import components directly from their paths. Also applies to components/charts/index.ts and components/ui/index.ts.",
+      "category": "unused_file",
+      "discovered_at": "2025-12-22T04:23:37.201403+00:00"
+    },
+    "ui/src/components/AIAssistant.tsx": {
+      "description": "Unused component. App.tsx uses NogChat instead as the AI assistant. Safe to delete.",
+      "category": "unused_file",
+      "discovered_at": "2025-12-22T04:23:37.269003+00:00"
+    }
+  },
+  "last_updated": "2025-12-22T04:23:37.269017+00:00"
+}

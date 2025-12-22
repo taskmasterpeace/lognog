@@ -1,0 +1,63 @@
+{
+  "task_description": "Clean up unused code, orphaned files, dead code paths, and unnecessary dependencies across the monorepo",
+  "scoped_services": ["api", "ui", "agent", "log-generator", "test-data-generator"],
+  "files_to_modify": {
+    "api": ["api/package.json"],
+    "ui": ["ui/package.json"],
+    "root": []
+  },
+  "files_to_delete": {
+    "confirmed_unused": [
+      "C:gitspunkapiscripts",
+      "ui/src/pages/DataSourcesPage.tsx",
+      "ui/src/pages/TooltipDemo.tsx"
+    ],
+    "investigate_before_delete": [
+      "api/src/services/field-extractor.demo.ts",
+      "ui/src/components/LogViewer.example.tsx",
+      "ui/src/components/TimePicker.example.tsx",
+      "setup-demo-data.js",
+      "take-screenshots.js",
+      "PHASE2-MANUAL-STEPS.md",
+      "PHASE4-SUMMARY.md",
+      "PHASE-5-IMPLEMENTATION.md"
+    ]
+  },
+  "files_to_reference": [
+    "api/src/index.ts",
+    "ui/src/App.tsx",
+    "docker-compose.yml"
+  ],
+  "patterns": {
+    "api_route_pattern": "Routes imported in api/src/index.ts and registered with app.use()",
+    "ui_page_pattern": "Pages imported in ui/src/App.tsx and added to <Routes>",
+    "service_pattern": "Services imported in route files or other services"
+  },
+  "existing_implementations": {
+    "description": "5-service monorepo with API (Express/TypeScript), UI (React/Vite), Agent (Python), log-generator (JS), test-data-generator (TS)",
+    "cleanup_candidates_found": {
+      "confirmed_orphans": [
+        "DataSourcesPage.tsx - defined but not imported in App.tsx",
+        "TooltipDemo.tsx - defined but not imported in App.tsx",
+        "C:gitspunkapiscripts - empty directory with malformed name"
+      ],
+      "demo_example_files": [
+        "field-extractor.demo.ts - manual testing script",
+        "LogViewer.example.tsx - documentation example",
+        "TimePicker.example.tsx - documentation example"
+      ],
+      "root_scripts": [
+        "setup-demo-data.js - possibly one-time setup script",
+        "take-screenshots.js - possibly one-time utility",
+        "test-log-parsers.sh/bat - testing utilities"
+      ]
+    }
+  },
+  "investigation_findings": {
+    "api_routes": "All 15 route modules are imported in api/src/index.ts - no orphans found",
+    "ui_pages": "2 orphaned pages found (DataSourcesPage.tsx, TooltipDemo.tsx)",
+    "malformed_directories": "C:gitspunkapiscripts appears to be a path escaping bug",
+    "documentation_examples": "3 .example.tsx files exist for documentation purposes"
+  },
+  "created_at": "2025-12-22T00:00:00.000Z"
+}

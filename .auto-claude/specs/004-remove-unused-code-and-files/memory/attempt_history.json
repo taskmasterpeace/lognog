@@ -1,0 +1,21 @@
+{
+  "subtasks": {
+    "subtask-1-1": {
+      "attempts": [
+        {
+          "session": 1,
+          "timestamp": "2025-12-21T23:17:04.792414",
+          "approach": "Implemented: Analyze API service for unused files and exports",
+          "success": true,
+          "error": null
+        }
+      ],
+      "status": "completed"
+    }
+  },
+  "stuck_subtasks": [],
+  "metadata": {
+    "created_at": "2025-12-21T23:12:58.015425",
+    "last_updated": "2025-12-21T23:17:04.792420"
+  }
+}
