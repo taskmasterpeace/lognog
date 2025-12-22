@@ -7,5 +7,4 @@ export { VariableEditorModal } from './VariableEditorModal';
 export { PaginatedTable } from './PaginatedTable';
 export { DrilldownHandler, useDrilldown } from './DrilldownHandler';
 export { AIInsightsPanel } from './AIInsightsPanel';
-export { NaturalLanguageInput } from './NaturalLanguageInput';
 export { DashboardAnnotations, type Annotation } from './DashboardAnnotations';
