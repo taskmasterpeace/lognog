@@ -82,3 +82,73 @@ Or start development environment manually:
 Then visit: http://localhost:3000/search
 
 === END SESSION 1 ===
+
+=== SESSION: END-TO-END VERIFICATION (subtask-3-1) ===
+
+Date: 2025-12-22
+Subtask: subtask-3-1 - End-to-end verification of all 4 new features
+
+## Verification Steps Completed:
+
+### 1. TypeScript Compilation
+- [x] UI: npx tsc --noEmit - PASS (no errors)
+- [x] API: npx tsc --noEmit - PASS (no errors)
+
+### 2. Build Verification
+- [x] UI Build: npm run build - PASS
+- [x] API Build: npm run build - PASS
+
+### 3. Code Review - Feature 1: Query History Dropdown
+Location: ui/src/pages/SearchPage.tsx (lines 58-86, 137-150, 531-583)
+- [x] State initialized from localStorage with JSON parsing
+- [x] Error handling for JSON parse failures
+- [x] History saved on search with deduplication (limit 10)
+- [x] Dropdown with staggered animations
+- [x] Click-outside detection using useRef
+- [x] Clear history functionality
+- [x] History button only shows when history exists
+- [x] Click on history item populates search input
+
+### 4. Code Review - Feature 2: Relative Time Tooltips
+Location: ui/src/components/TimePicker.tsx (lines 35-62, 191-212)
+- [x] getPresetTooltip() function generates descriptive tooltips
+- [x] Handles special cases: "all" and "custom"
+- [x] Parses relative time values (-5m, -1h, -7d, etc.)
+- [x] Each preset wrapped with Tooltip component
+- [x] Tooltips positioned on left with 300ms delay
+
+### 5. Code Review - Feature 3: Copy as JSON
+Location: ui/src/pages/SearchPage.tsx (lines 220-242, 905-921)
+- [x] copyToClipboard function using navigator.clipboard.writeText
+- [x] Fallback using textarea for older browsers
+- [x] Visual feedback with Check icon and "Copied!" text
+- [x] 2-second timeout for feedback reset
+- [x] Button placed next to Export CSV
+
+### 6. Code Review - Feature 4: Show Execution Time
+Locations:
+- API: api/src/routes/search.ts (lines 26, 41, 50)
+- UI Type: ui/src/api/client.ts (line 8)
+- UI Display: ui/src/pages/SearchPage.tsx (lines 824, 847-851)
+- [x] API measures with performance.now()
+- [x] executionTime included in API response
+- [x] SearchResult interface updated with optional executionTime
+- [x] UI displays "in {X}ms" when executionTime present
+- [x] Proper dark mode styling
+
+### 7. Pattern Compliance
+- [x] localStorage uses lognog_ prefix
+- [x] Button styling follows btn-ghost, btn-secondary patterns
+- [x] Icons from lucide-react (History, Copy, Check)
+- [x] Tooltip uses existing @floating-ui/react component
+- [x] Error handling in place for all features
+
+### 8. No Console Errors
+- [x] No debugging console.log statements in new code
+- [x] Error handling uses try/catch without exposing internals
+
+## Summary:
+All 4 features have been implemented correctly following established patterns.
+All code compiles and builds without errors.
+
+=== END E2E VERIFICATION SESSION ===
