@@ -369,12 +369,6 @@ cd api
 npm run test -- src/services/field-extractor.test.ts
 ```
 
-Run the demo:
-```bash
-cd api
-npx tsx src/services/field-extractor.demo.ts
-```
-
 ## Performance
 
 - Pattern compilation is cached for repeated use
