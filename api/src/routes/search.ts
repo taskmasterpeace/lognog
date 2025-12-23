@@ -271,6 +271,44 @@ router.delete('/saved/:id', (req: Request, res: Response) => {
   }
 });
 
+// Bulk export saved searches
+router.post('/saved/export', (req: Request, res: Response) => {
+  try {
+    const { ids } = req.body;
+
+    // Get all saved searches or filter by IDs
+    let searches = getSavedSearches();
+
+    if (ids && Array.isArray(ids) && ids.length > 0) {
+      // Filter to only requested IDs
+      const idSet = new Set(ids);
+      searches = searches.filter(s => idSet.has(s.id));
+    }
+
+    // Export each search
+    const exports = searches.map(search => ({
+      name: search.name,
+      query: search.query,
+      description: search.description,
+      exported_at: new Date().toISOString(),
+      version: '1.0',
+    }));
+
+    const exportData = {
+      type: 'saved_searches',
+      count: exports.length,
+      exported_at: new Date().toISOString(),
+      version: '1.0',
+      searches: exports,
+    };
+
+    return res.json(exportData);
+  } catch (error) {
+    console.error('Error exporting saved searches:', error);
+    return res.status(500).json({ error: 'Failed to export saved searches' });
+  }
+});
+
 // Export saved search as template
 router.post('/saved/:id/export', (req: Request, res: Response) => {
   try {
