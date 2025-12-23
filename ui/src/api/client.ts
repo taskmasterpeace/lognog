@@ -620,6 +620,20 @@ export async function toggleAlert(id: string): Promise<Alert> {
   return request(`/alerts/${id}/toggle`, { method: 'POST' });
 }
 
+export async function bulkEnableAlerts(ids: string[]): Promise<Alert[]> {
+  return request('/alerts/bulk/enable', {
+    method: 'POST',
+    body: JSON.stringify({ ids }),
+  });
+}
+
+export async function bulkDisableAlerts(ids: string[]): Promise<Alert[]> {
+  return request('/alerts/bulk/disable', {
+    method: 'POST',
+    body: JSON.stringify({ ids }),
+  });
+}
+
 export async function evaluateAlert(id: string): Promise<{ triggered: boolean; resultCount: number; message: string }> {
   return request(`/alerts/${id}/evaluate`, { method: 'POST' });
 }
