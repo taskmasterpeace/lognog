@@ -362,4 +362,81 @@ router.post('/saved/import', (req: Request, res: Response) => {
   }
 });
 
+// Bulk import saved searches from templates
+router.post('/saved/import-bulk', (req: Request, res: Response) => {
+  try {
+    const { searches } = req.body;
+
+    // Validate the searches array
+    if (!searches || !Array.isArray(searches)) {
+      return res.status(400).json({ error: 'Invalid format: searches array is required' });
+    }
+
+    if (searches.length === 0) {
+      return res.status(400).json({ error: 'Invalid format: searches array cannot be empty' });
+    }
+
+    const results: {
+      successful: Array<{ index: number; id: string; name: string }>;
+      failed: Array<{ index: number; error: string; name?: string }>;
+    } = {
+      successful: [],
+      failed: [],
+    };
+
+    // Process each search template
+    searches.forEach((template, index) => {
+      // Validate template structure
+      if (!template || typeof template !== 'object') {
+        results.failed.push({ index, error: 'Invalid template format: template object is required' });
+        return;
+      }
+
+      if (!template.name || typeof template.name !== 'string') {
+        results.failed.push({ index, error: 'Invalid template format: name is required', name: template.name });
+        return;
+      }
+
+      if (!template.query || typeof template.query !== 'string') {
+        results.failed.push({ index, error: 'Invalid template format: query is required', name: template.name });
+        return;
+      }
+
+      // Import the search
+      try {
+        const search = createSavedSearch(
+          template.name,
+          template.query,
+          template.description || null
+        );
+        results.successful.push({ index, id: search.id, name: search.name });
+      } catch (importError) {
+        results.failed.push({ index, error: `Failed to create: ${String(importError)}`, name: template.name });
+      }
+    });
+
+    // Return summary
+    const response = {
+      type: 'saved_searches_import',
+      total: searches.length,
+      successful_count: results.successful.length,
+      failed_count: results.failed.length,
+      imported_at: new Date().toISOString(),
+      successful: results.successful,
+      failed: results.failed,
+    };
+
+    // If all failed, return 400
+    if (results.successful.length === 0 && results.failed.length > 0) {
+      return res.status(400).json(response);
+    }
+
+    // Return 201 for full or partial success
+    return res.status(201).json(response);
+  } catch (error) {
+    console.error('Error bulk importing saved searches:', error);
+    return res.status(500).json({ error: 'Failed to bulk import saved searches' });
+  }
+});
+
 export default router;
