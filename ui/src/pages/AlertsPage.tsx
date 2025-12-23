@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Bell,
@@ -113,6 +113,9 @@ export default function AlertsPage() {
   const [selectedAlertId, setSelectedAlertId] = useState<string | null>(null);
   const [silencingAlertId, setSilencingAlertId] = useState<string | null>(null);
   const [expandedAlerts, setExpandedAlerts] = useState<Set<string>>(new Set());
+
+  // Multi-select state for bulk operations
+  const [selectedAlerts, setSelectedAlerts] = useState<Set<string>>(new Set());
 
   // Refs for action inputs (for variable insertion)
   const emailSubjectRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -319,6 +322,37 @@ export default function AlertsPage() {
     }
     setExpandedAlerts(newExpanded);
   };
+
+  // Multi-select helper functions for bulk operations
+  const toggleSelection = useCallback((id: string) => {
+    setSelectedAlerts((prev) => {
+      const newSelected = new Set(prev);
+      if (newSelected.has(id)) {
+        newSelected.delete(id);
+      } else {
+        newSelected.add(id);
+      }
+      return newSelected;
+    });
+  }, []);
+
+  const selectAll = useCallback(() => {
+    if (alerts && alerts.length > 0) {
+      setSelectedAlerts(new Set(alerts.map((alert) => alert.id)));
+    }
+  }, [alerts]);
+
+  const clearSelection = useCallback(() => {
+    setSelectedAlerts(new Set());
+  }, []);
+
+  // Note: selectedAlerts, toggleSelection, selectAll, clearSelection will be used
+  // in subsequent subtasks (3.2, 3.3, 3.4) for checkboxes and bulk action toolbar
+  // Temporarily reference them to satisfy TypeScript noUnusedLocals
+  void selectedAlerts;
+  void toggleSelection;
+  void selectAll;
+  void clearSelection;
 
   const getSeverityConfig = (severity: string) => {
     return SEVERITIES.find(s => s.value === severity) || SEVERITIES[2];
