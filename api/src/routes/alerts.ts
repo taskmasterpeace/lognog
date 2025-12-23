@@ -250,6 +250,43 @@ router.post('/evaluate-all', async (_req: Request, res: Response) => {
   }
 });
 
+// Export all alerts as template array
+router.post('/export-all', (_req: Request, res: Response) => {
+  try {
+    const alerts = getAlerts();
+
+    // Export all alerts in the same format as single export
+    const exportedAlerts = alerts.map(alert => ({
+      name: alert.name,
+      description: alert.description,
+      search_query: alert.search_query,
+      trigger_type: alert.trigger_type,
+      trigger_condition: alert.trigger_condition,
+      trigger_threshold: alert.trigger_threshold,
+      schedule_type: alert.schedule_type,
+      cron_expression: alert.cron_expression,
+      time_range: alert.time_range,
+      actions: JSON.parse(alert.actions || '[]'),
+      throttle_enabled: alert.throttle_enabled,
+      throttle_window_seconds: alert.throttle_window_seconds,
+      severity: alert.severity,
+      enabled: alert.enabled,
+    }));
+
+    const exportData = {
+      alerts: exportedAlerts,
+      count: exportedAlerts.length,
+      exported_at: new Date().toISOString(),
+      version: '1.0',
+    };
+
+    return res.json(exportData);
+  } catch (error) {
+    console.error('Error exporting alerts:', error);
+    return res.status(500).json({ error: 'Failed to export alerts' });
+  }
+});
+
 // Get alert history
 router.get('/history', (_req: Request, res: Response) => {
   try {
