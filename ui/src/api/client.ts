@@ -644,6 +644,79 @@ export async function acknowledgeAlertHistory(id: string, acknowledgedBy: string
   });
 }
 
+// Alert Export/Import Types
+export interface AlertExportData {
+  name: string;
+  description?: string;
+  search_query: string;
+  trigger_type: string;
+  trigger_condition: string;
+  trigger_threshold: number;
+  schedule_type: string;
+  cron_expression?: string;
+  time_range: string;
+  actions: AlertAction[];
+  throttle_enabled: number;
+  throttle_window_seconds: number;
+  severity: string;
+  enabled: number;
+  exported_at: string;
+  version: string;
+}
+
+export interface AlertBulkExportData {
+  alerts: Omit<AlertExportData, 'exported_at' | 'version'>[];
+  count: number;
+  exported_at: string;
+  version: string;
+}
+
+export interface AlertImportTemplate {
+  name: string;
+  description?: string;
+  search_query: string;
+  trigger_type?: string;
+  trigger_condition?: string;
+  trigger_threshold?: number;
+  schedule_type?: string;
+  cron_expression?: string;
+  time_range?: string;
+  actions?: AlertAction[];
+  throttle_enabled?: number | boolean;
+  throttle_window_seconds?: number;
+  severity?: string;
+  enabled?: number | boolean;
+}
+
+export interface AlertImportResult {
+  imported: Alert[];
+  count: number;
+}
+
+export interface AlertImportError {
+  error: string;
+  details?: string[];
+}
+
+// Alert Export/Import API
+export async function exportAlert(id: string): Promise<AlertExportData> {
+  return request(`/alerts/${id}/export`, { method: 'POST' });
+}
+
+export async function exportAllAlerts(): Promise<AlertBulkExportData> {
+  return request('/alerts/export-all', { method: 'POST' });
+}
+
+export async function importAlerts(
+  templates: AlertImportTemplate | AlertImportTemplate[]
+): Promise<AlertImportResult> {
+  const body = Array.isArray(templates) ? { templates } : { template: templates };
+  return request('/alerts/import', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+}
+
 // Silences API
 export interface AlertSilence {
   id: string;
