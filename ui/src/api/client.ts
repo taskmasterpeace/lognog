@@ -656,6 +656,13 @@ export async function bulkEnableAlerts(ids: string[]): Promise<BulkAlertResult> 
   });
 }
 
+export async function bulkDisableAlerts(ids: string[]): Promise<BulkAlertResult> {
+  return request('/alerts/bulk-disable', {
+    method: 'POST',
+    body: JSON.stringify({ ids }),
+  });
+}
+
 // Silences API
 export interface AlertSilence {
   id: string;
