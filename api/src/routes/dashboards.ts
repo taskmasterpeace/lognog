@@ -504,6 +504,77 @@ router.post('/:id/export', (req: Request, res: Response) => {
   }
 });
 
+// Duplicate dashboard
+router.post('/:id/duplicate', (req: Request, res: Response) => {
+  try {
+    const sourceDashboard = getDashboard(req.params.id);
+    if (!sourceDashboard) {
+      return res.status(404).json({ error: 'Dashboard not found' });
+    }
+
+    const sourcePanels = getDashboardPanels(req.params.id);
+    const sourceVariables = getDashboardVariables(req.params.id);
+
+    // Create new dashboard with "- Copy" suffix
+    const newDashboard = createDashboard(
+      `${sourceDashboard.name} - Copy`,
+      sourceDashboard.description
+    );
+
+    // Copy branding settings
+    if (sourceDashboard.logo_url || sourceDashboard.accent_color || sourceDashboard.header_color) {
+      updateDashboard(newDashboard.id, {
+        logo_url: sourceDashboard.logo_url,
+        accent_color: sourceDashboard.accent_color,
+        header_color: sourceDashboard.header_color,
+      });
+    }
+
+    // Copy all panels with their positions and options
+    for (const panel of sourcePanels) {
+      createDashboardPanel(
+        newDashboard.id,
+        panel.title,
+        panel.query,
+        panel.visualization,
+        JSON.parse(panel.options),
+        {
+          x: panel.position_x,
+          y: panel.position_y,
+          width: panel.width,
+          height: panel.height,
+        }
+      );
+    }
+
+    // Copy all variables
+    for (const variable of sourceVariables) {
+      createDashboardVariable(newDashboard.id, variable.name, {
+        label: variable.label,
+        type: variable.type,
+        query: variable.query,
+        default_value: variable.default_value,
+        multi_select: variable.multi_select === 1,
+        include_all: variable.include_all === 1,
+        sort_order: variable.sort_order,
+      });
+    }
+
+    // Return the new dashboard with panels
+    const newPanels = getDashboardPanels(newDashboard.id);
+    return res.status(201).json({
+      ...newDashboard,
+      panels: newPanels.map(p => ({
+        ...p,
+        options: JSON.parse(p.options),
+      })),
+    });
+  } catch (error) {
+    console.error('Error duplicating dashboard:', error);
+    return res.status(500).json({ error: 'Failed to duplicate dashboard' });
+  }
+});
+
 // Import dashboard from template
 router.post('/import', (req: Request, res: Response) => {
   try {
