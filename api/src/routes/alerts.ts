@@ -287,6 +287,170 @@ router.post('/export-all', (_req: Request, res: Response) => {
   }
 });
 
+// Valid enum values for validation
+const VALID_TRIGGER_TYPES: AlertTriggerType[] = ['number_of_results', 'number_of_hosts', 'custom_condition'];
+const VALID_TRIGGER_CONDITIONS: AlertTriggerCondition[] = ['greater_than', 'less_than', 'equal_to', 'not_equal_to', 'drops_by', 'rises_by'];
+const VALID_SEVERITIES: AlertSeverity[] = ['info', 'low', 'medium', 'high', 'critical'];
+const VALID_SCHEDULE_TYPES: AlertScheduleType[] = ['cron', 'realtime'];
+
+// Validate an alert template and return errors if any
+function validateAlertTemplate(template: Record<string, unknown>, index?: number): string[] {
+  const errors: string[] = [];
+  const prefix = index !== undefined ? `Alert ${index + 1}: ` : '';
+
+  // Required fields
+  if (!template.name || typeof template.name !== 'string' || !template.name.trim()) {
+    errors.push(`${prefix}name is required`);
+  }
+  if (!template.search_query || typeof template.search_query !== 'string' || !template.search_query.trim()) {
+    errors.push(`${prefix}search_query is required`);
+  }
+
+  // Enum validations
+  if (template.trigger_type !== undefined && !VALID_TRIGGER_TYPES.includes(template.trigger_type as AlertTriggerType)) {
+    errors.push(`${prefix}trigger_type must be one of: ${VALID_TRIGGER_TYPES.join(', ')}`);
+  }
+  if (template.trigger_condition !== undefined && !VALID_TRIGGER_CONDITIONS.includes(template.trigger_condition as AlertTriggerCondition)) {
+    errors.push(`${prefix}trigger_condition must be one of: ${VALID_TRIGGER_CONDITIONS.join(', ')}`);
+  }
+  if (template.severity !== undefined && !VALID_SEVERITIES.includes(template.severity as AlertSeverity)) {
+    errors.push(`${prefix}severity must be one of: ${VALID_SEVERITIES.join(', ')}`);
+  }
+  if (template.schedule_type !== undefined && !VALID_SCHEDULE_TYPES.includes(template.schedule_type as AlertScheduleType)) {
+    errors.push(`${prefix}schedule_type must be one of: ${VALID_SCHEDULE_TYPES.join(', ')}`);
+  }
+
+  // Validate actions
+  if (template.actions !== undefined) {
+    if (!Array.isArray(template.actions)) {
+      errors.push(`${prefix}actions must be an array`);
+    } else {
+      template.actions.forEach((action: Record<string, unknown>, actionIndex: number) => {
+        if (!action.type || !['email', 'webhook', 'log', 'script'].includes(action.type as string)) {
+          errors.push(`${prefix}action ${actionIndex + 1}: type must be one of: email, webhook, log, script`);
+        } else if (!action.config || typeof action.config !== 'object') {
+          errors.push(`${prefix}action ${actionIndex + 1}: config is required`);
+        } else {
+          const config = action.config as Record<string, unknown>;
+          // Email requires 'to'
+          if (action.type === 'email' && (!config.to || typeof config.to !== 'string' || !config.to.trim())) {
+            errors.push(`${prefix}action ${actionIndex + 1}: email action requires 'to' in config`);
+          }
+          // Webhook requires 'url'
+          if (action.type === 'webhook' && (!config.url || typeof config.url !== 'string' || !config.url.trim())) {
+            errors.push(`${prefix}action ${actionIndex + 1}: webhook action requires 'url' in config`);
+          }
+        }
+      });
+    }
+  }
+
+  return errors;
+}
+
+// Generate unique name for imported alert (handles duplicates)
+function generateUniqueName(baseName: string, existingNames: Set<string>): string {
+  let name = baseName;
+  if (existingNames.has(name)) {
+    name = `${baseName} (imported)`;
+    let counter = 2;
+    while (existingNames.has(name)) {
+      name = `${baseName} (imported ${counter})`;
+      counter++;
+    }
+  }
+  return name;
+}
+
+// Import alerts from template
+router.post('/import', (req: Request, res: Response) => {
+  try {
+    const { templates, template } = req.body;
+
+    // Accept either 'templates' array, 'template' single object, or direct array/object
+    let alertTemplates: Record<string, unknown>[];
+    if (templates) {
+      // { templates: [...] } format (from bulk export)
+      alertTemplates = Array.isArray(templates) ? templates : [templates];
+    } else if (template) {
+      // { template: {...} } format (single import)
+      alertTemplates = Array.isArray(template) ? template : [template];
+    } else if (req.body.alerts) {
+      // { alerts: [...] } format (from export-all response)
+      alertTemplates = Array.isArray(req.body.alerts) ? req.body.alerts : [req.body.alerts];
+    } else if (Array.isArray(req.body)) {
+      // Direct array format
+      alertTemplates = req.body;
+    } else if (req.body.name || req.body.search_query) {
+      // Direct single object format (exported alert)
+      alertTemplates = [req.body];
+    } else {
+      return res.status(400).json({
+        error: 'Invalid request format. Provide templates array, template object, alerts array, or alert template directly.'
+      });
+    }
+
+    if (alertTemplates.length === 0) {
+      return res.status(400).json({ error: 'No alert templates provided' });
+    }
+
+    // Validate all templates first
+    const allErrors: string[] = [];
+    alertTemplates.forEach((tmpl, index) => {
+      const errors = validateAlertTemplate(tmpl, alertTemplates.length > 1 ? index : undefined);
+      allErrors.push(...errors);
+    });
+
+    if (allErrors.length > 0) {
+      return res.status(400).json({
+        error: 'Validation failed',
+        details: allErrors
+      });
+    }
+
+    // Get existing alert names for duplicate handling
+    const existingAlerts = getAlerts();
+    const existingNames = new Set(existingAlerts.map(a => a.name));
+    const usedNames = new Set(existingNames);
+
+    // Create alerts
+    const createdAlerts: Array<Record<string, unknown>> = [];
+    for (const tmpl of alertTemplates) {
+      // Generate unique name
+      const name = generateUniqueName(tmpl.name as string, usedNames);
+      usedNames.add(name);
+
+      const alert = createAlert(name, tmpl.search_query as string, {
+        description: tmpl.description as string | undefined,
+        trigger_type: (tmpl.trigger_type as AlertTriggerType) || undefined,
+        trigger_condition: (tmpl.trigger_condition as AlertTriggerCondition) || undefined,
+        trigger_threshold: tmpl.trigger_threshold as number | undefined,
+        schedule_type: (tmpl.schedule_type as AlertScheduleType) || undefined,
+        cron_expression: tmpl.cron_expression as string | undefined,
+        time_range: tmpl.time_range as string | undefined,
+        actions: tmpl.actions as AlertAction[] | undefined,
+        throttle_enabled: tmpl.throttle_enabled === 1 || tmpl.throttle_enabled === true,
+        throttle_window_seconds: tmpl.throttle_window_seconds as number | undefined,
+        severity: (tmpl.severity as AlertSeverity) || undefined,
+        enabled: tmpl.enabled === 1 || tmpl.enabled === true,
+      });
+
+      createdAlerts.push({
+        ...alert,
+        actions: JSON.parse(alert.actions || '[]'),
+      });
+    }
+
+    return res.status(201).json({
+      imported: createdAlerts,
+      count: createdAlerts.length,
+    });
+  } catch (error) {
+    console.error('Error importing alerts:', error);
+    return res.status(500).json({ error: 'Failed to import alerts' });
+  }
+});
+
 // Get alert history
 router.get('/history', (_req: Request, res: Response) => {
   try {
