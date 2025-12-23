@@ -315,4 +315,39 @@ router.post('/history/:id/acknowledge', (req: Request, res: Response) => {
   }
 });
 
+// Export single alert as template
+router.post('/:id/export', (req: Request, res: Response) => {
+  try {
+    const alert = getAlert(req.params.id);
+    if (!alert) {
+      return res.status(404).json({ error: 'Alert not found' });
+    }
+
+    // Export all configuration fields, excluding runtime data
+    const exportData = {
+      name: alert.name,
+      description: alert.description,
+      search_query: alert.search_query,
+      trigger_type: alert.trigger_type,
+      trigger_condition: alert.trigger_condition,
+      trigger_threshold: alert.trigger_threshold,
+      schedule_type: alert.schedule_type,
+      cron_expression: alert.cron_expression,
+      time_range: alert.time_range,
+      actions: JSON.parse(alert.actions || '[]'),
+      throttle_enabled: alert.throttle_enabled,
+      throttle_window_seconds: alert.throttle_window_seconds,
+      severity: alert.severity,
+      enabled: alert.enabled,
+      exported_at: new Date().toISOString(),
+      version: '1.0',
+    };
+
+    return res.json(exportData);
+  } catch (error) {
+    console.error('Error exporting alert:', error);
+    return res.status(500).json({ error: 'Failed to export alert' });
+  }
+});
+
 export default router;
