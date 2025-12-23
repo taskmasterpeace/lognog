@@ -294,4 +294,34 @@ router.post('/saved/:id/export', (req: Request, res: Response) => {
   }
 });
 
+// Import saved search from template
+router.post('/saved/import', (req: Request, res: Response) => {
+  try {
+    const { template, name } = req.body;
+
+    if (!template || typeof template !== 'object') {
+      return res.status(400).json({ error: 'Invalid template format: template object is required' });
+    }
+
+    if (!template.name || typeof template.name !== 'string') {
+      return res.status(400).json({ error: 'Invalid template format: name is required' });
+    }
+
+    if (!template.query || typeof template.query !== 'string') {
+      return res.status(400).json({ error: 'Invalid template format: query is required' });
+    }
+
+    // Use name override if provided, otherwise use template name
+    const searchName = name || template.name;
+    const searchQuery = template.query;
+    const searchDescription = template.description || null;
+
+    const search = createSavedSearch(searchName, searchQuery, searchDescription);
+    return res.status(201).json(search);
+  } catch (error) {
+    console.error('Error importing saved search:', error);
+    return res.status(500).json({ error: 'Failed to import saved search' });
+  }
+});
+
 export default router;

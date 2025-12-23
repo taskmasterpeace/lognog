@@ -1,0 +1,25 @@
+{
+  "active": true,
+  "spec": "010-saved-search-export-import",
+  "state": "building",
+  "subtasks": {
+    "completed": 1,
+    "total": 9,
+    "in_progress": 1,
+    "failed": 0
+  },
+  "phase": {
+    "current": "API Backend",
+    "id": null,
+    "total": 4
+  },
+  "workers": {
+    "active": 0,
+    "max": 1
+  },
+  "session": {
+    "number": 3,
+    "started_at": "2025-12-23T15:03:58.965419"
+  },
+  "last_update": "2025-12-23T15:13:33.194114"
+}
