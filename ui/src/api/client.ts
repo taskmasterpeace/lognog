@@ -569,6 +569,11 @@ export interface AlertHistory {
   notes?: string;
 }
 
+export interface BulkToggleResult {
+  success: Alert[];
+  failed: { id: string; error: string }[];
+}
+
 export async function getAlerts(): Promise<Alert[]> {
   return request('/alerts');
 }
@@ -618,6 +623,13 @@ export async function deleteAlert(id: string): Promise<void> {
 
 export async function toggleAlert(id: string): Promise<Alert> {
   return request(`/alerts/${id}/toggle`, { method: 'POST' });
+}
+
+export async function bulkToggleAlerts(ids: string[], enabled: boolean): Promise<BulkToggleResult> {
+  return request('/alerts/bulk/toggle', {
+    method: 'POST',
+    body: JSON.stringify({ ids, enabled }),
+  });
 }
 
 export async function evaluateAlert(id: string): Promise<{ triggered: boolean; resultCount: number; message: string }> {
