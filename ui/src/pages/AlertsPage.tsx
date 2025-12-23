@@ -346,11 +346,8 @@ export default function AlertsPage() {
     setSelectedAlerts(new Set());
   }, []);
 
-  // Note: selectedAlerts, toggleSelection, selectAll, clearSelection will be used
-  // in subsequent subtasks (3.2, 3.3, 3.4) for checkboxes and bulk action toolbar
+  // Note: selectAll, clearSelection will be used in subsequent subtasks (3.3, 3.4)
   // Temporarily reference them to satisfy TypeScript noUnusedLocals
-  void selectedAlerts;
-  void toggleSelection;
   void selectAll;
   void clearSelection;
 
@@ -443,6 +440,15 @@ export default function AlertsPage() {
               >
                 {/* Alert Header */}
                 <div className="p-4 flex items-center gap-4">
+                  {/* Selection checkbox for bulk operations */}
+                  <input
+                    type="checkbox"
+                    checked={selectedAlerts.has(alert.id)}
+                    onChange={() => toggleSelection(alert.id)}
+                    onClick={(e) => e.stopPropagation()}
+                    className="w-4 h-4 rounded border-slate-300"
+                  />
+
                   <button
                     onClick={() => toggleExpand(alert.id)}
                     className="text-slate-400 hover:text-slate-600"
