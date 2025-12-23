@@ -14,6 +14,7 @@ import {
   getAlertHistory,
   getAlertHistoryEntry,
   acknowledgeAlertHistory,
+  bulkUpdateAlertsEnabled,
   AlertAction,
   AlertTriggerType,
   AlertTriggerCondition,
@@ -195,6 +196,54 @@ router.post('/:id/toggle', (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error toggling alert:', error);
     res.status(500).json({ error: 'Failed to toggle alert' });
+  }
+});
+
+// Bulk enable alerts
+router.post('/bulk/enable', (req: Request, res: Response) => {
+  try {
+    const { ids } = req.body;
+
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'ids array is required and must not be empty' });
+    }
+
+    const updatedAlerts = bulkUpdateAlertsEnabled(ids, true);
+
+    // Parse actions JSON for each alert
+    const alertsWithParsedActions = updatedAlerts.map(alert => ({
+      ...alert,
+      actions: JSON.parse(alert.actions || '[]'),
+    }));
+
+    res.json(alertsWithParsedActions);
+  } catch (error) {
+    console.error('Error bulk enabling alerts:', error);
+    res.status(500).json({ error: 'Failed to bulk enable alerts' });
+  }
+});
+
+// Bulk disable alerts
+router.post('/bulk/disable', (req: Request, res: Response) => {
+  try {
+    const { ids } = req.body;
+
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'ids array is required and must not be empty' });
+    }
+
+    const updatedAlerts = bulkUpdateAlertsEnabled(ids, false);
+
+    // Parse actions JSON for each alert
+    const alertsWithParsedActions = updatedAlerts.map(alert => ({
+      ...alert,
+      actions: JSON.parse(alert.actions || '[]'),
+    }));
+
+    res.json(alertsWithParsedActions);
+  } catch (error) {
+    console.error('Error bulk disabling alerts:', error);
+    res.status(500).json({ error: 'Failed to bulk disable alerts' });
   }
 });
 
