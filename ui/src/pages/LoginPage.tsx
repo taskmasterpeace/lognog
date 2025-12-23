@@ -18,7 +18,6 @@ export default function LoginPage() {
   // Password visibility state
   const [showPassword, setShowPassword] = useState(false);
   const [showSetupPassword, setShowSetupPassword] = useState(false);
-  // @ts-ignore - Variable will be used when toggle button is added in subtask 1.5
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   // Automatically switch to setup mode if required
@@ -206,14 +205,26 @@ export default function LoginPage() {
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                   <input
-                    type="password"
+                    type={showConfirmPassword ? 'text' : 'password'}
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Confirm your password"
                     required
                     minLength={8}
-                    className="w-full pl-10 pr-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all"
+                    className="w-full pl-10 pr-10 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-all"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 focus:outline-none focus:text-slate-600 dark:focus:text-slate-300 transition-colors"
+                    aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="w-5 h-5" />
+                    ) : (
+                      <Eye className="w-5 h-5" />
+                    )}
+                  </button>
                 </div>
               </div>
 
