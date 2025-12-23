@@ -271,4 +271,27 @@ router.delete('/saved/:id', (req: Request, res: Response) => {
   }
 });
 
+// Export saved search as template
+router.post('/saved/:id/export', (req: Request, res: Response) => {
+  try {
+    const search = getSavedSearch(req.params.id);
+    if (!search) {
+      return res.status(404).json({ error: 'Saved search not found' });
+    }
+
+    const exportData = {
+      name: search.name,
+      query: search.query,
+      description: search.description,
+      exported_at: new Date().toISOString(),
+      version: '1.0',
+    };
+
+    return res.json(exportData);
+  } catch (error) {
+    console.error('Error exporting saved search:', error);
+    return res.status(500).json({ error: 'Failed to export saved search' });
+  }
+});
+
 export default router;
