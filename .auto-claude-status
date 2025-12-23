@@ -3,23 +3,23 @@
   "spec": "010-saved-search-export-import",
   "state": "building",
   "subtasks": {
-    "completed": 1,
+    "completed": 4,
     "total": 9,
     "in_progress": 1,
     "failed": 0
   },
   "phase": {
-    "current": "API Backend",
+    "current": "Frontend API Client",
     "id": null,
-    "total": 4
+    "total": 2
   },
   "workers": {
     "active": 0,
     "max": 1
   },
   "session": {
-    "number": 3,
+    "number": 6,
     "started_at": "2025-12-23T15:03:58.965419"
   },
-  "last_update": "2025-12-23T15:13:33.194114"
+  "last_update": "2025-12-23T15:26:43.559856"
 }

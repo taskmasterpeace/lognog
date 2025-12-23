@@ -916,6 +916,33 @@ export async function deleteDashboardAnnotation(dashboardId: string, annotationI
   await request(`/dashboards/${dashboardId}/annotations/${annotationId}`, { method: 'DELETE' });
 }
 
+// Saved Search Export/Import API
+export interface SavedSearchExport {
+  name: string;
+  query: string;
+  description?: string;
+  exported_at: string;
+  version: string;
+}
+
+export interface SavedSearchBulkExport {
+  type: 'saved_searches';
+  count: number;
+  exported_at: string;
+  version: string;
+  searches: SavedSearchExport[];
+}
+
+export interface SavedSearchBulkImportResult {
+  type: 'saved_searches_import';
+  total: number;
+  successful_count: number;
+  failed_count: number;
+  imported_at: string;
+  successful: Array<{ index: number; id: string; name: string }>;
+  failed: Array<{ index: number; error: string; name?: string }>;
+}
+
 // Dashboard Export/Import API
 export interface DashboardExport {
   name: string;
