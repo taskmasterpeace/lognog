@@ -356,8 +356,7 @@ export default function AlertsPage() {
     setSelectedAlertIds(new Set());
   };
 
-  // Expose selection helpers for future use (bulk operations - subtasks 3.2, 3.3, 4.x)
-  void toggleSelection;
+  // Expose selection helpers for future use (bulk operations - subtasks 3.3, 4.x)
   void selectAlertId;
   void deselectAlertId;
   void selectAllAlerts;
@@ -452,6 +451,13 @@ export default function AlertsPage() {
               >
                 {/* Alert Header */}
                 <div className="p-4 flex items-center gap-4">
+                  <input
+                    type="checkbox"
+                    checked={selectedAlertIds.has(alert.id)}
+                    onChange={() => toggleSelection(alert.id)}
+                    className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-sky-500 focus:ring-sky-500 cursor-pointer"
+                    title="Select alert for bulk operations"
+                  />
                   <button
                     onClick={() => toggleExpand(alert.id)}
                     className="text-slate-400 hover:text-slate-600"

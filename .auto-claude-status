@@ -3,23 +3,23 @@
   "spec": "009-bulk-alert-enable-disable-operations",
   "state": "building",
   "subtasks": {
-    "completed": 3,
+    "completed": 5,
     "total": 16,
     "in_progress": 1,
     "failed": 0
   },
   "phase": {
-    "current": "API Client",
+    "current": "UI Selection State",
     "id": null,
-    "total": 2
+    "total": 3
   },
   "workers": {
     "active": 0,
     "max": 1
   },
   "session": {
-    "number": 5,
+    "number": 7,
     "started_at": "2025-12-23T15:03:49.159250"
   },
-  "last_update": "2025-12-23T15:17:41.594905"
+  "last_update": "2025-12-23T15:22:53.089715"
 }
