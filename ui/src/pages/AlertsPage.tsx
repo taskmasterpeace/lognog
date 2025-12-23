@@ -114,6 +114,9 @@ export default function AlertsPage() {
   const [silencingAlertId, setSilencingAlertId] = useState<string | null>(null);
   const [expandedAlerts, setExpandedAlerts] = useState<Set<string>>(new Set());
 
+  // Multi-select state for bulk operations
+  const [selectedAlertIds, setSelectedAlertIds] = useState<Set<string>>(new Set());
+
   // Refs for action inputs (for variable insertion)
   const emailSubjectRefs = useRef<(HTMLInputElement | null)[]>([]);
   const emailBodyRefs = useRef<(HTMLTextAreaElement | null)[]>([]);
@@ -319,6 +322,37 @@ export default function AlertsPage() {
     }
     setExpandedAlerts(newExpanded);
   };
+
+  // Multi-select helper functions
+  const toggleSelection = (id: string) => {
+    const newSelected = new Set(selectedAlertIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedAlertIds(newSelected);
+  };
+
+  const selectAll = () => {
+    if (alerts) {
+      setSelectedAlertIds(new Set(alerts.map(alert => alert.id)));
+    }
+  };
+
+  const clearSelection = () => {
+    setSelectedAlertIds(new Set());
+  };
+
+  const isSelected = (id: string) => {
+    return selectedAlertIds.has(id);
+  };
+
+  // Explicitly mark as used - these will be called in UI components for subtasks 3.2 and 3.3
+  void toggleSelection;
+  void selectAll;
+  void clearSelection;
+  void isSelected;
 
   const getSeverityConfig = (severity: string) => {
     return SEVERITIES.find(s => s.value === severity) || SEVERITIES[2];
