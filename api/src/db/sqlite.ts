@@ -1211,6 +1211,39 @@ export function deleteAlert(id: string): boolean {
   return result.changes > 0;
 }
 
+// Bulk update alerts enabled state
+export interface BulkUpdateResult {
+  updatedCount: number;
+  updatedIds: string[];
+}
+
+export function bulkUpdateAlerts(ids: string[], enabled: boolean): BulkUpdateResult {
+  const database = getSQLiteDB();
+
+  if (ids.length === 0) {
+    return { updatedCount: 0, updatedIds: [] };
+  }
+
+  const stmt = database.prepare(
+    "UPDATE alerts SET enabled = ?, updated_at = datetime('now') WHERE id = ?"
+  );
+  const enabledValue = enabled ? 1 : 0;
+  const updatedIds: string[] = [];
+
+  const updateMany = database.transaction((alertIds: string[]) => {
+    for (const id of alertIds) {
+      const result = stmt.run(enabledValue, id);
+      if (result.changes > 0) {
+        updatedIds.push(id);
+      }
+    }
+  });
+
+  updateMany(ids);
+
+  return { updatedCount: updatedIds.length, updatedIds };
+}
+
 // Alert History
 export function getAlertHistory(alertId?: string, limit: number = 100): AlertHistory[] {
   const database = getSQLiteDB();
