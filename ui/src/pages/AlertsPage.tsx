@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Bell,
@@ -121,6 +121,9 @@ export default function AlertsPage() {
   const emailSubjectRefs = useRef<(HTMLInputElement | null)[]>([]);
   const emailBodyRefs = useRef<(HTMLTextAreaElement | null)[]>([]);
   const webhookPayloadRefs = useRef<(HTMLTextAreaElement | null)[]>([]);
+
+  // Ref for select all checkbox (to control indeterminate state)
+  const selectAllCheckboxRef = useRef<HTMLInputElement>(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -346,10 +349,27 @@ export default function AlertsPage() {
     setSelectedAlerts(new Set());
   }, []);
 
-  // Note: selectAll, clearSelection will be used in subsequent subtasks (3.3, 3.4)
-  // Temporarily reference them to satisfy TypeScript noUnusedLocals
-  void selectAll;
-  void clearSelection;
+  // Computed values for select all checkbox state
+  const alertCount = alerts?.length ?? 0;
+  const selectedCount = selectedAlerts.size;
+  const isAllSelected = alertCount > 0 && selectedCount === alertCount;
+  const isIndeterminate = selectedCount > 0 && selectedCount < alertCount;
+
+  // Update indeterminate state on the checkbox (cannot be set via attribute)
+  useEffect(() => {
+    if (selectAllCheckboxRef.current) {
+      selectAllCheckboxRef.current.indeterminate = isIndeterminate;
+    }
+  }, [isIndeterminate]);
+
+  // Handler for select all checkbox
+  const handleSelectAllChange = useCallback(() => {
+    if (isAllSelected || isIndeterminate) {
+      clearSelection();
+    } else {
+      selectAll();
+    }
+  }, [isAllSelected, isIndeterminate, clearSelection, selectAll]);
 
   const getSeverityConfig = (severity: string) => {
     return SEVERITIES.find(s => s.value === severity) || SEVERITIES[2];
@@ -426,6 +446,23 @@ export default function AlertsPage() {
       {/* Alerts List */}
       {alerts && alerts.length > 0 ? (
         <div className="space-y-4">
+          {/* List Header with Select All Checkbox */}
+          <div className="flex items-center gap-4 px-4 py-2 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
+            <input
+              ref={selectAllCheckboxRef}
+              type="checkbox"
+              checked={isAllSelected}
+              onChange={handleSelectAllChange}
+              className="w-4 h-4 rounded border-slate-300"
+              aria-label={isAllSelected ? 'Deselect all alerts' : 'Select all alerts'}
+            />
+            <span className="text-sm text-slate-600 dark:text-slate-400">
+              {selectedCount > 0
+                ? `${selectedCount} of ${alertCount} selected`
+                : `Select all (${alertCount})`}
+            </span>
+          </div>
+
           {alerts.map((alert) => {
             const severity = getSeverityConfig(alert.severity);
             const SeverityIcon = severity.icon;
