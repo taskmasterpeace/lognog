@@ -644,6 +644,18 @@ export async function acknowledgeAlertHistory(id: string, acknowledgedBy: string
   });
 }
 
+export interface BulkAlertResult {
+  updated: Alert[];
+  errors?: { id: string; error: string }[];
+}
+
+export async function bulkEnableAlerts(ids: string[]): Promise<BulkAlertResult> {
+  return request('/alerts/bulk-enable', {
+    method: 'POST',
+    body: JSON.stringify({ ids }),
+  });
+}
+
 // Silences API
 export interface AlertSilence {
   id: string;
