@@ -356,11 +356,9 @@ export default function AlertsPage() {
     setSelectedAlertIds(new Set());
   };
 
-  // Expose selection helpers for future use (bulk operations - subtasks 3.3, 4.x)
+  // Expose selection helpers for future use (bulk operations - subtasks 4.x)
   void selectAlertId;
   void deselectAlertId;
-  void selectAllAlerts;
-  void deselectAllAlerts;
 
   const getSeverityConfig = (severity: string) => {
     return SEVERITIES.find(s => s.value === severity) || SEVERITIES[2];
@@ -433,6 +431,37 @@ export default function AlertsPage() {
           </button>
         </div>
       </div>
+
+      {/* Select All Header - shown when alerts exist */}
+      {alerts && alerts.length > 0 && (
+        <div className="mb-4 flex items-center gap-3 px-4 py-2 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
+          <input
+            type="checkbox"
+            checked={alerts.length > 0 && selectedAlertIds.size === alerts.length}
+            ref={(el) => {
+              if (el) {
+                el.indeterminate = selectedAlertIds.size > 0 && selectedAlertIds.size < alerts.length;
+              }
+            }}
+            onChange={(e) => {
+              if (e.target.checked) {
+                selectAllAlerts();
+              } else {
+                deselectAllAlerts();
+              }
+            }}
+            className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-sky-500 focus:ring-sky-500 cursor-pointer"
+            title="Select all alerts"
+          />
+          <span className="text-sm text-slate-600 dark:text-slate-400">
+            {selectedAlertIds.size === 0
+              ? `Select all (${alerts.length} alerts)`
+              : selectedAlertIds.size === alerts.length
+                ? `All ${alerts.length} alerts selected`
+                : `${selectedAlertIds.size} of ${alerts.length} selected`}
+          </span>
+        </div>
+      )}
 
       {/* Alerts List */}
       {alerts && alerts.length > 0 ? (
