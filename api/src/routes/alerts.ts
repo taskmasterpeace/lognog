@@ -214,6 +214,44 @@ router.post('/bulk-enable', (req: Request, res: Response) => {
   }
 });
 
+// Bulk disable alerts
+router.post('/bulk-disable', (req: Request, res: Response) => {
+  try {
+    const { ids } = req.body;
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'ids array is required' });
+    }
+
+    const updatedAlerts = [];
+    const errors = [];
+
+    for (const id of ids) {
+      const existing = getAlert(id);
+      if (!existing) {
+        errors.push({ id, error: 'Alert not found' });
+        continue;
+      }
+
+      const alert = updateAlert(id, { enabled: false });
+      if (alert) {
+        updatedAlerts.push({
+          ...alert,
+          actions: JSON.parse(alert.actions || '[]'),
+        });
+      }
+    }
+
+    res.json({
+      updated: updatedAlerts,
+      errors: errors.length > 0 ? errors : undefined,
+    });
+  } catch (error) {
+    console.error('Error bulk disabling alerts:', error);
+    res.status(500).json({ error: 'Failed to bulk disable alerts' });
+  }
+});
+
 // Enable/disable alert
 router.post('/:id/toggle', (req: Request, res: Response) => {
   try {
