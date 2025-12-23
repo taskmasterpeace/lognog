@@ -15,6 +15,14 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
 
+  // Password visibility state (will be used by toggle buttons in subtasks 1.3-1.5)
+  // @ts-ignore - Variables will be used when toggle buttons are added
+  const [showPassword, setShowPassword] = useState(false);
+  // @ts-ignore - Variables will be used when toggle buttons are added
+  const [showSetupPassword, setShowSetupPassword] = useState(false);
+  // @ts-ignore - Variables will be used when toggle buttons are added
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
   // Automatically switch to setup mode if required
   useEffect(() => {
     if (setupRequired && !isSetupMode) {
