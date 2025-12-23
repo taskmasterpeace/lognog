@@ -14,6 +14,7 @@ import {
   getAlertHistory,
   getAlertHistoryEntry,
   acknowledgeAlertHistory,
+  bulkUpdateAlerts,
   AlertAction,
   AlertTriggerType,
   AlertTriggerCondition,
@@ -103,6 +104,53 @@ router.post('/', (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error creating alert:', error);
     res.status(500).json({ error: 'Failed to create alert' });
+  }
+});
+
+// Bulk enable/disable alerts
+router.post('/bulk/toggle', (req: Request, res: Response) => {
+  try {
+    const { ids, enabled } = req.body;
+
+    // Validate input
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ error: 'ids must be a non-empty array' });
+    }
+
+    if (typeof enabled !== 'boolean') {
+      return res.status(400).json({ error: 'enabled must be a boolean' });
+    }
+
+    // Check which IDs exist before bulk update
+    const existingAlerts: Record<string, boolean> = {};
+    for (const id of ids) {
+      const alert = getAlert(id);
+      existingAlerts[id] = !!alert;
+    }
+
+    // Perform bulk update
+    const { updatedIds } = bulkUpdateAlerts(ids, enabled);
+
+    // Build response with success alerts and failed IDs
+    const success = updatedIds.map(id => {
+      const alert = getAlert(id);
+      return {
+        ...alert,
+        actions: JSON.parse(alert?.actions || '[]'),
+      };
+    });
+
+    const failed = ids
+      .filter(id => !updatedIds.includes(id))
+      .map(id => ({
+        id,
+        error: existingAlerts[id] ? 'Failed to update alert' : 'Alert not found',
+      }));
+
+    res.json({ success, failed });
+  } catch (error) {
+    console.error('Error bulk toggling alerts:', error);
+    res.status(500).json({ error: 'Failed to bulk toggle alerts' });
   }
 });
 
