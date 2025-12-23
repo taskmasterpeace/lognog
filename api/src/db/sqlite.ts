@@ -1211,6 +1211,45 @@ export function deleteAlert(id: string): boolean {
   return result.changes > 0;
 }
 
+/**
+ * Bulk update the enabled status of multiple alerts in a single transaction.
+ * Returns only the alerts that were successfully updated (existing IDs).
+ */
+export function bulkUpdateAlertsEnabled(ids: string[], enabled: boolean): Alert[] {
+  if (ids.length === 0) {
+    return [];
+  }
+
+  const database = getSQLiteDB();
+  const enabledValue = enabled ? 1 : 0;
+  const updatedAlerts: Alert[] = [];
+
+  const updateStmt = database.prepare(`
+    UPDATE alerts
+    SET enabled = ?, updated_at = datetime('now')
+    WHERE id = ?
+  `);
+
+  const getStmt = database.prepare('SELECT * FROM alerts WHERE id = ?');
+
+  const bulkUpdate = database.transaction((alertIds: string[]) => {
+    for (const id of alertIds) {
+      const result = updateStmt.run(enabledValue, id);
+      // Only fetch the alert if the update affected a row (i.e., the ID exists)
+      if (result.changes > 0) {
+        const alert = getStmt.get(id) as Alert | undefined;
+        if (alert) {
+          updatedAlerts.push(alert);
+        }
+      }
+    }
+  });
+
+  bulkUpdate(ids);
+
+  return updatedAlerts;
+}
+
 // Alert History
 export function getAlertHistory(alertId?: string, limit: number = 100): AlertHistory[] {
   const database = getSQLiteDB();
