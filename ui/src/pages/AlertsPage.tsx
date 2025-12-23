@@ -114,6 +114,9 @@ export default function AlertsPage() {
   const [silencingAlertId, setSilencingAlertId] = useState<string | null>(null);
   const [expandedAlerts, setExpandedAlerts] = useState<Set<string>>(new Set());
 
+  // Selection state for bulk operations
+  const [selectedAlertIds, setSelectedAlertIds] = useState<Set<string>>(new Set());
+
   // Refs for action inputs (for variable insertion)
   const emailSubjectRefs = useRef<(HTMLInputElement | null)[]>([]);
   const emailBodyRefs = useRef<(HTMLTextAreaElement | null)[]>([]);
@@ -319,6 +322,46 @@ export default function AlertsPage() {
     }
     setExpandedAlerts(newExpanded);
   };
+
+  // Selection helpers for bulk operations
+  const toggleSelection = (id: string) => {
+    const newSelected = new Set(selectedAlertIds);
+    if (newSelected.has(id)) {
+      newSelected.delete(id);
+    } else {
+      newSelected.add(id);
+    }
+    setSelectedAlertIds(newSelected);
+  };
+
+  const selectAlertId = (id: string) => {
+    const newSelected = new Set(selectedAlertIds);
+    newSelected.add(id);
+    setSelectedAlertIds(newSelected);
+  };
+
+  const deselectAlertId = (id: string) => {
+    const newSelected = new Set(selectedAlertIds);
+    newSelected.delete(id);
+    setSelectedAlertIds(newSelected);
+  };
+
+  const selectAllAlerts = () => {
+    if (alerts) {
+      setSelectedAlertIds(new Set(alerts.map(alert => alert.id)));
+    }
+  };
+
+  const deselectAllAlerts = () => {
+    setSelectedAlertIds(new Set());
+  };
+
+  // Expose selection helpers for future use (bulk operations - subtasks 3.2, 3.3, 4.x)
+  void toggleSelection;
+  void selectAlertId;
+  void deselectAlertId;
+  void selectAllAlerts;
+  void deselectAllAlerts;
 
   const getSeverityConfig = (severity: string) => {
     return SEVERITIES.find(s => s.value === severity) || SEVERITIES[2];
