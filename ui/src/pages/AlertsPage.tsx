@@ -463,6 +463,47 @@ export default function AlertsPage() {
             </span>
           </div>
 
+          {/* Bulk Action Toolbar - appears when alerts are selected */}
+          {selectedCount > 0 && (
+            <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 bg-sky-50 dark:bg-sky-900/30 rounded-lg border border-sky-200 dark:border-sky-800 shadow-sm">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-sky-700 dark:text-sky-300">
+                  {selectedCount} {selectedCount === 1 ? 'alert' : 'alerts'} selected
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    // Placeholder for bulk enable - will be implemented in subtask 3.5
+                  }}
+                  className="px-3 py-1.5 text-sm bg-green-100 hover:bg-green-200 dark:bg-green-900/50 dark:hover:bg-green-900/70 text-green-700 dark:text-green-300 rounded-lg flex items-center gap-1.5 transition-colors"
+                  title="Enable selected alerts"
+                >
+                  <Play className="w-4 h-4" />
+                  Enable All
+                </button>
+                <button
+                  onClick={() => {
+                    // Placeholder for bulk disable - will be implemented in subtask 3.5
+                  }}
+                  className="px-3 py-1.5 text-sm bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg flex items-center gap-1.5 transition-colors"
+                  title="Disable selected alerts"
+                >
+                  <Pause className="w-4 h-4" />
+                  Disable All
+                </button>
+                <button
+                  onClick={clearSelection}
+                  className="px-3 py-1.5 text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg flex items-center gap-1.5 transition-colors"
+                  title="Clear selection"
+                >
+                  <X className="w-4 h-4" />
+                  Clear
+                </button>
+              </div>
+            </div>
+          )}
+
           {alerts.map((alert) => {
             const severity = getSeverityConfig(alert.severity);
             const SeverityIcon = severity.icon;
