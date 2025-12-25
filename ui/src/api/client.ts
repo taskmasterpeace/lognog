@@ -943,6 +943,37 @@ export interface SavedSearchBulkImportResult {
   failed: Array<{ index: number; error: string; name?: string }>;
 }
 
+// Saved Search Export/Import Functions
+export async function exportSavedSearch(id: string): Promise<SavedSearchExport> {
+  return request(`/search/saved/${id}/export`, { method: 'POST' });
+}
+
+export async function importSavedSearch(
+  template: SavedSearchExport,
+  name?: string
+): Promise<SavedSearch> {
+  return request('/search/saved/import', {
+    method: 'POST',
+    body: JSON.stringify({ template, name }),
+  });
+}
+
+export async function exportSavedSearches(ids?: string[]): Promise<SavedSearchBulkExport> {
+  return request('/search/saved/export', {
+    method: 'POST',
+    body: JSON.stringify(ids ? { ids } : {}),
+  });
+}
+
+export async function importSavedSearches(
+  searches: SavedSearchExport[]
+): Promise<SavedSearchBulkImportResult> {
+  return request('/search/saved/import-bulk', {
+    method: 'POST',
+    body: JSON.stringify({ searches }),
+  });
+}
+
 // Dashboard Export/Import API
 export interface DashboardExport {
   name: string;

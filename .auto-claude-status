@@ -3,7 +3,7 @@
   "spec": "010-saved-search-export-import",
   "state": "building",
   "subtasks": {
-    "completed": 4,
+    "completed": 5,
     "total": 9,
     "in_progress": 1,
     "failed": 0
@@ -18,8 +18,8 @@
     "max": 1
   },
   "session": {
-    "number": 6,
-    "started_at": "2025-12-23T15:03:58.965419"
+    "number": 2,
+    "started_at": "2025-12-25T01:14:27.278251"
   },
-  "last_update": "2025-12-23T15:26:43.559856"
+  "last_update": "2025-12-25T01:16:16.278914"
 }
