@@ -1,5 +1,5 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Search,
   Play,
@@ -20,8 +20,9 @@ import {
   PanelLeft,
   Download,
   MoreVertical,
+  Upload,
 } from 'lucide-react';
-import { executeSearch, getSavedSearches, createSavedSearch, aiSearch, getAISuggestions, exportSavedSearch, exportSavedSearches, SavedSearch } from '../api/client';
+import { executeSearch, getSavedSearches, createSavedSearch, aiSearch, getAISuggestions, exportSavedSearch, exportSavedSearches, importSavedSearch, importSavedSearches, SavedSearch, SavedSearchExport, SavedSearchBulkImportResult } from '../api/client';
 import LogViewer from '../components/LogViewer';
 import TimePicker from '../components/TimePicker';
 import FacetFilters, { Facet } from '../components/FacetFilters';
@@ -56,6 +57,15 @@ export default function SearchPage() {
   const [exportingId, setExportingId] = useState<string | null>(null);
   const [exportingAll, setExportingAll] = useState(false);
   const [showSavedSearchMenu, setShowSavedSearchMenu] = useState<string | null>(null);
+  const [showImportModal, setShowImportModal] = useState(false);
+  const [importJsonText, setImportJsonText] = useState('');
+  const [importError, setImportError] = useState<string | null>(null);
+  const [importPreview, setImportPreview] = useState<SavedSearchExport[] | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
+  const [importResult, setImportResult] = useState<SavedSearchBulkImportResult | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const queryClient = useQueryClient();
 
   // Persist sidebar state to localStorage
   useEffect(() => {
@@ -365,6 +375,123 @@ export default function SearchPage() {
     }
   }, []);
 
+  // Parse and validate import JSON
+  const parseImportJson = useCallback((jsonText: string) => {
+    setImportError(null);
+    setImportPreview(null);
+    setImportResult(null);
+
+    if (!jsonText.trim()) {
+      return;
+    }
+
+    try {
+      const data = JSON.parse(jsonText);
+
+      // Check if it's a bulk export (has 'searches' array)
+      if (data.type === 'saved_searches' && Array.isArray(data.searches)) {
+        const searches = data.searches as SavedSearchExport[];
+        if (searches.length === 0) {
+          setImportError('No saved searches found in the export file.');
+          return;
+        }
+        // Validate each search
+        for (let i = 0; i < searches.length; i++) {
+          const s = searches[i];
+          if (!s.name || typeof s.name !== 'string') {
+            setImportError(`Search #${i + 1} is missing a valid name.`);
+            return;
+          }
+          if (!s.query || typeof s.query !== 'string') {
+            setImportError(`Search "${s.name}" is missing a valid query.`);
+            return;
+          }
+        }
+        setImportPreview(searches);
+      }
+      // Check if it's a single search export
+      else if (data.name && data.query) {
+        const search = data as SavedSearchExport;
+        setImportPreview([search]);
+      }
+      // Invalid format
+      else {
+        setImportError('Invalid format. Expected a saved search export or bulk export JSON.');
+      }
+    } catch (e) {
+      setImportError('Invalid JSON format. Please check the content and try again.');
+    }
+  }, []);
+
+  // Handle file upload
+  const handleFileUpload = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const content = e.target?.result as string;
+      setImportJsonText(content);
+      parseImportJson(content);
+    };
+    reader.onerror = () => {
+      setImportError('Failed to read the file. Please try again.');
+    };
+    reader.readAsText(file);
+
+    // Reset the input so the same file can be selected again
+    event.target.value = '';
+  }, [parseImportJson]);
+
+  // Handle JSON text change
+  const handleImportJsonChange = useCallback((text: string) => {
+    setImportJsonText(text);
+    parseImportJson(text);
+  }, [parseImportJson]);
+
+  // Handle import submission
+  const handleImportSubmit = useCallback(async () => {
+    if (!importPreview || importPreview.length === 0) return;
+
+    setIsImporting(true);
+    setImportError(null);
+
+    try {
+      if (importPreview.length === 1) {
+        // Single import
+        await importSavedSearch(importPreview[0]);
+        setImportResult({
+          type: 'saved_searches_import',
+          total: 1,
+          successful_count: 1,
+          failed_count: 0,
+          imported_at: new Date().toISOString(),
+          successful: [{ index: 0, id: 'imported', name: importPreview[0].name }],
+          failed: [],
+        });
+      } else {
+        // Bulk import
+        const result = await importSavedSearches(importPreview);
+        setImportResult(result);
+      }
+      // Refresh saved searches list
+      queryClient.invalidateQueries({ queryKey: ['savedSearches'] });
+    } catch (err) {
+      setImportError(`Import failed: ${err instanceof Error ? err.message : 'Unknown error'}`);
+    } finally {
+      setIsImporting(false);
+    }
+  }, [importPreview, queryClient]);
+
+  // Reset import modal state
+  const resetImportModal = useCallback(() => {
+    setShowImportModal(false);
+    setImportJsonText('');
+    setImportError(null);
+    setImportPreview(null);
+    setImportResult(null);
+  }, []);
+
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
@@ -644,6 +771,15 @@ search * | top 10 app_name`}
                         <Download className="w-3 h-3" />
                       )}
                       <span className="text-xs">Export All</span>
+                    </button>
+                    {/* Import button */}
+                    <button
+                      onClick={() => setShowImportModal(true)}
+                      className="flex items-center gap-1.5 px-2 py-1.5 text-sm text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors whitespace-nowrap"
+                      title="Import saved searches"
+                    >
+                      <Upload className="w-3 h-3" />
+                      <span className="text-xs">Import</span>
                     </button>
                   </>
                 )}
@@ -1086,6 +1222,196 @@ search * | top 10 app_name`}
                 {saveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                 Save Search
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Import Saved Searches Modal */}
+      {showImportModal && (
+        <div className="modal-overlay" onClick={resetImportModal}>
+          <div className="modal animate-slide-up max-w-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Upload className="w-5 h-5 text-sky-500" />
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                    Import Saved Searches
+                  </h3>
+                </div>
+                <button onClick={resetImportModal} className="btn-ghost p-1">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            <div className="modal-body space-y-4">
+              {/* Success State */}
+              {importResult && importResult.successful_count > 0 && (
+                <div className="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-semibold text-green-900 dark:text-green-100">
+                        Import Successful
+                      </p>
+                      <p className="text-sm text-green-700 dark:text-green-300 mt-1">
+                        {importResult.successful_count} saved search{importResult.successful_count !== 1 ? 'es' : ''} imported successfully.
+                        {importResult.failed_count > 0 && (
+                          <span className="text-amber-600 dark:text-amber-400">
+                            {' '}{importResult.failed_count} failed.
+                          </span>
+                        )}
+                      </p>
+                      <ul className="mt-2 text-sm text-green-700 dark:text-green-300 space-y-1">
+                        {importResult.successful.map((s, i) => (
+                          <li key={i} className="flex items-center gap-2">
+                            <Bookmark className="w-3 h-3" />
+                            {s.name}
+                          </li>
+                        ))}
+                      </ul>
+                      {importResult.failed.length > 0 && (
+                        <ul className="mt-2 text-sm text-red-600 dark:text-red-400 space-y-1">
+                          {importResult.failed.map((f, i) => (
+                            <li key={i} className="flex items-center gap-2">
+                              <AlertCircle className="w-3 h-3" />
+                              {f.name ? `${f.name}: ${f.error}` : f.error}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* File Upload & JSON Paste (show when no result yet) */}
+              {!importResult && (
+                <>
+                  {/* File Upload */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                      Upload JSON File
+                    </label>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".json,application/json"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                    />
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      className="w-full py-8 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg hover:border-sky-400 hover:bg-sky-50 dark:hover:bg-sky-900/20 transition-colors flex flex-col items-center gap-2"
+                    >
+                      <Upload className="w-8 h-8 text-slate-400" />
+                      <span className="text-sm text-slate-600 dark:text-slate-400">
+                        Click to select a JSON file or drag and drop
+                      </span>
+                      <span className="text-xs text-slate-400">
+                        Supports single and bulk export files
+                      </span>
+                    </button>
+                  </div>
+
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-slate-200 dark:border-slate-700"></div>
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                      <span className="px-2 bg-white dark:bg-slate-800 text-slate-500">or paste JSON</span>
+                    </div>
+                  </div>
+
+                  {/* JSON Paste */}
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                      Paste JSON Content
+                    </label>
+                    <textarea
+                      value={importJsonText}
+                      onChange={(e) => handleImportJsonChange(e.target.value)}
+                      placeholder='{"name": "My Search", "query": "search *", ...}'
+                      rows={6}
+                      className="input font-mono text-sm resize-none"
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* Error Message */}
+              {importError && (
+                <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="font-semibold text-red-900 dark:text-red-100">
+                        Import Error
+                      </p>
+                      <p className="text-sm text-red-700 dark:text-red-300 mt-1">
+                        {importError}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Preview */}
+              {importPreview && importPreview.length > 0 && !importResult && (
+                <div className="p-4 bg-sky-50 dark:bg-sky-900/20 rounded-lg border border-sky-200 dark:border-sky-800">
+                  <p className="font-semibold text-sky-900 dark:text-sky-100 mb-2">
+                    Preview: {importPreview.length} saved search{importPreview.length !== 1 ? 'es' : ''} to import
+                  </p>
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {importPreview.map((search, idx) => (
+                      <div
+                        key={idx}
+                        className="p-2 bg-white dark:bg-slate-800 rounded border border-sky-100 dark:border-sky-700"
+                      >
+                        <div className="flex items-start justify-between">
+                          <div>
+                            <p className="font-medium text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                              <Bookmark className="w-3 h-3 text-sky-500" />
+                              {search.name}
+                            </p>
+                            <code className="text-xs text-slate-500 dark:text-slate-400 mt-1 block truncate max-w-md">
+                              {search.query}
+                            </code>
+                            {search.description && (
+                              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 truncate">
+                                {search.description}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="modal-footer">
+              {importResult ? (
+                <button onClick={resetImportModal} className="btn-primary">
+                  Done
+                </button>
+              ) : (
+                <>
+                  <button onClick={resetImportModal} className="btn-secondary">
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleImportSubmit}
+                    disabled={!importPreview || importPreview.length === 0 || isImporting}
+                    className="btn-primary"
+                  >
+                    {isImporting && <Loader2 className="w-4 h-4 animate-spin" />}
+                    Import {importPreview ? importPreview.length : 0} Search{importPreview && importPreview.length !== 1 ? 'es' : ''}
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </div>
