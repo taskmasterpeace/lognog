@@ -23,6 +23,7 @@ import {
   TestTube,
   Settings,
   BellOff,
+  Download,
 } from 'lucide-react';
 import {
   getAlerts,
@@ -33,6 +34,8 @@ import {
   toggleAlert,
   testAlert,
   evaluateAlert,
+  exportAlert,
+  exportAllAlerts,
   Alert,
   AlertAction,
   createSilence,
@@ -105,6 +108,27 @@ const TIME_RANGES = [
   { label: 'Last 24 hours', value: '-24h' },
 ];
 
+// Helper function to trigger JSON file download
+const downloadJSON = (data: unknown, filename: string) => {
+  const json = JSON.stringify(data, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
+
+// Generate filename with timestamp
+const generateExportFilename = (name: string, prefix: string = 'alert') => {
+  const sanitizedName = name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+  return `${prefix}_${sanitizedName}_${timestamp}.json`;
+};
+
 export default function AlertsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
@@ -113,6 +137,8 @@ export default function AlertsPage() {
   const [selectedAlertId, setSelectedAlertId] = useState<string | null>(null);
   const [silencingAlertId, setSilencingAlertId] = useState<string | null>(null);
   const [expandedAlerts, setExpandedAlerts] = useState<Set<string>>(new Set());
+  const [exportingAlertId, setExportingAlertId] = useState<string | null>(null);
+  const [exportingAll, setExportingAll] = useState(false);
 
   // Refs for action inputs (for variable insertion)
   const emailSubjectRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -268,6 +294,32 @@ export default function AlertsPage() {
     }
   };
 
+  const handleExportSingle = async (alertId: string, alertName: string) => {
+    setExportingAlertId(alertId);
+    try {
+      const data = await exportAlert(alertId);
+      const filename = generateExportFilename(alertName, 'alert');
+      downloadJSON(data, filename);
+    } catch (err) {
+      alert('Export failed: ' + (err instanceof Error ? err.message : 'Unknown error'));
+    } finally {
+      setExportingAlertId(null);
+    }
+  };
+
+  const handleExportAll = async () => {
+    setExportingAll(true);
+    try {
+      const data = await exportAllAlerts();
+      const filename = generateExportFilename('all', 'alerts');
+      downloadJSON(data, filename);
+    } catch (err) {
+      alert('Export failed: ' + (err instanceof Error ? err.message : 'Unknown error'));
+    } finally {
+      setExportingAll(false);
+    }
+  };
+
   const addAction = (type: AlertAction['type']) => {
     const newAction: AlertAction = {
       type,
@@ -369,6 +421,15 @@ export default function AlertsPage() {
         </div>
         <div className="flex gap-2">
           <button
+            onClick={handleExportAll}
+            disabled={exportingAll || !alerts || alerts.length === 0}
+            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            title={!alerts || alerts.length === 0 ? 'No alerts to export' : 'Export all alerts'}
+          >
+            {exportingAll ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+            Export All
+          </button>
+          <button
             onClick={() => {
               setSelectedAlertId(null);
               setShowHistoryModal(true);
@@ -449,6 +510,18 @@ export default function AlertsPage() {
                       title="Run Now"
                     >
                       <Play className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => handleExportSingle(alert.id, alert.name)}
+                      disabled={exportingAlertId === alert.id}
+                      className="p-2 text-slate-400 hover:text-sky-500 hover:bg-sky-50 rounded-lg disabled:opacity-50"
+                      title="Export"
+                    >
+                      {exportingAlertId === alert.id ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Download className="w-4 h-4" />
+                      )}
                     </button>
                     <button
                       onClick={() => {
