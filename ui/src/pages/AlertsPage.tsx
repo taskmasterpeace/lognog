@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Bell,
@@ -348,11 +348,28 @@ export default function AlertsPage() {
     return selectedAlertIds.has(id);
   };
 
-  // Explicitly mark as used - these will be called in UI components for subtasks 3.2 and 3.3
-  void toggleSelection;
-  void selectAll;
-  void clearSelection;
-  void isSelected;
+  // Ref for select-all checkbox to handle indeterminate state
+  const selectAllRef = useRef<HTMLInputElement>(null);
+
+  // Compute selection state for the select-all checkbox
+  const allSelected = alerts && alerts.length > 0 && selectedAlertIds.size === alerts.length;
+  const someSelected = selectedAlertIds.size > 0 && !allSelected;
+
+  // Update indeterminate state when selection changes
+  useEffect(() => {
+    if (selectAllRef.current) {
+      selectAllRef.current.indeterminate = someSelected;
+    }
+  }, [someSelected]);
+
+  // Toggle all alerts selection
+  const toggleSelectAll = useCallback(() => {
+    if (allSelected) {
+      clearSelection();
+    } else {
+      selectAll();
+    }
+  }, [allSelected, clearSelection, selectAll]);
 
   const getSeverityConfig = (severity: string) => {
     return SEVERITIES.find(s => s.value === severity) || SEVERITIES[2];
@@ -428,7 +445,27 @@ export default function AlertsPage() {
 
       {/* Alerts List */}
       {alerts && alerts.length > 0 ? (
-        <div className="space-y-4">
+        <div className="space-y-2">
+          {/* Header row with select-all checkbox */}
+          <div className="flex items-center gap-4 px-4 py-2 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
+            <div className="w-5" /> {/* Spacer for expand/collapse button column */}
+            <label className="flex items-center gap-3 cursor-pointer select-none">
+              <input
+                ref={selectAllRef}
+                type="checkbox"
+                checked={allSelected}
+                onChange={toggleSelectAll}
+                className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-sky-500 focus:ring-sky-500 focus:ring-offset-0 cursor-pointer"
+              />
+              <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
+                {selectedAlertIds.size > 0
+                  ? `${selectedAlertIds.size} of ${alerts.length} selected`
+                  : 'Select all'}
+              </span>
+            </label>
+          </div>
+
+          {/* Alert rows */}
           {alerts.map((alert) => {
             const severity = getSeverityConfig(alert.severity);
             const SeverityIcon = severity.icon;
@@ -437,18 +474,34 @@ export default function AlertsPage() {
             return (
               <div
                 key={alert.id}
-                className={`bg-white dark:bg-slate-800 rounded-xl shadow-sm border ${
-                  alert.enabled ? 'border-slate-200 dark:border-slate-700' : 'border-slate-200/50 dark:border-slate-700/50 opacity-60'
-                }`}
+                className={`bg-white dark:bg-slate-800 rounded-xl shadow-sm border transition-colors ${
+                  isSelected(alert.id)
+                    ? 'border-sky-300 dark:border-sky-600 ring-1 ring-sky-200 dark:ring-sky-800'
+                    : alert.enabled
+                      ? 'border-slate-200 dark:border-slate-700'
+                      : 'border-slate-200/50 dark:border-slate-700/50'
+                } ${!alert.enabled && !isSelected(alert.id) ? 'opacity-60' : ''}`}
               >
                 {/* Alert Header */}
                 <div className="p-4 flex items-center gap-4">
                   <button
                     onClick={() => toggleExpand(alert.id)}
-                    className="text-slate-400 hover:text-slate-600"
+                    className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
                   >
                     {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
                   </button>
+
+                  {/* Selection checkbox */}
+                  <input
+                    type="checkbox"
+                    checked={isSelected(alert.id)}
+                    onChange={(e) => {
+                      e.stopPropagation();
+                      toggleSelection(alert.id);
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-sky-500 focus:ring-sky-500 focus:ring-offset-0 cursor-pointer"
+                  />
 
                   <div className={`p-2 rounded-lg ${severity.bg}`}>
                     <SeverityIcon className={`w-5 h-5 ${severity.color}`} />
