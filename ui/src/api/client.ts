@@ -649,6 +649,25 @@ export async function acknowledgeAlertHistory(id: string, acknowledgedBy: string
   });
 }
 
+export async function exportAlertHistoryCSV(alertId?: string, limit?: number): Promise<Blob> {
+  const params = new URLSearchParams();
+  if (alertId) params.set('alertId', alertId);
+  if (limit) params.set('limit', limit.toString());
+  const query = params.toString();
+
+  const response = await fetch(`${API_BASE}/alerts/history/export${query ? `?${query}` : ''}`, {
+    method: 'GET',
+    headers: { 'Accept': 'text/csv' },
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Export failed' }));
+    throw new Error(error.message || error.error || 'Export failed');
+  }
+
+  return response.blob();
+}
+
 // Silences API
 export interface AlertSilence {
   id: string;
