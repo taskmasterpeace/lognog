@@ -494,8 +494,8 @@ export default function AlertsPage() {
               type="checkbox"
               checked={isAllSelected}
               onChange={handleSelectAllChange}
-              className="w-4 h-4 rounded border-slate-300"
-              aria-label={isAllSelected ? 'Deselect all alerts' : 'Select all alerts'}
+              className="w-4 h-4 rounded border-slate-300 text-sky-600 focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 cursor-pointer"
+              aria-label={isAllSelected ? 'Deselect all alerts' : isIndeterminate ? `Deselect ${selectedCount} selected alerts` : 'Select all alerts'}
             />
             <span className="text-sm text-slate-600 dark:text-slate-400">
               {selectedCount > 0
@@ -506,45 +506,51 @@ export default function AlertsPage() {
 
           {/* Bulk Action Toolbar - appears when alerts are selected */}
           {selectedCount > 0 && (
-            <div className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 bg-sky-50 dark:bg-sky-900/30 rounded-lg border border-sky-200 dark:border-sky-800 shadow-sm">
+            <div
+              role="toolbar"
+              aria-label="Bulk alert actions"
+              aria-live="polite"
+              aria-atomic="true"
+              className="sticky top-0 z-10 flex items-center justify-between px-4 py-3 bg-sky-50 dark:bg-sky-900/30 rounded-lg border border-sky-200 dark:border-sky-800 shadow-sm"
+            >
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-sky-700 dark:text-sky-300">
+                <span className="text-sm font-medium text-sky-700 dark:text-sky-300" aria-live="polite">
                   {selectedCount} {selectedCount === 1 ? 'alert' : 'alerts'} selected
                 </span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2" role="group" aria-label="Bulk actions">
                 <button
                   onClick={handleBulkEnable}
                   disabled={bulkToggleMutation.isPending}
-                  className="px-3 py-1.5 text-sm bg-green-100 hover:bg-green-200 dark:bg-green-900/50 dark:hover:bg-green-900/70 text-green-700 dark:text-green-300 rounded-lg flex items-center gap-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="Enable selected alerts"
+                  className="px-3 py-1.5 text-sm bg-green-100 hover:bg-green-200 dark:bg-green-900/50 dark:hover:bg-green-900/70 text-green-700 dark:text-green-300 rounded-lg flex items-center gap-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+                  aria-label={`Enable ${selectedCount} selected ${selectedCount === 1 ? 'alert' : 'alerts'}`}
                 >
                   {bulkToggleMutation.isPending && bulkToggleMutation.variables?.enabled ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
                   ) : (
-                    <Play className="w-4 h-4" />
+                    <Play className="w-4 h-4" aria-hidden="true" />
                   )}
                   Enable All
                 </button>
                 <button
                   onClick={handleBulkDisable}
                   disabled={bulkToggleMutation.isPending}
-                  className="px-3 py-1.5 text-sm bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg flex items-center gap-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="Disable selected alerts"
+                  className="px-3 py-1.5 text-sm bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg flex items-center gap-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2"
+                  aria-label={`Disable ${selectedCount} selected ${selectedCount === 1 ? 'alert' : 'alerts'}`}
                 >
                   {bulkToggleMutation.isPending && !bulkToggleMutation.variables?.enabled ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
                   ) : (
-                    <Pause className="w-4 h-4" />
+                    <Pause className="w-4 h-4" aria-hidden="true" />
                   )}
                   Disable All
                 </button>
                 <button
                   onClick={clearSelection}
-                  className="px-3 py-1.5 text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg flex items-center gap-1.5 transition-colors"
-                  title="Clear selection"
+                  className="px-3 py-1.5 text-sm text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg flex items-center gap-1.5 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2"
+                  aria-label="Clear selection"
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-4 h-4" aria-hidden="true" />
                   Clear
                 </button>
               </div>
@@ -571,7 +577,8 @@ export default function AlertsPage() {
                     checked={selectedAlerts.has(alert.id)}
                     onChange={() => toggleSelection(alert.id)}
                     onClick={(e) => e.stopPropagation()}
-                    className="w-4 h-4 rounded border-slate-300"
+                    className="w-4 h-4 rounded border-slate-300 text-sky-600 focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 cursor-pointer"
+                    aria-label={selectedAlerts.has(alert.id) ? `Deselect alert: ${alert.name}` : `Select alert: ${alert.name}`}
                   />
 
                   <button
