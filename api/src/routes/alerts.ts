@@ -270,6 +270,77 @@ router.get('/history', (_req: Request, res: Response) => {
   }
 });
 
+// Export alert history as CSV
+router.get('/history/export', (_req: Request, res: Response) => {
+  try {
+    const alertId = _req.query.alertId as string | undefined;
+    const limit = parseInt(_req.query.limit as string) || 1000;
+
+    // Get history data
+    const history = getAlertHistory(alertId, limit);
+
+    // Get all alerts to create a lookup map for alert names
+    const alerts = getAlerts();
+    const alertNameMap = new Map(alerts.map(a => [a.id, a.name]));
+
+    // Add alert_name to each history entry
+    const historyWithNames = history.map(h => ({
+      id: h.id,
+      alert_name: alertNameMap.get(h.alert_id) || 'Unknown Alert',
+      triggered_at: h.triggered_at,
+      result_count: h.result_count,
+      trigger_value: h.trigger_value || '',
+      severity: h.severity,
+      acknowledged: h.acknowledged ? 'Yes' : 'No',
+      acknowledged_by: h.acknowledged_by || '',
+      acknowledged_at: h.acknowledged_at || '',
+      notes: h.notes || '',
+    }));
+
+    // Define CSV columns (exclude complex JSON fields: actions_executed, sample_results)
+    const columns = [
+      'id',
+      'alert_name',
+      'triggered_at',
+      'result_count',
+      'trigger_value',
+      'severity',
+      'acknowledged',
+      'acknowledged_by',
+      'acknowledged_at',
+      'notes',
+    ];
+
+    // Convert to CSV
+    const csv = convertToCSV(historyWithNames, columns);
+
+    // Generate filename with timestamp
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    let filename: string;
+    if (alertId) {
+      const alertName = alertNameMap.get(alertId);
+      if (alertName) {
+        // Sanitize alert name for filename (remove special characters)
+        const sanitizedName = alertName.replace(/[^a-zA-Z0-9-_]/g, '-').toLowerCase();
+        filename = `alert-${sanitizedName}-history-${timestamp}.csv`;
+      } else {
+        filename = `alert-history-${timestamp}.csv`;
+      }
+    } else {
+      filename = `alert-history-${timestamp}.csv`;
+    }
+
+    // Set response headers for CSV download
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+    res.send(csv);
+  } catch (error) {
+    console.error('Error exporting alert history:', error);
+    res.status(500).json({ error: 'Failed to export alert history' });
+  }
+});
+
 // Get history for specific alert
 router.get('/:id/history', (req: Request, res: Response) => {
   try {
