@@ -515,7 +515,13 @@ export default function AlertsPage() {
               )}
               Disable Selected
             </button>
-            {/* Additional action buttons will be added in subtask 4.4 */}
+            <button
+              onClick={() => deselectAllAlerts()}
+              className="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 dark:bg-slate-600 dark:hover:bg-slate-500 text-slate-700 dark:text-slate-200 text-sm font-medium rounded-lg flex items-center gap-2"
+            >
+              <X className="w-4 h-4" />
+              Clear Selection
+            </button>
           </div>
         </div>
       )}
