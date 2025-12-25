@@ -41,6 +41,7 @@ import {
 } from '../api/client';
 import VariableHelper from '../components/VariableHelper';
 import { InfoTip } from '../components/ui/InfoTip';
+import { useToast, ToastContainer } from '../components/ui/Toast';
 
 // Local type for alert history (used in UI)
 interface LocalAlertHistory {
@@ -149,6 +150,7 @@ export default function AlertsPage() {
   const [testing, setTesting] = useState(false);
 
   const queryClient = useQueryClient();
+  const toast = useToast();
 
   const { data: alerts, isLoading, error } = useQuery({
     queryKey: ['alerts'],
@@ -215,17 +217,39 @@ export default function AlertsPage() {
   // Bulk operations mutations
   const bulkEnableMutation = useMutation({
     mutationFn: bulkEnableAlerts,
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['alerts'] });
+      const count = data.length;
+      toast.success(
+        'Alerts Enabled',
+        `Successfully enabled ${count} alert${count !== 1 ? 's' : ''}`
+      );
       clearSelection();
+    },
+    onError: (error) => {
+      toast.error(
+        'Enable Failed',
+        error instanceof Error ? error.message : 'Failed to enable alerts'
+      );
     },
   });
 
   const bulkDisableMutation = useMutation({
     mutationFn: bulkDisableAlerts,
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['alerts'] });
+      const count = data.length;
+      toast.success(
+        'Alerts Disabled',
+        `Successfully disabled ${count} alert${count !== 1 ? 's' : ''}`
+      );
       clearSelection();
+    },
+    onError: (error) => {
+      toast.error(
+        'Disable Failed',
+        error instanceof Error ? error.message : 'Failed to disable alerts'
+      );
     },
   });
 
@@ -1284,6 +1308,9 @@ export default function AlertsPage() {
           }}
         />
       )}
+
+      {/* Toast Notifications */}
+      <ToastContainer toasts={toast.toasts} onClose={toast.close} />
     </div>
   );
 }
