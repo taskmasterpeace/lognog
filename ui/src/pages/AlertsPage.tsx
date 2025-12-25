@@ -24,6 +24,7 @@ import {
   Settings,
   BellOff,
   Download,
+  Upload,
 } from 'lucide-react';
 import {
   getAlerts,
@@ -36,8 +37,10 @@ import {
   evaluateAlert,
   exportAlert,
   exportAllAlerts,
+  importAlerts,
   Alert,
   AlertAction,
+  AlertImportTemplate,
   createSilence,
 } from '../api/client';
 import VariableHelper from '../components/VariableHelper';
@@ -133,6 +136,7 @@ export default function AlertsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [showSilenceModal, setShowSilenceModal] = useState(false);
+  const [showImportModal, setShowImportModal] = useState(false);
   const [editingAlert, setEditingAlert] = useState<Alert | null>(null);
   const [selectedAlertId, setSelectedAlertId] = useState<string | null>(null);
   const [silencingAlertId, setSilencingAlertId] = useState<string | null>(null);
@@ -428,6 +432,14 @@ export default function AlertsPage() {
           >
             {exportingAll ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
             Export All
+          </button>
+          <button
+            onClick={() => setShowImportModal(true)}
+            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg flex items-center gap-2"
+            title="Import alerts from JSON"
+          >
+            <Upload className="w-4 h-4" />
+            Import
           </button>
           <button
             onClick={() => {
@@ -1200,6 +1212,17 @@ export default function AlertsPage() {
           }}
         />
       )}
+
+      {/* Import Modal */}
+      {showImportModal && (
+        <AlertImportModal
+          onClose={() => setShowImportModal(false)}
+          onSuccess={() => {
+            setShowImportModal(false);
+            queryClient.invalidateQueries({ queryKey: ['alerts'] });
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -1323,6 +1346,265 @@ function QuickSilenceModal({ alertId, alertName, onClose }: QuickSilenceModalPro
             </button>
           </div>
         </form>
+      </div>
+    </div>
+  );
+}
+
+interface AlertImportModalProps {
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+function AlertImportModal({ onClose, onSuccess }: AlertImportModalProps) {
+  const [jsonInput, setJsonInput] = useState('');
+  const [parseError, setParseError] = useState<string | null>(null);
+  const [parsedAlerts, setParsedAlerts] = useState<AlertImportTemplate[]>([]);
+  const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Parse and validate JSON input
+  const parseJsonInput = (input: string) => {
+    setJsonInput(input);
+    setParseError(null);
+    setParsedAlerts([]);
+    setImportError(null);
+
+    if (!input.trim()) {
+      return;
+    }
+
+    try {
+      const parsed = JSON.parse(input);
+
+      // Handle different input formats
+      let alertTemplates: AlertImportTemplate[] = [];
+
+      if (Array.isArray(parsed)) {
+        // Direct array of alerts
+        alertTemplates = parsed;
+      } else if (parsed.alerts && Array.isArray(parsed.alerts)) {
+        // Bulk export format { alerts: [...], count, exported_at, version }
+        alertTemplates = parsed.alerts;
+      } else if (parsed.templates && Array.isArray(parsed.templates)) {
+        // Template array format { templates: [...] }
+        alertTemplates = parsed.templates;
+      } else if (parsed.name && parsed.search_query) {
+        // Single alert object
+        alertTemplates = [parsed];
+      } else {
+        throw new Error('Invalid format: expected an alert object, array of alerts, or bulk export format');
+      }
+
+      // Validate each alert has required fields
+      const invalidAlerts = alertTemplates.filter(
+        (a) => !a.name || !a.search_query
+      );
+
+      if (invalidAlerts.length > 0) {
+        throw new Error(
+          `${invalidAlerts.length} alert(s) missing required fields (name, search_query)`
+        );
+      }
+
+      setParsedAlerts(alertTemplates);
+    } catch (err) {
+      setParseError(err instanceof Error ? err.message : 'Invalid JSON format');
+    }
+  };
+
+  // Handle file upload
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      parseJsonInput(content);
+    };
+    reader.onerror = () => {
+      setParseError('Failed to read file');
+    };
+    reader.readAsText(file);
+
+    // Reset file input so same file can be selected again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  // Handle import
+  const handleImport = async () => {
+    if (parsedAlerts.length === 0) return;
+
+    setImporting(true);
+    setImportError(null);
+
+    try {
+      await importAlerts(parsedAlerts);
+      onSuccess();
+    } catch (err) {
+      setImportError(err instanceof Error ? err.message : 'Import failed');
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  // Get severity config for preview
+  const getSeverityLabel = (severity: string | undefined) => {
+    const severityMap: Record<string, { label: string; color: string }> = {
+      info: { label: 'Info', color: 'text-blue-500' },
+      low: { label: 'Low', color: 'text-slate-500' },
+      medium: { label: 'Medium', color: 'text-yellow-500' },
+      high: { label: 'High', color: 'text-orange-500' },
+      critical: { label: 'Critical', color: 'text-red-500' },
+    };
+    return severityMap[severity || 'medium'] || severityMap.medium;
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] flex flex-col">
+        <div className="p-6 border-b border-slate-200 dark:border-slate-700">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <Upload className="h-5 w-5 text-sky-500" />
+              Import Alerts
+            </h2>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+
+        <div className="p-6 flex-1 overflow-y-auto space-y-4">
+          {/* File Upload */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Upload JSON File
+            </label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".json,application/json"
+              onChange={handleFileUpload}
+              className="block w-full text-sm text-slate-500 dark:text-slate-400
+                file:mr-4 file:py-2 file:px-4
+                file:rounded-lg file:border-0
+                file:text-sm file:font-medium
+                file:bg-sky-50 file:text-sky-700
+                dark:file:bg-sky-900/20 dark:file:text-sky-400
+                hover:file:bg-sky-100 dark:hover:file:bg-sky-900/30
+                file:cursor-pointer cursor-pointer"
+            />
+          </div>
+
+          <div className="flex items-center gap-4">
+            <div className="flex-1 border-t border-slate-200 dark:border-slate-700" />
+            <span className="text-sm text-slate-500 dark:text-slate-400">or</span>
+            <div className="flex-1 border-t border-slate-200 dark:border-slate-700" />
+          </div>
+
+          {/* JSON Textarea */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Paste JSON
+            </label>
+            <textarea
+              value={jsonInput}
+              onChange={(e) => parseJsonInput(e.target.value)}
+              placeholder={'{\n  "name": "My Alert",\n  "search_query": "search severity<=3",\n  ...\n}'}
+              rows={8}
+              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 font-mono text-sm resize-none focus:ring-2 focus:ring-sky-500 focus:border-sky-500"
+            />
+          </div>
+
+          {/* Parse Error */}
+          {parseError && (
+            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+              <div className="flex items-center gap-2 text-red-700 dark:text-red-300">
+                <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                <p className="text-sm">{parseError}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Import Error */}
+          {importError && (
+            <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+              <div className="flex items-center gap-2 text-red-700 dark:text-red-300">
+                <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                <p className="text-sm">{importError}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Preview */}
+          {parsedAlerts.length > 0 && (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                Preview ({parsedAlerts.length} alert{parsedAlerts.length !== 1 ? 's' : ''} to import)
+              </label>
+              <div className="border border-slate-200 dark:border-slate-700 rounded-lg divide-y divide-slate-200 dark:divide-slate-700 max-h-48 overflow-y-auto">
+                {parsedAlerts.map((alertTemplate, index) => {
+                  const severity = getSeverityLabel(alertTemplate.severity);
+                  return (
+                    <div key={index} className="p-3 flex items-center gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-slate-900 dark:text-slate-100 truncate">
+                          {alertTemplate.name}
+                        </div>
+                        <div className="text-sm text-slate-500 dark:text-slate-400 truncate font-mono">
+                          {alertTemplate.search_query}
+                        </div>
+                      </div>
+                      <span className={`text-xs font-medium ${severity.color}`}>
+                        {severity.label}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Info */}
+          <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+            <p className="text-sm text-blue-700 dark:text-blue-300">
+              <strong>Tip:</strong> You can import alerts exported from this or another instance.
+              Duplicate alert names will be suffixed with " (imported)".
+            </p>
+          </div>
+        </div>
+
+        <div className="p-6 border-t border-slate-200 dark:border-slate-700 flex gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleImport}
+            disabled={importing || parsedAlerts.length === 0}
+            className="flex-1 px-4 py-2 bg-sky-500 text-white rounded-lg hover:bg-sky-600 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {importing ? (
+              <span className="flex items-center justify-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Importing...
+              </span>
+            ) : (
+              `Import ${parsedAlerts.length > 0 ? parsedAlerts.length : ''} Alert${parsedAlerts.length !== 1 ? 's' : ''}`
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );
