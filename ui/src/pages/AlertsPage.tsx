@@ -443,6 +443,44 @@ export default function AlertsPage() {
         </div>
       </div>
 
+      {/* Bulk Action Toolbar - appears when alerts are selected */}
+      {selectedAlertIds.size > 0 && (
+        <div className="sticky top-0 z-10 mb-4 p-4 bg-sky-50 dark:bg-sky-900/30 border border-sky-200 dark:border-sky-800 rounded-lg shadow-sm flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <span className="font-medium text-sky-700 dark:text-sky-300">
+              {selectedAlertIds.size} selected
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                // Will be wired up in subtask 4.2
+              }}
+              className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg flex items-center gap-2 transition-colors"
+            >
+              <Play className="w-4 h-4" />
+              Enable Selected
+            </button>
+            <button
+              onClick={() => {
+                // Will be wired up in subtask 4.2
+              }}
+              className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg flex items-center gap-2 transition-colors"
+            >
+              <Pause className="w-4 h-4" />
+              Disable Selected
+            </button>
+            <button
+              onClick={clearSelection}
+              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg flex items-center gap-2 transition-colors"
+            >
+              <X className="w-4 h-4" />
+              Clear Selection
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Alerts List */}
       {alerts && alerts.length > 0 ? (
         <div className="space-y-2">
