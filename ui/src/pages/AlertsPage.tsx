@@ -23,6 +23,7 @@ import {
   TestTube,
   Settings,
   BellOff,
+  Download,
 } from 'lucide-react';
 import {
   getAlerts,
@@ -36,6 +37,7 @@ import {
   Alert,
   AlertAction,
   createSilence,
+  exportAlertHistoryCSV,
 } from '../api/client';
 import VariableHelper from '../components/VariableHelper';
 import { InfoTip } from '../components/ui/InfoTip';
@@ -113,6 +115,8 @@ export default function AlertsPage() {
   const [selectedAlertId, setSelectedAlertId] = useState<string | null>(null);
   const [silencingAlertId, setSilencingAlertId] = useState<string | null>(null);
   const [expandedAlerts, setExpandedAlerts] = useState<Set<string>>(new Set());
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   // Refs for action inputs (for variable insertion)
   const emailSubjectRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -322,6 +326,37 @@ export default function AlertsPage() {
 
   const getSeverityConfig = (severity: string) => {
     return SEVERITIES.find(s => s.value === severity) || SEVERITIES[2];
+  };
+
+  const handleExportCSV = async () => {
+    setIsExporting(true);
+    setExportError(null);
+    try {
+      const blob = await exportAlertHistoryCSV(selectedAlertId || undefined);
+
+      // Generate filename with timestamp
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      const alertName = selectedAlertId
+        ? alerts?.find(a => a.id === selectedAlertId)?.name?.replace(/[^a-zA-Z0-9]/g, '_')
+        : null;
+      const filename = alertName
+        ? `alert-${alertName}-history-${timestamp}.csv`
+        : `alert-history-${timestamp}.csv`;
+
+      // Create download link and trigger download
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      setExportError(err instanceof Error ? err.message : 'Export failed');
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   // Validate all actions have required config
@@ -1047,15 +1082,42 @@ export default function AlertsPage() {
                 <History className="w-5 h-5" />
                 Alert History
               </h2>
-              <button
-                onClick={() => setShowHistoryModal(false)}
-                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
-              >
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleExportCSV}
+                  disabled={isExporting}
+                  className="px-3 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg flex items-center gap-2 disabled:opacity-50 text-sm"
+                  title="Export to CSV"
+                >
+                  {isExporting ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4" />
+                  )}
+                  Export CSV
+                </button>
+                <button
+                  onClick={() => setShowHistoryModal(false)}
+                  className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             <div className="flex-1 overflow-y-auto p-6">
+              {exportError && (
+                <div className="mb-4 p-3 bg-red-50 text-red-700 dark:bg-red-900/20 dark:text-red-400 rounded-lg flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                  <span>Export failed: {exportError}</span>
+                  <button
+                    onClick={() => setExportError(null)}
+                    className="ml-auto p-1 hover:bg-red-100 dark:hover:bg-red-900/40 rounded"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
               {alertHistory && alertHistory.length > 0 ? (
                 <div className="space-y-3">
                   {alertHistory.map((entry) => {
