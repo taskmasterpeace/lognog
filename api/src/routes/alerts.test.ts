@@ -382,4 +382,226 @@ describe('Alerts Bulk Operations API', () => {
       expect(response.body.error).toBe('ids array is required and must not be empty');
     });
   });
+
+  describe('Edge cases: All alerts selected', () => {
+    it('should enable all alerts when all IDs are selected', async () => {
+      const allIds = sampleAlerts.map(a => a.id);
+      const allEnabled = sampleAlerts.map(a => ({ ...a, enabled: 1 }));
+
+      vi.mocked(sqlite.bulkUpdateAlertsEnabled).mockReturnValue(allEnabled);
+
+      const response = await request(app)
+        .post('/api/alerts/bulk/enable')
+        .send({ ids: allIds });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveLength(3);
+      expect(response.body.every((a: { enabled: number }) => a.enabled === 1)).toBe(true);
+      expect(sqlite.bulkUpdateAlertsEnabled).toHaveBeenCalledWith(allIds, true);
+    });
+
+    it('should disable all alerts when all IDs are selected', async () => {
+      const allIds = sampleAlerts.map(a => a.id);
+      const allDisabled = sampleAlerts.map(a => ({ ...a, enabled: 0 }));
+
+      vi.mocked(sqlite.bulkUpdateAlertsEnabled).mockReturnValue(allDisabled);
+
+      const response = await request(app)
+        .post('/api/alerts/bulk/disable')
+        .send({ ids: allIds });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveLength(3);
+      expect(response.body.every((a: { enabled: number }) => a.enabled === 0)).toBe(true);
+      expect(sqlite.bulkUpdateAlertsEnabled).toHaveBeenCalledWith(allIds, false);
+    });
+  });
+
+  describe('Edge cases: Mix of enabled/disabled alerts', () => {
+    it('should enable a mix of already-enabled and disabled alerts (idempotent)', async () => {
+      // alert-1 and alert-2 are disabled (enabled: 0), alert-3 is enabled (enabled: 1)
+      const mixedIds = ['alert-1', 'alert-2', 'alert-3'];
+      const allNowEnabled = sampleAlerts.map(a => ({ ...a, enabled: 1 }));
+
+      vi.mocked(sqlite.bulkUpdateAlertsEnabled).mockReturnValue(allNowEnabled);
+
+      const response = await request(app)
+        .post('/api/alerts/bulk/enable')
+        .send({ ids: mixedIds });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveLength(3);
+      // All should now be enabled
+      expect(response.body.every((a: { enabled: number }) => a.enabled === 1)).toBe(true);
+    });
+
+    it('should disable a mix of already-disabled and enabled alerts (idempotent)', async () => {
+      // alert-1 and alert-2 are disabled (enabled: 0), alert-3 is enabled (enabled: 1)
+      const mixedIds = ['alert-1', 'alert-2', 'alert-3'];
+      const allNowDisabled = sampleAlerts.map(a => ({ ...a, enabled: 0 }));
+
+      vi.mocked(sqlite.bulkUpdateAlertsEnabled).mockReturnValue(allNowDisabled);
+
+      const response = await request(app)
+        .post('/api/alerts/bulk/disable')
+        .send({ ids: mixedIds });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveLength(3);
+      // All should now be disabled
+      expect(response.body.every((a: { enabled: number }) => a.enabled === 0)).toBe(true);
+    });
+
+    it('should handle enabling already-enabled alerts without error', async () => {
+      // Only alert-3 is enabled
+      const enabledAlertId = ['alert-3'];
+      const alreadyEnabled = [{ ...sampleAlerts[2], enabled: 1 }];
+
+      vi.mocked(sqlite.bulkUpdateAlertsEnabled).mockReturnValue(alreadyEnabled);
+
+      const response = await request(app)
+        .post('/api/alerts/bulk/enable')
+        .send({ ids: enabledAlertId });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveLength(1);
+      expect(response.body[0].enabled).toBe(1);
+    });
+
+    it('should handle disabling already-disabled alerts without error', async () => {
+      // alert-1 and alert-2 are already disabled
+      const disabledAlertIds = ['alert-1', 'alert-2'];
+      const alreadyDisabled = sampleAlerts
+        .filter(a => ['alert-1', 'alert-2'].includes(a.id))
+        .map(a => ({ ...a, enabled: 0 }));
+
+      vi.mocked(sqlite.bulkUpdateAlertsEnabled).mockReturnValue(alreadyDisabled);
+
+      const response = await request(app)
+        .post('/api/alerts/bulk/disable')
+        .send({ ids: disabledAlertIds });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveLength(2);
+      expect(response.body.every((a: { enabled: number }) => a.enabled === 0)).toBe(true);
+    });
+  });
+
+  describe('Edge cases: Large selections', () => {
+    it('should handle bulk enabling a large number of alerts', async () => {
+      // Generate 100 alert IDs
+      const largeIdList = Array.from({ length: 100 }, (_, i) => `alert-large-${i}`);
+      const largeAlertList = largeIdList.map((id, i) => ({
+        ...sampleAlerts[0],
+        id,
+        name: `Large Alert ${i}`,
+        enabled: 1,
+      }));
+
+      vi.mocked(sqlite.bulkUpdateAlertsEnabled).mockReturnValue(largeAlertList);
+
+      const response = await request(app)
+        .post('/api/alerts/bulk/enable')
+        .send({ ids: largeIdList });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveLength(100);
+      expect(sqlite.bulkUpdateAlertsEnabled).toHaveBeenCalledWith(largeIdList, true);
+    });
+
+    it('should handle bulk disabling a large number of alerts', async () => {
+      // Generate 50 alert IDs
+      const largeIdList = Array.from({ length: 50 }, (_, i) => `alert-large-${i}`);
+      const largeAlertList = largeIdList.map((id, i) => ({
+        ...sampleAlerts[0],
+        id,
+        name: `Large Alert ${i}`,
+        enabled: 0,
+      }));
+
+      vi.mocked(sqlite.bulkUpdateAlertsEnabled).mockReturnValue(largeAlertList);
+
+      const response = await request(app)
+        .post('/api/alerts/bulk/disable')
+        .send({ ids: largeIdList });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveLength(50);
+      expect(sqlite.bulkUpdateAlertsEnabled).toHaveBeenCalledWith(largeIdList, false);
+    });
+  });
+
+  describe('Edge cases: Duplicate IDs in request', () => {
+    it('should handle duplicate IDs in enable request gracefully', async () => {
+      const duplicateIds = ['alert-1', 'alert-1', 'alert-2', 'alert-2'];
+      const uniqueAlerts = sampleAlerts
+        .filter(a => ['alert-1', 'alert-2'].includes(a.id))
+        .map(a => ({ ...a, enabled: 1 }));
+
+      // The function will receive duplicates but should handle them
+      vi.mocked(sqlite.bulkUpdateAlertsEnabled).mockReturnValue(uniqueAlerts);
+
+      const response = await request(app)
+        .post('/api/alerts/bulk/enable')
+        .send({ ids: duplicateIds });
+
+      expect(response.status).toBe(200);
+      // The mock returns unique alerts, actual behavior depends on DB implementation
+      expect(response.body).toHaveLength(2);
+      expect(sqlite.bulkUpdateAlertsEnabled).toHaveBeenCalledWith(duplicateIds, true);
+    });
+
+    it('should handle duplicate IDs in disable request gracefully', async () => {
+      const duplicateIds = ['alert-3', 'alert-3', 'alert-3'];
+      const uniqueAlerts = [{ ...sampleAlerts[2], enabled: 0 }];
+
+      vi.mocked(sqlite.bulkUpdateAlertsEnabled).mockReturnValue(uniqueAlerts);
+
+      const response = await request(app)
+        .post('/api/alerts/bulk/disable')
+        .send({ ids: duplicateIds });
+
+      expect(response.status).toBe(200);
+      expect(response.body).toHaveLength(1);
+      expect(sqlite.bulkUpdateAlertsEnabled).toHaveBeenCalledWith(duplicateIds, false);
+    });
+  });
+
+  describe('Edge cases: Various payload formats', () => {
+    it('should return 400 for enable with undefined ids', async () => {
+      const response = await request(app)
+        .post('/api/alerts/bulk/enable')
+        .send({});
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('ids array is required and must not be empty');
+    });
+
+    it('should return 400 for disable with undefined ids', async () => {
+      const response = await request(app)
+        .post('/api/alerts/bulk/disable')
+        .send({});
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('ids array is required and must not be empty');
+    });
+
+    it('should return 400 for enable with object instead of array', async () => {
+      const response = await request(app)
+        .post('/api/alerts/bulk/enable')
+        .send({ ids: { id: 'alert-1' } });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('ids array is required and must not be empty');
+    });
+
+    it('should return 400 for disable with numeric ids', async () => {
+      const response = await request(app)
+        .post('/api/alerts/bulk/disable')
+        .send({ ids: 123 });
+
+      expect(response.status).toBe(400);
+      expect(response.body.error).toBe('ids array is required and must not be empty');
+    });
+  });
 });
