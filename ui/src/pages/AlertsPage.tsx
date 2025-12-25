@@ -369,13 +369,38 @@ export default function AlertsPage() {
     setExpandedAlerts(newExpanded);
   };
 
+  // Track last selected alert ID for shift+click range selection
+  const lastSelectedRef = useRef<string | null>(null);
+
   // Multi-select helper functions
-  const toggleSelection = (id: string) => {
+  const toggleSelection = (id: string, shiftKey = false) => {
     const newSelected = new Set(selectedAlertIds);
+
+    // Handle shift+click for range selection
+    if (shiftKey && lastSelectedRef.current && alerts) {
+      const alertIds = alerts.map(a => a.id);
+      const lastIndex = alertIds.indexOf(lastSelectedRef.current);
+      const currentIndex = alertIds.indexOf(id);
+
+      if (lastIndex !== -1 && currentIndex !== -1) {
+        const start = Math.min(lastIndex, currentIndex);
+        const end = Math.max(lastIndex, currentIndex);
+
+        // Select all alerts in range
+        for (let i = start; i <= end; i++) {
+          newSelected.add(alertIds[i]);
+        }
+        setSelectedAlertIds(newSelected);
+        return;
+      }
+    }
+
+    // Normal toggle behavior
     if (newSelected.has(id)) {
       newSelected.delete(id);
     } else {
       newSelected.add(id);
+      lastSelectedRef.current = id;
     }
     setSelectedAlertIds(newSelected);
   };
@@ -491,24 +516,30 @@ export default function AlertsPage() {
 
       {/* Bulk Action Toolbar - appears when alerts are selected */}
       {selectedAlertIds.size > 0 && (
-        <div className="sticky top-0 z-10 mb-4 p-4 bg-sky-50 dark:bg-sky-900/30 border border-sky-200 dark:border-sky-800 rounded-lg shadow-sm flex items-center justify-between">
+        <div
+          className="sticky top-0 z-10 mb-4 p-4 bg-sky-50 dark:bg-sky-900/30 border border-sky-200 dark:border-sky-800 rounded-lg shadow-sm flex items-center justify-between"
+          role="toolbar"
+          aria-label="Bulk alert actions"
+        >
           <div className="flex items-center gap-4">
-            <span className="font-medium text-sky-700 dark:text-sky-300">
+            <span className="font-medium text-sky-700 dark:text-sky-300" aria-live="polite">
               {selectedAlertIds.size} selected
             </span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2" role="group" aria-label="Bulk action buttons">
             <button
               onClick={() => {
                 bulkEnableMutation.mutate(Array.from(selectedAlertIds));
               }}
               disabled={isBulkOperationPending}
-              className="px-4 py-2 bg-green-500 hover:bg-green-600 disabled:bg-green-300 disabled:cursor-not-allowed text-white rounded-lg flex items-center gap-2 transition-colors"
+              aria-label={`Enable ${selectedAlertIds.size} selected alert${selectedAlertIds.size !== 1 ? 's' : ''}`}
+              aria-busy={bulkEnableMutation.isPending}
+              className="px-4 py-2 bg-green-500 hover:bg-green-600 disabled:bg-green-300 disabled:cursor-not-allowed text-white rounded-lg flex items-center gap-2 transition-colors focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
             >
               {bulkEnableMutation.isPending ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
               ) : (
-                <Play className="w-4 h-4" />
+                <Play className="w-4 h-4" aria-hidden="true" />
               )}
               Enable Selected
             </button>
@@ -517,20 +548,23 @@ export default function AlertsPage() {
                 bulkDisableMutation.mutate(Array.from(selectedAlertIds));
               }}
               disabled={isBulkOperationPending}
-              className="px-4 py-2 bg-orange-500 hover:bg-orange-600 disabled:bg-orange-300 disabled:cursor-not-allowed text-white rounded-lg flex items-center gap-2 transition-colors"
+              aria-label={`Disable ${selectedAlertIds.size} selected alert${selectedAlertIds.size !== 1 ? 's' : ''}`}
+              aria-busy={bulkDisableMutation.isPending}
+              className="px-4 py-2 bg-orange-500 hover:bg-orange-600 disabled:bg-orange-300 disabled:cursor-not-allowed text-white rounded-lg flex items-center gap-2 transition-colors focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
             >
               {bulkDisableMutation.isPending ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
+                <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
               ) : (
-                <Pause className="w-4 h-4" />
+                <Pause className="w-4 h-4" aria-hidden="true" />
               )}
               Disable Selected
             </button>
             <button
               onClick={clearSelection}
-              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg flex items-center gap-2 transition-colors"
+              aria-label="Clear selection"
+              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg flex items-center gap-2 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2"
             >
-              <X className="w-4 h-4" />
+              <X className="w-4 h-4" aria-hidden="true" />
               Clear Selection
             </button>
           </div>
@@ -541,7 +575,11 @@ export default function AlertsPage() {
       {alerts && alerts.length > 0 ? (
         <div className="space-y-2">
           {/* Header row with select-all checkbox */}
-          <div className="flex items-center gap-4 px-4 py-2 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700">
+          <div
+            className="flex items-center gap-4 px-4 py-2 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700"
+            role="toolbar"
+            aria-label="Alert selection controls"
+          >
             <div className="w-5" /> {/* Spacer for expand/collapse button column */}
             <label className="flex items-center gap-3 cursor-pointer select-none">
               <input
@@ -549,7 +587,8 @@ export default function AlertsPage() {
                 type="checkbox"
                 checked={allSelected}
                 onChange={toggleSelectAll}
-                className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-sky-500 focus:ring-sky-500 focus:ring-offset-0 cursor-pointer"
+                aria-label={allSelected ? 'Deselect all alerts' : someSelected ? `${selectedAlertIds.size} alerts selected, click to select all` : 'Select all alerts'}
+                className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-sky-500 focus:ring-sky-500 focus:ring-2 focus:ring-offset-0 cursor-pointer"
               />
               <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
                 {selectedAlertIds.size > 0
@@ -591,10 +630,19 @@ export default function AlertsPage() {
                     checked={isSelected(alert.id)}
                     onChange={(e) => {
                       e.stopPropagation();
-                      toggleSelection(alert.id);
+                      toggleSelection(alert.id, e.nativeEvent instanceof MouseEvent && e.nativeEvent.shiftKey);
                     }}
                     onClick={(e) => e.stopPropagation()}
-                    className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-sky-500 focus:ring-sky-500 focus:ring-offset-0 cursor-pointer"
+                    onKeyDown={(e) => {
+                      // Handle Shift+Space for range selection
+                      if (e.key === ' ' && e.shiftKey) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        toggleSelection(alert.id, true);
+                      }
+                    }}
+                    aria-label={`Select alert: ${alert.name}`}
+                    className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-sky-500 focus:ring-sky-500 focus:ring-2 focus:ring-offset-0 cursor-pointer"
                   />
 
                   <div className={`p-2 rounded-lg ${severity.bg}`}>
