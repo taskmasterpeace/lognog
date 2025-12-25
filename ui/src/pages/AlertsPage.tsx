@@ -215,17 +215,43 @@ export default function AlertsPage() {
 
   const bulkEnableMutation = useMutation({
     mutationFn: (ids: string[]) => bulkEnableAlerts(ids),
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['alerts'] });
       deselectAllAlerts();
+      // Handle partial failures - some alerts may have failed to update
+      if (result.errors && result.errors.length > 0) {
+        const failedCount = result.errors.length;
+        const successCount = result.updated.length;
+        setBulkOperationError(
+          `Enabled ${successCount} alert${successCount !== 1 ? 's' : ''}, but ${failedCount} failed: ${result.errors.map(e => e.error).join(', ')}`
+        );
+      } else {
+        setBulkOperationError(null);
+      }
+    },
+    onError: (error: Error) => {
+      setBulkOperationError(`Failed to enable alerts: ${error.message}`);
     },
   });
 
   const bulkDisableMutation = useMutation({
     mutationFn: (ids: string[]) => bulkDisableAlerts(ids),
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['alerts'] });
       deselectAllAlerts();
+      // Handle partial failures - some alerts may have failed to update
+      if (result.errors && result.errors.length > 0) {
+        const failedCount = result.errors.length;
+        const successCount = result.updated.length;
+        setBulkOperationError(
+          `Disabled ${successCount} alert${successCount !== 1 ? 's' : ''}, but ${failedCount} failed: ${result.errors.map(e => e.error).join(', ')}`
+        );
+      } else {
+        setBulkOperationError(null);
+      }
+    },
+    onError: (error: Error) => {
+      setBulkOperationError(`Failed to disable alerts: ${error.message}`);
     },
   });
 
@@ -379,6 +405,9 @@ export default function AlertsPage() {
   void selectAlertId;
   void deselectAlertId;
 
+  // State for bulk operation error feedback
+  const [bulkOperationError, setBulkOperationError] = useState<string | null>(null);
+
   const getSeverityConfig = (severity: string) => {
     return SEVERITIES.find(s => s.value === severity) || SEVERITIES[2];
   };
@@ -492,7 +521,10 @@ export default function AlertsPage() {
           </div>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => bulkEnableMutation.mutate(Array.from(selectedAlertIds))}
+              onClick={() => {
+                setBulkOperationError(null);
+                bulkEnableMutation.mutate(Array.from(selectedAlertIds));
+              }}
               disabled={bulkEnableMutation.isPending}
               className="px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-sm font-medium rounded-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -504,7 +536,10 @@ export default function AlertsPage() {
               Enable Selected
             </button>
             <button
-              onClick={() => bulkDisableMutation.mutate(Array.from(selectedAlertIds))}
+              onClick={() => {
+                setBulkOperationError(null);
+                bulkDisableMutation.mutate(Array.from(selectedAlertIds));
+              }}
               disabled={bulkDisableMutation.isPending}
               className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium rounded-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -523,6 +558,25 @@ export default function AlertsPage() {
               Clear Selection
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Bulk Operation Error Banner */}
+      {bulkOperationError && (
+        <div className="mb-4 flex items-center justify-between px-4 py-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-red-500" />
+            <span className="text-sm text-red-700 dark:text-red-300">
+              {bulkOperationError}
+            </span>
+          </div>
+          <button
+            onClick={() => setBulkOperationError(null)}
+            className="p-1 text-red-400 hover:text-red-600 dark:text-red-400 dark:hover:text-red-200 rounded"
+            title="Dismiss"
+          >
+            <X className="w-4 h-4" />
+          </button>
         </div>
       )}
 
