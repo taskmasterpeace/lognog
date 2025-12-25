@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useEffect } from 'react';
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import {
   Search,
@@ -19,6 +19,9 @@ import {
   PanelLeftClose,
   PanelLeft,
   Download,
+  History,
+  Copy,
+  Check,
 } from 'lucide-react';
 import { executeSearch, getSavedSearches, createSavedSearch, aiSearch, getAISuggestions } from '../api/client';
 import LogViewer from '../components/LogViewer';
@@ -52,6 +55,35 @@ export default function SearchPage() {
     return saved !== null ? saved === 'true' : true;
   });
   const [selectedFilters, setSelectedFilters] = useState<Record<string, string[]>>({});
+  const [queryHistory, setQueryHistory] = useState<string[]>(() => {
+    const saved = localStorage.getItem('lognog_query_history');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return [];
+      }
+    }
+    return [];
+  });
+  const [showHistory, setShowHistory] = useState(false);
+  const [jsonCopied, setJsonCopied] = useState(false);
+
+  const historyDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close history dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (historyDropdownRef.current && !historyDropdownRef.current.contains(event.target as Node)) {
+        setShowHistory(false);
+      }
+    };
+
+    if (showHistory) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showHistory]);
 
   // Persist sidebar state to localStorage
   useEffect(() => {
@@ -103,8 +135,20 @@ export default function SearchPage() {
   });
 
   const handleSearch = useCallback(() => {
+    // Add to query history (dedupe, limit to 10)
+    if (query && query.trim() !== 'search *') {
+      setQueryHistory(prev => {
+        const updated = [query, ...prev.filter(q => q !== query)].slice(0, 10);
+        try {
+          localStorage.setItem('lognog_query_history', JSON.stringify(updated));
+        } catch {
+          // Gracefully handle localStorage errors (e.g., quota exceeded)
+        }
+        return updated;
+      });
+    }
     searchMutation.mutate();
-  }, [searchMutation]);
+  }, [query, searchMutation]);
 
   const handleAISearch = useCallback(() => {
     if (aiQuestion.trim()) {
@@ -171,6 +215,30 @@ export default function SearchPage() {
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
+  }, []);
+
+  // Copy results to clipboard as JSON
+  const copyToClipboard = useCallback(async (data: Record<string, unknown>[]) => {
+    if (!data || data.length === 0) return;
+
+    try {
+      const jsonContent = JSON.stringify(data, null, 2);
+      await navigator.clipboard.writeText(jsonContent);
+      setJsonCopied(true);
+      setTimeout(() => setJsonCopied(false), 2000);
+    } catch {
+      // Fallback for browsers that don't support clipboard API
+      const textArea = document.createElement('textarea');
+      textArea.value = JSON.stringify(data, null, 2);
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      setJsonCopied(true);
+      setTimeout(() => setJsonCopied(false), 2000);
+    }
   }, []);
 
   // Calculate facets from results
@@ -460,6 +528,60 @@ search * | top 10 app_name`}
               </div>
             )}
 
+            {/* Query History Dropdown */}
+            {searchMode === 'dsl' && queryHistory.length > 0 && (
+              <div className="relative" ref={historyDropdownRef}>
+                <button
+                  onClick={() => setShowHistory(!showHistory)}
+                  className="btn-secondary h-12 group"
+                  title="Query history"
+                >
+                  <History className="w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-all duration-200 group-hover:scale-110" />
+                </button>
+
+                {/* History Dropdown Menu */}
+                {showHistory && (
+                  <div className="dropdown right-0 w-96 animate-fade-in">
+                    <div className="py-2">
+                      <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-700">
+                        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                          Recent Queries
+                        </p>
+                      </div>
+                      {queryHistory.map((historyQuery, index) => (
+                        <button
+                          key={index}
+                          onClick={() => {
+                            setQuery(historyQuery);
+                            setShowHistory(false);
+                          }}
+                          className={`dropdown-item flex items-center gap-3 text-left transition-all duration-150 animate-fade-in text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700`}
+                          style={{ animationDelay: `${index * 30}ms` }}
+                        >
+                          <History className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                          <span className="font-mono text-sm truncate flex-1">{historyQuery}</span>
+                        </button>
+                      ))}
+                      {queryHistory.length > 0 && (
+                        <div className="border-t border-slate-100 dark:border-slate-700 mt-2 pt-2 px-4">
+                          <button
+                            onClick={() => {
+                              setQueryHistory([]);
+                              localStorage.removeItem('lognog_query_history');
+                              setShowHistory(false);
+                            }}
+                            className="text-xs text-slate-500 hover:text-red-600 transition-colors"
+                          >
+                            Clear history
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Time Range */}
             <TimePicker
               onRangeChange={(earliest, latest) => {
@@ -699,6 +821,8 @@ search * | top 10 app_name`}
 
           if (!results || results.length === 0) return null;
 
+          const executionTime = searchMutation.data?.executionTime;
+
           return (
             <div className="animate-slide-up">
               {/* Result Stats */}
@@ -715,11 +839,16 @@ search * | top 10 app_name`}
                       <PanelLeft className="w-5 h-5" />
                     )}
                   </button>
-                  <p className="text-sm font-medium text-slate-700">
-                    <span className="text-2xl font-bold text-slate-900">
+                  <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                    <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">
                       {count.toLocaleString()}
                     </span>
-                    {' '}results found
+                    {' '}results
+                    {executionTime !== undefined && (
+                      <span className="text-slate-500 dark:text-slate-400">
+                        {' '}in {executionTime.toLocaleString()}ms
+                      </span>
+                    )}
                   </p>
                 </div>
 
@@ -773,6 +902,23 @@ search * | top 10 app_name`}
                       {showSqlPreview ? 'Hide SQL' : 'Show SQL'}
                     </button>
                   )}
+                  <button
+                    onClick={() => copyToClipboard(results as Record<string, unknown>[])}
+                    className="btn-ghost text-xs"
+                    title="Copy as JSON"
+                  >
+                    {jsonCopied ? (
+                      <>
+                        <Check className="w-4 h-4 text-green-500" />
+                        Copied!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-4 h-4" />
+                        Copy JSON
+                      </>
+                    )}
+                  </button>
                   <button
                     onClick={() => exportToCSV(results as Record<string, unknown>[])}
                     className="btn-ghost text-xs"

@@ -22,6 +22,9 @@ router.post('/query', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Query is required' });
     }
 
+    // Measure execution time
+    const startTime = performance.now();
+
     // Execute query using backend abstraction (handles both ClickHouse and SQLite)
     const { sql, results: rawResults } = await executeDSLQuery(query, {
       earliest,
@@ -34,6 +37,9 @@ router.post('/query', async (req: Request, res: Response) => {
       results = await applyFieldExtraction(results, source_type);
     }
 
+    // Calculate execution time
+    const executionTime = Math.round(performance.now() - startTime);
+
     return res.json({
       query,
       sql,
@@ -41,6 +47,7 @@ router.post('/query', async (req: Request, res: Response) => {
       count: results.length,
       fields_extracted: extract_fields,
       backend: getBackendInfo().backend,
+      executionTime,
     });
   } catch (error) {
     if (error instanceof ParseError) {

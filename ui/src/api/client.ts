@@ -5,6 +5,7 @@ export interface SearchResult {
   sql: string;
   results: Record<string, unknown>[];
   count: number;
+  executionTime?: number;
 }
 
 export interface SavedSearch {

@@ -3,6 +3,7 @@ import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import './TimePicker.css';
 import { Clock, Calendar, ChevronDown, X } from 'lucide-react';
+import { Tooltip } from './ui/Tooltip';
 
 interface TimeRange {
   label: string;
@@ -30,6 +31,35 @@ const TIME_PRESETS: TimeRange[] = [
   { label: 'All time', value: 'all', earliest: '' },
   { label: 'Custom range', value: 'custom', earliest: 'custom' },
 ];
+
+/**
+ * Generates a relative time tooltip description for a time preset
+ */
+function getPresetTooltip(preset: TimeRange): string {
+  if (preset.value === 'all') {
+    return 'Show all available logs without time restriction';
+  }
+  if (preset.value === 'custom') {
+    return 'Select a custom date and time range';
+  }
+
+  // Parse the value to get the unit and amount
+  const match = preset.value.match(/^-(\d+)([mhd])$/);
+  if (!match) return preset.label;
+
+  const amount = parseInt(match[1], 10);
+  const unit = match[2];
+
+  const unitNames: Record<string, { singular: string; plural: string }> = {
+    'm': { singular: 'minute', plural: 'minutes' },
+    'h': { singular: 'hour', plural: 'hours' },
+    'd': { singular: 'day', plural: 'days' },
+  };
+
+  const unitName = amount === 1 ? unitNames[unit].singular : unitNames[unit].plural;
+
+  return `Shows logs from ${amount} ${unitName} ago to now`;
+}
 
 export default function TimePicker({ onRangeChange, defaultRange = '-24h', className = '' }: TimePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -159,20 +189,26 @@ export default function TimePicker({ onRangeChange, defaultRange = '-24h', class
                 </p>
               </div>
               {TIME_PRESETS.map((preset, index) => (
-                <button
+                <Tooltip
                   key={preset.value}
-                  onClick={() => handlePresetSelect(preset)}
-                  className={`dropdown-item flex items-center justify-between transition-all duration-150 animate-fade-in animate-stagger-${Math.min(index + 1, 8)} ${
-                    selectedPreset.value === preset.value && !isCustomMode
-                      ? 'bg-sky-50 text-sky-600 font-medium dark:bg-sky-900/20 dark:text-sky-400'
-                      : 'text-slate-700 dark:text-slate-300'
-                  }`}
+                  content={getPresetTooltip(preset)}
+                  placement="left"
+                  delay={300}
                 >
-                  <span>{preset.label}</span>
-                  {preset.value === 'custom' && (
-                    <Calendar className="w-4 h-4 text-slate-400 dark:text-slate-500" />
-                  )}
-                </button>
+                  <button
+                    onClick={() => handlePresetSelect(preset)}
+                    className={`dropdown-item flex items-center justify-between transition-all duration-150 animate-fade-in animate-stagger-${Math.min(index + 1, 8)} ${
+                      selectedPreset.value === preset.value && !isCustomMode
+                        ? 'bg-sky-50 text-sky-600 font-medium dark:bg-sky-900/20 dark:text-sky-400'
+                        : 'text-slate-700 dark:text-slate-300'
+                    }`}
+                  >
+                    <span>{preset.label}</span>
+                    {preset.value === 'custom' && (
+                      <Calendar className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+                    )}
+                  </button>
+                </Tooltip>
               ))}
             </div>
           ) : (

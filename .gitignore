@@ -67,3 +67,6 @@ take-screenshots.js
 
 # Auto Claude data directory
 .auto-claude/
+
+# Git worktrees
+.worktrees/
