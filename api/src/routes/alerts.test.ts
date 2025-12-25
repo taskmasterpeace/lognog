@@ -135,7 +135,7 @@ describe('Alerts API - Bulk Toggle Endpoint', () => {
       it('should return parsed actions in success response', async () => {
         const alert = createAlert('Alert with Actions', 'search index=main', {
           enabled: false,
-          actions: [{ type: 'email', to: 'test@example.com' }],
+          actions: [{ type: 'email', config: { to: 'test@example.com' } }],
         });
         createdAlertIds.push(alert.id);
 
@@ -145,7 +145,7 @@ describe('Alerts API - Bulk Toggle Endpoint', () => {
 
         expect(response.status).toBe(200);
         expect(response.body.success[0].actions).toEqual([
-          { type: 'email', to: 'test@example.com' },
+          { type: 'email', config: { to: 'test@example.com' } },
         ]);
       });
     });
