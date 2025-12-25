@@ -229,9 +229,8 @@ export default function AlertsPage() {
     },
   });
 
-  // Mark mutations as used - will be connected in subtask 4.2
-  void bulkEnableMutation;
-  void bulkDisableMutation;
+  // Check if any bulk operation is in progress
+  const isBulkOperationPending = bulkEnableMutation.isPending || bulkDisableMutation.isPending;
 
   const resetForm = () => {
     setFormData({
@@ -477,20 +476,30 @@ export default function AlertsPage() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => {
-                // Will be wired up in subtask 4.2
+                bulkEnableMutation.mutate(Array.from(selectedAlertIds));
               }}
-              className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg flex items-center gap-2 transition-colors"
+              disabled={isBulkOperationPending}
+              className="px-4 py-2 bg-green-500 hover:bg-green-600 disabled:bg-green-300 disabled:cursor-not-allowed text-white rounded-lg flex items-center gap-2 transition-colors"
             >
-              <Play className="w-4 h-4" />
+              {bulkEnableMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Play className="w-4 h-4" />
+              )}
               Enable Selected
             </button>
             <button
               onClick={() => {
-                // Will be wired up in subtask 4.2
+                bulkDisableMutation.mutate(Array.from(selectedAlertIds));
               }}
-              className="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg flex items-center gap-2 transition-colors"
+              disabled={isBulkOperationPending}
+              className="px-4 py-2 bg-orange-500 hover:bg-orange-600 disabled:bg-orange-300 disabled:cursor-not-allowed text-white rounded-lg flex items-center gap-2 transition-colors"
             >
-              <Pause className="w-4 h-4" />
+              {bulkDisableMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Pause className="w-4 h-4" />
+              )}
               Disable Selected
             </button>
             <button
