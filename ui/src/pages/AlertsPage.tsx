@@ -33,6 +33,7 @@ import {
   toggleAlert,
   testAlert,
   evaluateAlert,
+  bulkEnableAlerts,
   Alert,
   AlertAction,
   createSilence,
@@ -207,6 +208,14 @@ export default function AlertsPage() {
       queryClient.invalidateQueries({ queryKey: ['alerts'] });
       queryClient.invalidateQueries({ queryKey: ['alertHistory'] });
       alert(data.message);
+    },
+  });
+
+  const bulkEnableMutation = useMutation({
+    mutationFn: (ids: string[]) => bulkEnableAlerts(ids),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['alerts'] });
+      deselectAllAlerts();
     },
   });
 
@@ -472,7 +481,19 @@ export default function AlertsPage() {
             </span>
           </div>
           <div className="flex items-center gap-2">
-            {/* Action buttons will be added in subtasks 4.2, 4.3, 4.4 */}
+            <button
+              onClick={() => bulkEnableMutation.mutate(Array.from(selectedAlertIds))}
+              disabled={bulkEnableMutation.isPending}
+              className="px-3 py-1.5 bg-green-500 hover:bg-green-600 text-white text-sm font-medium rounded-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {bulkEnableMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <CheckCircle2 className="w-4 h-4" />
+              )}
+              Enable Selected
+            </button>
+            {/* Additional action buttons will be added in subtasks 4.3, 4.4 */}
           </div>
         </div>
       )}
