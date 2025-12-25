@@ -33,6 +33,8 @@ import {
   toggleAlert,
   testAlert,
   evaluateAlert,
+  bulkEnableAlerts,
+  bulkDisableAlerts,
   Alert,
   AlertAction,
   createSilence,
@@ -209,6 +211,27 @@ export default function AlertsPage() {
       alert(data.message);
     },
   });
+
+  // Bulk operations mutations
+  const bulkEnableMutation = useMutation({
+    mutationFn: bulkEnableAlerts,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['alerts'] });
+      clearSelection();
+    },
+  });
+
+  const bulkDisableMutation = useMutation({
+    mutationFn: bulkDisableAlerts,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['alerts'] });
+      clearSelection();
+    },
+  });
+
+  // Mark mutations as used - will be connected in subtask 4.2
+  void bulkEnableMutation;
+  void bulkDisableMutation;
 
   const resetForm = () => {
     setFormData({
