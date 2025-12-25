@@ -315,4 +315,40 @@ router.post('/history/:id/acknowledge', (req: Request, res: Response) => {
   }
 });
 
+/**
+ * Escape a CSV field according to RFC 4180 standard.
+ * - Fields containing commas, double quotes, or newlines are enclosed in double quotes
+ * - Double quotes within fields are escaped by doubling them
+ */
+function escapeCSVField(value: unknown): string {
+  if (value === null || value === undefined) {
+    return '';
+  }
+
+  const str = String(value);
+
+  // Check if the field needs quoting (contains comma, double quote, or newline)
+  if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+    // Escape double quotes by doubling them, then wrap in double quotes
+    return '"' + str.replace(/"/g, '""') + '"';
+  }
+
+  return str;
+}
+
+/**
+ * Convert an array of objects to CSV format following RFC 4180 standard.
+ */
+function convertToCSV(data: Record<string, unknown>[], columns: string[]): string {
+  // Header row
+  const header = columns.map(col => escapeCSVField(col)).join(',');
+
+  // Data rows
+  const rows = data.map(row =>
+    columns.map(col => escapeCSVField(row[col])).join(',')
+  );
+
+  return [header, ...rows].join('\r\n');
+}
+
 export default router;
