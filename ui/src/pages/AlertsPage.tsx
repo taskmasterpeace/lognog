@@ -23,6 +23,7 @@ import {
   TestTube,
   Settings,
   BellOff,
+  XCircle,
 } from 'lucide-react';
 import {
   getAlerts,
@@ -34,6 +35,7 @@ import {
   testAlert,
   evaluateAlert,
   bulkEnableAlerts,
+  bulkDisableAlerts,
   Alert,
   AlertAction,
   createSilence,
@@ -213,6 +215,14 @@ export default function AlertsPage() {
 
   const bulkEnableMutation = useMutation({
     mutationFn: (ids: string[]) => bulkEnableAlerts(ids),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['alerts'] });
+      deselectAllAlerts();
+    },
+  });
+
+  const bulkDisableMutation = useMutation({
+    mutationFn: (ids: string[]) => bulkDisableAlerts(ids),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['alerts'] });
       deselectAllAlerts();
@@ -493,7 +503,19 @@ export default function AlertsPage() {
               )}
               Enable Selected
             </button>
-            {/* Additional action buttons will be added in subtasks 4.3, 4.4 */}
+            <button
+              onClick={() => bulkDisableMutation.mutate(Array.from(selectedAlertIds))}
+              disabled={bulkDisableMutation.isPending}
+              className="px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium rounded-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {bulkDisableMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <XCircle className="w-4 h-4" />
+              )}
+              Disable Selected
+            </button>
+            {/* Additional action buttons will be added in subtask 4.4 */}
           </div>
         </div>
       )}
