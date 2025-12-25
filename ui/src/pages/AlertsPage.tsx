@@ -31,11 +31,13 @@ import {
   updateAlert,
   deleteAlert,
   toggleAlert,
+  bulkToggleAlerts,
   testAlert,
   evaluateAlert,
   Alert,
   AlertAction,
   createSilence,
+  BulkToggleResult,
 } from '../api/client';
 import VariableHelper from '../components/VariableHelper';
 import { InfoTip } from '../components/ui/InfoTip';
@@ -212,6 +214,45 @@ export default function AlertsPage() {
       alert(data.message);
     },
   });
+
+  const bulkToggleMutation = useMutation({
+    mutationFn: ({ ids, enabled }: { ids: string[]; enabled: boolean }) =>
+      bulkToggleAlerts(ids, enabled),
+    onSuccess: (result: BulkToggleResult, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['alerts'] });
+      clearSelection();
+
+      // Build notification message
+      const action = variables.enabled ? 'enabled' : 'disabled';
+      const successCount = result.success.length;
+      const failedCount = result.failed.length;
+
+      if (failedCount === 0) {
+        alert(`Successfully ${action} ${successCount} alert${successCount !== 1 ? 's' : ''}.`);
+      } else if (successCount === 0) {
+        alert(`Failed to ${action.slice(0, -1)} all ${failedCount} alert${failedCount !== 1 ? 's' : ''}. ${result.failed.map(f => f.error).join(', ')}`);
+      } else {
+        alert(`${action.charAt(0).toUpperCase() + action.slice(1)} ${successCount} alert${successCount !== 1 ? 's' : ''}. Failed: ${failedCount}.`);
+      }
+    },
+    onError: (error) => {
+      alert(`Bulk operation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    },
+  });
+
+  const handleBulkEnable = useCallback(() => {
+    const ids = Array.from(selectedAlerts);
+    if (ids.length > 0) {
+      bulkToggleMutation.mutate({ ids, enabled: true });
+    }
+  }, [selectedAlerts, bulkToggleMutation]);
+
+  const handleBulkDisable = useCallback(() => {
+    const ids = Array.from(selectedAlerts);
+    if (ids.length > 0) {
+      bulkToggleMutation.mutate({ ids, enabled: false });
+    }
+  }, [selectedAlerts, bulkToggleMutation]);
 
   const resetForm = () => {
     setFormData({
@@ -473,23 +514,29 @@ export default function AlertsPage() {
               </div>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => {
-                    // Placeholder for bulk enable - will be implemented in subtask 3.5
-                  }}
-                  className="px-3 py-1.5 text-sm bg-green-100 hover:bg-green-200 dark:bg-green-900/50 dark:hover:bg-green-900/70 text-green-700 dark:text-green-300 rounded-lg flex items-center gap-1.5 transition-colors"
+                  onClick={handleBulkEnable}
+                  disabled={bulkToggleMutation.isPending}
+                  className="px-3 py-1.5 text-sm bg-green-100 hover:bg-green-200 dark:bg-green-900/50 dark:hover:bg-green-900/70 text-green-700 dark:text-green-300 rounded-lg flex items-center gap-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   title="Enable selected alerts"
                 >
-                  <Play className="w-4 h-4" />
+                  {bulkToggleMutation.isPending && bulkToggleMutation.variables?.enabled ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Play className="w-4 h-4" />
+                  )}
                   Enable All
                 </button>
                 <button
-                  onClick={() => {
-                    // Placeholder for bulk disable - will be implemented in subtask 3.5
-                  }}
-                  className="px-3 py-1.5 text-sm bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg flex items-center gap-1.5 transition-colors"
+                  onClick={handleBulkDisable}
+                  disabled={bulkToggleMutation.isPending}
+                  className="px-3 py-1.5 text-sm bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg flex items-center gap-1.5 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   title="Disable selected alerts"
                 >
-                  <Pause className="w-4 h-4" />
+                  {bulkToggleMutation.isPending && !bulkToggleMutation.variables?.enabled ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Pause className="w-4 h-4" />
+                  )}
                   Disable All
                 </button>
                 <button
