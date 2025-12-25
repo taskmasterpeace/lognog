@@ -534,11 +534,17 @@ export default function AlertsPage() {
             const SeverityIcon = severity.icon;
             const isExpanded = expandedAlerts.has(alert.id);
 
+            const isSelected = selectedAlertIds.has(alert.id);
+
             return (
               <div
                 key={alert.id}
-                className={`bg-white dark:bg-slate-800 rounded-xl shadow-sm border ${
-                  alert.enabled ? 'border-slate-200 dark:border-slate-700' : 'border-slate-200/50 dark:border-slate-700/50 opacity-60'
+                className={`bg-white dark:bg-slate-800 rounded-xl shadow-sm border-2 transition-colors ${
+                  isSelected
+                    ? 'border-sky-400 dark:border-sky-500 bg-sky-50/50 dark:bg-sky-900/20 ring-1 ring-sky-200 dark:ring-sky-700'
+                    : alert.enabled
+                      ? 'border-slate-200 dark:border-slate-700'
+                      : 'border-slate-200/50 dark:border-slate-700/50 opacity-60'
                 }`}
               >
                 {/* Alert Header */}
