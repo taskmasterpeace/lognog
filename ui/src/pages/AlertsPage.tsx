@@ -463,6 +463,20 @@ export default function AlertsPage() {
         </div>
       )}
 
+      {/* Bulk Action Toolbar - shown when items are selected */}
+      {selectedAlertIds.size > 0 && (
+        <div className="mb-4 flex items-center justify-between px-4 py-3 bg-sky-50 dark:bg-sky-900/20 rounded-lg border border-sky-200 dark:border-sky-800">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-sky-700 dark:text-sky-300">
+              {selectedAlertIds.size} {selectedAlertIds.size === 1 ? 'alert' : 'alerts'} selected
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            {/* Action buttons will be added in subtasks 4.2, 4.3, 4.4 */}
+          </div>
+        </div>
+      )}
+
       {/* Alerts List */}
       {alerts && alerts.length > 0 ? (
         <div className="space-y-4">
