@@ -154,6 +154,10 @@ export async function deleteDashboard(id: string): Promise<void> {
   await request(`/dashboards/${id}`, { method: 'DELETE' });
 }
 
+export async function duplicateDashboard(id: string): Promise<Dashboard> {
+  return request(`/dashboards/${id}/duplicate`, { method: 'POST' });
+}
+
 export async function createDashboardPanel(
   dashboardId: string,
   panel: {

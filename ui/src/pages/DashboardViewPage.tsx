@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Plus,
@@ -27,6 +27,7 @@ import {
   Download,
   Sparkles,
   Variable,
+  Copy,
 } from 'lucide-react';
 import {
   XAxis,
@@ -51,6 +52,7 @@ import {
   updateDashboardLayout,
   getDashboardVariables,
   exportDashboard,
+  duplicateDashboard,
   DashboardPanel,
   DashboardVariable as APIDashboardVariable,
 } from '../api/client';
@@ -524,6 +526,7 @@ search error | timechart span=1h count"
 export default function DashboardViewPage() {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const { drilldown } = useDrilldown();
 
   const [timeRange, setTimeRange] = useState('-24h');
@@ -624,6 +627,14 @@ export default function DashboardViewPage() {
       updateDashboardLayout(id!, layout),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dashboard', id] });
+    },
+  });
+
+  const duplicateMutation = useMutation({
+    mutationFn: () => duplicateDashboard(id!),
+    onSuccess: (newDashboard) => {
+      queryClient.invalidateQueries({ queryKey: ['dashboards'] });
+      navigate(`/dashboards/${newDashboard.id}`);
     },
   });
 
@@ -891,6 +902,14 @@ export default function DashboardViewPage() {
                   >
                     <Download className="w-4 h-4" />
                     Export
+                  </button>
+                  <button
+                    onClick={() => { duplicateMutation.mutate(); setShowActionsDropdown(false); }}
+                    disabled={duplicateMutation.isPending}
+                    className="dropdown-item"
+                  >
+                    <Copy className="w-4 h-4" />
+                    {duplicateMutation.isPending ? 'Duplicating...' : 'Duplicate'}
                   </button>
                   <button
                     onClick={() => { setShowAIInsights(!showAIInsights); setShowActionsDropdown(false); }}

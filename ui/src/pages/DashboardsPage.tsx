@@ -10,8 +10,9 @@ import {
   Grid3X3,
   X,
   Sparkles,
+  Copy,
 } from 'lucide-react';
-import { getDashboards, createDashboard, deleteDashboard, Dashboard } from '../api/client';
+import { getDashboards, createDashboard, deleteDashboard, duplicateDashboard, Dashboard } from '../api/client';
 
 const TEMPLATES = [
   {
@@ -66,6 +67,13 @@ export default function DashboardsPage() {
 
   const deleteMutation = useMutation({
     mutationFn: deleteDashboard,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dashboards'] });
+    },
+  });
+
+  const duplicateMutation = useMutation({
+    mutationFn: duplicateDashboard,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dashboards'] });
     },
@@ -140,17 +148,27 @@ export default function DashboardsPage() {
                           )}
                         </div>
                       </div>
-                      <button
-                        onClick={() => {
-                          if (confirm(`Delete dashboard "${dashboard.name}"? This cannot be undone.`)) {
-                            deleteMutation.mutate(dashboard.id);
-                          }
-                        }}
-                        className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
-                        title="Delete dashboard"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => duplicateMutation.mutate(dashboard.id)}
+                          disabled={duplicateMutation.isPending}
+                          className="p-1.5 text-slate-400 hover:text-sky-500 hover:bg-sky-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all disabled:opacity-50"
+                          title="Duplicate dashboard"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (confirm(`Delete dashboard "${dashboard.name}"? This cannot be undone.`)) {
+                              deleteMutation.mutate(dashboard.id);
+                            }
+                          }}
+                          className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                          title="Delete dashboard"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
 
                     <div className="flex items-center justify-between pt-3 border-t border-slate-100">
