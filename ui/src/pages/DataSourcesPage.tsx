@@ -14,8 +14,10 @@ import {
   FileCode,
   AlertCircle,
   CheckCircle2,
+  Plus,
 } from 'lucide-react';
 import { getTemplatesByCategory, getTemplateStats, SourceTemplate } from '../api/client';
+import AddDataSourceWizard from '../components/AddDataSourceWizard';
 
 const CATEGORY_ICONS = {
   database: Database,
@@ -37,6 +39,7 @@ export default function DataSourcesPage() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedTemplate, setSelectedTemplate] = useState<SourceTemplate | null>(null);
   const [showSetupModal, setShowSetupModal] = useState(false);
+  const [showWizard, setShowWizard] = useState(false);
   const [copiedSection, setCopiedSection] = useState<string | null>(null);
 
   const { data: templatesByCategory, isLoading } = useQuery({
@@ -88,14 +91,23 @@ export default function DataSourcesPage() {
   return (
     <div className="p-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-          <Database className="w-7 h-7 text-sky-500" />
-          Data Sources
-        </h1>
-        <p className="text-slate-500 dark:text-slate-400 mt-1">
-          Configure log sources with pre-built templates for common platforms and applications
-        </p>
+      <div className="mb-6 flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <Database className="w-7 h-7 text-sky-500" />
+            Data Sources
+          </h1>
+          <p className="text-slate-500 dark:text-slate-400 mt-1">
+            Configure log sources with pre-built templates for common platforms and applications
+          </p>
+        </div>
+        <button
+          onClick={() => setShowWizard(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg font-medium shadow-sm transition-colors"
+        >
+          <Plus className="w-5 h-5" />
+          Add Data Source
+        </button>
       </div>
 
       {/* Stats Cards */}
@@ -417,6 +429,15 @@ export default function DataSourcesPage() {
           </div>
         </div>
       )}
+
+      {/* Add Data Source Wizard */}
+      <AddDataSourceWizard
+        isOpen={showWizard}
+        onClose={() => setShowWizard(false)}
+        onComplete={() => {
+          // Optionally refresh or show a success message
+        }}
+      />
     </div>
   );
 }

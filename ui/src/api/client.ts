@@ -1022,3 +1022,96 @@ export async function getAIInsights(dashboardId: string, timeRange: string): Pro
     body: JSON.stringify({ dashboardId, timeRange }),
   });
 }
+
+// Ingestion Validation API
+export interface ValidatedField {
+  value: unknown;
+  detected_from: string | null;
+}
+
+export interface ValidationResult {
+  success: boolean;
+  event_count: number;
+  extracted: {
+    standard_fields: {
+      timestamp: ValidatedField;
+      hostname: ValidatedField;
+      app_name: ValidatedField;
+      severity: ValidatedField;
+      message: ValidatedField;
+    };
+    custom_fields: Record<string, { value: unknown; type: string }>;
+    custom_field_count: number;
+  };
+  warnings: string[];
+  storage_preview: {
+    message: string;
+    structured_data: string;
+  };
+}
+
+export async function validateIngestion(payload: unknown): Promise<ValidationResult> {
+  return request('/ingest/validate', {
+    method: 'POST',
+    body: JSON.stringify({ payload }),
+  });
+}
+
+export async function sendTestEvent(payload: unknown, apiKey: string): Promise<{ accepted: number }> {
+  // This uses the generic HTTP ingest endpoint
+  const response = await fetch(`${API_BASE}/ingest/http`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-API-Key': apiKey,
+    },
+    body: JSON.stringify(Array.isArray(payload) ? payload : [payload]),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to send test event');
+  }
+
+  return response.json();
+}
+
+// API Key Management
+export interface ApiKey {
+  id: string;
+  name: string;
+  key_prefix: string;
+  permissions: string[];
+  expires_at: string | null;
+  revoked: boolean;
+  created_at: string;
+  last_used_at: string | null;
+}
+
+export interface CreateApiKeyResponse {
+  apiKey: string;
+  keyData: ApiKey;
+}
+
+export async function getApiKeys(): Promise<ApiKey[]> {
+  return request('/auth/api-keys');
+}
+
+export async function createApiKey(name: string, permissions?: string[], expiresInDays?: number): Promise<CreateApiKeyResponse> {
+  return request('/auth/api-keys', {
+    method: 'POST',
+    body: JSON.stringify({ name, permissions, expiresInDays }),
+  });
+}
+
+export async function revokeApiKey(id: string): Promise<{ message: string }> {
+  return request(`/auth/api-keys/${id}/revoke`, {
+    method: 'POST',
+  });
+}
+
+export async function deleteApiKey(id: string): Promise<{ message: string }> {
+  return request(`/auth/api-keys/${id}`, {
+    method: 'DELETE',
+  });
+}

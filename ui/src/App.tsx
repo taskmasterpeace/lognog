@@ -32,6 +32,7 @@ import LandingPage from './pages/LandingPage';
 import SettingsPage from './pages/SettingsPage';
 import AlertsPage from './pages/AlertsPage';
 import SilencesPage from './pages/SilencesPage';
+import DataSourcesPage from './pages/DataSourcesPage';
 
 interface NavLinkProps {
   to: string;
@@ -131,6 +132,7 @@ function Layout({ children }: { children: React.ReactNode }) {
           <p className="px-3 py-2 mt-6 text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
             Configuration
           </p>
+          <NavLink to="/data-sources" icon={Database}>Data Sources</NavLink>
           <NavLink to="/knowledge" icon={BookOpen}>Knowledge</NavLink>
 
           <p className="px-3 py-2 mt-6 text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
@@ -295,6 +297,18 @@ function AppRoutes() {
             <Layout>
               <AnimatedPage>
                 <SilencesPage />
+              </AnimatedPage>
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/data-sources"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <AnimatedPage>
+                <DataSourcesPage />
               </AnimatedPage>
             </Layout>
           </ProtectedRoute>

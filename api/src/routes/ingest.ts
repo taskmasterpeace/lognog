@@ -1629,4 +1629,175 @@ router.post('/smartthings', authenticateIngestion, async (req, res) => {
   }
 });
 
+// =============================================================================
+// Validate/Preview Endpoint (Dry Run)
+// =============================================================================
+
+/**
+ * POST /api/ingest/validate
+ *
+ * Validates JSON payload and returns extracted fields WITHOUT storing.
+ * Used by the "Add Data Source" wizard for live field preview.
+ *
+ * Authentication: Optional (works without auth for testing)
+ */
+router.post('/validate', async (req, res) => {
+  try {
+    const { payload } = req.body;
+
+    if (!payload) {
+      return res.status(400).json({
+        error: 'Missing payload',
+        message: 'Request body must include a "payload" field with the JSON to validate',
+      });
+    }
+
+    // Handle both single object and array
+    const events = Array.isArray(payload) ? payload : [payload];
+    const warnings: string[] = [];
+
+    const extractedFields = events.map((event: Record<string, unknown>) => {
+      // Try to extract timestamp from various common field names
+      let timestamp: string | null = null;
+      let timestampField: string | null = null;
+      const tsFieldNames = ['timestamp', 'time', '@timestamp', 'ts', 'datetime', 'created_at', 'date'];
+
+      for (const fieldName of tsFieldNames) {
+        if (event[fieldName]) {
+          timestampField = fieldName;
+          const tsField = event[fieldName];
+          if (typeof tsField === 'number') {
+            timestamp = new Date(tsField > 1e12 ? tsField : tsField * 1000).toISOString();
+          } else if (typeof tsField === 'string') {
+            try {
+              timestamp = new Date(tsField).toISOString();
+            } catch {
+              timestamp = null;
+            }
+          }
+          break;
+        }
+      }
+
+      if (!timestamp) {
+        warnings.push('No timestamp field found - server time will be used');
+      }
+
+      // Extract hostname
+      let hostname: string | null = null;
+      let hostnameField: string | null = null;
+      const hostFieldNames = ['hostname', 'host', 'source', 'server', 'machine', 'origin'];
+
+      for (const fieldName of hostFieldNames) {
+        if (event[fieldName]) {
+          hostnameField = fieldName;
+          hostname = String(event[fieldName]);
+          break;
+        }
+      }
+
+      // Extract app name
+      let appName: string | null = null;
+      let appNameField: string | null = null;
+      const appFieldNames = ['app_name', 'app', 'application', 'program', 'service', 'component'];
+
+      for (const fieldName of appFieldNames) {
+        if (event[fieldName]) {
+          appNameField = fieldName;
+          appName = String(event[fieldName]);
+          break;
+        }
+      }
+
+      // Extract message
+      let message: string | null = null;
+      let messageField: string | null = null;
+      const msgFieldNames = ['message', 'msg', 'log', 'text', 'body', 'content'];
+
+      for (const fieldName of msgFieldNames) {
+        if (event[fieldName]) {
+          messageField = fieldName;
+          message = String(event[fieldName]);
+          break;
+        }
+      }
+
+      if (!message) {
+        message = JSON.stringify(event);
+        warnings.push('No message field found - entire JSON will be used as message');
+      }
+
+      // Extract severity
+      let severity = 6; // default info
+      let severityField: string | null = null;
+      const levelFieldNames = ['level', 'severity', 'loglevel', 'priority'];
+
+      for (const fieldName of levelFieldNames) {
+        if (event[fieldName] !== undefined) {
+          severityField = fieldName;
+          const levelField = event[fieldName];
+          if (typeof levelField === 'number') {
+            severity = Math.min(7, Math.max(0, levelField));
+          } else {
+            const lvl = String(levelField).toLowerCase();
+            if (lvl.includes('fatal') || lvl.includes('crit') || lvl.includes('emergency')) severity = 2;
+            else if (lvl.includes('error') || lvl.includes('err')) severity = 3;
+            else if (lvl.includes('warn')) severity = 4;
+            else if (lvl.includes('notice')) severity = 5;
+            else if (lvl.includes('info')) severity = 6;
+            else if (lvl.includes('debug') || lvl.includes('trace')) severity = 7;
+          }
+          break;
+        }
+      }
+
+      // Get all custom fields (fields not in the standard extraction list)
+      const standardFields = new Set([
+        ...tsFieldNames, ...hostFieldNames, ...appFieldNames,
+        ...msgFieldNames, ...levelFieldNames
+      ]);
+
+      const customFields: Record<string, { value: unknown; type: string }> = {};
+      for (const [key, value] of Object.entries(event)) {
+        if (!standardFields.has(key)) {
+          customFields[key] = {
+            value,
+            type: value === null ? 'null' : Array.isArray(value) ? 'array' : typeof value,
+          };
+        }
+      }
+
+      return {
+        standard_fields: {
+          timestamp: { value: timestamp, detected_from: timestampField },
+          hostname: { value: hostname || 'unknown', detected_from: hostnameField },
+          app_name: { value: appName || 'generic', detected_from: appNameField },
+          severity: { value: severity, detected_from: severityField },
+          message: { value: message, detected_from: messageField },
+        },
+        custom_fields: customFields,
+        custom_field_count: Object.keys(customFields).length,
+      };
+    });
+
+    res.json({
+      success: true,
+      event_count: events.length,
+      extracted: extractedFields.length === 1 ? extractedFields[0] : extractedFields,
+      warnings: [...new Set(warnings)], // Deduplicate
+      storage_preview: {
+        message: extractedFields[0]?.standard_fields.message.value,
+        structured_data: 'Full JSON payload preserved in structured_data column',
+      },
+    });
+  } catch (error) {
+    console.error('Validate error:', error);
+    res.status(400).json({
+      success: false,
+      error: 'Validation failed',
+      message: error instanceof Error ? error.message : 'Invalid JSON payload',
+    });
+  }
+});
+
 export default router;
