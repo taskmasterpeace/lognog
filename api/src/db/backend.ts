@@ -242,3 +242,210 @@ export function getBackendInfo(): {
     description: 'ClickHouse-based storage (scales to billions of logs)',
   };
 }
+
+/**
+ * Discovered field from structured_data
+ */
+export interface DiscoveredField {
+  name: string;
+  type: string;
+  occurrences: number;
+  sampleValues: string[];
+}
+
+/**
+ * Discover custom fields from structured_data JSON column
+ * Scans recent logs to find unique field names and their types
+ */
+export async function discoverStructuredDataFields(options?: {
+  earliest?: string;
+  latest?: string;
+  limit?: number;
+  index?: string;
+}): Promise<DiscoveredField[]> {
+  const limit = options?.limit || 50;
+
+  if (isLiteMode()) {
+    // SQLite: Use json_each to extract keys from structured_data
+    let sql = `
+      SELECT
+        json_each.key as name,
+        typeof(json_each.value) as type,
+        COUNT(*) as occurrences
+      FROM logs, json_each(structured_data)
+      WHERE structured_data IS NOT NULL
+        AND structured_data != '{}'
+        AND structured_data != ''
+    `;
+
+    // Add time filter
+    if (options?.earliest) {
+      const match = options.earliest.match(/^-(\d+)([mhdw])$/i);
+      if (match) {
+        const value = parseInt(match[1], 10);
+        const unit = match[2].toLowerCase();
+        const unitMap: Record<string, string> = {
+          'm': 'minutes', 'h': 'hours', 'd': 'days', 'w': 'days',
+        };
+        const multiplier = unit === 'w' ? value * 7 : value;
+        sql += ` AND timestamp >= datetime('now', '-${multiplier} ${unitMap[unit]}')`;
+      }
+    }
+
+    // Add index filter
+    if (options?.index) {
+      sql += ` AND index_name = '${options.index.replace(/'/g, "''")}'`;
+    }
+
+    sql += `
+      GROUP BY json_each.key
+      ORDER BY occurrences DESC
+      LIMIT ${limit}
+    `;
+
+    const results = await sqliteLogs.executeQuery<{
+      name: string;
+      type: string;
+      occurrences: number;
+    }>(sql);
+
+    // For SQLite, we need to get sample values in a separate query
+    const fieldsWithSamples: DiscoveredField[] = [];
+    for (const field of results) {
+      // Get sample values for this field
+      const sampleSql = `
+        SELECT DISTINCT json_extract(structured_data, '$.' || ?) as val
+        FROM logs
+        WHERE structured_data IS NOT NULL
+          AND json_extract(structured_data, '$.' || ?) IS NOT NULL
+        LIMIT 5
+      `;
+      try {
+        const samples = await sqliteLogs.executeQuery<{ val: string }>(
+          sampleSql.replace(/\?/g, `'${field.name.replace(/'/g, "''")}'`)
+        );
+        fieldsWithSamples.push({
+          name: field.name,
+          type: mapSQLiteType(field.type),
+          occurrences: field.occurrences,
+          sampleValues: samples.map(s => String(s.val)).filter(v => v !== 'null'),
+        });
+      } catch {
+        fieldsWithSamples.push({
+          name: field.name,
+          type: mapSQLiteType(field.type),
+          occurrences: field.occurrences,
+          sampleValues: [],
+        });
+      }
+    }
+
+    return fieldsWithSamples;
+  } else {
+    // ClickHouse: Use JSONExtractKeys to get all keys
+    let sql = `
+      SELECT
+        arrayJoin(JSONExtractKeys(structured_data)) as name,
+        count() as occurrences
+      FROM lognog.logs
+      WHERE structured_data != '{}'
+        AND length(structured_data) > 2
+    `;
+
+    // Add time filter
+    if (options?.earliest) {
+      const match = options.earliest.match(/^-(\d+)([mhdw])$/i);
+      if (match) {
+        const value = parseInt(match[1], 10);
+        const unit = match[2].toLowerCase();
+        const unitMap: Record<string, string> = {
+          'm': 'MINUTE', 'h': 'HOUR', 'd': 'DAY', 'w': 'WEEK',
+        };
+        sql += ` AND timestamp >= now() - INTERVAL ${value} ${unitMap[unit]}`;
+      }
+    }
+
+    // Add index filter
+    if (options?.index) {
+      sql += ` AND index_name = '${options.index.replace(/'/g, "\\'")}'`;
+    }
+
+    sql += `
+      GROUP BY name
+      ORDER BY occurrences DESC
+      LIMIT ${limit}
+    `;
+
+    const results = await clickhouse.executeQuery<{
+      name: string;
+      occurrences: number;
+    }>(sql);
+
+    // Get sample values and types for each field
+    const fieldsWithSamples: DiscoveredField[] = [];
+    for (const field of results) {
+      try {
+        const sampleSql = `
+          SELECT
+            JSONType(structured_data, '${field.name.replace(/'/g, "\\'")}') as type,
+            groupUniqArray(5)(JSONExtractString(structured_data, '${field.name.replace(/'/g, "\\'")}')) as samples
+          FROM lognog.logs
+          WHERE structured_data != '{}'
+            AND JSONHas(structured_data, '${field.name.replace(/'/g, "\\'")}')
+          LIMIT 1
+        `;
+        const typeInfo = await clickhouse.executeQuery<{
+          type: string;
+          samples: string[];
+        }>(sampleSql);
+
+        fieldsWithSamples.push({
+          name: field.name,
+          type: mapClickHouseJSONType(typeInfo[0]?.type || 'String'),
+          occurrences: Number(field.occurrences),
+          sampleValues: typeInfo[0]?.samples || [],
+        });
+      } catch {
+        fieldsWithSamples.push({
+          name: field.name,
+          type: 'string',
+          occurrences: Number(field.occurrences),
+          sampleValues: [],
+        });
+      }
+    }
+
+    return fieldsWithSamples;
+  }
+}
+
+/**
+ * Map SQLite typeof() result to standard type names
+ */
+function mapSQLiteType(type: string): string {
+  const typeMap: Record<string, string> = {
+    'text': 'string',
+    'integer': 'number',
+    'real': 'number',
+    'null': 'null',
+    'blob': 'binary',
+  };
+  return typeMap[type.toLowerCase()] || 'string';
+}
+
+/**
+ * Map ClickHouse JSON type to standard type names
+ */
+function mapClickHouseJSONType(type: string): string {
+  const typeMap: Record<string, string> = {
+    'String': 'string',
+    'Int64': 'number',
+    'UInt64': 'number',
+    'Float64': 'number',
+    'Bool': 'boolean',
+    'Array': 'array',
+    'Object': 'object',
+    'Null': 'null',
+  };
+  return typeMap[type] || 'string';
+}

@@ -56,6 +56,7 @@ export default function FacetFilters({ facets, selectedFilters, onFilterChange }
       severity: 'Severity',
       hostname: 'Host',
       app_name: 'App Name',
+      index_name: 'Index',
       source_ip: 'Source IP',
       facility: 'Facility',
     };

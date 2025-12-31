@@ -1,15 +1,19 @@
 import { Router, Request, Response } from 'express';
 import { parseToAST, validateQuery, ParseError } from '../dsl/index.js';
-import { executeDSLQuery, getFields, getFieldValues, getBackendInfo } from '../db/backend.js';
+import { executeDSLQuery, getFields, getFieldValues, getBackendInfo, discoverStructuredDataFields, DiscoveredField } from '../db/backend.js';
 import {
   getSavedSearches,
   getSavedSearch,
   createSavedSearch,
   updateSavedSearch,
   deleteSavedSearch,
+  getUserPinnedFields,
+  setFieldPinned,
+  reorderPinnedFields,
 } from '../db/sqlite.js';
 import { translateNaturalLanguage, getSuggestedQueries } from '../services/ai-search.js';
 import { applyFieldExtraction } from '../services/field-extractor.js';
+import { optionalAuth } from '../auth/middleware.js';
 
 const router = Router();
 
@@ -171,7 +175,7 @@ router.post('/validate', (req: Request, res: Response) => {
   return res.json(result);
 });
 
-// Get field suggestions
+// Get field suggestions (core fields only)
 router.get('/fields', async (_req: Request, res: Response) => {
   try {
     const fields = await getFields();
@@ -179,6 +183,131 @@ router.get('/fields', async (_req: Request, res: Response) => {
   } catch (error) {
     console.error('Error fetching fields:', error);
     return res.status(500).json({ error: 'Failed to fetch fields' });
+  }
+});
+
+// Discover all available fields (core + custom from structured_data)
+router.get('/fields/discover', async (req: Request, res: Response) => {
+  try {
+    const { earliest, latest, limit, index } = req.query;
+
+    // Core fields that always exist in the schema
+    const coreFields = [
+      { name: 'timestamp', type: 'datetime', source: 'core' as const },
+      { name: 'hostname', type: 'string', source: 'core' as const },
+      { name: 'app_name', type: 'string', source: 'core' as const },
+      { name: 'severity', type: 'number', source: 'core' as const },
+      { name: 'message', type: 'string', source: 'core' as const },
+      { name: 'index_name', type: 'string', source: 'core' as const },
+      { name: 'facility', type: 'number', source: 'core' as const },
+      { name: 'source_ip', type: 'string', source: 'core' as const },
+      { name: 'protocol', type: 'string', source: 'core' as const },
+    ];
+
+    // Discover custom fields from structured_data
+    const discoveredFields = await discoverStructuredDataFields({
+      earliest: earliest as string | undefined,
+      latest: latest as string | undefined,
+      limit: limit ? parseInt(limit as string, 10) : undefined,
+      index: index as string | undefined,
+    });
+
+    // Map discovered fields to include source
+    const customFields = discoveredFields.map((f: DiscoveredField) => ({
+      name: f.name,
+      type: f.type,
+      source: 'discovered' as const,
+      occurrences: f.occurrences,
+      sampleValues: f.sampleValues,
+    }));
+
+    return res.json({
+      core: coreFields,
+      discovered: customFields,
+      backend: getBackendInfo().backend,
+    });
+  } catch (error) {
+    console.error('Error discovering fields:', error);
+    return res.status(500).json({ error: 'Failed to discover fields' });
+  }
+});
+
+// Get user's pinned field preferences
+router.get('/fields/preferences', optionalAuth, (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      // For anonymous users, return default pinned fields
+      return res.json({
+        pinned: ['severity', 'hostname', 'app_name', 'index_name'],
+        authenticated: false,
+      });
+    }
+
+    const pinned = getUserPinnedFields(req.user.id);
+    // If user has no preferences, return defaults
+    if (pinned.length === 0) {
+      return res.json({
+        pinned: ['severity', 'hostname', 'app_name', 'index_name'],
+        authenticated: true,
+        hasCustomPreferences: false,
+      });
+    }
+
+    return res.json({
+      pinned,
+      authenticated: true,
+      hasCustomPreferences: true,
+    });
+  } catch (error) {
+    console.error('Error fetching field preferences:', error);
+    return res.status(500).json({ error: 'Failed to fetch field preferences' });
+  }
+});
+
+// Pin or unpin a field
+router.post('/fields/pin', optionalAuth, (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        error: 'Authentication required',
+        message: 'Log in to save field preferences',
+      });
+    }
+
+    const { field, pinned } = req.body;
+    if (!field || typeof pinned !== 'boolean') {
+      return res.status(400).json({ error: 'field and pinned (boolean) are required' });
+    }
+
+    const preference = setFieldPinned(req.user.id, field, pinned);
+    return res.json({ success: true, preference });
+  } catch (error) {
+    console.error('Error setting field pin status:', error);
+    return res.status(500).json({ error: 'Failed to update field preference' });
+  }
+});
+
+// Reorder pinned fields
+router.post('/fields/reorder', optionalAuth, (req: Request, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        error: 'Authentication required',
+        message: 'Log in to save field preferences',
+      });
+    }
+
+    const { fields } = req.body;
+    if (!Array.isArray(fields) || fields.length === 0) {
+      return res.status(400).json({ error: 'fields array is required' });
+    }
+
+    reorderPinnedFields(req.user.id, fields);
+    const updatedPinned = getUserPinnedFields(req.user.id);
+    return res.json({ success: true, pinned: updatedPinned });
+  } catch (error) {
+    console.error('Error reordering pinned fields:', error);
+    return res.status(500).json({ error: 'Failed to reorder fields' });
   }
 });
 

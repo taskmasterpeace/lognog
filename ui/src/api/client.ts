@@ -114,6 +114,60 @@ export async function getFieldValues(field: string, limit?: number): Promise<{ v
   return request(`/search/fields/${field}/values${params}`);
 }
 
+// Field Discovery API
+export interface DiscoveredField {
+  name: string;
+  type: string;
+  source: 'core' | 'discovered';
+  occurrences?: number;
+  sampleValues?: string[];
+}
+
+export interface FieldDiscoveryResult {
+  core: DiscoveredField[];
+  discovered: DiscoveredField[];
+  backend: string;
+}
+
+export interface FieldPreferences {
+  pinned: string[];
+  authenticated: boolean;
+  hasCustomPreferences?: boolean;
+}
+
+export async function discoverFields(options?: {
+  earliest?: string;
+  latest?: string;
+  limit?: number;
+  index?: string;
+}): Promise<FieldDiscoveryResult> {
+  const params = new URLSearchParams();
+  if (options?.earliest) params.set('earliest', options.earliest);
+  if (options?.latest) params.set('latest', options.latest);
+  if (options?.limit) params.set('limit', String(options.limit));
+  if (options?.index) params.set('index', options.index);
+  const query = params.toString();
+  return request(`/search/fields/discover${query ? `?${query}` : ''}`);
+}
+
+export async function getFieldPreferences(): Promise<FieldPreferences> {
+  return request('/search/fields/preferences');
+}
+
+export async function pinField(field: string, pinned: boolean): Promise<{ success: boolean }> {
+  return request('/search/fields/pin', {
+    method: 'POST',
+    body: JSON.stringify({ field, pinned }),
+  });
+}
+
+export async function reorderFields(fields: string[]): Promise<{ success: boolean; pinned: string[] }> {
+  return request('/search/fields/reorder', {
+    method: 'POST',
+    body: JSON.stringify({ fields }),
+  });
+}
+
 // Saved Searches API
 export async function getSavedSearches(): Promise<SavedSearch[]> {
   return request('/search/saved');

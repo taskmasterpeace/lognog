@@ -331,6 +331,20 @@ function initializeSchema(): void {
 
     CREATE INDEX IF NOT EXISTS idx_rag_documents_source ON rag_documents(source_type);
     CREATE INDEX IF NOT EXISTS idx_rag_documents_title ON rag_documents(title);
+
+    -- User Field Preferences (for pinning/ordering fields in sidebar)
+    CREATE TABLE IF NOT EXISTS user_field_preferences (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      field_name TEXT NOT NULL,
+      is_pinned INTEGER DEFAULT 0,
+      display_order INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now')),
+      UNIQUE(user_id, field_name)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_user_field_prefs_user ON user_field_preferences(user_id);
+    CREATE INDEX IF NOT EXISTS idx_user_field_prefs_pinned ON user_field_preferences(user_id, is_pinned);
   `);
 
   // Add new columns to dashboards table if they don't exist
@@ -2260,4 +2274,82 @@ export function deleteRAGDocumentsBySource(sourceType: string, sourcePath?: stri
 export function getRAGDocumentsWithEmbeddings(): RAGDocument[] {
   const database = getSQLiteDB();
   return database.prepare('SELECT * FROM rag_documents WHERE embedding IS NOT NULL').all() as RAGDocument[];
+}
+
+// User Field Preferences (for sidebar field pinning/ordering)
+export interface UserFieldPreference {
+  id: string;
+  user_id: string;
+  field_name: string;
+  is_pinned: number;
+  display_order: number;
+  created_at: string;
+}
+
+export function getUserPinnedFields(userId: string): string[] {
+  const database = getSQLiteDB();
+  const prefs = database.prepare(
+    'SELECT field_name FROM user_field_preferences WHERE user_id = ? AND is_pinned = 1 ORDER BY display_order'
+  ).all(userId) as Array<{ field_name: string }>;
+  return prefs.map(p => p.field_name);
+}
+
+export function getUserFieldPreferences(userId: string): UserFieldPreference[] {
+  const database = getSQLiteDB();
+  return database.prepare(
+    'SELECT * FROM user_field_preferences WHERE user_id = ? ORDER BY display_order'
+  ).all(userId) as UserFieldPreference[];
+}
+
+export function setFieldPinned(userId: string, fieldName: string, pinned: boolean): UserFieldPreference {
+  const database = getSQLiteDB();
+
+  // Get current max order if pinning
+  let displayOrder = 0;
+  if (pinned) {
+    const maxOrder = database.prepare(
+      'SELECT MAX(display_order) as max_order FROM user_field_preferences WHERE user_id = ? AND is_pinned = 1'
+    ).get(userId) as { max_order: number | null };
+    displayOrder = (maxOrder?.max_order ?? -1) + 1;
+  }
+
+  // Upsert the preference
+  const existing = database.prepare(
+    'SELECT id FROM user_field_preferences WHERE user_id = ? AND field_name = ?'
+  ).get(userId, fieldName) as { id: string } | undefined;
+
+  if (existing) {
+    database.prepare(
+      'UPDATE user_field_preferences SET is_pinned = ?, display_order = ? WHERE id = ?'
+    ).run(pinned ? 1 : 0, displayOrder, existing.id);
+    return database.prepare('SELECT * FROM user_field_preferences WHERE id = ?').get(existing.id) as UserFieldPreference;
+  } else {
+    const id = uuidv4();
+    database.prepare(
+      'INSERT INTO user_field_preferences (id, user_id, field_name, is_pinned, display_order) VALUES (?, ?, ?, ?, ?)'
+    ).run(id, userId, fieldName, pinned ? 1 : 0, displayOrder);
+    return database.prepare('SELECT * FROM user_field_preferences WHERE id = ?').get(id) as UserFieldPreference;
+  }
+}
+
+export function reorderPinnedFields(userId: string, fieldNames: string[]): void {
+  const database = getSQLiteDB();
+
+  const updateMany = database.transaction((fields: string[]) => {
+    fields.forEach((fieldName, index) => {
+      database.prepare(
+        'UPDATE user_field_preferences SET display_order = ? WHERE user_id = ? AND field_name = ?'
+      ).run(index, userId, fieldName);
+    });
+  });
+
+  updateMany(fieldNames);
+}
+
+export function deleteFieldPreference(userId: string, fieldName: string): boolean {
+  const database = getSQLiteDB();
+  const result = database.prepare(
+    'DELETE FROM user_field_preferences WHERE user_id = ? AND field_name = ?'
+  ).run(userId, fieldName);
+  return result.changes > 0;
 }

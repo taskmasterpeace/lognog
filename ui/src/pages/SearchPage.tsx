@@ -26,7 +26,7 @@ import {
 import { executeSearch, getSavedSearches, createSavedSearch, aiSearch, getAISuggestions } from '../api/client';
 import LogViewer from '../components/LogViewer';
 import TimePicker from '../components/TimePicker';
-import FacetFilters, { Facet } from '../components/FacetFilters';
+import FieldSidebar from '../components/FieldSidebar';
 import { Tooltip, TooltipWithCode } from '../components/ui/Tooltip';
 import { InfoIcon } from '../components/ui/InfoTip';
 
@@ -240,43 +240,6 @@ export default function SearchPage() {
       setTimeout(() => setJsonCopied(false), 2000);
     }
   }, []);
-
-  // Calculate facets from results
-  const calculateFacets = useCallback((results: Record<string, unknown>[]): Facet[] => {
-    if (!results || results.length === 0) return [];
-
-    const facetFields = ['severity', 'hostname', 'app_name'];
-    const facets: Facet[] = [];
-
-    facetFields.forEach((field) => {
-      const valueCounts = new Map<string, number>();
-
-      results.forEach((row) => {
-        const value = row[field];
-        if (value !== undefined && value !== null) {
-          const key = String(value);
-          valueCounts.set(key, (valueCounts.get(key) || 0) + 1);
-        }
-      });
-
-      if (valueCounts.size > 0) {
-        const values = Array.from(valueCounts.entries())
-          .map(([value, count]) => ({ value, count }))
-          .sort((a, b) => b.count - a.count)
-          .slice(0, 10); // Top 10 values
-
-        facets.push({ field, values });
-      }
-    });
-
-    return facets;
-  }, []);
-
-  // Memoize facets from results
-  const facets = useMemo(() => {
-    const results = searchMutation.data?.results || aiSearchMutation.data?.results;
-    return calculateFacets(results || []);
-  }, [searchMutation.data, aiSearchMutation.data, calculateFacets]);
 
   // Handle facet filter changes
   const handleFilterChange = useCallback((field: string, values: string[]) => {
@@ -677,13 +640,14 @@ search * | top 10 app_name`}
 
       {/* Main Content Area with Sidebar */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left Sidebar - Facet Filters */}
+        {/* Left Sidebar - Field Discovery */}
         {sidebarOpen && (
           <div className="w-64 flex-shrink-0 overflow-hidden">
-            <FacetFilters
-              facets={facets}
+            <FieldSidebar
+              results={(searchMutation.data?.results || aiSearchMutation.data?.results || []) as Record<string, unknown>[]}
               selectedFilters={selectedFilters}
               onFilterChange={handleFilterChange}
+              timeRange={timeRange}
             />
           </div>
         )}
