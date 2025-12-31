@@ -256,6 +256,32 @@ export async function getTimeSeries(interval?: string, hours?: number): Promise<
   return request(`/stats/timeseries${query ? `?${query}` : ''}`);
 }
 
+// Active Sources (for Data Sources dashboard)
+export interface ActiveSource {
+  app_name: string;
+  index_name: string;
+  hostname: string;
+  protocol: string;
+  log_count: number;
+  last_seen: string;
+  error_count: number;
+}
+
+export interface IndexSummary {
+  index_name: string;
+  count: number;
+  sources: number;
+}
+
+export interface ActiveSourcesResult {
+  sources: ActiveSource[];
+  by_index: IndexSummary[];
+}
+
+export async function getActiveSources(): Promise<ActiveSourcesResult> {
+  return request('/stats/sources');
+}
+
 // Reports API
 export interface ScheduledReport {
   id: string;

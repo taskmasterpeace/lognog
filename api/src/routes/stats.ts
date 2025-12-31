@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { executeQuery } from '../db/clickhouse.js';
+import { getActiveSources } from '../db/backend.js';
 
 const router = Router();
 
@@ -114,6 +115,17 @@ router.get('/indexes', async (_req: Request, res: Response) => {
   } catch (error) {
     console.error('Error fetching index stats:', error);
     return res.status(500).json({ error: 'Failed to fetch index statistics' });
+  }
+});
+
+// Get active sources for Data Sources dashboard
+router.get('/sources', async (_req: Request, res: Response) => {
+  try {
+    const data = await getActiveSources();
+    return res.json(data);
+  } catch (error) {
+    console.error('Error fetching active sources:', error);
+    return res.status(500).json({ error: 'Failed to fetch active sources' });
   }
 });
 

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import {
   Database,
   Shield,
@@ -15,8 +16,12 @@ import {
   AlertCircle,
   CheckCircle2,
   Plus,
+  Activity,
+  Clock,
+  ExternalLink,
+  Loader2,
 } from 'lucide-react';
-import { getTemplatesByCategory, getTemplateStats, SourceTemplate } from '../api/client';
+import { getTemplatesByCategory, getTemplateStats, getActiveSources, SourceTemplate } from '../api/client';
 import AddDataSourceWizard from '../components/AddDataSourceWizard';
 
 const CATEGORY_ICONS = {
@@ -35,7 +40,40 @@ const CATEGORY_COLORS = {
   application: 'text-orange-500 bg-orange-100 dark:bg-orange-900/30',
 };
 
+// Helper to get status color based on last_seen time
+function getStatusInfo(lastSeen: string): { color: string; label: string; dotClass: string } {
+  const now = new Date();
+  const last = new Date(lastSeen);
+  const diffMinutes = (now.getTime() - last.getTime()) / (1000 * 60);
+
+  if (diffMinutes < 15) {
+    return { color: 'text-green-500', label: 'Active', dotClass: 'bg-green-500' };
+  } else if (diffMinutes < 60) {
+    return { color: 'text-yellow-500', label: 'Recent', dotClass: 'bg-yellow-500' };
+  } else if (diffMinutes < 60 * 24) {
+    return { color: 'text-orange-500', label: 'Inactive', dotClass: 'bg-orange-500' };
+  } else {
+    return { color: 'text-slate-400', label: 'Stale', dotClass: 'bg-slate-400' };
+  }
+}
+
+// Format relative time
+function formatRelativeTime(dateStr: string): string {
+  const now = new Date();
+  const date = new Date(dateStr);
+  const diffMs = now.getTime() - date.getTime();
+  const diffMinutes = Math.floor(diffMs / (1000 * 60));
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffMinutes < 1) return 'just now';
+  if (diffMinutes < 60) return `${diffMinutes}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  return `${diffDays}d ago`;
+}
+
 export default function DataSourcesPage() {
+  const navigate = useNavigate();
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedTemplate, setSelectedTemplate] = useState<SourceTemplate | null>(null);
   const [showSetupModal, setShowSetupModal] = useState(false);
@@ -50,6 +88,12 @@ export default function DataSourcesPage() {
   const { data: stats } = useQuery({
     queryKey: ['templates', 'stats'],
     queryFn: getTemplateStats,
+  });
+
+  const { data: activeSources, isLoading: sourcesLoading } = useQuery({
+    queryKey: ['active-sources'],
+    queryFn: getActiveSources,
+    refetchInterval: 60000, // Refresh every minute
   });
 
   const handleCopy = (text: string, section: string) => {
@@ -108,6 +152,174 @@ export default function DataSourcesPage() {
           <Plus className="w-5 h-5" />
           Add Data Source
         </button>
+      </div>
+
+      {/* Active Sources Section */}
+      <div className="mb-8">
+        <div className="flex items-center gap-2 mb-4">
+          <Activity className="w-5 h-5 text-green-500" />
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+            Active Sources
+          </h2>
+          {sourcesLoading && <Loader2 className="w-4 h-4 animate-spin text-slate-400" />}
+          {activeSources && (
+            <span className="text-sm text-slate-500 dark:text-slate-400">
+              ({activeSources.sources.length} sources sending logs)
+            </span>
+          )}
+        </div>
+
+        {/* Index Summary Cards */}
+        {activeSources && activeSources.by_index.length > 0 && (
+          <div className="flex flex-wrap gap-3 mb-4">
+            {activeSources.by_index.map((idx) => (
+              <button
+                key={idx.index_name}
+                onClick={() => navigate(`/search?q=${encodeURIComponent(`search index=${idx.index_name}`)}`)}
+                className="px-4 py-2 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-sky-300 dark:hover:border-sky-600 transition-colors flex items-center gap-3"
+              >
+                <div className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                  {idx.index_name || 'main'}
+                </div>
+                <div className="text-xs text-slate-500 dark:text-slate-400">
+                  {idx.count.toLocaleString()} logs
+                </div>
+                <div className="text-xs text-slate-400">
+                  {idx.sources} sources
+                </div>
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Active Sources Table */}
+        {activeSources && activeSources.sources.length > 0 ? (
+          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+            <table className="w-full">
+              <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                    Status
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                    Source
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                    Index
+                  </th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                    Protocol
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                    Logs (7d)
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                    Errors
+                  </th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                    Last Seen
+                  </th>
+                  <th className="px-4 py-3"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                {activeSources.sources.map((source, idx) => {
+                  const status = getStatusInfo(source.last_seen);
+                  return (
+                    <tr
+                      key={`${source.app_name}-${source.index_name}-${idx}`}
+                      className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                    >
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2">
+                          <div className={`w-2 h-2 rounded-full ${status.dotClass}`} />
+                          <span className={`text-xs font-medium ${status.color}`}>
+                            {status.label}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="font-medium text-slate-900 dark:text-slate-100">
+                          {source.app_name}
+                        </div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400">
+                          {source.hostname}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="px-2 py-1 text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded">
+                          {source.index_name || 'main'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className="text-sm text-slate-600 dark:text-slate-400">
+                          {source.protocol || 'unknown'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                          {source.log_count.toLocaleString()}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        {source.error_count > 0 ? (
+                          <span className="text-sm font-medium text-red-600 dark:text-red-400">
+                            {source.error_count.toLocaleString()}
+                          </span>
+                        ) : (
+                          <span className="text-sm text-slate-400">0</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex items-center justify-end gap-1 text-sm text-slate-500 dark:text-slate-400">
+                          <Clock className="w-3 h-3" />
+                          {formatRelativeTime(source.last_seen)}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3">
+                        <button
+                          onClick={() =>
+                            navigate(
+                              `/search?q=${encodeURIComponent(
+                                `search index=${source.index_name || 'main'} app_name="${source.app_name}"`
+                              )}`
+                            )
+                          }
+                          className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-600 rounded transition-colors"
+                          title="View logs"
+                        >
+                          <ExternalLink className="w-4 h-4 text-slate-400 hover:text-sky-500" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        ) : !sourcesLoading ? (
+          <div className="bg-slate-50 dark:bg-slate-900 rounded-xl p-8 text-center border border-slate-200 dark:border-slate-700">
+            <Activity className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
+            <p className="text-slate-600 dark:text-slate-400 mb-2">No active sources in the last 7 days</p>
+            <p className="text-sm text-slate-500 dark:text-slate-500">
+              Configure a data source below to start ingesting logs
+            </p>
+          </div>
+        ) : null}
+      </div>
+
+      {/* Divider */}
+      <div className="border-t border-slate-200 dark:border-slate-700 my-8"></div>
+
+      {/* Templates Section Header */}
+      <div className="flex items-center gap-2 mb-4">
+        <Database className="w-5 h-5 text-slate-400" />
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+          Source Templates
+        </h2>
+        <span className="text-sm text-slate-500 dark:text-slate-400">
+          (for setting up new sources)
+        </span>
       </div>
 
       {/* Stats Cards */}

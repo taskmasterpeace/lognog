@@ -449,3 +449,132 @@ function mapClickHouseJSONType(type: string): string {
   };
   return typeMap[type] || 'string';
 }
+
+/**
+ * Active source info for the Data Sources dashboard
+ */
+export interface ActiveSource {
+  app_name: string;
+  index_name: string;
+  hostname: string;
+  protocol: string;
+  log_count: number;
+  last_seen: string;
+  error_count: number;
+}
+
+export interface IndexSummary {
+  index_name: string;
+  count: number;
+  sources: number;
+}
+
+export interface ActiveSourcesResult {
+  sources: ActiveSource[];
+  by_index: IndexSummary[];
+}
+
+/**
+ * Get active log sources with stats from the last 7 days
+ */
+export async function getActiveSources(): Promise<ActiveSourcesResult> {
+  if (isLiteMode()) {
+    // SQLite version
+    const sourcesResult = await sqliteLogs.executeQuery<{
+      app_name: string;
+      index_name: string;
+      hostname: string;
+      protocol: string;
+      log_count: number;
+      last_seen: string;
+      error_count: number;
+    }>(`
+      SELECT
+        COALESCE(app_name, 'unknown') as app_name,
+        COALESCE(index_name, 'main') as index_name,
+        COALESCE(hostname, 'unknown') as hostname,
+        COALESCE(protocol, 'unknown') as protocol,
+        COUNT(*) as log_count,
+        MAX(timestamp) as last_seen,
+        SUM(CASE WHEN severity <= 3 THEN 1 ELSE 0 END) as error_count
+      FROM logs
+      WHERE timestamp >= datetime('now', '-7 days')
+      GROUP BY app_name, index_name
+      ORDER BY log_count DESC
+      LIMIT 50
+    `);
+
+    const indexResult = await sqliteLogs.executeQuery<{
+      index_name: string;
+      count: number;
+      sources: number;
+    }>(`
+      SELECT
+        COALESCE(index_name, 'main') as index_name,
+        COUNT(*) as count,
+        COUNT(DISTINCT app_name) as sources
+      FROM logs
+      WHERE timestamp >= datetime('now', '-7 days')
+      GROUP BY index_name
+      ORDER BY count DESC
+    `);
+
+    return {
+      sources: sourcesResult,
+      by_index: indexResult,
+    };
+  } else {
+    // ClickHouse version
+    const sourcesResult = await clickhouse.executeQuery<{
+      app_name: string;
+      index_name: string;
+      hostname: string;
+      protocol: string;
+      log_count: number;
+      last_seen: string;
+      error_count: number;
+    }>(`
+      SELECT
+        COALESCE(app_name, 'unknown') as app_name,
+        COALESCE(index_name, 'main') as index_name,
+        any(COALESCE(hostname, 'unknown')) as hostname,
+        any(COALESCE(protocol, 'unknown')) as protocol,
+        count() as log_count,
+        max(timestamp) as last_seen,
+        countIf(severity <= 3) as error_count
+      FROM lognog.logs
+      WHERE timestamp >= now() - INTERVAL 7 DAY
+      GROUP BY app_name, index_name
+      ORDER BY log_count DESC
+      LIMIT 50
+    `);
+
+    const indexResult = await clickhouse.executeQuery<{
+      index_name: string;
+      count: number;
+      sources: number;
+    }>(`
+      SELECT
+        COALESCE(index_name, 'main') as index_name,
+        count() as count,
+        uniq(app_name) as sources
+      FROM lognog.logs
+      WHERE timestamp >= now() - INTERVAL 7 DAY
+      GROUP BY index_name
+      ORDER BY count DESC
+    `);
+
+    return {
+      sources: sourcesResult.map(s => ({
+        ...s,
+        log_count: Number(s.log_count),
+        error_count: Number(s.error_count),
+      })),
+      by_index: indexResult.map(i => ({
+        ...i,
+        count: Number(i.count),
+        sources: Number(i.sources),
+      })),
+    };
+  }
+}
