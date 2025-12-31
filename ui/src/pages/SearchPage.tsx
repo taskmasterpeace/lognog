@@ -1,5 +1,6 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import {
   Search,
   Play,
@@ -22,6 +23,8 @@ import {
   History,
   Copy,
   Check,
+  Bell,
+  FileText,
 } from 'lucide-react';
 import { executeSearch, getSavedSearches, createSavedSearch, aiSearch, getAISuggestions } from '../api/client';
 import LogViewer from '../components/LogViewer';
@@ -41,6 +44,7 @@ const EXAMPLE_QUERIES = [
 ];
 
 export default function SearchPage() {
+  const navigate = useNavigate();
   const [query, setQuery] = useState('search *');
   const [timeRange, setTimeRange] = useState('-24h');
   const [timeRangeLatest, setTimeRangeLatest] = useState<string | undefined>(undefined);
@@ -890,6 +894,43 @@ search * | top 10 app_name`}
                   >
                     <Download className="w-4 h-4" />
                     Export CSV
+                  </button>
+
+                  {/* Divider */}
+                  <div className="w-px h-6 bg-slate-200 dark:bg-slate-600" />
+
+                  {/* Create Alert Button */}
+                  <button
+                    onClick={() => {
+                      const params = new URLSearchParams({
+                        action: 'create',
+                        query: query,
+                        timeRange: timeRange,
+                      });
+                      navigate(`/alerts?${params.toString()}`);
+                    }}
+                    className="btn-ghost text-xs text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-900/20"
+                    title="Create an alert from this search"
+                  >
+                    <Bell className="w-4 h-4" />
+                    Create Alert
+                  </button>
+
+                  {/* Create Report Button */}
+                  <button
+                    onClick={() => {
+                      const params = new URLSearchParams({
+                        action: 'create',
+                        query: query,
+                        timeRange: timeRange,
+                      });
+                      navigate(`/reports?${params.toString()}`);
+                    }}
+                    className="btn-ghost text-xs text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-900/20"
+                    title="Create a scheduled report from this search"
+                  >
+                    <FileText className="w-4 h-4" />
+                    Create Report
                   </button>
                 </div>
               </div>

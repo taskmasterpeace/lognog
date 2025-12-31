@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Database,
   Shield,
@@ -20,9 +20,12 @@ import {
   Clock,
   ExternalLink,
   Loader2,
+  Settings,
 } from 'lucide-react';
 import { getTemplatesByCategory, getTemplateStats, getActiveSources, SourceTemplate } from '../api/client';
 import AddDataSourceWizard from '../components/AddDataSourceWizard';
+
+type TabId = 'active' | 'templates' | 'config';
 
 const CATEGORY_ICONS = {
   database: Database,
@@ -74,11 +77,29 @@ function formatRelativeTime(dateStr: string): string {
 
 export default function DataSourcesPage() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState<TabId>(() => {
+    const tab = searchParams.get('tab');
+    return (tab as TabId) || 'active';
+  });
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedTemplate, setSelectedTemplate] = useState<SourceTemplate | null>(null);
   const [showSetupModal, setShowSetupModal] = useState(false);
   const [showWizard, setShowWizard] = useState(false);
   const [copiedSection, setCopiedSection] = useState<string | null>(null);
+
+  // Sync tab with URL
+  useEffect(() => {
+    const tab = searchParams.get('tab') as TabId | null;
+    if (tab && ['active', 'templates', 'config'].includes(tab)) {
+      setActiveTab(tab);
+    }
+  }, [searchParams]);
+
+  const handleTabChange = (tab: TabId) => {
+    setActiveTab(tab);
+    setSearchParams({ tab }, { replace: true });
+  };
 
   const { data: templatesByCategory, isLoading } = useQuery({
     queryKey: ['templates', 'by-category'],
@@ -133,301 +154,372 @@ export default function DataSourcesPage() {
       : (templatesByCategory as Record<string, SourceTemplate[]>)?.[selectedCategory] || [];
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="min-h-full bg-slate-50 dark:bg-slate-900">
       {/* Header */}
-      <div className="mb-6 flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            <Database className="w-7 h-7 text-sky-500" />
-            Data Sources
-          </h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">
-            Configure log sources with pre-built templates for common platforms and applications
-          </p>
+      <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 shadow-sm">
+        <div className="max-w-7xl mx-auto px-6 py-6">
+          <div className="flex items-start justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                <Database className="w-7 h-7 text-sky-500" />
+                Data Sources
+              </h1>
+              <p className="text-slate-500 dark:text-slate-400 mt-1">
+                Monitor active sources and configure new log ingestion
+              </p>
+            </div>
+            <button
+              onClick={() => setShowWizard(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg font-medium shadow-sm transition-colors"
+            >
+              <Plus className="w-5 h-5" />
+              Add Data Source
+            </button>
+          </div>
+
+          {/* Tabs */}
+          <div className="flex gap-1 mt-6 -mb-px">
+            <button
+              onClick={() => handleTabChange('active')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-t-lg font-medium text-sm transition-colors border-b-2 ${
+                activeTab === 'active'
+                  ? 'bg-slate-50 dark:bg-slate-900 text-sky-600 dark:text-sky-400 border-sky-500'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border-transparent hover:bg-slate-100 dark:hover:bg-slate-700'
+              }`}
+            >
+              <Activity className="w-4 h-4" />
+              Active Sources
+              {activeSources && (
+                <span className={`px-1.5 py-0.5 text-xs rounded-full ${
+                  activeTab === 'active'
+                    ? 'bg-sky-100 dark:bg-sky-900/50 text-sky-700 dark:text-sky-300'
+                    : 'bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-300'
+                }`}>
+                  {activeSources.sources.length}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => handleTabChange('templates')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-t-lg font-medium text-sm transition-colors border-b-2 ${
+                activeTab === 'templates'
+                  ? 'bg-slate-50 dark:bg-slate-900 text-sky-600 dark:text-sky-400 border-sky-500'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border-transparent hover:bg-slate-100 dark:hover:bg-slate-700'
+              }`}
+            >
+              <Database className="w-4 h-4" />
+              Source Templates
+              {stats && (
+                <span className={`px-1.5 py-0.5 text-xs rounded-full ${
+                  activeTab === 'templates'
+                    ? 'bg-sky-100 dark:bg-sky-900/50 text-sky-700 dark:text-sky-300'
+                    : 'bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-300'
+                }`}>
+                  {stats.total}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => handleTabChange('config')}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-t-lg font-medium text-sm transition-colors border-b-2 ${
+                activeTab === 'config'
+                  ? 'bg-slate-50 dark:bg-slate-900 text-sky-600 dark:text-sky-400 border-sky-500'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border-transparent hover:bg-slate-100 dark:hover:bg-slate-700'
+              }`}
+            >
+              <Settings className="w-4 h-4" />
+              Source Config
+            </button>
+          </div>
         </div>
-        <button
-          onClick={() => setShowWizard(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg font-medium shadow-sm transition-colors"
-        >
-          <Plus className="w-5 h-5" />
-          Add Data Source
-        </button>
       </div>
 
-      {/* Active Sources Section */}
-      <div className="mb-8">
-        <div className="flex items-center gap-2 mb-4">
-          <Activity className="w-5 h-5 text-green-500" />
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-            Active Sources
-          </h2>
-          {sourcesLoading && <Loader2 className="w-4 h-4 animate-spin text-slate-400" />}
-          {activeSources && (
-            <span className="text-sm text-slate-500 dark:text-slate-400">
-              ({activeSources.sources.length} sources sending logs)
-            </span>
-          )}
-        </div>
+      {/* Tab Content */}
+      <div className="max-w-7xl mx-auto px-6 py-6">
+        {/* Active Sources Tab */}
+        {activeTab === 'active' && (
+          <div>
+            {/* Index Summary Cards */}
+            {activeSources && activeSources.by_index.length > 0 && (
+              <div className="flex flex-wrap gap-3 mb-6">
+                {activeSources.by_index.map((idx) => (
+                  <button
+                    key={idx.index_name}
+                    onClick={() => navigate(`/search?q=${encodeURIComponent(`search index=${idx.index_name}`)}`)}
+                    className="px-4 py-2 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-sky-300 dark:hover:border-sky-600 transition-colors flex items-center gap-3"
+                  >
+                    <div className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                      {idx.index_name || 'main'}
+                    </div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400">
+                      {idx.count.toLocaleString()} logs
+                    </div>
+                    <div className="text-xs text-slate-400">
+                      {idx.sources} sources
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
 
-        {/* Index Summary Cards */}
-        {activeSources && activeSources.by_index.length > 0 && (
-          <div className="flex flex-wrap gap-3 mb-4">
-            {activeSources.by_index.map((idx) => (
-              <button
-                key={idx.index_name}
-                onClick={() => navigate(`/search?q=${encodeURIComponent(`search index=${idx.index_name}`)}`)}
-                className="px-4 py-2 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-sky-300 dark:hover:border-sky-600 transition-colors flex items-center gap-3"
-              >
-                <div className="text-sm font-medium text-slate-900 dark:text-slate-100">
-                  {idx.index_name || 'main'}
-                </div>
-                <div className="text-xs text-slate-500 dark:text-slate-400">
-                  {idx.count.toLocaleString()} logs
-                </div>
-                <div className="text-xs text-slate-400">
-                  {idx.sources} sources
-                </div>
-              </button>
-            ))}
+            {/* Active Sources Table */}
+            {sourcesLoading ? (
+              <div className="flex items-center justify-center h-64">
+                <Loader2 className="w-8 h-8 text-sky-500 animate-spin" />
+              </div>
+            ) : activeSources && activeSources.sources.length > 0 ? (
+              <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                <table className="w-full">
+                  <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                        Status
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                        Source
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                        Index
+                      </th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                        Protocol
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                        Logs (7d)
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                        Errors
+                      </th>
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                        Last Seen
+                      </th>
+                      <th className="px-4 py-3"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                    {activeSources.sources.map((source, idx) => {
+                      const status = getStatusInfo(source.last_seen);
+                      return (
+                        <tr
+                          key={`${source.app_name}-${source.index_name}-${idx}`}
+                          className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                        >
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <div className={`w-2 h-2 rounded-full ${status.dotClass}`} />
+                              <span className={`text-xs font-medium ${status.color}`}>
+                                {status.label}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="font-medium text-slate-900 dark:text-slate-100">
+                              {source.app_name}
+                            </div>
+                            <div className="text-xs text-slate-500 dark:text-slate-400">
+                              {source.hostname}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="px-2 py-1 text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded">
+                              {source.index_name || 'main'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span className="text-sm text-slate-600 dark:text-slate-400">
+                              {source.protocol || 'unknown'}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                              {source.log_count.toLocaleString()}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            {source.error_count > 0 ? (
+                              <span className="text-sm font-medium text-red-600 dark:text-red-400">
+                                {source.error_count.toLocaleString()}
+                              </span>
+                            ) : (
+                              <span className="text-sm text-slate-400">0</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <div className="flex items-center justify-end gap-1 text-sm text-slate-500 dark:text-slate-400">
+                              <Clock className="w-3 h-3" />
+                              {formatRelativeTime(source.last_seen)}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <button
+                              onClick={() =>
+                                navigate(
+                                  `/search?q=${encodeURIComponent(
+                                    `search index=${source.index_name || 'main'} app_name="${source.app_name}"`
+                                  )}`
+                                )
+                              }
+                              className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-600 rounded transition-colors"
+                              title="View logs"
+                            >
+                              <ExternalLink className="w-4 h-4 text-slate-400 hover:text-sky-500" />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="bg-white dark:bg-slate-800 rounded-xl p-12 text-center border border-slate-200 dark:border-slate-700">
+                <Activity className="w-16 h-16 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
+                <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">
+                  No active sources in the last 7 days
+                </h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+                  Configure a data source to start ingesting logs
+                </p>
+                <button
+                  onClick={() => handleTabChange('templates')}
+                  className="px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg font-medium transition-colors"
+                >
+                  Browse Source Templates
+                </button>
+              </div>
+            )}
           </div>
         )}
 
-        {/* Active Sources Table */}
-        {activeSources && activeSources.sources.length > 0 ? (
-          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
-            <table className="w-full">
-              <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
-                    Status
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
-                    Source
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
-                    Index
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
-                    Protocol
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
-                    Logs (7d)
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
-                    Errors
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
-                    Last Seen
-                  </th>
-                  <th className="px-4 py-3"></th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                {activeSources.sources.map((source, idx) => {
-                  const status = getStatusInfo(source.last_seen);
-                  return (
-                    <tr
-                      key={`${source.app_name}-${source.index_name}-${idx}`}
-                      className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
-                    >
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <div className={`w-2 h-2 rounded-full ${status.dotClass}`} />
-                          <span className={`text-xs font-medium ${status.color}`}>
-                            {status.label}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="font-medium text-slate-900 dark:text-slate-100">
-                          {source.app_name}
-                        </div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400">
-                          {source.hostname}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="px-2 py-1 text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded">
-                          {source.index_name || 'main'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="text-sm text-slate-600 dark:text-slate-400">
-                          {source.protocol || 'unknown'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
-                          {source.log_count.toLocaleString()}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        {source.error_count > 0 ? (
-                          <span className="text-sm font-medium text-red-600 dark:text-red-400">
-                            {source.error_count.toLocaleString()}
-                          </span>
-                        ) : (
-                          <span className="text-sm text-slate-400">0</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-1 text-sm text-slate-500 dark:text-slate-400">
-                          <Clock className="w-3 h-3" />
-                          {formatRelativeTime(source.last_seen)}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <button
-                          onClick={() =>
-                            navigate(
-                              `/search?q=${encodeURIComponent(
-                                `search index=${source.index_name || 'main'} app_name="${source.app_name}"`
-                              )}`
-                            )
-                          }
-                          className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-600 rounded transition-colors"
-                          title="View logs"
-                        >
-                          <ExternalLink className="w-4 h-4 text-slate-400 hover:text-sky-500" />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        ) : !sourcesLoading ? (
-          <div className="bg-slate-50 dark:bg-slate-900 rounded-xl p-8 text-center border border-slate-200 dark:border-slate-700">
-            <Activity className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
-            <p className="text-slate-600 dark:text-slate-400 mb-2">No active sources in the last 7 days</p>
-            <p className="text-sm text-slate-500 dark:text-slate-500">
-              Configure a data source below to start ingesting logs
-            </p>
-          </div>
-        ) : null}
-      </div>
-
-      {/* Divider */}
-      <div className="border-t border-slate-200 dark:border-slate-700 my-8"></div>
-
-      {/* Templates Section Header */}
-      <div className="flex items-center gap-2 mb-4">
-        <Database className="w-5 h-5 text-slate-400" />
-        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
-          Source Templates
-        </h2>
-        <span className="text-sm text-slate-500 dark:text-slate-400">
-          (for setting up new sources)
-        </span>
-      </div>
-
-      {/* Stats Cards */}
-      {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-            <div className="text-sm text-slate-500 dark:text-slate-400">Total Templates</div>
-            <div className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1">{stats.total}</div>
-          </div>
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-            <div className="text-sm text-slate-500 dark:text-slate-400">Built-in</div>
-            <div className="text-2xl font-bold text-sky-500 mt-1">{stats.built_in}</div>
-          </div>
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-            <div className="text-sm text-slate-500 dark:text-slate-400">Custom</div>
-            <div className="text-2xl font-bold text-purple-500 mt-1">{stats.custom}</div>
-          </div>
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-            <div className="text-sm text-slate-500 dark:text-slate-400">Categories</div>
-            <div className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1">
-              {Object.keys(stats.by_category).filter((k) => stats.by_category[k] > 0).length}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Category Filter */}
-      <div className="mb-6 flex flex-wrap gap-2">
-        <button
-          onClick={() => setSelectedCategory('all')}
-          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-            selectedCategory === 'all'
-              ? 'bg-sky-500 text-white'
-              : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
-          }`}
-        >
-          All Templates ({allTemplates.length})
-        </button>
-        {categories.map((category) => {
-          const Icon = CATEGORY_ICONS[category as keyof typeof CATEGORY_ICONS];
-          const count = (templatesByCategory as Record<string, SourceTemplate[]>)[category]?.length || 0;
-          return (
-            <button
-              key={category}
-              onClick={() => setSelectedCategory(category)}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
-                selectedCategory === category
-                  ? 'bg-sky-500 text-white'
-                  : 'bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-600'
-              }`}
-            >
-              <Icon className="w-4 h-4" />
-              {category.charAt(0).toUpperCase() + category.slice(1)} ({count})
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Templates Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredTemplates.map((template) => {
-          const Icon = CATEGORY_ICONS[template.category];
-          const colorClass = CATEGORY_COLORS[template.category];
-
-          return (
-            <div
-              key={template.id}
-              className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5 hover:shadow-lg transition-shadow cursor-pointer"
-              onClick={() => openTemplateSetup(template)}
-            >
-              <div className="flex items-start justify-between mb-3">
-                <div className={`p-3 rounded-lg ${colorClass}`}>
-                  <Icon className="w-6 h-6" />
+        {/* Templates Tab */}
+        {activeTab === 'templates' && (
+          <div>
+            {/* Stats Cards */}
+            {stats && (
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+                <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
+                  <div className="text-sm text-slate-500 dark:text-slate-400">Total Templates</div>
+                  <div className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1">{stats.total}</div>
                 </div>
-                {template.built_in ? (
-                  <span className="px-2 py-1 text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 rounded">
-                    Built-in
-                  </span>
-                ) : null}
+                <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
+                  <div className="text-sm text-slate-500 dark:text-slate-400">Built-in</div>
+                  <div className="text-2xl font-bold text-sky-500 mt-1">{stats.built_in}</div>
+                </div>
+                <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
+                  <div className="text-sm text-slate-500 dark:text-slate-400">Custom</div>
+                  <div className="text-2xl font-bold text-purple-500 mt-1">{stats.custom}</div>
+                </div>
+                <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
+                  <div className="text-sm text-slate-500 dark:text-slate-400">Categories</div>
+                  <div className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1">
+                    {Object.keys(stats.by_category).filter((k) => stats.by_category[k] > 0).length}
+                  </div>
+                </div>
               </div>
+            )}
 
-              <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-1">{template.name}</h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2 mb-3">{template.description}</p>
-
-              <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                <span className="px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded capitalize">{template.category}</span>
-                {template.field_extractions && template.field_extractions.length > 0 && (
-                  <span className="px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded">
-                    {template.field_extractions.length} fields
-                  </span>
-                )}
-              </div>
+            {/* Category Filter */}
+            <div className="mb-6 flex flex-wrap gap-2">
+              <button
+                onClick={() => setSelectedCategory('all')}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                  selectedCategory === 'all'
+                    ? 'bg-sky-500 text-white'
+                    : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
+                }`}
+              >
+                All Templates ({allTemplates.length})
+              </button>
+              {categories.map((category) => {
+                const Icon = CATEGORY_ICONS[category as keyof typeof CATEGORY_ICONS];
+                const count = (templatesByCategory as Record<string, SourceTemplate[]>)[category]?.length || 0;
+                return (
+                  <button
+                    key={category}
+                    onClick={() => setSelectedCategory(category)}
+                    className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
+                      selectedCategory === category
+                        ? 'bg-sky-500 text-white'
+                        : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    {category.charAt(0).toUpperCase() + category.slice(1)} ({count})
+                  </button>
+                );
+              })}
             </div>
-          );
-        })}
-      </div>
 
-      {filteredTemplates.length === 0 && (
-        <div className="text-center py-12 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
-          <Search className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100 mb-2">
-            No templates found
-          </h3>
-          <p className="text-slate-500 dark:text-slate-400">
-            Try selecting a different category or browse all templates
-          </p>
-        </div>
-      )}
+            {/* Templates Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredTemplates.map((template) => {
+                const Icon = CATEGORY_ICONS[template.category];
+                const colorClass = CATEGORY_COLORS[template.category];
+
+                return (
+                  <div
+                    key={template.id}
+                    className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5 hover:shadow-lg transition-shadow cursor-pointer"
+                    onClick={() => openTemplateSetup(template)}
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div className={`p-3 rounded-lg ${colorClass}`}>
+                        <Icon className="w-6 h-6" />
+                      </div>
+                      {template.built_in ? (
+                        <span className="px-2 py-1 text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 rounded">
+                          Built-in
+                        </span>
+                      ) : null}
+                    </div>
+
+                    <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-1">{template.name}</h3>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2 mb-3">{template.description}</p>
+
+                    <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                      <span className="px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded capitalize">{template.category}</span>
+                      {template.field_extractions && template.field_extractions.length > 0 && (
+                        <span className="px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded">
+                          {template.field_extractions.length} fields
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {filteredTemplates.length === 0 && (
+              <div className="text-center py-12 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+                <Search className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100 mb-2">
+                  No templates found
+                </h3>
+                <p className="text-slate-500 dark:text-slate-400">
+                  Try selecting a different category or browse all templates
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Source Config Tab (Placeholder) */}
+        {activeTab === 'config' && (
+          <div className="bg-white dark:bg-slate-800 rounded-xl p-12 text-center border border-slate-200 dark:border-slate-700">
+            <Settings className="w-16 h-16 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">
+              Source Configuration
+            </h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto mb-6">
+              Create custom source definitions, configure index routing, set app_name overrides, and manage field extractions per source.
+            </p>
+            <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 rounded-lg text-sm">
+              <AlertCircle className="w-4 h-4" />
+              Coming soon
+            </div>
+          </div>
+        )}
+      </div>
 
       {/* Setup Modal */}
       {showSetupModal && selectedTemplate && (

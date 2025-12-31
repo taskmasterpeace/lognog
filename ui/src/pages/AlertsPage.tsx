@@ -1,5 +1,6 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import {
   Bell,
   Plus,
@@ -106,6 +107,7 @@ const TIME_RANGES = [
 ];
 
 export default function AlertsPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [showSilenceModal, setShowSilenceModal] = useState(false);
@@ -144,6 +146,29 @@ export default function AlertsPage() {
   const [testing, setTesting] = useState(false);
 
   const queryClient = useQueryClient();
+
+  // Handle URL params for "Create from Search" flow
+  useEffect(() => {
+    const action = searchParams.get('action');
+    const queryParam = searchParams.get('query');
+    const timeRangeParam = searchParams.get('timeRange');
+
+    if (action === 'create' && queryParam) {
+      // Pre-populate form with search query
+      setFormData((prev) => ({
+        ...prev,
+        search_query: queryParam,
+        time_range: timeRangeParam || prev.time_range,
+        name: '', // User should name their alert
+      }));
+
+      // Open the create modal
+      setShowCreateModal(true);
+
+      // Clear URL params to prevent re-triggering
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const { data: alerts, isLoading, error } = useQuery({
     queryKey: ['alerts'],

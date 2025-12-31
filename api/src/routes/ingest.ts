@@ -7,6 +7,45 @@ import { getPendingNotifications, markNotificationDelivered, AgentNotification }
 
 const router = Router();
 
+/**
+ * Sanitize index name to prevent injection and ensure valid ClickHouse table naming.
+ * Only allows alphanumeric characters, hyphens, and underscores.
+ * Converts to lowercase and limits length.
+ */
+function sanitizeIndexName(name: string, defaultValue: string = 'http'): string {
+  if (!name || typeof name !== 'string') return defaultValue;
+
+  // Remove any characters that aren't alphanumeric, hyphen, or underscore
+  const sanitized = name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9_-]/g, '')
+    .slice(0, 32); // Limit length
+
+  // Must start with a letter
+  if (!/^[a-z]/.test(sanitized)) {
+    return defaultValue;
+  }
+
+  return sanitized || defaultValue;
+}
+
+/**
+ * Sanitize app name for display and storage.
+ * More permissive than index name, but still safe.
+ */
+function sanitizeAppName(name: string, defaultValue: string = 'generic'): string {
+  if (!name || typeof name !== 'string') return defaultValue;
+
+  // Remove control characters and limit length
+  const sanitized = name
+    .trim()
+    .replace(/[\x00-\x1f\x7f]/g, '') // Remove control characters
+    .slice(0, 64); // Limit length
+
+  return sanitized || defaultValue;
+}
+
 // Event schema from LogNog In agent
 const agentEventSchema = z.object({
   type: z.enum(['log', 'fim']),
@@ -616,6 +655,11 @@ router.post('/supabase', authenticateIngestion, async (req, res) => {
  * Generic HTTP log ingestion endpoint.
  * Accepts a JSON array of log objects with flexible schema.
  *
+ * Custom Headers:
+ * - X-Index: Custom index name (alphanumeric, hyphens only, max 32 chars)
+ * - X-App-Name: Custom app name to override auto-detection
+ * - X-Source-Name: Alias for X-App-Name
+ *
  * Authentication: API key required
  */
 router.post('/http', authenticateIngestion, async (req, res) => {
@@ -629,6 +673,10 @@ router.post('/http', authenticateIngestion, async (req, res) => {
         message: 'Expected array of log objects',
       });
     }
+
+    // Extract custom headers for index and app name
+    const customIndex = sanitizeIndexName(req.headers['x-index'] as string, 'http');
+    const customAppName = req.headers['x-app-name'] as string || req.headers['x-source-name'] as string;
 
     const receivedAt = new Date().toISOString();
 
@@ -645,9 +693,10 @@ router.post('/http', authenticateIngestion, async (req, res) => {
         }
       }
 
-      // Extract common fields
+      // Extract common fields - use custom app name if provided via header
       const hostname = String(event.hostname || event.host || event.source || 'unknown');
-      const appName = String(event.app_name || event.app || event.application || event.program || event.service || 'generic');
+      const appNameFromEvent = String(event.app_name || event.app || event.application || event.program || event.service || '');
+      const appName = sanitizeAppName(customAppName || appNameFromEvent, 'generic');
       const message = String(event.message || event.msg || event.log || event.text || JSON.stringify(event));
 
       // Try to determine severity
@@ -676,7 +725,7 @@ router.post('/http', authenticateIngestion, async (req, res) => {
         severity,
         raw: JSON.stringify(event),
         structured_data: JSON.stringify(event),
-        index_name: 'http',
+        index_name: customIndex,
         protocol: 'http',
       };
     });
@@ -687,16 +736,18 @@ router.post('/http', authenticateIngestion, async (req, res) => {
 
     await insertLogs(logs);
 
-    console.log(`HTTP: Ingested ${logs.length} log events`);
+    console.log(`HTTP: Ingested ${logs.length} log events to index '${customIndex}'`);
 
     if (req.user) {
       logAuthEvent(req.user.id, 'http_ingest', req.ip, req.get('user-agent'), {
         logs_count: logs.length,
+        index_name: customIndex,
       });
     }
 
     res.status(200).json({
       accepted: logs.length,
+      index: customIndex,
     });
   } catch (error) {
     console.error('HTTP ingest error:', error);

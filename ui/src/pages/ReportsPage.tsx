@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import {
   FileText,
   Plus,
@@ -45,6 +46,7 @@ const TIME_PRESETS = [
 ];
 
 export default function ReportsPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [reportName, setReportName] = useState('');
@@ -61,6 +63,28 @@ export default function ReportsPage() {
   const [previewFullscreen, setPreviewFullscreen] = useState(false);
 
   const queryClient = useQueryClient();
+
+  // Handle URL params for "Create from Search" flow
+  useEffect(() => {
+    const action = searchParams.get('action');
+    const queryParam = searchParams.get('query');
+    const timeRangeParam = searchParams.get('timeRange');
+
+    if (action === 'create' && queryParam) {
+      // Pre-populate the generate report form
+      setGenerateQuery(queryParam);
+      setGenerateTitle('Report from Search');
+      if (timeRangeParam) {
+        setGenerateTimeRange(timeRangeParam);
+      }
+
+      // Open the generate modal
+      setShowGenerateModal(true);
+
+      // Clear URL params to prevent re-triggering
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const { data: reports, isLoading, error } = useQuery({
     queryKey: ['scheduledReports'],
