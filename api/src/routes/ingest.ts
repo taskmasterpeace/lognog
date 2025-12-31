@@ -954,6 +954,7 @@ interface NextJsLogEvent {
   environment?: 'development' | 'production' | 'preview';
   deployment_id?: string;
   user_id?: string;
+  user_email?: string;
   session_id?: string;
   message?: string; // Optional pre-formatted message
   // Flat format fields (DP style)
@@ -973,6 +974,41 @@ interface NextJsLogEvent {
   event?: string;
   amount?: number;
   currency?: string;
+  // Business event fields (credits, AI usage, etc.)
+  credits_deducted?: number;
+  credits_before?: number;
+  credits_after?: number;
+  credits_used?: number;
+  model?: string;
+  prediction_id?: string;
+  generation_id?: string;
+  reason?: string;
+  prompt_preview?: string;
+  prompt_length?: number;
+  tokens_used?: number;
+  estimated_cost?: number;
+  output_url?: string;
+  // Integration fields
+  http_status?: number;
+  error_code?: string;
+  // Recipe/Storybook fields
+  recipe_id?: string;
+  recipe_name?: string;
+  stage_count?: number;
+  project_id?: string;
+  title?: string;
+  category?: string;
+  topic?: string;
+  character_name?: string;
+  character_age?: number;
+  page_count?: number;
+  sentences_per_page?: number;
+  generated_title?: string;
+  // Prompt expander fields
+  detail_level?: string;
+  director_style?: string;
+  original_prompt_length?: number;
+  expanded_prompt_length?: number;
   // Nested format fields (original)
   api?: {
     route: string;
@@ -1062,22 +1098,70 @@ function extractNextJsStructuredData(event: NextJsLogEvent): Record<string, unkn
     });
   }
 
-  // Handle integration type (flat format)
+  // Handle integration type (flat format) - extract all integration fields
   if (event.type === 'integration') {
     Object.assign(data, {
       integration_name: event.integration,
       integration_latency_ms: event.latency_ms,
       integration_success: event.success,
       integration_error: event.error,
+      integration_http_status: event.http_status,
+      integration_error_code: event.error_code,
+      // User context
+      user_email: event.user_email,
+      // AI model details
+      model: event.model,
+      prompt_length: event.prompt_length,
+      prompt_preview: event.prompt_preview,
+      prediction_id: event.prediction_id,
+      output_url: event.output_url,
+      estimated_cost: event.estimated_cost,
+      tokens_used: event.tokens_used,
     });
   }
 
-  // Handle business type (flat format)
+  // Handle business type (flat format) - extract all business fields
   if (event.type === 'business') {
     Object.assign(data, {
       business_event: event.event ?? event.name,
       business_amount: event.amount,
       business_currency: event.currency,
+      // User context
+      user_email: event.user_email,
+      // Credit tracking
+      credits_deducted: event.credits_deducted,
+      credits_before: event.credits_before,
+      credits_after: event.credits_after,
+      credits_used: event.credits_used,
+      // AI/Generation context
+      model: event.model,
+      prediction_id: event.prediction_id,
+      generation_id: event.generation_id,
+      reason: event.reason,
+      prompt_preview: event.prompt_preview,
+      prompt_length: event.prompt_length,
+      tokens_used: event.tokens_used,
+      estimated_cost: event.estimated_cost,
+      output_url: event.output_url,
+      // Recipe context
+      recipe_id: event.recipe_id,
+      recipe_name: event.recipe_name,
+      stage_count: event.stage_count,
+      // Storybook context
+      project_id: event.project_id,
+      title: event.title,
+      category: event.category,
+      topic: event.topic,
+      character_name: event.character_name,
+      character_age: event.character_age,
+      page_count: event.page_count,
+      sentences_per_page: event.sentences_per_page,
+      generated_title: event.generated_title,
+      // Prompt expander context
+      detail_level: event.detail_level,
+      director_style: event.director_style,
+      original_prompt_length: event.original_prompt_length,
+      expanded_prompt_length: event.expanded_prompt_length,
     });
   }
 

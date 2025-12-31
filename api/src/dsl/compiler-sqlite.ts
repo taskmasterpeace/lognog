@@ -52,6 +52,17 @@ const FIELD_MAP: Record<string, string> = {
   'index': 'index_name',
 };
 
+// Known columns in the logs table - fields NOT in this set are queried from structured_data JSON
+const KNOWN_COLUMNS = new Set([
+  'timestamp', 'received_at',
+  'facility', 'severity', 'priority',
+  'hostname', 'app_name', 'proc_id', 'msg_id',
+  'message', 'raw', 'structured_data',
+  'source_ip', 'dest_ip', 'source_port', 'dest_port',
+  'protocol', 'action', 'user',
+  'index_name', 'message_tokens',
+]);
+
 export class SQLiteCompiler {
   private ast: QueryAST;
   private params: unknown[] = [];
@@ -244,13 +255,25 @@ export class SQLiteCompiler {
   }
 
   private compileSimpleCondition(cond: SimpleCondition): string {
-    const field = this.mapField(cond.field);
+    // Handle special "_all" field (match all) - this is generated when user searches with *
+    if (cond.field === '_all' && cond.value === '*') {
+      return '1=1';  // Always true - no filtering
+    }
+
+    const mappedField = this.mapField(cond.field);
+
+    // Check if field is a known column or needs to be extracted from structured_data JSON
+    const isKnownColumn = KNOWN_COLUMNS.has(mappedField);
+    const field = isKnownColumn
+      ? mappedField
+      : this.jsonExtract(cond.field);
+
     let expr: string;
 
     switch (cond.operator) {
       case '=':
         if (cond.value === '*') {
-          expr = `${field} != ''`;
+          expr = isKnownColumn ? `${field} != ''` : `${field} IS NOT NULL`;
         } else if (typeof cond.value === 'string') {
           expr = `${field} = '${this.escape(cond.value)}'`;
         } else {
@@ -270,10 +293,10 @@ export class SQLiteCompiler {
       case '<=':
       case '>':
       case '>=':
-        if (field === 'severity') {
+        if (mappedField === 'severity') {
           // Severity is numeric
           expr = `${field} ${cond.operator} ${this.severityToNumber(cond.value)}`;
-        } else if (typeof cond.value === 'string') {
+        } else if (typeof cond.value === 'string' && isKnownColumn) {
           expr = `${field} ${cond.operator} '${this.escape(cond.value)}'`;
         } else {
           expr = `${field} ${cond.operator} ${cond.value}`;
@@ -283,13 +306,14 @@ export class SQLiteCompiler {
       case '~':
         // Contains or regex match - use LIKE for SQLite
         if (typeof cond.value === 'string') {
+          const searchField = isKnownColumn ? field : this.jsonExtract(cond.field);
           if (cond.value.includes('*')) {
             // Wildcard pattern -> LIKE
             const pattern = cond.value.replace(/\*/g, '%');
-            expr = `${field} LIKE '${this.escape(pattern)}'`;
+            expr = `${searchField} LIKE '${this.escape(pattern)}'`;
           } else {
             // Simple contains -> LIKE with wildcards (case-insensitive with COLLATE)
-            expr = `${field} LIKE '%${this.escape(cond.value)}%' COLLATE NOCASE`;
+            expr = `${searchField} LIKE '%${this.escape(cond.value)}%' COLLATE NOCASE`;
           }
         } else {
           expr = `${field} LIKE '%${cond.value}%'`;
@@ -395,6 +419,14 @@ export class SQLiteCompiler {
 
   private mapField(field: string): string {
     return FIELD_MAP[field.toLowerCase()] || field;
+  }
+
+  /**
+   * Generate SQLite json_extract expression for custom fields stored in structured_data
+   * Example: json_extract(structured_data, '$.credits_deducted')
+   */
+  private jsonExtract(fieldName: string): string {
+    return `json_extract(structured_data, '$.${fieldName}')`;
   }
 
   private escape(value: string): string {

@@ -215,9 +215,10 @@ export class Parser {
   }
 
   private parsePrimaryCondition(): Condition | null {
-    // Handle wildcard * as "match all" - skip it
+    // Handle wildcard * as "match all" - return a special condition
+    // This allows queries like `search * hostname=value` to work
     if (this.match(TokenType.MULTIPLY)) {
-      return null;
+      return { field: '_all', operator: '=', value: '*', negate: false };
     }
 
     // Handle parentheses for grouping

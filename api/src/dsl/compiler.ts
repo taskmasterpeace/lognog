@@ -51,6 +51,17 @@ const FIELD_MAP: Record<string, string> = {
   'index': 'index_name',
 };
 
+// Known columns in the logs table - fields NOT in this set are queried from structured_data JSON
+const KNOWN_COLUMNS = new Set([
+  'timestamp', 'received_at',
+  'facility', 'severity', 'priority',
+  'hostname', 'app_name', 'proc_id', 'msg_id',
+  'message', 'raw', 'structured_data',
+  'source_ip', 'dest_ip', 'source_port', 'dest_port',
+  'protocol', 'action', 'user',
+  'index_name', 'message_tokens',
+]);
+
 export class Compiler {
   private ast: QueryAST;
   private params: unknown[] = [];
@@ -90,7 +101,7 @@ export class Compiler {
         case 'stats':
           isAggregation = true;
           aggregationSelect = this.compileStats(stage);
-          groupByFields = stage.groupBy.map(f => this.mapField(f));
+          groupByFields = stage.groupBy.map(f => this.mapFieldForSelect(f, 'string'));
           break;
 
         case 'sort':
@@ -172,7 +183,7 @@ export class Compiler {
           });
           groupByFields = [timeBucket];
           if (stage.groupBy) {
-            groupByFields.push(this.mapField(stage.groupBy));
+            groupByFields.push(this.mapFieldForSelect(stage.groupBy, 'string'));
           }
           orderByFields = [`${timeBucket} ASC`];
           break;
@@ -242,13 +253,25 @@ export class Compiler {
   }
 
   private compileSimpleCondition(cond: SimpleCondition): string {
-    const field = this.mapField(cond.field);
+    // Handle special "_all" field (match all) - this is generated when user searches with *
+    if (cond.field === '_all' && cond.value === '*') {
+      return '1=1';  // Always true - no filtering
+    }
+
+    const mappedField = this.mapField(cond.field);
+
+    // Check if field is a known column or needs to be extracted from structured_data JSON
+    const isKnownColumn = KNOWN_COLUMNS.has(mappedField);
+    const field = isKnownColumn
+      ? mappedField
+      : this.jsonExtract(cond.field, cond.value);
+
     let expr: string;
 
     switch (cond.operator) {
       case '=':
         if (cond.value === '*') {
-          expr = `${field} != ''`;
+          expr = isKnownColumn ? `${field} != ''` : `${field} IS NOT NULL`;
         } else if (typeof cond.value === 'string') {
           expr = `${field} = '${this.escape(cond.value)}'`;
         } else {
@@ -268,10 +291,10 @@ export class Compiler {
       case '<=':
       case '>':
       case '>=':
-        if (field === 'severity') {
+        if (mappedField === 'severity') {
           // Severity is numeric
           expr = `${field} ${cond.operator} ${this.severityToNumber(cond.value)}`;
-        } else if (typeof cond.value === 'string') {
+        } else if (typeof cond.value === 'string' && isKnownColumn) {
           expr = `${field} ${cond.operator} '${this.escape(cond.value)}'`;
         } else {
           expr = `${field} ${cond.operator} ${cond.value}`;
@@ -284,10 +307,15 @@ export class Compiler {
           if (cond.value.includes('*')) {
             // Wildcard pattern -> LIKE
             const pattern = cond.value.replace(/\*/g, '%');
-            expr = `${field} LIKE '${this.escape(pattern)}'`;
+            expr = isKnownColumn
+              ? `${field} LIKE '${this.escape(pattern)}'`
+              : `JSONExtractString(structured_data, '${cond.field}') LIKE '${this.escape(pattern)}'`;
           } else {
             // Simple contains -> positionCaseInsensitive
-            expr = `positionCaseInsensitive(${field}, '${this.escape(cond.value)}') > 0`;
+            const searchField = isKnownColumn
+              ? field
+              : `JSONExtractString(structured_data, '${cond.field}')`;
+            expr = `positionCaseInsensitive(${searchField}, '${this.escape(cond.value)}') > 0`;
           }
         } else {
           expr = `${field} LIKE '%${cond.value}%'`;
@@ -315,8 +343,10 @@ export class Compiler {
 
   private compileStats(stats: StatsNode): string[] {
     return stats.aggregations.map(agg => {
-      const field = agg.field ? this.mapField(agg.field) : null;
-      const alias = agg.alias || `${agg.function}_${field || 'all'}`;
+      // Use 'number' type for numeric aggregations, 'string' for count/dc/values/list
+      const isNumericAgg = ['sum', 'avg', 'min', 'max', 'median', 'stddev', 'variance', 'range', 'p50', 'p90', 'p95', 'p99'].includes(agg.function);
+      const field = agg.field ? this.mapFieldForSelect(agg.field, isNumericAgg ? 'number' : 'string') : null;
+      const alias = agg.alias || `${agg.function}_${agg.field || 'all'}`;
 
       switch (agg.function) {
         case 'count':
@@ -376,6 +406,36 @@ export class Compiler {
 
   private mapField(field: string): string {
     return FIELD_MAP[field.toLowerCase()] || field;
+  }
+
+  /**
+   * Map a field for use in SELECT, GROUP BY, or aggregations
+   * Unknown fields are extracted from structured_data JSON
+   * @param field The field name
+   * @param type 'string' for group by, 'number' for aggregations (default: 'string')
+   */
+  private mapFieldForSelect(field: string, type: 'string' | 'number' = 'string'): string {
+    const mappedField = this.mapField(field);
+    if (KNOWN_COLUMNS.has(mappedField)) {
+      return mappedField;
+    }
+    // Unknown field - extract from structured_data JSON
+    return type === 'number'
+      ? `JSONExtractFloat(structured_data, '${field}')`
+      : `JSONExtractString(structured_data, '${field}')`;
+  }
+
+  /**
+   * Generate ClickHouse JSONExtract expression for custom fields stored in structured_data
+   * Example: JSONExtractFloat(structured_data, 'credits_deducted') or JSONExtractString(...)
+   */
+  private jsonExtract(fieldName: string, value: string | number | null): string {
+    // Determine appropriate ClickHouse JSON function based on value type
+    if (typeof value === 'number') {
+      return `JSONExtractFloat(structured_data, '${fieldName}')`;
+    }
+    // For string values, use JSONExtractString
+    return `JSONExtractString(structured_data, '${fieldName}')`;
   }
 
   private escape(value: string): string {
