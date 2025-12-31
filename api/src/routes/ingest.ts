@@ -944,6 +944,294 @@ router.post('/vercel', authenticateIngestion, async (req, res) => {
 });
 
 // =============================================================================
+// Next.js Application Logs
+// =============================================================================
+
+// Supports both nested format (original) and flat format (DP style)
+interface NextJsLogEvent {
+  timestamp?: number | string;
+  type: 'api' | 'action' | 'performance' | 'error' | 'integration' | 'business';
+  environment?: 'development' | 'production' | 'preview';
+  deployment_id?: string;
+  user_id?: string;
+  session_id?: string;
+  message?: string; // Optional pre-formatted message
+  // Flat format fields (DP style)
+  route?: string;
+  method?: string;
+  status_code?: number;
+  duration_ms?: number;
+  integration?: string;
+  latency_ms?: number;
+  success?: boolean;
+  error?: string;
+  name?: string;
+  component?: string;
+  page?: string;
+  metric?: string;
+  value?: number;
+  event?: string;
+  amount?: number;
+  currency?: string;
+  // Nested format fields (original)
+  api?: {
+    route: string;
+    method: string;
+    status_code: number;
+    duration_ms: number;
+    error?: string;
+    request_id?: string;
+    integration?: string;
+    integration_latency_ms?: number;
+  };
+  action?: {
+    name: string;
+    component: string;
+    page: string;
+    metadata?: Record<string, unknown>;
+  };
+  performance?: {
+    metric: string;
+    value: number;
+    page: string;
+    device_type?: 'mobile' | 'tablet' | 'desktop';
+  };
+  errorDetails?: {
+    message: string;
+    stack?: string;
+    component?: string;
+    page?: string;
+    user_agent?: string;
+  };
+  metadata?: Record<string, unknown>;
+}
+
+function nextjsLogToSeverity(event: NextJsLogEvent): number {
+  // Get status code from flat or nested format
+  const statusCode = event.status_code ?? event.api?.status_code;
+  const durationMs = event.duration_ms ?? event.api?.duration_ms;
+  const success = event.success;
+
+  if (event.type === 'error') {
+    if (statusCode && statusCode >= 500) return 2;
+    if (event.error?.toLowerCase().includes('uncaught')) return 2;
+    if (event.errorDetails?.message?.toLowerCase().includes('uncaught')) return 2;
+    return 3;
+  }
+  if (event.type === 'api') {
+    if (statusCode && statusCode >= 500) return 3;
+    if (statusCode && statusCode >= 400) return 4;
+    if (durationMs && durationMs > 5000) return 4;
+  }
+  if (event.type === 'integration') {
+    if (success === false) return 3;
+    const latency = event.latency_ms ?? event.api?.integration_latency_ms;
+    if (latency && latency > 10000) return 4;
+  }
+  if (event.type === 'performance') {
+    const metric = event.metric ?? event.performance?.metric;
+    const value = event.value ?? event.performance?.value;
+    if (metric && value !== undefined) {
+      if (metric === 'LCP' && value > 2500) return 4;
+      if (metric === 'FID' && value > 100) return 4;
+      if (metric === 'CLS' && value > 0.1) return 4;
+      if (metric === 'TTFB' && value > 800) return 4;
+    }
+  }
+  return 6;
+}
+
+function extractNextJsStructuredData(event: NextJsLogEvent): Record<string, unknown> {
+  const data: Record<string, unknown> = {
+    nextjs_type: event.type,
+    nextjs_environment: event.environment,
+    deployment_id: event.deployment_id,
+    user_id: event.user_id,
+    session_id: event.session_id,
+  };
+
+  // Handle API type (flat or nested)
+  if (event.type === 'api') {
+    Object.assign(data, {
+      http_method: event.method ?? event.api?.method,
+      http_route: event.route ?? event.api?.route,
+      http_status: event.status_code ?? event.api?.status_code,
+      api_duration_ms: event.duration_ms ?? event.api?.duration_ms,
+      api_error: event.error ?? event.api?.error,
+      integration_name: event.integration ?? event.api?.integration,
+    });
+  }
+
+  // Handle integration type (flat format)
+  if (event.type === 'integration') {
+    Object.assign(data, {
+      integration_name: event.integration,
+      integration_latency_ms: event.latency_ms,
+      integration_success: event.success,
+      integration_error: event.error,
+    });
+  }
+
+  // Handle business type (flat format)
+  if (event.type === 'business') {
+    Object.assign(data, {
+      business_event: event.event ?? event.name,
+      business_amount: event.amount,
+      business_currency: event.currency,
+    });
+  }
+
+  // Handle action type (flat or nested)
+  if (event.type === 'action') {
+    Object.assign(data, {
+      action_name: event.name ?? event.action?.name,
+      action_component: event.component ?? event.action?.component,
+      action_page: event.page ?? event.action?.page,
+      action_metadata: event.action?.metadata ? JSON.stringify(event.action.metadata) : undefined,
+    });
+  }
+
+  // Handle performance type (flat or nested)
+  if (event.type === 'performance') {
+    Object.assign(data, {
+      perf_metric: event.metric ?? event.performance?.metric,
+      perf_value: event.value ?? event.performance?.value,
+      perf_page: event.page ?? event.performance?.page,
+    });
+  }
+
+  // Handle error type (flat or nested)
+  if (event.type === 'error') {
+    Object.assign(data, {
+      error_message: event.error ?? event.errorDetails?.message,
+      error_stack: event.errorDetails?.stack,
+      error_component: event.component ?? event.errorDetails?.component,
+      error_page: event.page ?? event.errorDetails?.page,
+    });
+  }
+
+  if (event.metadata) Object.assign(data, event.metadata);
+  return Object.fromEntries(Object.entries(data).filter(([, v]) => v !== undefined));
+}
+
+router.post('/nextjs', authenticateIngestion, async (req, res) => {
+  try {
+    const body = req.body;
+    // ClickHouse DateTime64 doesn't accept 'Z' suffix - strip it
+    const receivedAt = new Date().toISOString().replace('Z', '');
+    const events: NextJsLogEvent[] = Array.isArray(body) ? body : [body];
+    if (events.length === 0) return res.status(200).json({ accepted: 0 });
+
+    const logs = events.map((event) => {
+      let timestamp: string;
+      if (event.timestamp) {
+        if (typeof event.timestamp === 'number') {
+          timestamp = new Date(event.timestamp > 1e12 ? event.timestamp : event.timestamp * 1000).toISOString().replace('Z', '');
+        } else {
+          timestamp = new Date(event.timestamp).toISOString().replace('Z', '');
+        }
+      } else {
+        timestamp = receivedAt;
+      }
+
+      const severity = nextjsLogToSeverity(event);
+      const hostname = event.environment || 'nextjs';
+      const appName = `nextjs-${event.type}`;
+
+      // Use pre-formatted message if provided, otherwise generate one
+      let message = event.message || '';
+      if (!message) {
+        // Handle API type (flat or nested)
+        if (event.type === 'api') {
+          const method = event.method ?? event.api?.method ?? 'UNKNOWN';
+          const route = event.route ?? event.api?.route ?? '/unknown';
+          const status = event.status_code ?? event.api?.status_code ?? 0;
+          const duration = event.duration_ms ?? event.api?.duration_ms ?? 0;
+          const integration = event.integration ?? event.api?.integration;
+          message = `${method} ${route} ${status} (${duration}ms)`;
+          if (integration) message += ` [${integration}]`;
+          if (event.error) message += ` - ${event.error}`;
+        }
+        // Handle integration type (flat format)
+        else if (event.type === 'integration') {
+          const integration = event.integration ?? 'unknown';
+          const status = event.success !== false ? 'OK' : 'FAILED';
+          const latency = event.latency_ms ?? 0;
+          message = `${integration} ${status} ${latency}ms`;
+          if (event.error) message += ` - ${event.error}`;
+        }
+        // Handle business type (flat format)
+        else if (event.type === 'business') {
+          const eventName = event.event ?? event.name ?? 'unknown';
+          message = `Business: ${eventName}`;
+          if (event.amount !== undefined) {
+            message += ` ${event.currency ?? 'USD'} ${event.amount}`;
+          }
+        }
+        // Handle action type (flat or nested)
+        else if (event.type === 'action') {
+          const name = event.name ?? event.action?.name ?? 'unknown';
+          const component = event.component ?? event.action?.component ?? 'unknown';
+          const page = event.page ?? event.action?.page ?? '/';
+          message = `Action: ${name} on ${component} (${page})`;
+        }
+        // Handle performance type (flat or nested)
+        else if (event.type === 'performance') {
+          const metric = event.metric ?? event.performance?.metric ?? 'unknown';
+          const value = event.value ?? event.performance?.value ?? 0;
+          const page = event.page ?? event.performance?.page ?? '/';
+          message = `Performance: ${metric}=${value} (${page})`;
+        }
+        // Handle error type (flat or nested)
+        else if (event.type === 'error') {
+          const errorMsg = event.error ?? event.errorDetails?.message ?? 'Unknown error';
+          const component = event.component ?? event.errorDetails?.component;
+          message = `Error: ${errorMsg}`;
+          if (component) message += ` in ${component}`;
+        }
+        else {
+          message = `Next.js ${event.type} event`;
+        }
+      }
+
+      return {
+        timestamp,
+        received_at: receivedAt,
+        hostname,
+        app_name: appName,
+        message,
+        severity,
+        facility: 1,
+        priority: (1 * 8) + severity,
+        raw: JSON.stringify(event),
+        structured_data: JSON.stringify(extractNextJsStructuredData(event)),
+        index_name: 'nextjs',
+        protocol: 'nextjs-logger',
+      };
+    });
+
+    await insertLogs(logs);
+    console.log(`Next.js: Ingested ${logs.length} log events`);
+
+    if (req.user) {
+      logAuthEvent(req.user.id, 'nextjs_ingest', req.ip, req.get('user-agent'), {
+        logs_count: logs.length,
+        environment: events[0]?.environment,
+        types: [...new Set(events.map(e => e.type))],
+      });
+    }
+
+    res.status(200).json({ accepted: logs.length, message: 'Logs ingested successfully' });
+  } catch (error) {
+    console.error('Next.js ingest error:', error);
+    res.status(500).json({
+      error: 'Next.js log ingestion failed',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+// =============================================================================
 // Test Data Generation
 // =============================================================================
 

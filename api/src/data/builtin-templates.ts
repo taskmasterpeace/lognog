@@ -1098,6 +1098,49 @@ search index=vercel vercel_source=lambda
     sampleQuery: 'search index=vercel vercel_source=lambda | stats count, avg(duration_ms), sum(cold_start=true) as cold_starts by lambda_id',
     icon: 'code',
   },
+  // Next.js Application Logs
+  {
+    name: 'Next.js Application',
+    sourceType: 'nextjs',
+    category: 'application',
+    description: 'Next.js application logs including API calls, user actions, performance metrics, and errors.',
+    setupInstructions: `## Next.js Integration
+
+### Quick Start
+1. Create API key in LogNog Settings with write permission
+2. Set environment variables:
+   - LOGNOG_ENDPOINT=https://your-lognog/api/ingest/nextjs
+   - LOGNOG_API_KEY=your-key
+
+### Usage
+\\\`\\\`\\\`typescript
+// Track API calls
+logger.api({ route: '/api/generate', method: 'POST', statusCode: 200, durationMs: 1523, integration: 'replicate' });
+
+// Track user actions
+logger.action({ name: 'button_click', component: 'GenerateButton', page: '/dashboard' });
+
+// Track performance
+logger.performance({ metric: 'LCP', value: 1200, page: '/home' });
+
+// Track errors
+logger.error({ message: 'Failed to generate', stack: error.stack, component: 'GenerateAPI' });
+\\\`\\\`\\\``,
+    fieldExtractions: [
+      { field_name: 'nextjs_type', pattern: '"type":"([^"]+)"', pattern_type: 'regex', description: 'Log type (api, action, performance, error)', required: true },
+      { field_name: 'http_route', pattern: '"route":"([^"]+)"', pattern_type: 'regex', description: 'API route path' },
+      { field_name: 'http_status', pattern: '"status_code":(\\d+)', pattern_type: 'regex', description: 'HTTP status code' },
+      { field_name: 'api_duration_ms', pattern: '"duration_ms":(\\d+)', pattern_type: 'regex', description: 'API call duration in milliseconds' },
+      { field_name: 'integration_name', pattern: '"integration":"([^"]+)"', pattern_type: 'regex', description: 'External integration (replicate, supabase, stripe)' },
+      { field_name: 'action_name', pattern: '"name":"([^"]+)"', pattern_type: 'regex', description: 'User action name' },
+      { field_name: 'perf_metric', pattern: '"metric":"([^"]+)"', pattern_type: 'regex', description: 'Performance metric (LCP, FID, CLS)' },
+    ],
+    defaultIndex: 'nextjs',
+    defaultSeverity: 6,
+    sampleLog: '{"timestamp":1705312345000,"type":"api","environment":"production","api":{"route":"/api/generate","method":"POST","status_code":200,"duration_ms":1523,"integration":"replicate"}}',
+    sampleQuery: 'search index=nextjs nextjs_type=api | stats avg(api_duration_ms) p95(api_duration_ms) by http_route',
+    icon: 'code',
+  },
 ];
 
 /**
