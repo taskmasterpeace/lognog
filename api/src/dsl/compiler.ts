@@ -25,13 +25,14 @@ import {
   EvalExpression,
 } from './types.js';
 
-// Default fields to select
+// Default fields to select (including structured_data for custom fields)
 const DEFAULT_FIELDS = [
   'timestamp',
   'hostname',
   'app_name',
   'severity',
   'message',
+  'structured_data',
 ];
 
 // Map DSL field names to ClickHouse column names

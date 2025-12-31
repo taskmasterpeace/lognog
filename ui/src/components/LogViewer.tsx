@@ -223,10 +223,30 @@ const LogRow: React.FC<LogRowProps> = ({
   const severity = typeof log.severity === 'number' ? log.severity : 6;
   const severityConfig = SEVERITY_CONFIG[severity as keyof typeof SEVERITY_CONFIG] || SEVERITY_CONFIG[6];
 
+  // Parse structured_data if it's a JSON string
+  const parsedStructuredData = useMemo(() => {
+    if (log.structured_data) {
+      if (typeof log.structured_data === 'string') {
+        try {
+          return JSON.parse(log.structured_data);
+        } catch {
+          return null;
+        }
+      } else if (typeof log.structured_data === 'object') {
+        return log.structured_data;
+      }
+    }
+    return null;
+  }, [log.structured_data]);
+
   // Primary fields to show in collapsed view
   const primaryFields = ['timestamp', 'severity', 'hostname', 'app_name', 'message'];
+  const excludeFromAdditional = [...primaryFields, 'structured_data', 'raw', 'facility'];
   const allFields = Object.keys(log);
-  const additionalFields = allFields.filter(f => !primaryFields.includes(f));
+  const additionalFields = allFields.filter(f => !excludeFromAdditional.includes(f));
+
+  // Get structured data fields for display
+  const structuredFields = parsedStructuredData ? Object.keys(parsedStructuredData) : [];
 
   return (
     <div
@@ -306,6 +326,34 @@ const LogRow: React.FC<LogRowProps> = ({
                   );
                 })}
               </div>
+
+              {/* Structured Data Fields (parsed from JSON) */}
+              {structuredFields.length > 0 && (
+                <>
+                  <div className="border-t border-slate-200 dark:border-slate-700 pt-2 mt-2">
+                    <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase">
+                      Custom Fields
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {structuredFields.map((field) => (
+                      <div key={field} className="flex items-start gap-2 bg-emerald-50/50 dark:bg-emerald-900/20 rounded px-2 py-1">
+                        <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 min-w-[100px] flex-shrink-0 mt-0.5">
+                          {field}:
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <FieldValue
+                            field={field}
+                            value={parsedStructuredData[field]}
+                            onAddFilter={onAddFilter}
+                            searchTerms={searchTerms}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
 
               {/* Additional Fields */}
               {additionalFields.length > 0 && (

@@ -1,390 +1,468 @@
-# Director's Palette Integration Guide
+# Directors Palette v2 → LogNog Integration Guide
 
-Integration guide for sending Director's Palette analytics to LogNog.
+## Endpoint & Auth
 
----
-
-## Overview
-
-Director's Palette can send generation events, user analytics, and application logs to LogNog for centralized monitoring, dashboards, and alerting.
-
-**What LogNog Provides:**
-- Real-time log search with Splunk-like query language
-- Custom dashboards for revenue, usage, and user analytics
-- Alerts (email, webhook) for anomalies
-- Data retention with automatic TTL cleanup
-- No per-GB pricing (self-hosted)
+```
+POST https://analytics.machinekinglabs.com/api/ingest/nextjs
+X-API-Key: lnog_f6ca89cdb6e84bed845422f306a49467
+Content-Type: application/json
+```
 
 ---
 
-## Quick Start
+## Developer API Questions Answered
 
-### Step 1: Get Your API Key
+### 1. Query/Search API
 
-1. Log into LogNog at `https://your-lognog-server`
-2. Go to **Settings** (gear icon)
-3. Scroll to **API Keys** section
-4. Click **Create API Key**
-5. Name it: `Directors Palette Production`
-6. Copy the key (shown once!)
+**YES** - Full REST API:
 
-### Step 2: Send Events
+```bash
+POST /api/search/query
+Content-Type: application/json
+X-API-Key: lnog_your_key
 
-```javascript
-// utils/lognog.ts
-const LOGNOG_URL = 'https://your-lognog-server/api/ingest/http';
-const LOGNOG_API_KEY = process.env.LOGNOG_API_KEY;
+{
+  "query": "search index=nextjs http_status>=400 | stats count by http_route",
+  "earliest": "-1h",
+  "latest": "now"
+}
+```
 
-export async function logToLogNog(events: object | object[]) {
-  const payload = Array.isArray(events) ? events : [events];
+### 2. Query Syntax (Splunk-like DSL)
+
+```bash
+# Basic search
+search index=nextjs http_status=200
+
+# Filters
+search index=nextjs severity<=3
+| filter app_name~"api"
+
+# Aggregations
+search index=nextjs
+| stats count, avg(api_duration_ms), p95(api_duration_ms) by http_route
+| sort desc count
+
+# Time bucketing
+search index=nextjs
+| timechart span=5m count by http_status
+```
+
+**Operators**: `=`, `!=`, `>`, `<`, `>=`, `<=`, `~` (contains), `!~` (not contains)
+
+### 3. Response Format
+
+```json
+{
+  "query": "search index=nextjs...",
+  "results": [
+    {
+      "timestamp": "2025-12-31T06:23:26.283",
+      "hostname": "nextjs",
+      "app_name": "nextjs-api",
+      "severity": 6,
+      "message": "POST /api/generate 200 (1523ms)",
+      "structured_data": {
+        "http_route": "/api/generate",
+        "http_status": 200,
+        "api_duration_ms": 1523,
+        "user_email": "john@example.com"
+      }
+    }
+  ],
+  "count": 100,
+  "executionTime": 23
+}
+```
+
+### 4. Real-time / Live Tail
+
+**YES** - WebSocket:
+```
+ws://logs.machinekinglabs.com/api/ws/tail
+```
+
+### 5. Stats Functions
+
+`count`, `sum`, `avg`, `min`, `max`, `dc` (distinct), `values`, `list`, `earliest`, `latest`, `p50`, `p90`, `p95`, `p99`, `median`, `mode`, `stddev`, `variance`, `range`
+
+### 6. Time Ranges
+
+```bash
+earliest=-1h latest=now
+earliest=-7d latest=-1d
+earliest=2025-12-31T00:00:00Z latest=2025-12-31T23:59:59Z
+```
+
+### 7. Index Management
+
+```bash
+search index=nextjs ...    # Specific index
+search index=* ...         # All indexes
+```
+
+### 8. Authentication
+
+```
+X-API-Key: lnog_your_key
+```
+
+---
+
+## CRITICAL: Richer Logging Schema
+
+### The Problem
+
+Current logs are **useless** because they lack context:
+
+```json
+// ❌ BAD - What does this tell us?
+{ "type": "business", "event": "credit_deduction", "amount": 20 }
+```
+
+### The Solution
+
+Include **business context** in every log:
+
+```json
+// ✅ GOOD - Now we can analyze this!
+{
+  "type": "business",
+  "event": "credit_deduction",
+  "user_id": "d3a01f94-...",
+  "user_email": "john@example.com",
+  "credits_deducted": 20,
+  "credits_before": 100,
+  "credits_after": 80,
+  "reason": "image_generation",
+  "model": "flux-schnell",
+  "generation_id": "gen_abc123"
+}
+```
+
+---
+
+## Updated Logger Class
+
+```typescript
+// lib/lognog.ts
+class LogNogLogger {
+  private endpoint = process.env.LOGNOG_ENDPOINT || '';
+  private apiKey = process.env.LOGNOG_API_KEY || '';
+  private queue: any[] = [];
+
+  constructor() {
+    if (typeof window !== 'undefined' && this.endpoint) {
+      setInterval(() => this.flush(), 5000);
+    }
+  }
+
+  private enqueue(event: any) {
+    if (!this.endpoint) return;
+    this.queue.push({
+      timestamp: Date.now(),
+      environment: process.env.NODE_ENV || 'development',
+      ...event,
+    });
+    if (this.queue.length >= 100) this.flush();
+  }
+
+  // API call logging
+  api(data: {
+    route: string;
+    method: string;
+    statusCode: number;
+    durationMs: number;
+    // User context (REQUIRED)
+    userId?: string;
+    userEmail?: string;
+    // Integration details
+    integration?: 'replicate' | 'supabase' | 'stripe';
+    integrationLatencyMs?: number;
+    model?: string;
+    // Request context
+    requestId?: string;
+    // Business context
+    creditsUsed?: number;
+    // Error details
+    error?: string;
+    errorCode?: string;
+  }) {
+    this.enqueue({
+      type: 'api',
+      ...data,
+    });
+  }
+
+  // Integration logging (Replicate, Supabase, Stripe)
+  integration(data: {
+    integration: 'replicate' | 'supabase' | 'stripe';
+    success: boolean;
+    latencyMs: number;
+    // Replicate specific
+    model?: string;
+    promptLength?: number;
+    promptPreview?: string;  // First 50 chars
+    predictionId?: string;
+    outputUrl?: string;
+    // Cost tracking
+    estimatedCost?: number;
+    // Error
+    error?: string;
+    errorCode?: string;
+  }) {
+    this.enqueue({
+      type: 'integration',
+      ...data,
+    });
+  }
+
+  // Business events (credits, generations, etc.)
+  business(data: {
+    event: 'credit_deduction' | 'generation_completed' | 'user_signup' | 'subscription_created' | string;
+    // User context (REQUIRED)
+    userId: string;
+    userEmail: string;
+    // Credit tracking
+    creditsDeducted?: number;
+    creditsBefore?: number;
+    creditsAfter?: number;
+    // Context
+    reason?: string;
+    model?: string;
+    generationId?: string;
+    // Metadata
+    metadata?: Record<string, any>;
+  }) {
+    this.enqueue({
+      type: 'business',
+      ...data,
+    });
+  }
+
+  // Error logging
+  error(data: {
+    message: string;
+    stack?: string;
+    // Location
+    component?: string;
+    page?: string;
+    // User context
+    userId?: string;
+    userEmail?: string;
+    // Request context
+    requestId?: string;
+    // Error details
+    errorCode?: string;
+    model?: string;
+    retryCount?: number;
+  }) {
+    this.enqueue({
+      type: 'error',
+      ...data,
+    });
+  }
+
+  // User actions (client-side)
+  action(data: {
+    name: string;
+    component: string;
+    page: string;
+    userId?: string;
+    metadata?: Record<string, any>;
+  }) {
+    this.enqueue({
+      type: 'action',
+      ...data,
+    });
+  }
+
+  async flush() {
+    if (!this.queue.length || !this.endpoint) return;
+    const batch = this.queue.splice(0, 100);
+    try {
+      await fetch(this.endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-API-Key': this.apiKey
+        },
+        body: JSON.stringify(batch),
+      });
+    } catch (e) {
+      this.queue.unshift(...batch);
+      console.error('[LogNog] Flush failed:', e);
+    }
+  }
+}
+
+export const logger = new LogNogLogger();
+```
+
+---
+
+## Example: Full Generation Flow
+
+```typescript
+// app/api/generation/image/route.ts
+import { logger } from '@/lib/lognog';
+
+export async function POST(req: Request) {
+  const requestId = crypto.randomUUID();
+  const startTime = Date.now();
+
+  // Get user from session
+  const session = await getSession();
+  const user = session?.user;
 
   try {
-    await fetch(LOGNOG_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'X-API-Key': LOGNOG_API_KEY,
-      },
-      body: JSON.stringify(payload),
+    const { prompt, model } = await req.json();
+
+    // 1. Log Replicate call
+    const replicateStart = Date.now();
+    const result = await replicate.run(model, { input: { prompt } });
+    const replicateLatency = Date.now() - replicateStart;
+
+    logger.integration({
+      integration: 'replicate',
+      success: true,
+      latencyMs: replicateLatency,
+      model: model,
+      promptLength: prompt.length,
+      promptPreview: prompt.substring(0, 50),
+      predictionId: result.id,
+      outputUrl: result.output?.[0],
+      estimatedCost: 0.003,
     });
-  } catch (err) {
-    // Non-blocking - don't fail the main operation
-    console.error('LogNog logging failed:', err);
+
+    // 2. Deduct credits
+    const creditsBefore = user.credits;
+    const creditsToDeduct = 20;
+    await deductCredits(user.id, creditsToDeduct);
+
+    logger.business({
+      event: 'credit_deduction',
+      userId: user.id,
+      userEmail: user.email,
+      creditsDeducted: creditsToDeduct,
+      creditsBefore: creditsBefore,
+      creditsAfter: creditsBefore - creditsToDeduct,
+      reason: 'image_generation',
+      model: model,
+      generationId: result.id,
+    });
+
+    // 3. Log API completion
+    logger.api({
+      route: '/api/generation/image',
+      method: 'POST',
+      statusCode: 200,
+      durationMs: Date.now() - startTime,
+      userId: user.id,
+      userEmail: user.email,
+      requestId: requestId,
+      integration: 'replicate',
+      integrationLatencyMs: replicateLatency,
+      model: model,
+      creditsUsed: creditsToDeduct,
+    });
+
+    await logger.flush(); // REQUIRED for serverless
+    return Response.json({ success: true, output: result.output });
+
+  } catch (error: any) {
+    logger.error({
+      message: error.message,
+      stack: error.stack,
+      component: 'GenerateAPI',
+      page: '/api/generation/image',
+      userId: user?.id,
+      userEmail: user?.email,
+      requestId: requestId,
+      errorCode: error.code || 'UNKNOWN',
+    });
+
+    logger.api({
+      route: '/api/generation/image',
+      method: 'POST',
+      statusCode: 500,
+      durationMs: Date.now() - startTime,
+      userId: user?.id,
+      userEmail: user?.email,
+      requestId: requestId,
+      error: error.message,
+      errorCode: error.code,
+    });
+
+    await logger.flush();
+    return Response.json({ error: error.message }, { status: 500 });
   }
 }
 ```
 
-### Step 3: Log Generation Events
+---
 
-After each generation completes:
+## Queries You Can Run After
 
-```javascript
-import { logToLogNog } from '@/utils/lognog';
+Once logging is implemented with this schema:
 
-// In your generation completion handler
-await logToLogNog({
-  timestamp: new Date().toISOString(),
-  event_type: 'generation',
-  app: 'directors-palette',
+```bash
+# Credits used by user (last 24h)
+search index=nextjs event=credit_deduction earliest=-24h
+| stats sum(creditsDeducted) as total_credits by userEmail
+| sort desc total_credits
 
-  // User info
-  user_id: user.id,
-  user_email: user.email,
+# Slow Replicate calls (>5s)
+search index=nextjs integration=replicate latencyMs>5000
+| table timestamp, model, latencyMs, userEmail
 
-  // Generation details
-  model_id: selectedModel.id,
-  model_name: selectedModel.name,
-  generation_type: 'image', // or 'video', 'character_sheet'
+# Error rate by model
+search index=nextjs type=error model=*
+| stats count by model
+| sort desc count
 
-  // Business metrics
-  cost_cents: model.costCents,
-  credits_used: creditsCharged,
+# Generation cost by model
+search index=nextjs integration=replicate
+| stats sum(estimatedCost) as cost, count by model
+| sort desc cost
 
-  // Technical details
-  prediction_id: replicateResponse.id,
-  status: 'completed', // or 'failed'
-  duration_ms: endTime - startTime,
+# Users with most errors
+search index=nextjs type=error userEmail=*
+| stats count by userEmail
+| sort desc count
+| head 10
 
-  // Optional metadata
-  prompt_length: prompt.length,
-  reference_images: referenceImages?.length || 0,
-  resolution: '1024x1024',
-});
+# Average latency by model
+search index=nextjs integration=replicate success=true
+| stats avg(latencyMs), p95(latencyMs) by model
 ```
 
 ---
 
-## Event Types to Log
+## Environment Variables
 
-### 1. Generation Events (Required)
-
-```javascript
-{
-  timestamp: "2024-01-15T10:30:00Z",
-  event_type: "generation",
-  app: "directors-palette",
-  user_id: "uuid",
-  user_email: "user@example.com",
-  model_id: "nano-banana-pro",
-  model_name: "Nano Banana Pro",
-  generation_type: "image",
-  cost_cents: 20,
-  credits_used: 2,
-  prediction_id: "replicate-abc123",
-  status: "completed",
-  duration_ms: 4500,
-  prompt_length: 150,
-  reference_images: 2,
-  resolution: "1024x1024"
-}
-```
-
-### 2. Credit Events (Recommended)
-
-```javascript
-{
-  timestamp: "2024-01-15T10:29:00Z",
-  event_type: "credit_purchase",
-  app: "directors-palette",
-  user_id: "uuid",
-  user_email: "user@example.com",
-  package_name: "100 Credits",
-  amount_cents: 999,
-  credits_purchased: 100,
-  payment_provider: "stripe",
-  transaction_id: "ch_xxx"
-}
-```
-
-### 3. Auth Events (Recommended)
-
-```javascript
-{
-  timestamp: "2024-01-15T10:00:00Z",
-  event_type: "auth",
-  app: "directors-palette",
-  action: "login", // or 'signup', 'logout', 'password_reset'
-  user_id: "uuid",
-  user_email: "user@example.com",
-  ip_address: "1.2.3.4",
-  user_agent: "Mozilla/5.0..."
-}
-```
-
-### 4. Error Events (Recommended)
-
-```javascript
-{
-  timestamp: "2024-01-15T10:35:00Z",
-  event_type: "error",
-  app: "directors-palette",
-  severity: "error",
-  user_id: "uuid",
-  error_type: "generation_failed",
-  error_message: "Model timeout after 30s",
-  model_id: "some-model",
-  prediction_id: "replicate-xyz",
-  stack_trace: "..."
-}
+```env
+LOGNOG_ENDPOINT=https://analytics.machinekinglabs.com/api/ingest/nextjs
+LOGNOG_API_KEY=lnog_f6ca89cdb6e84bed845422f306a49467
 ```
 
 ---
 
-## Example Queries in LogNog
+## Testing
 
-Once data is flowing, you can query it:
-
-### Revenue Today
-```
-search app=directors-palette event_type=generation
-  | stats sum(cost_cents) as revenue_cents
-```
-
-### Top Users by Spend
-```
-search app=directors-palette event_type=generation
-  | stats sum(cost_cents) as total_spend by user_email
-  | sort desc total_spend
-  | limit 10
-```
-
-### Generations by Model
-```
-search app=directors-palette event_type=generation status=completed
-  | stats count by model_name
+```bash
+curl -X POST https://analytics.machinekinglabs.com/api/ingest/nextjs \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: lnog_f6ca89cdb6e84bed845422f306a49467" \
+  -d '[{
+    "timestamp": 1735640000000,
+    "type": "integration",
+    "integration": "replicate",
+    "success": true,
+    "latencyMs": 3500,
+    "model": "flux-schnell",
+    "userEmail": "test@example.com"
+  }]'
 ```
 
-### Failed Generations
-```
-search app=directors-palette event_type=generation status=failed
-  | table timestamp, user_email, model_name, error_message
-```
-
-### Average Generation Time by Model
-```
-search app=directors-palette event_type=generation status=completed
-  | stats avg(duration_ms) as avg_ms by model_name
-```
-
-### Daily Active Users
-```
-search app=directors-palette event_type=generation
-  | bin span=1d timestamp
-  | stats dc(user_id) as unique_users by timestamp
-```
-
-### Credit Purchase Revenue
-```
-search app=directors-palette event_type=credit_purchase
-  | stats sum(amount_cents) as total_revenue, count as purchases
-```
-
----
-
-## Deployment Options
-
-### Option A: Direct Internet Access
-
-If LogNog is accessible from the internet:
-
-```
-Director's Palette (Vercel)
-        ↓ HTTPS
-LogNog Server (your-domain.com:443)
-```
-
-**Pros:** Simple setup
-**Cons:** Requires exposing LogNog to internet
-
-**Security:** Use HTTPS + API key authentication (already built-in)
-
-### Option B: VPN/Private Network
-
-If LogNog is behind a firewall:
-
-```
-Director's Palette (Vercel)
-        ↓ HTTPS
-Cloudflare Tunnel / Tailscale / WireGuard
-        ↓
-LogNog Server (internal network)
-```
-
-**Options:**
-- **Cloudflare Tunnel** (free) - Expose only the ingest endpoint
-- **Tailscale** - Add Vercel edge function to your tailnet
-- **API Gateway** - Use AWS API Gateway as a proxy
-
-### Option C: Batch Export (Simplest)
-
-Don't expose LogNog at all - export periodically:
-
-```javascript
-// Scheduled function (e.g., Vercel cron, Supabase scheduled function)
-// Runs every hour, exports last hour's data
-
-const events = await supabase
-  .from('generation_events')
-  .select('*')
-  .gte('created_at', oneHourAgo);
-
-// POST to LogNog when you're connected to your network
-// Or download as JSON and import manually
-```
-
----
-
-## Supabase Log Drains (Bonus)
-
-You can ALSO enable Supabase's built-in Log Drains to capture:
-- Postgres query logs
-- Auth events (managed by Supabase)
-- Edge function logs
-- Storage events
-
-**Setup:**
-1. Go to Supabase Dashboard → Project Settings → Log Drains
-2. Add HTTP destination: `https://your-lognog/api/ingest/supabase`
-3. Add header: `X-API-Key: your-lognog-key`
-
-This gives you Supabase's internal logs in addition to your custom events.
-
----
-
-## Vercel Log Drains (Bonus)
-
-Capture Vercel deployment and function logs:
-
-**Setup:**
-1. Go to Vercel Dashboard → Project → Settings → Log Drains
-2. Add custom HTTP: `https://your-lognog/api/ingest/vercel`
-3. Add header: `X-API-Key: your-lognog-key`
-
----
-
-## Data Retention
-
-LogNog automatically manages data:
-
-| Setting | Default | Notes |
-|---------|---------|-------|
-| **TTL** | 90 days | Auto-deletes older data |
-| **Partitioning** | Monthly | Efficient storage |
-| **Compression** | ClickHouse native | ~10x compression |
-
-To adjust retention, modify `clickhouse/init/01-schema.sql`:
-```sql
-TTL toDateTime(timestamp) + INTERVAL 365 DAY  -- Keep 1 year
-```
-
----
-
-## Dashboard Ideas
-
-Once data is flowing, create dashboards for:
-
-### Revenue Dashboard
-- Total revenue (stat)
-- Revenue by day (line chart)
-- Revenue by model (pie chart)
-- Top paying users (table)
-
-### Usage Dashboard
-- Total generations (stat)
-- Generations per hour (line chart)
-- Model popularity (bar chart)
-- Failed vs successful (pie chart)
-
-### User Dashboard
-- Daily active users (line chart)
-- New signups (stat)
-- User leaderboard (table)
-- Credit balance distribution (bar chart)
-
----
-
-## Alerting
-
-Set up alerts in LogNog for:
-
-### High Error Rate
-```
-search app=directors-palette event_type=generation status=failed
-  | stats count as failures
-```
-Alert if failures > 10 in 15 minutes
-
-### Low Revenue
-```
-search app=directors-palette event_type=credit_purchase
-  | stats sum(amount_cents) as revenue
-```
-Alert if revenue < expected daily amount
-
-### Model Timeout Spike
-```
-search app=directors-palette event_type=generation duration_ms>30000
-  | stats count as slow_generations
-```
-Alert if slow_generations > 5 in 10 minutes
-
----
-
-## Summary
-
-| What | How |
-|------|-----|
-| **Send custom events** | `POST /api/ingest/http` with JSON |
-| **Supabase internal logs** | Enable Log Drains to `/api/ingest/supabase` |
-| **Vercel logs** | Enable Log Drains to `/api/ingest/vercel` |
-| **Authentication** | API key in `X-API-Key` header |
-| **Retention** | 90 days default, configurable |
-| **Querying** | Splunk-like DSL in LogNog UI |
-
----
-
-## Contact
-
-For LogNog issues: Check the [LogNog Documentation](../README.md)
-
-For Director's Palette integration: Contact your team lead
+Check logs: https://logs.machinekinglabs.com → Search → `search index=nextjs`
