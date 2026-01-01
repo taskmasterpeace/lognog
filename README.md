@@ -10,11 +10,10 @@
 </p>
 
 <p align="center">
-  <a href="#choose-your-setup">Get Started</a> •
-  <a href="#features">Features</a> •
-  <a href="#query-language">Query Language</a> •
-  <a href="#integrations">Integrations</a> •
-  <a href="docs/">Documentation</a>
+  <img src="https://img.shields.io/badge/version-1.0.0-blue" alt="Version 1.0.0">
+  <img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License">
+  <img src="https://img.shields.io/badge/tests-224%20passing-brightgreen" alt="224 Tests Passing">
+  <img src="https://img.shields.io/badge/docker-ready-blue" alt="Docker Ready">
 </p>
 
 <p align="center">
@@ -23,20 +22,52 @@
 
 ---
 
-## Why LogNog?
+## Table of Contents
 
-**Enterprise log management shouldn't require enterprise budgets.** Tools like Splunk offer powerful features, but their pricing puts them out of reach for homelabbers, small teams, and independent developers. The typical dev license limits? Often too restrictive for real-world testing.
-
-**LogNog is different:**
-- 100% open source (MIT license)
-- Runs entirely on your hardware
-- No cloud dependencies
-- No phone-home telemetry
-- No arbitrary limits
+- [Quick Start](#quick-start)
+- [Why LogNog?](#why-lognog)
+- [How LogNog Compares](#how-lognog-compares)
+- [Screenshots](#screenshots)
+- [Choose Your Setup](#choose-your-setup)
+- [Features](#features)
+  - [Core Features](#core-features)
+  - [Dashboard Features](#dashboard-features)
+  - [Alert System](#alert-system)
+  - [Search & Query](#search--query)
+  - [User Experience](#user-experience)
+  - [AI Features](#ai-features)
+  - [Security & Authentication](#security--authentication)
+- [Installation](#installation)
+  - [LogNog Full (Docker)](#lognog-full-docker-installation)
+  - [LogNog Lite (Windows)](#lognog-lite-installation)
+  - [LogNog In Agent](#lognog-in-agent)
+- [Query Language](#query-language)
+  - [Commands Reference](#commands-reference)
+  - [Operators](#operators)
+  - [Functions](#functions)
+  - [Example Queries](#example-queries)
+- [Integrations](#integrations)
+  - [Supabase Log Drains](#supabase-log-drains)
+  - [Vercel Log Drains](#vercel-log-drains)
+  - [SmartThings IoT](#smartthings-iot)
+  - [OpenTelemetry (OTLP)](#opentelemetry-otlp)
+  - [Claude Desktop (MCP)](#claude-desktop-mcp)
+  - [Generic HTTP](#generic-http)
+- [API Reference](#api-reference)
+- [Configuration](#configuration)
+  - [Environment Variables](#environment-variables)
+  - [User Preferences](#user-preferences)
+  - [Notification Channels](#notification-channels)
+- [Architecture](#architecture)
+- [Documentation](#documentation)
+- [Development](#development)
+- [Roadmap](#roadmap)
+- [Contributing](#contributing)
+- [License](#license)
 
 ---
 
-## Quick Start (5 Minutes)
+## Quick Start
 
 Get from zero to searching logs in under 5 minutes:
 
@@ -68,45 +99,42 @@ That's it! You're now running a fully-featured log management platform.
 
 ---
 
-## How LogNog Compares
+## Why LogNog?
 
-![LogNog vs Splunk vs ELK vs Grafana Loki](compare.png)
+**Enterprise log management shouldn't require enterprise budgets.** Tools like Splunk offer powerful features, but their pricing puts them out of reach for homelabbers, small teams, and independent developers.
+
+**LogNog is different:**
+- 100% open source (MIT license)
+- Runs entirely on your hardware
+- No cloud dependencies
+- No phone-home telemetry
+- No arbitrary limits
+
+---
+
+## How LogNog Compares
 
 | Feature | LogNog | Splunk | ELK Stack | Grafana Loki |
 |---------|--------|--------|-----------|--------------|
 | **Cost** | Free (MIT) | $$$$ | Free* | Free* |
-| **Setup Time** | 10 minutes | Hours | Hours | 30+ min |
+| **Setup Time** | 5 minutes | Hours | Hours | 30+ min |
 | **Query Language** | Splunk-like DSL | SPL | Lucene/KQL | LogQL |
 | **Learning Curve** | Low | High | Medium | Medium |
 | **Single Binary** | Yes (Lite) | No | No | No |
 | **Windows Native** | Yes | Yes | Painful | No |
 | **Docker Required** | Optional | No | Yes | Yes |
+| **Welcome Wizard** | Yes | No | No | No |
 | **Built-in Alerts** | Yes | Yes | Via Elastalert | Via Grafana |
+| **Alert Templates** | 8 pre-built | No | No | No |
 | **Built-in Dashboards** | Yes | Yes | Via Kibana | Via Grafana |
+| **Dashboard Templates** | 7 pre-built | Yes | No | No |
 | **FIM (File Monitoring)** | Yes | Via addon | No | No |
 | **Real-time Tail** | Yes (SSE) | Yes | Yes | Yes |
+| **AI Features** | Yes (Ollama) | Premium | No | No |
 | **GeoIP** | Yes | Yes | Yes | Plugin |
-| **Components** | 1-3 | 1 | 3+ (E+L+K) | 3+ (Loki+Promtail+Grafana) |
+| **Components** | 1-3 | 1 | 3+ | 3+ |
 
 *ELK and Loki are free but require significant infrastructure and expertise
-
-### Why Not ELK Stack?
-- **3 separate systems** to manage (Elasticsearch, Logstash, Kibana)
-- **Java-heavy** - high memory usage
-- **Complex configuration** - YAML everywhere
-- **Lucene query syntax** - different from Splunk SPL
-
-### Why Not Grafana Loki?
-- **Designed for metrics first**, logs second
-- **LogQL** is different from Splunk SPL
-- **Requires Grafana** for visualization
-- **No Windows agent** out of the box
-
-### Why LogNog?
-- **Splunk-familiar** query language
-- **One docker-compose** or native Windows binary
-- **Built-in everything** - no separate tools needed
-- **AI-ready** - NogBot advisors coming soon
 
 ---
 
@@ -167,209 +195,145 @@ Need to access LogNog from outside your network? See our **[Deployment Guide](do
 
 ## Features
 
-### Core Features (All Versions)
-- **Real-time Log Search** - Powerful Splunk-like query language, sub-second results
-- **Live Tail** - SSE-powered real-time log streaming
-- **Custom Dashboards** - 7 visualization types with pro features
-  - Table, Bar, Pie, Line/Area, Single Stat, Heatmap, Gauge
-  - **Drag-and-drop layout** - Resize and rearrange panels with react-grid-layout
-  - **Dashboard variables** - Dynamic $host$, $app$ dropdowns that filter all panels
-  - **Click-to-drilldown** - Click any chart element to search those logs
-  - **Dashboard branding** - Custom logos, accent colors, headers per dashboard
-  - **Public sharing** - Share dashboards without requiring login
-  - **Export/Import** - Backup dashboards as JSON, share with the community
-  - **Annotations** - Mark events on your dashboard timeline
-  - Auto-refresh intervals (30s, 1m, 5m)
-  - **7 pre-built templates** - pfSense, Docker, Windows, Nginx, Minecraft, System, Ubiquiti
-- **AI Features** (optional, via Ollama)
-  - Natural language to query conversion ("show me errors from last hour")
-  - AI-generated insights for dashboards (anomalies, trends, suggestions)
-  - **Codebase Interview Wizard** - Help dev teams implement logging
-    - Generate questionnaires for your dev teams
-    - AI analyzes responses and recommends what to log
-    - Generates implementation guides with actual code
-- **File Integrity Monitoring (FIM)** - Know when critical files change
-- **Splunk-style Alerts** - Threshold-based triggers with email, webhook, and log actions
-- **Alert Silencing** - Suppress alerts by host, alert rule, or globally with time-based expiration
-- **Reports** - Generate and schedule HTML reports with email delivery
-- **Source Templates** - 15+ pre-built templates for common log sources
-- **API Key Management** - Create and manage API keys for integrations
+### Core Features
+
+| Feature | Description |
+|---------|-------------|
+| **Real-time Log Search** | Powerful Splunk-like query language with sub-second results |
+| **Live Tail** | SSE-powered real-time log streaming |
+| **Welcome Wizard** | Guided 4-step setup for new users |
+| **Demo Data Generator** | One-click sample data for exploring features |
+| **Field Browser** | Interactive field discovery and pinning |
+| **Saved Searches** | Store and reuse common queries |
+| **Export to CSV** | One-click export of search results |
+| **Source Templates** | 15+ pre-built templates for common log sources |
+| **Field Extractions** | Grok and regex patterns for parsing |
+
+### Dashboard Features
+
+LogNog includes a powerful dashboard system with 7 visualization types:
+
+| Visualization | Use Case |
+|--------------|----------|
+| **Time Series** | Line, area, and bar charts over time |
+| **Bar Chart** | Single, grouped, or stacked comparisons |
+| **Pie/Donut** | Distribution and proportions |
+| **Gauge** | KPI thresholds and progress |
+| **Heatmap** | Pattern detection across dimensions |
+| **Stat Card** | Single metric display with trends |
+| **Table** | Paginated results with sorting |
+
+**Dashboard Capabilities:**
+
+- **Drag-and-drop layout** - Resize and rearrange panels freely
+- **Dashboard variables** - Dynamic `$host$`, `$app$` dropdowns that filter all panels
+- **Click-to-drilldown** - Click any chart element to search those logs
+- **Dashboard branding** - Custom logos, accent colors, headers per dashboard
+- **Public sharing** - Share dashboards without requiring login (optional password)
+- **Export/Import** - Backup dashboards as JSON, share with community
+- **Annotations** - Mark events on your dashboard timeline
+- **Auto-refresh** - 30s, 1m, 5m intervals
+- **7 pre-built templates** - pfSense, Docker, Windows, Nginx, Minecraft, System, Ubiquiti
+- **One-click duplication** - Clone dashboards with all panels and variables
+
+### Alert System
+
+**Alert Templates (8 Pre-built):**
+
+| Template | Category | Description |
+|----------|----------|-------------|
+| High Error Rate | Errors | Alert when error logs spike |
+| Failed SSH Logins | Security | Detect brute force attempts |
+| Windows Failed Logins | Security | Track Windows auth failures |
+| Firewall Block Spike | Security | Unusual firewall activity |
+| Web Server Errors | Errors | HTTP 5xx monitoring |
+| Docker Container Restarts | Availability | Container health |
+| New Admin User | Security | Privilege escalation detection |
+| Host Silent | Availability | Missing heartbeat detection |
+
+**Alert Features:**
+
+| Feature | Description |
+|---------|-------------|
+| **Multiple Trigger Types** | Number of results, threshold comparison, percentage change |
+| **Scheduling** | Real-time, cron, hourly, daily, weekly, monthly |
+| **Severity Levels** | Critical, High, Medium, Low |
+| **Multiple Actions** | Email, Slack, Discord, Webhook, Teams, and 10+ more via Apprise |
+| **Throttling** | Prevent alert storms with deduplication windows |
+| **Silencing** | Global, per-host, or per-alert muting with expiration |
+| **History & Acknowledgment** | Track all triggers with sample results |
+| **Test Before Save** | Preview alert behavior without committing |
+
+### Search & Query
+
+**Query Language (DSL):**
+
+- 17 commands: search, filter, stats, sort, limit, dedup, table, fields, rename, top, rare, bin, timechart, rex, eval, head, tail
+- Full boolean logic: AND, OR, NOT with parentheses
+- 25+ functions: Math, string, statistical, percentile, time
+- Field extraction with regex (rex command)
+- Field discovery and autocomplete
+
+**Search Features:**
+
+| Feature | Description |
+|---------|-------------|
+| **Field Sidebar** | Pin frequently used fields |
+| **Facet Filters** | Click-to-filter on field values |
+| **Percentage Display** | See value distribution for each field |
+| **Query History** | Browse and rerun past queries |
+| **Syntax Highlighting** | Clear visual feedback in query editor |
+| **AI Query Builder** | Natural language to DSL conversion |
 
 ### User Experience
-- **Relative Timestamps** - "5m ago" display alongside formatted times
-- **Time Range Memory** - Remembers your preferred time range across sessions
-- **Sidebar State Persistence** - Keeps filter panel open/closed as you left it
-- **Search Clear Button** - Quick clear with X button, auto-focus on load
-- **Export to CSV** - One-click export of search results
-- **Results in Tab Title** - See result count without switching tabs
-- **Empty Results Help** - Helpful suggestions when no results found
-- **Form Validation** - Visual feedback for emails, URLs, required fields
-- **Dark Mode** - Automatic system theme detection with manual override
 
-### Query Language Features
-- **Boolean Logic** - Full AND, OR, NOT with parentheses grouping
-- **Math Functions** - abs, round, floor, ceil, sqrt, pow, log, exp
-- **String Functions** - len, lower, upper, trim, substr, replace, concat, split
-- **Statistical Functions** - count, sum, avg, min, max, distinct count, percentiles (p50, p90, p95, p99)
-- **Time Functions** - bin span=1h/5m/1d, timechart
-- **Field Extraction** - rex command for regex-based field extraction
+| Feature | Description |
+|---------|-------------|
+| **Welcome Wizard** | 4-step guided setup for new users |
+| **Relative Timestamps** | "5m ago" display alongside formatted times |
+| **Time Range Memory** | Remembers your preferred time range |
+| **Sidebar Persistence** | Keeps filter panel state |
+| **Tab Title Updates** | See result count without switching tabs |
+| **Empty Results Help** | Helpful suggestions when no results |
+| **Form Validation** | Visual feedback for inputs |
+| **Dark Mode** | Automatic system detection + manual override |
+| **Mobile Responsive** | Usable on tablets and phones |
 
-### LogNog Full (Docker) Extras
-- **Syslog Ingestion** - UDP/TCP port 514 (RFC 3164 & 5424)
-- **OpenTelemetry (OTLP)** - Native OTLP/HTTP JSON ingestion with optional authentication
-- **ClickHouse Storage** - Columnar database for billions of logs
-- **Vector Pipeline** - High-performance log routing
-- **Network Device Support** - pfSense, OPNsense, Ubiquiti, etc.
-- **IP Classification** - Automatic RFC-compliant IP categorization (private/public/loopback)
-- **GeoIP Lookup** - MaxMind GeoLite2 integration for IP geolocation
+### AI Features
 
----
+*Requires Ollama or OpenRouter*
 
-## Integrations
+| Feature | Description |
+|---------|-------------|
+| **Natural Language Search** | "Show me errors from the last hour" → DSL |
+| **Dashboard Insights** | AI-generated anomaly detection and trends |
+| **NogChat Assistant** | Chat interface for query help |
+| **Codebase Interview Wizard** | Generate logging implementation guides for dev teams |
 
-LogNog integrates with popular platforms via Log Drains and webhooks:
+### Security & Authentication
 
-| Platform | Endpoint | Documentation |
-|----------|----------|---------------|
-| **Supabase** | `POST /api/ingest/supabase` | [Supabase Integration](docs/SUPABASE-INTEGRATION.md) |
-| **Vercel** | `POST /api/ingest/vercel` | [Vercel Integration](docs/VERCEL-INTEGRATION.md) |
-| **SmartThings** | `POST /api/ingest/smartthings` | IoT device events and health |
-| **Generic HTTP** | `POST /api/ingest/http` | Accepts any JSON array of logs |
-| **OpenTelemetry** | `POST /api/ingest/otlp/v1/logs` | [OTLP Authentication](docs/OTLP_AUTHENTICATION.md) |
-| **Claude Desktop** | SSE `/mcp/sse` | [MCP Integration](docs/MCP-INTEGRATION.md) |
-
-### Supabase Log Drains
-Ingest logs from your Supabase projects (database, auth, storage, edge functions):
-1. Go to Supabase Dashboard → Settings → Log Drains
-2. Add destination: Generic HTTP endpoint
-3. URL: `https://your-lognog-server/api/ingest/supabase`
-4. Headers: `X-API-Key: your-lognog-api-key`
-
-### Vercel Log Drains
-Ingest logs from Vercel deployments (serverless functions, edge, builds):
-1. Go to Vercel Dashboard → Project Settings → Log Drains
-2. Add Log Drain → Custom HTTP endpoint
-3. URL: `https://your-lognog-server/api/ingest/vercel`
-4. Headers: `X-API-Key: your-lognog-api-key`
-
-### SmartThings (IoT)
-Ingest device events from Samsung SmartThings:
-1. Create a SmartApp in SmartThings Developer Workspace
-2. Register a Webhook SmartApp pointing to: `https://your-lognog-server/api/ingest/smartthings`
-3. Add header: `X-API-Key: your-lognog-api-key`
-4. Subscribe to device events, health events, and lifecycle events
-
-**Event types captured:** Device state changes, health status, hub events, lifecycle events
-
-### Claude Desktop (MCP)
-Connect LogNog to Claude Desktop for AI-powered log management:
-1. Generate API key in LogNog (Settings → API Keys)
-2. Add to Claude Desktop config (`claude_desktop_config.json`):
-   ```json
-   {
-     "mcpServers": {
-       "lognog": {
-         "command": "curl",
-         "args": ["-N", "-H", "X-API-Key: YOUR_KEY", "http://localhost:4000/mcp/sse"]
-       }
-     }
-   }
-   ```
-3. Restart Claude Desktop
-4. Ask Claude: "Show me error logs from the last hour"
-
-[Full MCP Documentation →](docs/MCP-INTEGRATION.md)
+| Feature | Description |
+|---------|-------------|
+| **JWT Authentication** | Secure token-based auth with refresh rotation |
+| **Role-Based Access** | Admin, User, Readonly roles |
+| **API Key Management** | Create keys with specific permissions |
+| **Audit Logging** | Track all security events |
+| **Rate Limiting** | Protection against brute force |
+| **No Default Passwords** | You create credentials on first run |
+| **Password Hashing** | bcrypt with 12 rounds |
+| **User Management** | Admin UI for user lifecycle |
 
 ---
 
-## LogNog In (Agent)
+## Installation
 
-The lightweight agent that ships logs to your LogNog server.
+### LogNog Full (Docker) Installation
 
-### Features
-- System tray with status indicator
-- GUI configuration (no command line needed)
-- File watching with pattern matching
-- **File Integrity Monitoring (FIM)** - Track file changes with SHA-256 hashing
-- **Windows Event Log Collection** - Security, System, Application channels
-- **Customizable Sound Alerts** - Different sounds for different severity levels
-- **Alert notifications** - Push alerts from server to system tray
-- **Alert history** - View previous alerts received
-- Offline buffering - never lose logs
-- Low resource usage (~50MB RAM)
-
-### Windows Events
-The agent can collect Windows Event Logs directly:
-- Security events (logon, logoff, account changes)
-- System events (service changes, errors)
-- Application events
-- Configurable event ID filtering
-
-### Sound Alerts
-Customize audio notifications for different alert severities:
-- Critical, Error, Warning, Info sounds
-- Use default system beeps or custom .wav files
-- Volume control
-- Per-severity enable/disable
-
-### Quick Start
-
-1. **Download** `LogNogIn.exe` from [Releases](https://github.com/machinekinglabs/lognog/releases)
-2. **Run** - Double-click the EXE
-3. **Configure** - Double-click the tray icon
-4. **Done** - Logs start flowing
-
-[Full Agent Documentation →](agent/README.md)
-
----
-
-## LogNog Lite Installation
-
-Native Windows server with SQLite - no Docker required!
-
-### Prerequisites
-- Windows 10/11
-- [Node.js 18+](https://nodejs.org/)
-
-### Quick Start
-
-1. **Download** the `LogNogLite.zip` from [Releases](https://github.com/machinekinglabs/lognog/releases)
-2. **Extract** to any folder
-3. **Run** `LogNogLite.exe`
-4. **Browser opens** to http://localhost:4000
-5. **Create your admin account** (no default credentials - you choose your own username/password)
-6. **Done** - Start searching logs!
-
-### What's Included
-
-```
-LogNogLite/
-├── LogNogLite.exe    (run this)
-├── api/              (server code)
-├── ui/               (dashboard)
-└── data/             (created on first run)
-    ├── lognog.db     (settings)
-    └── lognog-logs.db (your logs)
-```
-
-### Performance
-
-- **Recommended**: Up to 100K logs/day
-- **Storage**: ~100 bytes per log
-
-For larger deployments, use [LogNog Full (Docker)](#lognog-full-docker-installation).
-
-[Full Lite Documentation →](docs/LOGNOG-LITE.md)
-
----
-
-## LogNog Full (Docker) Installation
-
-### Prerequisites
+**Prerequisites:**
 - Docker & Docker Compose
 - 4GB+ RAM recommended
 
-### Quick Start
+**Quick Start:**
 
 ```bash
 # Clone the repository
@@ -383,7 +347,7 @@ docker-compose up -d
 docker-compose ps
 ```
 
-### Access
+**Access Points:**
 
 | Service | URL | Description |
 |---------|-----|-------------|
@@ -391,30 +355,18 @@ docker-compose ps
 | **API** | http://localhost:4000 | REST API |
 | **Syslog** | localhost:514 (UDP/TCP) | Log ingestion |
 
-### First Time Setup
+**First Time Setup:**
 
-**There are no default credentials.** On first visit, you'll create your admin account:
+1. Open http://localhost
+2. Click "Get Started"
+3. Create your admin account (username, email, password)
+4. Follow the Welcome Wizard
+5. Start exploring!
 
-1. Open http://localhost in your browser
-2. Click "Get Started" or "Sign In"
-3. You'll see "Welcome to LogNog!" setup screen
-4. Create your admin account:
-   - **Username**: Choose any (e.g., `admin`)
-   - **Email**: Your email address
-   - **Password**: At least 8 characters
-5. Click "Create Admin Account"
-6. You're in! Start searching logs.
-
-**Security Notes:**
-- The first user automatically becomes admin
-- Additional users can be created via Settings
-- API keys can be generated for agents and integrations
-- All passwords are hashed with bcrypt (12 rounds)
-
-### Send Test Logs
+**Send Test Logs:**
 
 ```bash
-# Quick test
+# Quick syslog test
 echo "<14>$(date '+%b %d %H:%M:%S') testhost myapp[1234]: Hello LogNog!" | nc -u localhost 514
 
 # Generate realistic test data
@@ -423,38 +375,85 @@ docker-compose --profile testing up -d
 
 ---
 
+### LogNog Lite Installation
+
+Native Windows server with SQLite - no Docker required!
+
+**Prerequisites:**
+- Windows 10/11
+- [Node.js 18+](https://nodejs.org/)
+
+**Quick Start:**
+
+1. **Download** `LogNogLite.zip` from [Releases](https://github.com/machinekinglabs/lognog/releases)
+2. **Extract** to any folder
+3. **Run** `LogNogLite.exe`
+4. **Browser opens** to http://localhost:4000
+5. **Create your admin account**
+6. **Follow the Welcome Wizard**
+
+**Performance:**
+- Recommended: Up to 100K logs/day
+- Storage: ~100 bytes per log
+
+[Full Lite Documentation →](docs/LOGNOG-LITE.md)
+
+---
+
+### LogNog In Agent
+
+Lightweight agent that ships logs to your LogNog server.
+
+**Features:**
+
+| Feature | Description |
+|---------|-------------|
+| **System Tray GUI** | No command line needed |
+| **File Watching** | Monitor folders with patterns |
+| **FIM** | File Integrity Monitoring with SHA-256 |
+| **Windows Events** | Security, System, Application channels |
+| **Sound Alerts** | Customizable per-severity notifications |
+| **Alert History** | View past server alerts |
+| **Offline Buffering** | Never lose logs |
+| **Low Resources** | ~50MB RAM |
+
+**Quick Start:**
+
+1. **Download** `LogNogIn.exe` from [Releases](https://github.com/machinekinglabs/lognog/releases)
+2. **Run** - Double-click the EXE
+3. **Configure** - Double-click tray icon
+4. **Done** - Logs start flowing
+
+[Full Agent Documentation →](agent/README.md)
+
+---
+
 ## Query Language
 
 LogNog uses a Splunk-like query language that compiles to SQL.
 
-### Basic Syntax
-
-```
-command arguments | command arguments | ...
-```
-
-### Commands
+### Commands Reference
 
 | Command | Description | Example |
 |---------|-------------|---------|
 | `search` | Filter logs | `search host=router severity>=warning` |
 | `filter` | Additional filtering | `filter app_name~"nginx"` |
 | `where` | Alias for filter | `where severity<=3` |
-| `stats` | Aggregate | `stats count, avg(bytes) as avg_bytes by hostname` |
+| `stats` | Aggregate | `stats count, avg(bytes) by hostname` |
 | `sort` | Order results | `sort desc timestamp` |
 | `limit` | Limit results | `limit 100` |
 | `head` | First N results | `head 50` |
 | `tail` | Last N results | `tail 20` |
 | `table` | Select fields | `table timestamp hostname message` |
-| `fields` | Include/exclude fields | `fields - raw structured_data` |
-| `dedup` | Remove duplicates | `dedup hostname` |
+| `fields` | Include/exclude | `fields - raw structured_data` |
+| `dedup` | Deduplicate | `dedup hostname` |
 | `rename` | Rename fields | `rename hostname as host` |
-| `top` | Most common values | `top 10 hostname` |
-| `rare` | Least common values | `rare 10 app_name` |
+| `top` | Most common | `top 10 hostname` |
+| `rare` | Least common | `rare 10 app_name` |
 | `bin` | Time bucketing | `bin span=1h timestamp` |
-| `timechart` | Time-based stats | `timechart span=1h count by hostname` |
-| `rex` | Regex extraction | `rex field=message "user=(?P<user>\w+)"` |
-| `eval` | Calculate fields | `eval rate=bytes/1024` |
+| `timechart` | Time stats | `timechart span=1h count by hostname` |
+| `rex` | Regex extract | `rex field=message "user=(?P<user>\w+)"` |
+| `eval` | Calculate | `eval rate=bytes/1024` |
 
 ### Operators
 
@@ -462,10 +461,27 @@ command arguments | command arguments | ...
 |----------|-------------|---------|
 | `=` | Equals | `host=router` |
 | `!=` | Not equals | `severity!=7` |
-| `>`, `>=`, `<`, `<=` | Comparison | `severity>=warning` |
-| `~` | Contains (regex) | `message~"error"` |
-| `AND`, `OR`, `NOT` | Boolean | `host=router AND severity<=3` |
+| `>` `>=` `<` `<=` | Comparison | `severity>=warning` |
+| `~` | Contains/regex | `message~"error"` |
+| `AND` `OR` `NOT` | Boolean | `host=router AND severity<=3` |
 | `()` | Grouping | `(host=a OR host=b) AND severity<=3` |
+
+### Functions
+
+**Math Functions:**
+`abs`, `round`, `floor`, `ceil`, `sqrt`, `pow`, `log`, `log10`, `exp`
+
+**String Functions:**
+`len`, `lower`, `upper`, `trim`, `ltrim`, `rtrim`, `substr`, `replace`, `concat`, `split`
+
+**Statistical Functions:**
+`count`, `sum`, `avg`, `min`, `max`, `dc` (distinct count), `values`, `list`, `earliest`, `latest`
+
+**Percentile Functions:**
+`p50`, `p90`, `p95`, `p99`, `median`, `mode`, `stddev`, `variance`, `range`
+
+**IP Functions:**
+`is_private(ip)`, `is_public(ip)`, `ip_type(ip)`
 
 ### Example Queries
 
@@ -495,37 +511,204 @@ search severity<=3
 search app_name=nginx
   | rex field=message "status=(?P<status>\d+)"
   | stats count by status
+
+# Calculate rates
+search app_name=api
+  | eval duration_sec=duration_ms/1000
+  | stats avg(duration_sec) as avg_duration by endpoint
 ```
 
 [Full Query Language Documentation →](docs/QUERY-LANGUAGE.md)
 
 ---
 
-## Source Templates
+## Integrations
 
-LogNog includes 15+ pre-built templates for common log sources:
+LogNog integrates with popular platforms:
 
-### Databases
-- MySQL Error Log, Slow Query Log
-- PostgreSQL
-- MongoDB
-- Redis
+| Platform | Endpoint | Documentation |
+|----------|----------|---------------|
+| **Supabase** | `POST /api/ingest/supabase` | [Guide](docs/SUPABASE-INTEGRATION.md) |
+| **Vercel** | `POST /api/ingest/vercel` | [Guide](docs/VERCEL-INTEGRATION.md) |
+| **SmartThings** | `POST /api/ingest/smartthings` | [Below](#smartthings-iot) |
+| **Generic HTTP** | `POST /api/ingest/http` | [Below](#generic-http) |
+| **OpenTelemetry** | `POST /api/ingest/otlp/v1/logs` | [Guide](docs/OTLP_AUTHENTICATION.md) |
+| **Claude Desktop** | SSE `/mcp/sse` | [Guide](docs/MCP-INTEGRATION.md) |
 
-### Web Servers
-- Nginx Access/Error
-- Apache Access/Error
-- IIS (W3C format)
+### Supabase Log Drains
 
-### Security
-- Windows Security Events
-- Linux Auth/Secure logs
-- SSH (sshd)
+Ingest logs from Supabase projects (database, auth, storage, edge functions):
 
-### Platforms
-- Supabase (Postgres, Auth, Edge Functions)
-- Vercel (Serverless, Edge, Builds)
+1. Go to Supabase Dashboard → Settings → Log Drains
+2. Add destination: Generic HTTP endpoint
+3. URL: `https://your-lognog-server/api/ingest/supabase`
+4. Headers: `X-API-Key: your-lognog-api-key`
 
-Access templates at **Data Sources** in the UI or via API at `GET /api/templates`.
+### Vercel Log Drains
+
+Ingest logs from Vercel (serverless, edge, builds):
+
+1. Go to Vercel Dashboard → Project Settings → Log Drains
+2. Add Log Drain → Custom HTTP endpoint
+3. URL: `https://your-lognog-server/api/ingest/vercel`
+4. Headers: `X-API-Key: your-lognog-api-key`
+
+### SmartThings IoT
+
+Ingest device events from Samsung SmartThings:
+
+1. Create SmartApp in SmartThings Developer Workspace
+2. Register Webhook pointing to: `https://your-lognog-server/api/ingest/smartthings`
+3. Add header: `X-API-Key: your-lognog-api-key`
+4. Subscribe to device events, health events, lifecycle events
+
+**Events captured:** Device state changes, health status, hub events
+
+### OpenTelemetry OTLP
+
+Native OTLP/HTTP JSON ingestion:
+
+```bash
+curl -X POST "https://your-lognog/api/ingest/otlp/v1/logs" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-api-key" \
+  -d @otlp-logs.json
+```
+
+[OTLP Authentication Guide →](docs/OTLP_AUTHENTICATION.md)
+
+### Claude Desktop MCP
+
+Connect LogNog to Claude Desktop for AI-powered log analysis:
+
+1. Generate API key in LogNog (Settings → API Keys)
+2. Add to Claude Desktop config:
+   ```json
+   {
+     "mcpServers": {
+       "lognog": {
+         "command": "curl",
+         "args": ["-N", "-H", "X-API-Key: YOUR_KEY", "http://localhost:4000/mcp/sse"]
+       }
+     }
+   }
+   ```
+3. Restart Claude Desktop
+4. Ask: "Show me error logs from the last hour"
+
+[MCP Integration Guide →](docs/MCP-INTEGRATION.md)
+
+### Generic HTTP
+
+Send any JSON array of logs:
+
+```bash
+curl -X POST "https://your-lognog/api/ingest/http" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: your-api-key" \
+  -d '[{
+    "timestamp": "2024-01-15T10:30:00Z",
+    "message": "User logged in",
+    "level": "info",
+    "user_id": "12345"
+  }]'
+```
+
+---
+
+## API Reference
+
+### Core Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/search/query` | Execute DSL query |
+| `GET` | `/api/dashboards` | List dashboards |
+| `POST` | `/api/dashboards` | Create dashboard |
+| `GET` | `/api/alerts` | List alerts |
+| `POST` | `/api/alerts` | Create alert |
+| `GET` | `/api/alerts/templates` | List alert templates |
+| `POST` | `/api/alerts/from-template/:id` | Create from template |
+| `GET` | `/api/stats/overview` | System statistics |
+
+### Ingestion Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/ingest/http` | Generic JSON ingestion |
+| `POST` | `/api/ingest/supabase` | Supabase Log Drains |
+| `POST` | `/api/ingest/vercel` | Vercel Log Drains |
+| `POST` | `/api/ingest/smartthings` | SmartThings IoT |
+| `POST` | `/api/ingest/otlp/v1/logs` | OpenTelemetry |
+| `POST` | `/api/ingest/agent` | LogNog In Agent |
+
+### Authentication Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/api/auth/login` | User login |
+| `POST` | `/api/auth/refresh` | Refresh token |
+| `GET` | `/api/auth/me` | Current user info |
+| `POST` | `/api/auth/api-keys` | Create API key |
+| `GET` | `/api/auth/users` | List users (admin) |
+
+---
+
+## Configuration
+
+### Environment Variables
+
+```bash
+# API Port
+PORT=4000
+
+# Security (REQUIRED in production)
+JWT_SECRET=your-secure-random-secret
+JWT_REFRESH_SECRET=your-secure-refresh-secret
+NODE_ENV=production
+
+# OTLP Authentication (optional)
+OTLP_REQUIRE_AUTH=true
+
+# SMTP for scheduled reports
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USER=reports@example.com
+SMTP_PASS=your-password
+SMTP_FROM=reports@example.com
+
+# AI Features (optional)
+OLLAMA_URL=http://localhost:11434
+OLLAMA_MODEL=llama3.2
+
+# Apprise Notifications (optional)
+APPRISE_URL=http://localhost:8000
+```
+
+> **Security Note:** In production, `JWT_SECRET` and `JWT_REFRESH_SECRET` must be set. Use `openssl rand -base64 32` to generate.
+
+### User Preferences
+
+Configurable per-user in Settings:
+
+| Preference | Options |
+|------------|---------|
+| Theme | Light, Dark, System |
+| Default Time Range | 15m, 1h, 4h, 24h, 7d |
+| Default View Mode | Log, Table, JSON |
+| Sidebar State | Open, Closed |
+| Query History Limit | 10-100 entries |
+
+### Notification Channels
+
+LogNog supports 14+ notification services via Apprise:
+
+- Slack, Discord, Microsoft Teams
+- Telegram, Pushover, ntfy.sh
+- PagerDuty, Opsgenie
+- Email (SMTP), Twilio SMS
+- Gotify, Matrix
+- Custom Webhooks
 
 ---
 
@@ -557,10 +740,10 @@ Access templates at **Data Sources** in the UI or via API at `GET /api/templates
 
 | Port | Service | Protocol | Description |
 |------|---------|----------|-------------|
-| 80 | Nginx | HTTP | Web UI (main entry) |
-| 514 | Vector | UDP/TCP | Syslog ingestion |
-| 4000 | API | HTTP | REST API (internal) |
-| 8123 | ClickHouse | HTTP | Database (internal) |
+| 80 | Nginx | HTTP | Web UI |
+| 514 | Vector | UDP/TCP | Syslog |
+| 4000 | API | HTTP | REST API |
+| 8123 | ClickHouse | HTTP | Database |
 
 ---
 
@@ -569,176 +752,98 @@ Access templates at **Data Sources** in the UI or via API at `GET /api/templates
 | Document | Description |
 |----------|-------------|
 | [Query Language](docs/QUERY-LANGUAGE.md) | Complete DSL reference |
-| [Dashboards](docs/DASHBOARDS.md) | Dashboard features, templates, AI insights |
-| [Codebase Interview Wizard](docs/CODEBASE-INTERVIEW-WIZARD.md) | Help dev teams implement logging |
+| [Dashboards](docs/DASHBOARDS.md) | Dashboard features and templates |
+| [Codebase Interview Wizard](docs/CODEBASE-INTERVIEW-WIZARD.md) | AI logging implementation guides |
 | [Supabase Integration](docs/SUPABASE-INTEGRATION.md) | Supabase Log Drains setup |
 | [Vercel Integration](docs/VERCEL-INTEGRATION.md) | Vercel Log Drains setup |
-| [MCP Integration](docs/MCP-INTEGRATION.md) | Claude Desktop / AI integration |
-| [Cloudflare Tunnel](docs/CLOUDFLARE-TUNNEL-SETUP.md) | Secure remote access via Cloudflare |
-| [IP Classification](docs/IP-CLASSIFICATION.md) | IP categorization features |
-| [GeoIP Implementation](docs/GEOIP-IMPLEMENTATION.md) | GeoIP lookup setup |
-| [OTLP Authentication](docs/OTLP_AUTHENTICATION.md) | OpenTelemetry auth config |
-| [LogNog Lite](docs/LOGNOG-LITE.md) | SQLite mode documentation |
+| [MCP Integration](docs/MCP-INTEGRATION.md) | Claude Desktop integration |
+| [Cloudflare Tunnel](docs/CLOUDFLARE-TUNNEL-SETUP.md) | Secure remote access |
+| [IP Classification](docs/IP-CLASSIFICATION.md) | IP categorization |
+| [GeoIP Implementation](docs/GEOIP-IMPLEMENTATION.md) | GeoIP setup |
+| [OTLP Authentication](docs/OTLP_AUTHENTICATION.md) | OpenTelemetry auth |
+| [LogNog Lite](docs/LOGNOG-LITE.md) | SQLite mode docs |
 | [Database Templates](docs/DATABASE-TEMPLATES.md) | Database log templates |
-| [Agent Guide](agent/README.md) | LogNog In agent documentation |
-| [Feature Gap Analysis](docs/FEATURE-GAP-ANALYSIS.md) | Splunk comparison & roadmap |
-| [Deployment Guide](docs/DEPLOYMENT-GUIDE.md) | Secure remote access setup |
-| [Alert Variables](docs/ALERT-VARIABLES.md) | Dynamic variables in alert templates |
+| [Agent Guide](agent/README.md) | LogNog In agent docs |
+| [Alert Variables](docs/ALERT-VARIABLES.md) | Dynamic alert variables |
+| [Deployment Guide](docs/DEPLOYMENT-GUIDE.md) | Secure deployment |
 
 ---
 
 ## Development
 
-### API
+### API Development
+
 ```bash
 cd api
 npm install
-npm run dev      # Development server
-npm run test     # Run tests (202 tests)
+npm run dev      # Development server with hot reload
+npm run build    # Build TypeScript
+npm run test     # Run tests (224 tests)
 ```
 
-### UI
+### UI Development
+
 ```bash
 cd ui
 npm install
 npm run dev      # Vite dev server (port 3000)
+npm run build    # Production build
 ```
 
-### Agent
+### Agent Development
+
 ```bash
 cd agent
 pip install -e ".[dev]"
 pytest           # Run tests (68 tests)
 python -m lognog_in  # Run agent
+python build.py  # Build EXE
 ```
 
-### Build Agent EXE
-```bash
-cd agent
-python build.py  # Creates dist/LogNogIn.exe (84 MB)
-```
-
----
-
-## Test Coverage
+### Test Coverage
 
 | Component | Tests | Status |
 |-----------|-------|--------|
-| API (Vitest) | 202 | ✅ |
+| API (Vitest) | 224 | ✅ |
 | Agent (pytest) | 68 | ✅ |
-
----
-
-## Configuration
-
-### Environment Variables
-
-```bash
-# API Port
-PORT=4000
-
-# Security (REQUIRED in production)
-JWT_SECRET=your-secure-random-secret
-JWT_REFRESH_SECRET=your-secure-refresh-secret
-NODE_ENV=production
-
-# OTLP Authentication (optional)
-OTLP_REQUIRE_AUTH=true
-
-# SMTP for scheduled reports
-SMTP_HOST=smtp.example.com
-SMTP_PORT=587
-SMTP_USER=reports@example.com
-SMTP_PASS=your-password
-SMTP_FROM=reports@example.com
-
-# AI Features (optional)
-OLLAMA_URL=http://localhost:11434
-OLLAMA_MODEL=llama3.2
-```
-
-> **Security Note:** In production, `JWT_SECRET` and `JWT_REFRESH_SECRET` must be set or the API will refuse to start. Use strong, random secrets (e.g., `openssl rand -base64 32`).
 
 ---
 
 ## Roadmap
 
-### Completed
-- [x] Custom dashboards with 7 visualization types
-- [x] Dashboard auto-refresh (30s, 1m, 5m intervals)
-- [x] Heatmap and Gauge chart types
-- [x] Report generation & scheduling
-- [x] User authentication with JWT
-- [x] API key management for integrations
-- [x] LogNog In agent (Windows) with GUI
-- [x] LogNog Lite (native Windows server)
-- [x] Splunk-style alert rules & notifications
-- [x] Alert silencing (global, per-host, per-alert)
-- [x] OpenTelemetry (OTLP) ingestion
-- [x] SSE Live Tail (real-time streaming)
-- [x] Agent alert notifications (push to system tray)
-- [x] Windows Event Log collection
-- [x] Customizable sound alerts
-- [x] Supabase Log Drains integration
-- [x] Vercel Log Drains integration
-- [x] Generic HTTP ingestion endpoint
-- [x] IP Classification (RFC compliant)
-- [x] GeoIP lookup (MaxMind)
-- [x] Source templates (15+ templates)
-- [x] Advanced DSL (OR/AND, math, strings, percentiles)
-- [x] Data retention with TTL (configurable)
-- [x] **Dashboard variables** ($host$, $app$ dropdowns)
-- [x] **Click-to-drilldown** on charts → navigate to search
-- [x] **Dashboard templates** (7 pre-built: pfSense, Docker, Windows, etc.)
-- [x] **Table pagination** with sorting
-- [x] **Drag-and-drop dashboard layout** (react-grid-layout)
-- [x] **Dashboard branding** (logos, accent colors, custom headers)
-- [x] **Public dashboard sharing** (share without login)
-- [x] **Dashboard export/import** (JSON format)
-- [x] **Dashboard annotations** (mark events on timeline)
-- [x] **Natural language to query** (via Ollama)
-- [x] **AI dashboard insights** (anomalies, trends, suggestions via Ollama)
-- [x] **Codebase Interview Wizard** - Generate questionnaires, AI-powered implementation guides
-- [x] **Cloudflare Tunnel documentation** - Step-by-step secure remote access
-- [x] **SmartThings integration** - IoT device event ingestion
-- [x] **MCP Server** - Claude Desktop integration for AI-powered log analysis
-- [x] **Production security hardening** - JWT secret validation, async auth middleware
+### Completed ✅
 
-### Planned - Short Term
-- [ ] JSON batch import via UI
-- [ ] PDF export for dashboards
-- [ ] Dashboard template gallery (community submissions)
+- Welcome Wizard with guided setup
+- 8 pre-built alert templates
+- 7 dashboard templates (pfSense, Docker, Windows, etc.)
+- Dashboard variables and drilldown
+- Public dashboard sharing
+- Dashboard export/import
+- AI features via Ollama
+- 14+ notification channels via Apprise
+- Supabase, Vercel, SmartThings integrations
+- MCP Server for Claude Desktop
+- Windows Event Log collection
+- File Integrity Monitoring
+- GeoIP and IP classification
 
-### Planned - Medium Term
-- [ ] Sigma rule importer (3000+ security rules)
-- [ ] Lookup tables (CSV enrichment)
-- [ ] macOS/Linux agent packages
+### Planned
 
-### Planned - Data Sources
-- [ ] AWS CloudWatch Logs integration
-- [ ] Docker container logs
-- [ ] Kubernetes pod logs
-- [ ] Cloudflare Logs
-- [ ] GitHub Actions logs
-- [ ] Custom webhook templates
+**Short Term:**
+- JSON batch import via UI
+- PDF export for dashboards
+- Dashboard template gallery
 
-### Planned - AI Features (NogBot)
-- [ ] **Alert Advisor** - AI suggests alerts based on your log patterns
-  - Learns baselines from your data
-  - Recommends thresholds and alert rules
-- [ ] **Security Advisor** - AI identifies security gaps
-  - Maps alerts to MITRE ATT&CK framework
-  - Identifies coverage gaps
-- [ ] **Performance Advisor** - AI finds performance issues
-  - Detects slow endpoints, error spikes
-  - Suggests optimizations
+**Medium Term:**
+- Sigma rule importer (3000+ security rules)
+- Lookup tables (CSV enrichment)
+- macOS/Linux agent packages
 
-### Planned - Long Term
-- [ ] Machine learning anomaly detection
-- [ ] Grafana data source plugin
-- [ ] Kubernetes deployment (Helm chart)
-- [ ] Log forwarding between LogNog instances
-- [ ] Multi-tenant support with data isolation
+**Long Term:**
+- Machine learning anomaly detection
+- Grafana data source plugin
+- Kubernetes deployment (Helm chart)
+- Multi-tenant support
 
 ---
 
@@ -755,6 +860,6 @@ MIT License - see [LICENSE](LICENSE)
 ---
 
 <p align="center">
-  <strong>LogNog</strong> - Your Logs, Your Control<br>
+  <strong>LogNog v1.0.0</strong> - Your Logs, Your Control<br>
   <em>By Machine King Labs</em>
 </p>
