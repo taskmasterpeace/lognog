@@ -39,22 +39,22 @@ interface StatCardProps {
 
 function StatCard({ icon: Icon, label, value, subValue, trend, color, iconBg }: StatCardProps) {
   return (
-    <div className="card p-5">
+    <div className="card p-4 sm:p-5">
       <div className="flex items-start justify-between">
-        <div className={`p-3 rounded-xl ${iconBg}`}>
-          <Icon className={`w-6 h-6 ${color}`} />
+        <div className={`p-2 sm:p-3 rounded-xl ${iconBg}`}>
+          <Icon className={`w-5 h-5 sm:w-6 sm:h-6 ${color}`} />
         </div>
         {trend && (
-          <span className="flex items-center gap-1 text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-1 rounded-full">
-            <TrendingUp className="w-3 h-3" />
+          <span className="flex items-center gap-1 text-[10px] sm:text-xs font-medium text-emerald-600 bg-emerald-50 px-1.5 sm:px-2 py-0.5 sm:py-1 rounded-full">
+            <TrendingUp className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
             {trend}
           </span>
         )}
       </div>
-      <div className="mt-4">
-        <p className="text-3xl font-bold text-slate-900">{typeof value === 'number' ? value.toLocaleString() : value}</p>
-        <p className="text-sm text-slate-500 mt-1">{label}</p>
-        {subValue && <p className="text-xs text-slate-400 mt-0.5">{subValue}</p>}
+      <div className="mt-3 sm:mt-4">
+        <p className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100">{typeof value === 'number' ? value.toLocaleString() : value}</p>
+        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">{label}</p>
+        {subValue && <p className="text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 mt-0.5">{subValue}</p>}
       </div>
     </div>
   );
@@ -94,23 +94,24 @@ export default function StatsPage() {
     <div className="min-h-full bg-slate-50 dark:bg-slate-900">
       {/* Header */}
       <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 shadow-sm">
-        <div className="p-6">
-          <div className="flex items-center justify-between">
+        <div className="p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <div>
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Analytics</h1>
-              <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Real-time log metrics and insights</p>
+              <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100">Analytics</h1>
+              <p className="text-slate-500 dark:text-slate-400 text-sm mt-1 hidden sm:block">Real-time log metrics and insights</p>
             </div>
-            <div className="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-              <Zap className="w-4 h-4 text-amber-500" />
-              Auto-refreshing every 30s
+            <div className="flex items-center gap-2 text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+              <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-500" />
+              <span className="hidden sm:inline">Auto-refreshing every 30s</span>
+              <span className="sm:hidden">Live</span>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="p-6 space-y-6">
+      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
         {/* Stat Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           <StatCard
             icon={Database}
             label="Total Logs"
@@ -146,26 +147,26 @@ export default function StatsPage() {
         </div>
 
         {/* Charts Row 1 */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           {/* Time Series Chart */}
-          <div className="card p-5">
-            <div className="flex items-center justify-between mb-4">
+          <div className="card p-4 sm:p-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3 sm:mb-4 gap-2">
               <div>
-                <h3 className="font-semibold text-slate-900">Log Volume</h3>
-                <p className="text-sm text-slate-500">Events per hour (last 24h)</p>
+                <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-sm sm:text-base">Log Volume</h3>
+                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Events per hour (last 24h)</p>
               </div>
-              <div className="flex items-center gap-4 text-xs">
+              <div className="flex items-center gap-3 sm:gap-4 text-[10px] sm:text-xs">
                 <span className="flex items-center gap-1.5">
-                  <span className="w-3 h-3 rounded-full bg-sky-500"></span>
+                  <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-sky-500"></span>
                   Total
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <span className="w-3 h-3 rounded-full bg-red-500"></span>
+                  <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full bg-red-500"></span>
                   Errors
                 </span>
               </div>
             </div>
-            <div className="h-72">
+            <div className="h-56 sm:h-72">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={timeSeries || []}>
                   <defs>
@@ -217,12 +218,12 @@ export default function StatsPage() {
           </div>
 
           {/* Severity Distribution */}
-          <div className="card p-5">
-            <div className="mb-4">
-              <h3 className="font-semibold text-slate-900">Severity Distribution</h3>
-              <p className="text-sm text-slate-500">Breakdown by log level</p>
+          <div className="card p-4 sm:p-5">
+            <div className="mb-3 sm:mb-4">
+              <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-sm sm:text-base">Severity Distribution</h3>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Breakdown by log level</p>
             </div>
-            <div className="h-72 flex items-center">
+            <div className="h-48 sm:h-72 flex items-center">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -247,10 +248,10 @@ export default function StatsPage() {
                 </PieChart>
               </ResponsiveContainer>
             </div>
-            <div className="flex flex-wrap justify-center gap-3 mt-4">
+            <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mt-3 sm:mt-4">
               {severityData.slice(0, 6).map((entry) => (
-                <div key={entry.name} className="flex items-center gap-1.5 text-xs text-slate-600">
-                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.fill }} />
+                <div key={entry.name} className="flex items-center gap-1 sm:gap-1.5 text-[10px] sm:text-xs text-slate-600 dark:text-slate-400">
+                  <span className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full" style={{ backgroundColor: entry.fill }} />
                   {entry.name}
                 </div>
               ))}
@@ -259,14 +260,14 @@ export default function StatsPage() {
         </div>
 
         {/* Charts Row 2 */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           {/* Top Hosts */}
-          <div className="card p-5">
-            <div className="mb-4">
-              <h3 className="font-semibold text-slate-900">Top Hosts</h3>
-              <p className="text-sm text-slate-500">Most active log sources</p>
+          <div className="card p-4 sm:p-5">
+            <div className="mb-3 sm:mb-4">
+              <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-sm sm:text-base">Top Hosts</h3>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Most active log sources</p>
             </div>
-            <div className="h-72">
+            <div className="h-56 sm:h-72">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={stats?.topHosts || []} layout="vertical" barSize={20}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
@@ -297,12 +298,12 @@ export default function StatsPage() {
           </div>
 
           {/* Top Applications */}
-          <div className="card p-5">
-            <div className="mb-4">
-              <h3 className="font-semibold text-slate-900">Top Applications</h3>
-              <p className="text-sm text-slate-500">Most active programs</p>
+          <div className="card p-4 sm:p-5">
+            <div className="mb-3 sm:mb-4">
+              <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-sm sm:text-base">Top Applications</h3>
+              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Most active programs</p>
             </div>
-            <div className="h-72">
+            <div className="h-56 sm:h-72">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={stats?.topApps || []} layout="vertical" barSize={20}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />

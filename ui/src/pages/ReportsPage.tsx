@@ -204,78 +204,76 @@ export default function ReportsPage() {
     <div className="min-h-full bg-slate-50 dark:bg-slate-900">
       {/* Header */}
       <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 shadow-sm">
-        <div className="p-6">
-          <div className="flex items-center justify-between">
+        <div className="p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Reports</h1>
-              <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Generate and schedule log reports</p>
+              <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100">Reports</h1>
+              <p className="text-slate-500 dark:text-slate-400 text-sm mt-1 hidden sm:block">Generate and schedule log reports</p>
             </div>
             <div className="flex items-center gap-2">
-              <button onClick={() => setShowGenerateModal(true)} className="btn-secondary">
+              <button onClick={() => setShowGenerateModal(true)} className="btn-secondary flex-1 sm:flex-none justify-center">
                 <Download className="w-4 h-4" />
-                <span>Export Report</span>
+                <span className="sm:inline">Export</span>
               </button>
-              <button onClick={() => setShowCreateModal(true)} className="btn-primary">
+              <button onClick={() => setShowCreateModal(true)} className="btn-primary flex-1 sm:flex-none justify-center">
                 <Plus className="w-4 h-4" />
-                <span>Schedule Report</span>
+                <span className="sm:inline">Schedule</span>
               </button>
             </div>
           </div>
         </div>
       </div>
 
-      <div className="p-6 space-y-6">
+      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
         {/* Quick Export Section */}
-        <section className="card p-6">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-sky-400 to-sky-600 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
-              <FileCode className="w-6 h-6 text-white" />
+        <section className="card p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row items-start gap-3 sm:gap-4">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-sky-400 to-sky-600 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
+              <FileCode className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </div>
             <div className="flex-1">
-              <h2 className="font-semibold text-slate-900 mb-1">Generate & View Reports</h2>
-              <p className="text-sm text-slate-500 mb-3">
-                Create reports from any query. Preview them directly in the browser, print to PDF, or download as HTML.
+              <h2 className="font-semibold text-slate-900 mb-1 text-sm sm:text-base">Generate & View Reports</h2>
+              <p className="text-xs sm:text-sm text-slate-500 mb-3">
+                Create reports from any query. Preview in browser, print to PDF, or download as HTML.
               </p>
-              <div className="flex gap-2">
-                <button onClick={() => setShowGenerateModal(true)} className="btn-primary">
-                  <Eye className="w-4 h-4" />
-                  Generate Report
-                </button>
-              </div>
+              <button onClick={() => setShowGenerateModal(true)} className="btn-primary w-full sm:w-auto justify-center">
+                <Eye className="w-4 h-4" />
+                Generate Report
+              </button>
             </div>
           </div>
         </section>
 
         {/* Last Generated Report */}
         {reportPreview && (
-          <section className="card p-6 border-sky-200 bg-sky-50">
-            <div className="flex items-center justify-between">
+          <section className="card p-4 sm:p-6 border-sky-200 bg-sky-50">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-sky-100 rounded-lg flex items-center justify-center">
-                  <FileText className="w-5 h-5 text-sky-600" />
+                <div className="w-9 h-9 sm:w-10 sm:h-10 bg-sky-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-sky-600" />
                 </div>
-                <div>
-                  <h3 className="font-semibold text-slate-900">Last Generated Report</h3>
-                  <p className="text-sm text-slate-500">{generateTitle}</p>
+                <div className="min-w-0">
+                  <h3 className="font-semibold text-slate-900 text-sm sm:text-base">Last Generated Report</h3>
+                  <p className="text-xs sm:text-sm text-slate-500 truncate">{generateTitle}</p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 ml-12 sm:ml-0">
                 <button
                   onClick={() => setShowPreviewModal(true)}
-                  className="btn-secondary"
+                  className="btn-secondary text-sm"
                 >
                   <Eye className="w-4 h-4" />
-                  View
+                  <span className="hidden sm:inline">View</span>
                 </button>
                 <button
                   onClick={handleDownloadCurrentReport}
-                  className="btn-ghost"
+                  className="btn-ghost p-2"
                 >
                   <Download className="w-4 h-4" />
                 </button>
                 <button
                   onClick={handlePrintReport}
-                  className="btn-ghost"
+                  className="btn-ghost p-2"
                 >
                   <Printer className="w-4 h-4" />
                 </button>
@@ -286,48 +284,48 @@ export default function ReportsPage() {
 
         {/* Scheduled Reports */}
         <section>
-          <h2 className="text-lg font-semibold text-slate-900 mb-4">Scheduled Reports</h2>
+          <h2 className="text-base sm:text-lg font-semibold text-slate-900 mb-3 sm:mb-4">Scheduled Reports</h2>
 
           {reports && reports.length > 0 ? (
             <div className="space-y-3">
               {reports.map((report: ScheduledReport) => (
-                <div key={report.id} className="card p-4 group hover:shadow-md transition-shadow">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start gap-3">
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                <div key={report.id} className="card p-3 sm:p-4 group hover:shadow-md transition-shadow">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-start gap-2 sm:gap-3 min-w-0 flex-1">
+                      <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
                         report.enabled ? 'bg-emerald-100' : 'bg-slate-100'
                       }`}>
-                        <FileText className={`w-5 h-5 ${
+                        <FileText className={`w-4 h-4 sm:w-5 sm:h-5 ${
                           report.enabled ? 'text-emerald-600' : 'text-slate-400'
                         }`} />
                       </div>
-                      <div>
-                        <h3 className="font-semibold text-slate-900">{report.name}</h3>
-                        <code className="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded mt-1 inline-block">
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-semibold text-slate-900 text-sm sm:text-base truncate">{report.name}</h3>
+                        <code className="text-[10px] sm:text-xs text-slate-500 bg-slate-100 px-1.5 sm:px-2 py-0.5 rounded mt-1 inline-block max-w-full truncate">
                           {report.query}
                         </code>
-                        <div className="flex items-center gap-4 mt-2 text-xs text-slate-500">
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 text-[10px] sm:text-xs text-slate-500">
                           <span className="flex items-center gap-1">
-                            <Clock className="w-3.5 h-3.5" />
+                            <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                             {getScheduleLabel(report.schedule)}
                           </span>
-                          <span className="flex items-center gap-1">
-                            <Mail className="w-3.5 h-3.5" />
-                            {report.recipients}
+                          <span className="flex items-center gap-1 truncate">
+                            <Mail className="w-3 h-3 sm:w-3.5 sm:h-3.5 flex-shrink-0" />
+                            <span className="truncate">{report.recipients}</span>
                           </span>
                           {report.last_run && (
-                            <span className="flex items-center gap-1">
+                            <span className="flex items-center gap-1 hidden sm:flex">
                               <Calendar className="w-3.5 h-3.5" />
-                              Last run: {new Date(report.last_run).toLocaleString()}
+                              Last: {new Date(report.last_run).toLocaleDateString()}
                             </span>
                           )}
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 flex-shrink-0">
                       <button
                         onClick={() => toggleMutation.mutate({ id: report.id, enabled: !report.enabled })}
-                        className={`p-2 rounded-lg transition-colors ${
+                        className={`p-1.5 sm:p-2 rounded-lg transition-colors ${
                           report.enabled
                             ? 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100'
                             : 'text-slate-400 bg-slate-100 hover:bg-slate-200'
@@ -338,7 +336,7 @@ export default function ReportsPage() {
                       </button>
                       <button
                         onClick={() => deleteMutation.mutate(report.id)}
-                        className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                        className="p-1.5 sm:p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -348,15 +346,15 @@ export default function ReportsPage() {
               ))}
             </div>
           ) : (
-            <div className="card p-8 text-center">
-              <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Calendar className="w-6 h-6 text-slate-400" />
+            <div className="card p-6 sm:p-8 text-center">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-slate-400" />
               </div>
-              <h3 className="font-semibold text-slate-900 mb-1">No scheduled reports</h3>
-              <p className="text-sm text-slate-500 mb-4">
+              <h3 className="font-semibold text-slate-900 mb-1 text-sm sm:text-base">No scheduled reports</h3>
+              <p className="text-xs sm:text-sm text-slate-500 mb-4">
                 Schedule reports to be generated and emailed automatically
               </p>
-              <button onClick={() => setShowCreateModal(true)} className="btn-primary">
+              <button onClick={() => setShowCreateModal(true)} className="btn-primary w-full sm:w-auto justify-center">
                 <Plus className="w-4 h-4" />
                 Create Scheduled Report
               </button>
@@ -365,15 +363,15 @@ export default function ReportsPage() {
         </section>
 
         {/* Info Section */}
-        <section className="card p-6 bg-gradient-to-r from-amber-50 to-orange-50 border-amber-100">
-          <div className="flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+        <section className="card p-4 sm:p-6 bg-gradient-to-r from-amber-50 to-orange-50 border-amber-100">
+          <div className="flex items-start gap-2 sm:gap-3">
+            <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600 mt-0.5 flex-shrink-0" />
             <div>
-              <h3 className="font-semibold text-amber-900 mb-1">Email Delivery</h3>
-              <p className="text-sm text-amber-800">
-                Scheduled reports require SMTP configuration. Set the following environment variables in your API service:
+              <h3 className="font-semibold text-amber-900 mb-1 text-sm sm:text-base">Email Delivery</h3>
+              <p className="text-xs sm:text-sm text-amber-800">
+                Scheduled reports require SMTP configuration. Set these environment variables:
               </p>
-              <code className="block mt-2 text-xs bg-amber-100 text-amber-900 p-2 rounded font-mono">
+              <code className="block mt-2 text-[10px] sm:text-xs bg-amber-100 text-amber-900 p-2 rounded font-mono overflow-x-auto">
                 SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM
               </code>
             </div>
@@ -384,7 +382,7 @@ export default function ReportsPage() {
       {/* Create Schedule Modal */}
       {showCreateModal && (
         <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
-          <div className="modal animate-slide-up max-w-lg" onClick={(e) => e.stopPropagation()}>
+          <div className="modal animate-slide-up w-[calc(100%-2rem)] max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-slate-900">Schedule Report</h3>
@@ -466,7 +464,7 @@ export default function ReportsPage() {
       {/* Generate Report Modal */}
       {showGenerateModal && (
         <div className="modal-overlay" onClick={() => setShowGenerateModal(false)}>
-          <div className="modal animate-slide-up max-w-lg" onClick={(e) => e.stopPropagation()}>
+          <div className="modal animate-slide-up w-[calc(100%-2rem)] max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-slate-900">Generate Report</h3>
@@ -502,12 +500,12 @@ export default function ReportsPage() {
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1.5">Time Range</label>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   {TIME_PRESETS.map(preset => (
                     <button
                       key={preset.value}
                       onClick={() => setGenerateTimeRange(preset.value)}
-                      className={`px-3 py-1.5 text-sm rounded-lg border transition-colors ${
+                      className={`px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm rounded-lg border transition-colors ${
                         generateTimeRange === preset.value
                           ? 'border-sky-500 bg-sky-50 text-sky-700'
                           : 'border-slate-200 hover:border-slate-300 text-slate-600'
@@ -520,25 +518,25 @@ export default function ReportsPage() {
               </div>
             </div>
 
-            <div className="modal-footer">
-              <button onClick={() => setShowGenerateModal(false)} className="btn-secondary">
+            <div className="modal-footer flex-wrap gap-2">
+              <button onClick={() => setShowGenerateModal(false)} className="btn-secondary flex-1 sm:flex-none justify-center">
                 Cancel
               </button>
               <button
                 onClick={() => handleGenerateReport('preview')}
                 disabled={!generateQuery || generating}
-                className="btn-secondary"
+                className="btn-secondary flex-1 sm:flex-none justify-center"
               >
                 {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />}
-                Preview
+                <span className="hidden sm:inline">Preview</span>
               </button>
               <button
                 onClick={() => handleGenerateReport('download')}
                 disabled={!generateQuery || generating}
-                className="btn-primary"
+                className="btn-primary flex-1 sm:flex-none justify-center"
               >
                 {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
-                Download
+                <span className="hidden sm:inline">Download</span>
               </button>
             </div>
           </div>

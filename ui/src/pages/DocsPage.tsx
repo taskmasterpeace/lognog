@@ -47,17 +47,17 @@ function CodeBlock({ code }: { code: string }) {
 
   return (
     <div className="relative group">
-      <pre className="bg-slate-900 dark:bg-slate-950 text-slate-100 p-4 rounded-lg overflow-x-auto text-sm font-mono">
+      <pre className="bg-slate-900 dark:bg-slate-950 text-slate-100 p-3 sm:p-4 rounded-lg overflow-x-auto text-xs sm:text-sm font-mono">
         <code>{code}</code>
       </pre>
       <button
         onClick={handleCopy}
-        className="absolute top-2 right-2 p-2 bg-slate-800 rounded-md opacity-0 group-hover:opacity-100 transition-opacity hover:bg-slate-700"
+        className="absolute top-1.5 sm:top-2 right-1.5 sm:right-2 p-1.5 sm:p-2 bg-slate-800 rounded-md opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity hover:bg-slate-700"
       >
         {copied ? (
-          <Check className="w-4 h-4 text-green-400" />
+          <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-400" />
         ) : (
-          <Copy className="w-4 h-4 text-slate-400" />
+          <Copy className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400" />
         )}
       </button>
     </div>
@@ -65,31 +65,32 @@ function CodeBlock({ code }: { code: string }) {
 }
 
 function SectionNav({ active, onChange }: { active: DocSection; onChange: (s: DocSection) => void }) {
-  const sections: { id: DocSection; label: string; icon: React.ElementType }[] = [
-    { id: 'getting-started', label: 'Getting Started', icon: BookOpen },
-    { id: 'syslog-format', label: 'Syslog Format', icon: FileText },
-    { id: 'ingestion', label: 'Sending Logs', icon: Server },
-    { id: 'query', label: 'Query Language', icon: Search },
-    { id: 'knowledge', label: 'Knowledge Objects', icon: Brain },
-    { id: 'dashboards', label: 'Dashboards', icon: FileText },
-    { id: 'mcp', label: 'Claude AI (MCP)', icon: Bot },
-    { id: 'api', label: 'API Reference', icon: Terminal },
+  const sections: { id: DocSection; label: string; shortLabel: string; icon: React.ElementType }[] = [
+    { id: 'getting-started', label: 'Getting Started', shortLabel: 'Start', icon: BookOpen },
+    { id: 'syslog-format', label: 'Syslog Format', shortLabel: 'Syslog', icon: FileText },
+    { id: 'ingestion', label: 'Sending Logs', shortLabel: 'Ingest', icon: Server },
+    { id: 'query', label: 'Query Language', shortLabel: 'Query', icon: Search },
+    { id: 'knowledge', label: 'Knowledge Objects', shortLabel: 'Knowledge', icon: Brain },
+    { id: 'dashboards', label: 'Dashboards', shortLabel: 'Dash', icon: FileText },
+    { id: 'mcp', label: 'Claude AI (MCP)', shortLabel: 'AI', icon: Bot },
+    { id: 'api', label: 'API Reference', shortLabel: 'API', icon: Terminal },
   ];
 
   return (
-    <nav className="flex flex-wrap gap-2 mb-8">
+    <nav className="flex flex-wrap gap-1.5 sm:gap-2 mb-4 sm:mb-8 -mx-1 px-1 overflow-x-auto pb-2 scrollbar-hide">
       {sections.map((s) => (
         <button
           key={s.id}
           onClick={() => onChange(s.id)}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+          className={`flex items-center gap-1 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg text-sm sm:text-base font-medium transition-all whitespace-nowrap flex-shrink-0 ${
             active === s.id
               ? 'bg-sky-500 text-white shadow-md shadow-sky-500/25'
               : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700'
           }`}
         >
-          <s.icon className="w-4 h-4" />
-          {s.label}
+          <s.icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          <span className="hidden sm:inline">{s.label}</span>
+          <span className="sm:hidden">{s.shortLabel}</span>
         </button>
       ))}
     </nav>
@@ -97,30 +98,31 @@ function SectionNav({ active, onChange }: { active: DocSection; onChange: (s: Do
 }
 
 function QuerySubNav({ active, onChange }: { active: QuerySubsection; onChange: (s: QuerySubsection) => void }) {
-  const subsections: { id: QuerySubsection; label: string; icon: React.ElementType }[] = [
-    { id: 'intro', label: 'Introduction', icon: BookOpen },
-    { id: 'basic-search', label: 'Basic Searching', icon: Search },
-    { id: 'filtering', label: 'Filtering & Transforming', icon: Code },
-    { id: 'aggregations', label: 'Aggregations & Stats', icon: TrendingUp },
-    { id: 'eval-functions', label: 'Eval Functions', icon: Calculator },
-    { id: 'advanced-commands', label: 'Advanced Commands', icon: Braces },
-    { id: 'examples', label: 'Use Case Examples', icon: FileCode },
+  const subsections: { id: QuerySubsection; label: string; shortLabel: string; icon: React.ElementType }[] = [
+    { id: 'intro', label: 'Introduction', shortLabel: 'Intro', icon: BookOpen },
+    { id: 'basic-search', label: 'Basic Searching', shortLabel: 'Search', icon: Search },
+    { id: 'filtering', label: 'Filtering & Transforming', shortLabel: 'Filter', icon: Code },
+    { id: 'aggregations', label: 'Aggregations & Stats', shortLabel: 'Stats', icon: TrendingUp },
+    { id: 'eval-functions', label: 'Eval Functions', shortLabel: 'Eval', icon: Calculator },
+    { id: 'advanced-commands', label: 'Advanced Commands', shortLabel: 'Advanced', icon: Braces },
+    { id: 'examples', label: 'Use Case Examples', shortLabel: 'Examples', icon: FileCode },
   ];
 
   return (
-    <div className="flex flex-wrap gap-2 mb-6 pl-4 border-l-2 border-sky-200 dark:border-sky-800">
+    <div className="flex flex-nowrap sm:flex-wrap gap-1.5 sm:gap-2 mb-4 sm:mb-6 pl-2 sm:pl-4 border-l-2 border-sky-200 dark:border-sky-800 overflow-x-auto pb-2 scrollbar-hide -mr-4 pr-4">
       {subsections.map((s) => (
         <button
           key={s.id}
           onClick={() => onChange(s.id)}
-          className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
+          className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-xs sm:text-sm font-medium transition-all whitespace-nowrap flex-shrink-0 ${
             active === s.id
               ? 'bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300'
               : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
           }`}
         >
-          <s.icon className="w-3.5 h-3.5" />
-          {s.label}
+          <s.icon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
+          <span className="hidden sm:inline">{s.label}</span>
+          <span className="sm:hidden">{s.shortLabel}</span>
         </button>
       ))}
     </div>
@@ -130,9 +132,9 @@ function QuerySubNav({ active, onChange }: { active: QuerySubsection; onChange: 
 // Keep the existing sections from the original DocsPage
 function GettingStartedSection() {
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       <section>
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">Quick Start</h2>
+        <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 mb-3 sm:mb-4">Quick Start</h2>
         <p className="text-slate-600 dark:text-slate-400 mb-4">
           Get LogNog running in under 10 minutes with Docker Compose.
         </p>
@@ -1199,21 +1201,21 @@ export default function DocsPage() {
     <div className="min-h-full bg-slate-50 dark:bg-slate-900">
       {/* Header */}
       <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 shadow-sm">
-        <div className="max-w-5xl mx-auto px-6 py-8">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-sky-50 dark:bg-sky-900/30 rounded-lg">
-              <BookOpen className="w-6 h-6 text-sky-600 dark:text-sky-400" />
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
+          <div className="flex items-center gap-2 sm:gap-3 mb-2">
+            <div className="p-1.5 sm:p-2 bg-sky-50 dark:bg-sky-900/30 rounded-lg">
+              <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 text-sky-600 dark:text-sky-400" />
             </div>
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-100">Documentation</h1>
+            <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 dark:text-slate-100">Documentation</h1>
           </div>
-          <p className="text-slate-600 dark:text-slate-400">
+          <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400">
             Everything you need to know about using LogNog for log management.
           </p>
         </div>
       </div>
 
       {/* Content */}
-      <div className="max-w-5xl mx-auto px-6 py-8">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
         <SectionNav active={activeSection} onChange={setActiveSection} />
 
         {activeSection === 'getting-started' && <GettingStartedSection />}
