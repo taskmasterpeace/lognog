@@ -183,8 +183,49 @@ Install the LogNog In agent to collect:
 1. Go to Alerts → Create Alert
 2. Enter a DSL query (e.g., `search severity>=error | stats count`)
 3. Set threshold (e.g., trigger when count > 10)
-4. Choose notification method (email, webhook)
+4. Configure alert actions (see below)
 5. Set check interval
+
+### Alert Actions (Notifications)
+
+LogNog supports 113+ notification services via Apprise integration:
+
+**Supported Services:**
+- Slack, Discord, Microsoft Teams
+- Telegram, Pushover, ntfy
+- PagerDuty, Opsgenie
+- Email (SMTP)
+- Custom webhooks
+- And 100+ more!
+
+**Setting up notifications:**
+
+1. Go to Settings → Notifications
+2. Add a notification channel (e.g., Slack)
+3. Test the channel with one click
+4. When creating alerts, select the channel from the dropdown
+
+**Template Variables:**
+
+Use variables in alert messages:
+```
+🚨 {{alert_name:upper}}
+
+{{ai_summary}}
+
+Results: {{result_count:comma}}
+Time: {{timestamp:relative}}
+```
+
+Available filters:
+- `{{value:upper}}` - UPPERCASE
+- `{{value:lower}}` - lowercase
+- `{{count:comma}}` - 1,234 format
+- `{{timestamp:relative}}` - "5 minutes ago"
+- `{{message:truncate:100}}` - First 100 chars
+- `{{ai_summary}}` - AI-generated summary (requires Ollama)
+
+See [Alert Actions Guide](./ALERT-ACTIONS.md) for complete documentation.
 
 ### Alert Examples
 
@@ -212,6 +253,68 @@ You can silence alerts temporarily:
 
 ---
 
+## Data Sources
+
+### Data Source Onboarding Wizard
+
+LogNog includes a guided wizard to help you set up new log sources:
+
+1. Go to Data Sources → Add Source
+2. Choose your source type:
+   - **Syslog** - Network devices, Linux servers
+   - **Supabase** - Supabase Log Drains
+   - **Vercel** - Vercel Log Drains
+   - **Next.js** - Next.js applications
+   - **SmartThings** - IoT devices
+   - **Windows Events** - Windows servers
+3. Follow the step-by-step guide with copy-paste instructions
+4. Test the connection
+
+### Active Sources Dashboard
+
+Monitor which devices are sending logs:
+
+1. Go to Data Sources → Active Sources tab
+2. View:
+   - List of all devices sending logs
+   - Last seen timestamp for each source
+   - Event count per source
+   - Health status (active, stale, inactive)
+
+### Custom Index Headers
+
+Organize logs with custom headers per data source:
+
+1. Create a new data source configuration
+2. Specify a unique index name
+3. Logs from that source get their own searchable index
+
+---
+
+## Search Features
+
+### Field Discovery Sidebar
+
+Quickly explore your log data:
+
+1. On the Search page, click the sidebar icon (☰)
+2. Browse all fields in your logs
+3. See top values for each field
+4. Click a value to add it as a filter
+
+### Search-to-Action Buttons
+
+Save searches directly to other features:
+
+1. Run a search query
+2. Click "Save As" dropdown:
+   - **Dashboard** - Add as a dashboard panel
+   - **Alert** - Create an alert rule
+   - **Report** - Schedule as a report
+3. Configure and save in one click
+
+---
+
 ## Dashboards
 
 ### Creating a Dashboard
@@ -220,6 +323,17 @@ You can silence alerts temporarily:
 2. Add panels with DSL queries
 3. Choose visualization type (table, chart, counter)
 4. Save and share
+
+### Duplicating a Dashboard
+
+Quickly copy an existing dashboard:
+
+1. Go to Dashboards
+2. Find the dashboard you want to copy
+3. Click the "⋮" menu (three dots) on the dashboard card
+4. Select "Duplicate"
+5. A copy is created with "(Copy)" appended to the name
+6. Edit the new dashboard as needed
 
 ### Dashboard Panel Types
 
@@ -366,6 +480,21 @@ Content-Type: application/json
   "prompt": "show me errors from nginx in the last hour"
 }
 ```
+
+---
+
+## Mobile Support
+
+LogNog is fully responsive and works great on mobile devices:
+
+- **Search** - Optimized search bar and results for touch
+- **Dashboards** - Charts and panels resize for mobile screens
+- **Alerts** - Create and manage alerts on the go
+- **Stats** - Mobile-friendly analytics page
+- **Reports** - View and create reports from your phone
+- **Documentation** - Readable docs with scrollable navigation
+
+All features are available on mobile - no separate app needed.
 
 ---
 

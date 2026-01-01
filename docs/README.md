@@ -1,8 +1,8 @@
-# Spunk Documentation
+# LogNog Documentation
 
-> **Your Logs, Your Control** - The complete guide to mastering Spunk
+> **Your Logs, Your Control** - The complete guide to mastering LogNog
 
-Welcome to the Spunk documentation! Whether you're just getting started or looking to build advanced automation, you'll find everything you need here.
+Welcome to the LogNog documentation! Whether you're just getting started or looking to build advanced automation, you'll find everything you need here.
 
 ---
 
@@ -125,15 +125,29 @@ Real-world solutions:
 | DSL Query Language | ✅ Complete | DSL Reference |
 | Saved Searches | ✅ Complete | DSL Reference |
 | Dashboards | ✅ Complete | Dashboards |
+| Dashboard Duplicate | ✅ Complete | Dashboards |
 | Field Extractions | ✅ Complete | Knowledge Management |
 | Event Types | ✅ Complete | Knowledge Management |
 | Tags | ✅ Complete | Knowledge Management |
 | Lookups | ✅ Complete | Knowledge Management |
 | Workflow Actions | ✅ Complete | Knowledge Management |
 | Python Scripts | ✅ Complete | Knowledge Management |
-| Scheduled Reports | ✅ Complete | (Coming soon) |
-| Alerts | 🚧 Planned | - |
-| User Auth | 🚧 Planned | - |
+| Scheduled Reports | ✅ Complete | Reports Page |
+| Alerts | ✅ Complete | Alert Actions |
+| Alert Actions (Apprise) | ✅ Complete | [Alert Actions](./ALERT-ACTIONS.md) |
+| AI Summaries (Ollama) | ✅ Complete | Alert Actions |
+| User Auth (JWT) | ✅ Complete | Settings |
+| API Keys | ✅ Complete | Settings |
+| Field Discovery Sidebar | ✅ Complete | Search Page |
+| Data Source Onboarding | ✅ Complete | Data Sources |
+| Active Sources Dashboard | ✅ Complete | Data Sources |
+| Custom Index Headers | ✅ Complete | Data Sources |
+| Search-to-Action Buttons | ✅ Complete | Search Page |
+| Mobile Responsive UI | ✅ Complete | All Pages |
+| Next.js Integration | ✅ Complete | [Next.js Integration](./NEXTJS-INTEGRATION.md) |
+| Vercel Log Drains | ✅ Complete | [Vercel Integration](./VERCEL-INTEGRATION.md) |
+| Supabase Log Drains | ✅ Complete | [Supabase Integration](./SUPABASE-INTEGRATION.md) |
+| MCP (Claude Desktop) | ✅ Complete | [MCP Integration](./MCP-INTEGRATION.md) |
 
 ---
 

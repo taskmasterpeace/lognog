@@ -1,28 +1,29 @@
-# Spunk Quick Start Guide
+# LogNog Quick Start Guide
 
 > **From Zero to Log Hero in 10 Minutes**
 
-Welcome to Spunk! This guide will have you ingesting, searching, and analyzing logs faster than you can say "where did my disk space go?"
+Welcome to LogNog! This guide will have you ingesting, searching, and analyzing logs faster than you can say "where did my disk space go?"
 
 ---
 
-## What is Spunk?
+## What is LogNog?
 
-Spunk is a **self-hosted, fully-local Splunk alternative** for homelab log management. Think Splunk, but:
+LogNog is a **self-hosted, fully-local Splunk alternative** for homelab log management. Think Splunk, but:
 - 100% local (no cloud, no subscriptions, no data leaving your network)
 - Runs entirely in Docker (one command to start)
 - Free forever (open source)
+- Mobile-responsive UI that works great on phones and tablets
 
 ```
 ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
-│   Your      │───▶│   Spunk     │───▶│   Search    │───▶│   Profit!   │
+│   Your      │───▶│   LogNog    │───▶│   Search    │───▶│   Profit!   │
 │   Logs      │    │             │    │   Analyze   │    │             │
 └─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
 ```
 
 ---
 
-## Step 1: Launch Spunk (2 minutes)
+## Step 1: Launch LogNog (2 minutes)
 
 ### Prerequisites
 - Docker & Docker Compose installed
@@ -33,14 +34,14 @@ Spunk is a **self-hosted, fully-local Splunk alternative** for homelab log manag
 
 ```bash
 # Clone the repo (or download)
-git clone https://github.com/your-org/spunk.git
-cd spunk
+git clone https://github.com/your-org/lognog.git
+cd lognog
 
 # Launch!
 docker-compose up -d
 ```
 
-That's it. Spunk is now running.
+That's it. LogNog is now running.
 
 ### What Just Started?
 
@@ -62,7 +63,18 @@ docker-compose ps
 
 Open your browser to: **http://localhost**
 
-You should see the Spunk search interface!
+You should see the LogNog login page!
+
+### First-Time Setup: Create Admin Account
+
+On first launch, you'll be prompted to create an admin account:
+
+1. Open http://localhost
+2. You'll be redirected to the Setup page
+3. Enter your desired username, email, and password
+4. Click "Create Admin Account"
+
+This creates your first user with full admin privileges. You can add more users later in Settings.
 
 ---
 
@@ -72,7 +84,7 @@ Let's send a test log to make sure everything works:
 
 ```bash
 # Send a test syslog message
-echo "<14>Test message from Spunk setup" | nc -u localhost 514
+echo "<14>Test message from LogNog setup" | nc -u localhost 514
 ```
 
 Or multiple messages:
@@ -91,17 +103,17 @@ done
 
 ---
 
-## Step 3: Point Your Devices at Spunk (5 minutes)
+## Step 3: Point Your Devices at LogNog (5 minutes)
 
 Now let's get real logs flowing.
 
 ### Configure rsyslog (Linux/Most NAS)
 
-Add to `/etc/rsyslog.conf` or create `/etc/rsyslog.d/spunk.conf`:
+Add to `/etc/rsyslog.conf` or create `/etc/rsyslog.d/lognog.conf`:
 
 ```
-# Send all logs to Spunk
-*.* @YOUR_SPUNK_IP:514
+# Send all logs to LogNog
+*.* @YOUR_LOGNOG_IP:514
 ```
 
 Restart rsyslog:
@@ -114,13 +126,13 @@ sudo systemctl restart rsyslog
 Add to `/etc/syslog-ng/syslog-ng.conf`:
 
 ```
-destination d_spunk {
-    udp("YOUR_SPUNK_IP" port(514));
+destination d_lognog {
+    udp("YOUR_LOGNOG_IP" port(514));
 };
 
 log {
     source(s_sys);
-    destination(d_spunk);
+    destination(d_lognog);
 };
 ```
 
@@ -128,7 +140,7 @@ log {
 
 1. Go to Status → System Logs → Settings
 2. Enable Remote Logging
-3. Remote log server: `YOUR_SPUNK_IP:514`
+3. Remote log server: `YOUR_LOGNOG_IP:514`
 4. Select what to log (Firewall events recommended)
 5. Save
 
@@ -136,7 +148,7 @@ log {
 
 1. Control Panel → Log Center → Log Sending
 2. Check "Send logs to syslog server"
-3. Server: `YOUR_SPUNK_IP`
+3. Server: `YOUR_LOGNOG_IP`
 4. Port: `514`
 5. Protocol: UDP
 6. Apply
@@ -145,13 +157,13 @@ log {
 
 1. Settings → System → Remote Logging
 2. Enable Remote Logging
-3. Host: `YOUR_SPUNK_IP`
+3. Host: `YOUR_LOGNOG_IP`
 4. Port: `514`
 5. Apply
 
 ### Verify Logs Are Flowing
 
-After configuring, check the Spunk UI. You should see logs from your configured devices appearing!
+After configuring, check the LogNog UI. You should see logs from your configured devices appearing!
 
 ```
 search hostname=YOUR_DEVICE | limit 10
@@ -264,10 +276,22 @@ You've got the basics down! Here's where to go next:
 ### 🔧 Level Up
 - **[Field Extraction](./FIELD_EXTRACTION.md)** - Parse custom log formats
 - **[Dashboards Guide](./DASHBOARDS.md)** - Build operational views
-- **[Alerting](./ALERTS.md)** - Get notified when things go wrong
+- **[Alert Actions](./ALERT-ACTIONS.md)** - Configure notifications (Slack, Discord, 113+ services)
+
+### 🆕 New Features
+- **Data Source Wizard** - Go to Data Sources → Add Source for guided setup
+- **Field Discovery** - Click the sidebar icon on Search to explore fields
+- **Search-to-Action** - Save searches as dashboards, alerts, or reports in one click
+- **Active Sources** - Monitor which devices are sending logs in Data Sources
 
 ### 🏠 Homelab Recipes
 - **[Use Cases](./USE_CASES.md)** - Real-world examples for common setups
+
+### 🔗 Integrations
+- **[Next.js Integration](./NEXTJS-INTEGRATION.md)** - Send Next.js logs to LogNog
+- **[Vercel Integration](./VERCEL-INTEGRATION.md)** - Vercel Log Drains
+- **[Supabase Integration](./SUPABASE-INTEGRATION.md)** - Supabase Log Drains
+- **[MCP Integration](./MCP-INTEGRATION.md)** - Claude Desktop integration
 
 ---
 
@@ -282,12 +306,12 @@ You've got the basics down! Here's where to go next:
 
 2. Check ClickHouse is healthy:
    ```bash
-   docker-compose exec clickhouse clickhouse-client -q "SELECT count() FROM spunk.logs"
+   docker-compose exec clickhouse clickhouse-client -q "SELECT count() FROM lognog.logs"
    ```
 
 3. Verify your device is actually sending:
    ```bash
-   # On Spunk server
+   # On LogNog server
    tcpdump -i any port 514
    ```
 
@@ -314,10 +338,10 @@ docker-compose logs api
 
 ## Need Help?
 
-- 📝 [GitHub Issues](https://github.com/your-org/spunk/issues)
+- 📝 [GitHub Issues](https://github.com/your-org/lognog/issues)
 - 📚 [Full Documentation](./README.md)
 - 💬 Community Discord (coming soon!)
 
 ---
 
-*Happy Spunking! Your logs are now under your control.*
+*Happy LogNog-ing! Your logs, your control.*
