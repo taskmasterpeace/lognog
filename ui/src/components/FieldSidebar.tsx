@@ -188,6 +188,9 @@ export default function FieldSidebar({
     const selectedValues = selectedFilters[facet.field] || [];
     const selectedCount = selectedValues.length;
 
+    // Calculate total count for percentage display
+    const fieldTotal = facet.values.reduce((sum, v) => sum + v.count, 0);
+
     return (
       <div key={facet.field} className="border-b border-slate-200 dark:border-slate-700">
         {/* Panel Header */}
@@ -241,22 +244,41 @@ export default function FieldSidebar({
                   const displayValue =
                     facet.field === 'severity' ? getSeverityLabel(item.value) : item.value;
 
+                  // Calculate percentage with edge case handling
+                  const rawPercent = fieldTotal > 0 ? (item.count / fieldTotal) * 100 : 0;
+                  const percent = Math.min(100, Math.max(0, rawPercent)); // Clamp 0-100
+                  const percentDisplay =
+                    isNaN(percent) ? '' :
+                    percent > 0 && percent < 0.1 ? '<0.1%' :
+                    `${percent.toFixed(1)}%`;
+
                   return (
                     <label
                       key={item.value}
-                      className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-all duration-150 hover:scale-[1.02] ${
+                      className={`relative flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-all duration-150 hover:scale-[1.02] overflow-hidden ${
                         isSelected
                           ? 'bg-sky-100 dark:bg-sky-900/20 hover:bg-sky-200 dark:hover:bg-sky-900/30'
                           : 'hover:bg-slate-100 dark:hover:bg-slate-700'
                       }`}
                     >
+                      {/* Percentage bar background */}
+                      {percent > 0 && (
+                        <div
+                          className={`absolute left-0 top-0 bottom-0 transition-all duration-300 ${
+                            isSelected
+                              ? 'bg-sky-200/60 dark:bg-sky-800/30'
+                              : 'bg-sky-100/50 dark:bg-sky-900/20'
+                          }`}
+                          style={{ width: `${percent}%` }}
+                        />
+                      )}
                       <input
                         type="checkbox"
                         checked={isSelected}
                         onChange={() => toggleValue(facet.field, item.value)}
-                        className="w-4 h-4 text-sky-600 border-slate-300 rounded focus:ring-sky-500 focus:ring-offset-0 cursor-pointer"
+                        className="relative z-10 w-4 h-4 text-sky-600 border-slate-300 rounded focus:ring-sky-500 focus:ring-offset-0 cursor-pointer"
                       />
-                      <div className="flex-1 min-w-0 flex items-center justify-between gap-2">
+                      <div className="relative z-10 flex-1 min-w-0 flex items-center justify-between gap-2">
                         {facet.field === 'severity' ? (
                           <span
                             className={`text-xs font-medium px-2 py-0.5 rounded border truncate ${getSeverityColor(
@@ -273,8 +295,13 @@ export default function FieldSidebar({
                             {displayValue}
                           </span>
                         )}
-                        <span className="text-xs text-slate-500 font-medium tabular-nums flex-shrink-0">
+                        <span className="text-xs text-slate-500 font-medium tabular-nums flex-shrink-0 whitespace-nowrap">
                           {item.count.toLocaleString()}
+                          {percentDisplay && (
+                            <span className="text-slate-400 dark:text-slate-500 ml-1">
+                              ({percentDisplay})
+                            </span>
+                          )}
                         </span>
                       </div>
                     </label>
