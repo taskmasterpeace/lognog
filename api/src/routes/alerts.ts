@@ -21,6 +21,7 @@ import {
   AlertScheduleType,
 } from '../db/sqlite.js';
 import { evaluateAlert, testAlert, evaluateAllAlerts } from '../services/alerts.js';
+import { ALERT_TEMPLATES } from '../data/alert-templates.js';
 
 const router = Router();
 
@@ -37,6 +38,49 @@ router.get('/', (_req: Request, res: Response) => {
   } catch (error) {
     console.error('Error getting alerts:', error);
     res.status(500).json({ error: 'Failed to get alerts' });
+  }
+});
+
+// Get alert templates (for onboarding wizard)
+router.get('/templates', (_req: Request, res: Response) => {
+  try {
+    res.json(ALERT_TEMPLATES);
+  } catch (error) {
+    console.error('Error getting alert templates:', error);
+    res.status(500).json({ error: 'Failed to get alert templates' });
+  }
+});
+
+// Create alert from template
+router.post('/from-template/:templateId', (req: Request, res: Response) => {
+  try {
+    const template = ALERT_TEMPLATES.find(t => t.id === req.params.templateId);
+    if (!template) {
+      return res.status(404).json({ error: 'Template not found' });
+    }
+
+    const alert = createAlert(template.name, template.search_query, {
+      description: template.description,
+      trigger_type: template.trigger_type,
+      trigger_condition: template.trigger_condition,
+      trigger_threshold: template.trigger_threshold,
+      schedule_type: template.schedule_type,
+      cron_expression: template.cron_expression,
+      time_range: template.time_range,
+      severity: template.severity,
+      throttle_enabled: template.throttle_enabled,
+      throttle_window_seconds: template.throttle_window_seconds,
+      actions: [],
+      enabled: true,
+    });
+
+    res.status(201).json({
+      ...alert,
+      actions: JSON.parse(alert.actions || '[]'),
+    });
+  } catch (error) {
+    console.error('Error creating alert from template:', error);
+    res.status(500).json({ error: 'Failed to create alert from template' });
   }
 });
 

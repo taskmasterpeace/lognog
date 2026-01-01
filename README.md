@@ -36,6 +36,38 @@
 
 ---
 
+## Quick Start (5 Minutes)
+
+Get from zero to searching logs in under 5 minutes:
+
+```bash
+# 1. Clone and start
+git clone https://github.com/machinekinglabs/lognog.git
+cd lognog
+docker-compose up -d
+
+# 2. Open browser
+open http://localhost    # Or just visit http://localhost
+```
+
+**3. Create your admin account** - First visit prompts you to set up your login (no default passwords!)
+
+**4. Follow the Welcome Wizard** - The guided setup helps you:
+   - Generate demo data to explore (or connect real logs)
+   - Create your first dashboard from templates
+   - Set up optional alerts
+
+**5. Start searching!**
+```
+search severity<=3 | stats count by hostname
+```
+
+That's it! You're now running a fully-featured log management platform.
+
+> **Already have logs?** Point your syslog to `UDP 514` or POST JSON to `/api/ingest/http`.
+
+---
+
 ## How LogNog Compares
 
 ![LogNog vs Splunk vs ELK vs Grafana Loki](compare.png)

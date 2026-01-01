@@ -407,6 +407,17 @@ function initializeSchema(): void {
   if (!columnNames.includes('public_expires_at')) {
     database.exec('ALTER TABLE dashboards ADD COLUMN public_expires_at TEXT');
   }
+
+  // Add onboarding columns to users table if they don't exist
+  const userColumns = database.pragma('table_info(users)') as Array<{ name: string }>;
+  const userColumnNames = userColumns.map((col) => col.name);
+
+  if (!userColumnNames.includes('onboarding_completed')) {
+    database.exec('ALTER TABLE users ADD COLUMN onboarding_completed INTEGER DEFAULT 0');
+  }
+  if (!userColumnNames.includes('onboarding_completed_at')) {
+    database.exec('ALTER TABLE users ADD COLUMN onboarding_completed_at TEXT');
+  }
 }
 
 // Saved Searches
@@ -2624,4 +2635,41 @@ export function setSystemSettings(settings: Record<string, string>): void {
   });
 
   transaction(Object.entries(settings));
+}
+
+// ============ Onboarding ============
+
+export interface OnboardingStatus {
+  completed: boolean;
+  completed_at: string | null;
+}
+
+export function getOnboardingStatus(userId: string): OnboardingStatus {
+  const database = getSQLiteDB();
+  const row = database.prepare(
+    'SELECT onboarding_completed, onboarding_completed_at FROM users WHERE id = ?'
+  ).get(userId) as { onboarding_completed: number | null; onboarding_completed_at: string | null } | undefined;
+
+  return {
+    completed: row?.onboarding_completed === 1,
+    completed_at: row?.onboarding_completed_at || null,
+  };
+}
+
+export function completeOnboarding(userId: string): OnboardingStatus {
+  const database = getSQLiteDB();
+  database.prepare(`
+    UPDATE users SET onboarding_completed = 1, onboarding_completed_at = datetime('now') WHERE id = ?
+  `).run(userId);
+
+  return getOnboardingStatus(userId);
+}
+
+export function resetOnboarding(userId: string): OnboardingStatus {
+  const database = getSQLiteDB();
+  database.prepare(`
+    UPDATE users SET onboarding_completed = 0, onboarding_completed_at = NULL WHERE id = ?
+  `).run(userId);
+
+  return getOnboardingStatus(userId);
 }

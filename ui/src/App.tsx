@@ -23,6 +23,8 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import ThemeToggle from './components/ThemeToggle';
 import NogChat from './components/NogChat';
 import AnimatedPage from './components/ui/AnimatedPage';
+import WelcomeWizard from './components/onboarding/WelcomeWizard';
+import { useOnboarding } from './hooks/useOnboarding';
 import SearchPage from './pages/SearchPage';
 import DashboardsPage from './pages/DashboardsPage';
 import DashboardViewPage from './pages/DashboardViewPage';
@@ -254,8 +256,9 @@ function Layout({ children }: { children: React.ReactNode }) {
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading, setupRequired } = useAuth();
+  const { showWizard, isLoading: onboardingLoading, completeOnboarding } = useOnboarding();
 
-  if (isLoading) {
+  if (isLoading || onboardingLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-900">
         <div className="w-8 h-8 border-4 border-sky-500 border-t-transparent rounded-full animate-spin" />
@@ -267,7 +270,17 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/" replace />;
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      {showWizard && (
+        <WelcomeWizard
+          onComplete={completeOnboarding}
+          onSkip={completeOnboarding}
+        />
+      )}
+      {children}
+    </>
+  );
 }
 
 function AppRoutes() {
