@@ -46,18 +46,24 @@ const EXAMPLE_QUERIES = [
 export default function SearchPage() {
   const navigate = useNavigate();
   const [query, setQuery] = useState('search *');
-  const [timeRange, setTimeRange] = useState('-24h');
+  const [timeRange, setTimeRange] = useState(() => {
+    return localStorage.getItem('lognog_default_time_range') || '-24h';
+  });
   const [timeRangeLatest, setTimeRangeLatest] = useState<string | undefined>(undefined);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showSqlPreview, setShowSqlPreview] = useState(false);
   const [saveName, setSaveName] = useState('');
   const [searchMode, setSearchMode] = useState<'dsl' | 'ai'>('dsl');
   const [aiQuestion, setAiQuestion] = useState('');
-  const [viewMode, setViewMode] = useState<'log' | 'table' | 'json'>('log');
+  const [viewMode, setViewMode] = useState<'log' | 'table' | 'json'>(() => {
+    const saved = localStorage.getItem('lognog_default_view_mode') as 'log' | 'table' | 'json' | null;
+    return saved && ['log', 'table', 'json'].includes(saved) ? saved : 'log';
+  });
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     const saved = localStorage.getItem('lognog_sidebar_open');
     return saved !== null ? saved === 'true' : true;
   });
+  const [preferencesLoaded, setPreferencesLoaded] = useState(false);
   const [selectedFilters, setSelectedFilters] = useState<Record<string, string[]>>({});
   const [queryHistory, setQueryHistory] = useState<string[]>(() => {
     const saved = localStorage.getItem('lognog_query_history');
@@ -93,6 +99,48 @@ export default function SearchPage() {
   useEffect(() => {
     localStorage.setItem('lognog_sidebar_open', String(sidebarOpen));
   }, [sidebarOpen]);
+
+  // Load preferences from API on mount
+  useEffect(() => {
+    const loadPreferences = async () => {
+      const token = localStorage.getItem('lognog_access_token');
+      if (!token) {
+        setPreferencesLoaded(true);
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/settings/preferences', {
+          headers: { 'Authorization': `Bearer ${token}` },
+        });
+        if (response.ok) {
+          const data = await response.json();
+
+          // Apply preferences if not already manually set in this session
+          if (!preferencesLoaded) {
+            if (data.default_time_range) {
+              setTimeRange(data.default_time_range);
+              localStorage.setItem('lognog_default_time_range', data.default_time_range);
+            }
+            if (data.default_view_mode && ['log', 'table', 'json'].includes(data.default_view_mode)) {
+              setViewMode(data.default_view_mode);
+              localStorage.setItem('lognog_default_view_mode', data.default_view_mode);
+            }
+            if (typeof data.sidebar_open === 'boolean') {
+              setSidebarOpen(data.sidebar_open);
+              localStorage.setItem('lognog_sidebar_open', String(data.sidebar_open));
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load preferences:', err);
+      } finally {
+        setPreferencesLoaded(true);
+      }
+    };
+
+    loadPreferences();
+  }, []);
 
   const { data: savedSearches } = useQuery({
     queryKey: ['savedSearches'],

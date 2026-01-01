@@ -19,26 +19,84 @@ import {
   Download,
   RefreshCw,
   Bell,
+  Palette,
+  Lock,
+  Sun,
+  Moon,
+  Monitor,
+  Cpu,
+  Bot,
 } from 'lucide-react';
 import { InfoTip } from '../components/ui/InfoTip';
 import NotificationChannelsSection from '../components/NotificationChannelsSection';
 
-// Tab configuration
-const TABS = [
+// User preferences interface
+interface UserPreferences {
+  theme: 'light' | 'dark' | 'system';
+  default_time_range: string;
+  sidebar_open: boolean;
+  default_view_mode: 'log' | 'table' | 'json';
+  query_history_limit: number;
+}
+
+// Tab configuration - base tabs for all users
+const BASE_TABS = [
+  { id: 'preferences', label: 'Preferences', icon: Palette },
   { id: 'account', label: 'Account', icon: User },
   { id: 'notifications', label: 'Notifications', icon: Bell },
-  { id: 'data', label: 'Data', icon: Database },
-  { id: 'geoip', label: 'GeoIP', icon: Globe },
 ] as const;
 
-type TabId = typeof TABS[number]['id'];
+// Admin-only tabs
+const ADMIN_TABS = [
+  { id: 'data', label: 'Data', icon: Database },
+  { id: 'geoip', label: 'GeoIP', icon: Globe },
+  { id: 'system', label: 'System', icon: Cpu },
+  { id: 'ai', label: 'AI', icon: Bot },
+] as const;
+
+type TabId = typeof BASE_TABS[number]['id'] | typeof ADMIN_TABS[number]['id'];
 
 export default function SettingsPage() {
   const { user, logout, getApiKeys, createApiKey, revokeApiKey } = useAuth();
-  const [activeTab, setActiveTab] = useState<TabId>('account');
+  const [activeTab, setActiveTab] = useState<TabId>('preferences');
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Get available tabs based on user role
+  const isAdmin = user?.role === 'admin';
+  const TABS = isAdmin ? [...BASE_TABS, ...ADMIN_TABS] : BASE_TABS;
+
+  // User preferences
+  const [preferences, setPreferences] = useState<UserPreferences>({
+    theme: 'system',
+    default_time_range: '-24h',
+    sidebar_open: true,
+    default_view_mode: 'log',
+    query_history_limit: 10,
+  });
+  const [prefsLoading, setPrefsLoading] = useState(true);
+  const [prefsSaving, setPrefsSaving] = useState(false);
+  const [prefsSuccess, setPrefsSuccess] = useState(false);
+
+  // Password change
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [passwordChanging, setPasswordChanging] = useState(false);
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+
+  // Admin: System stats
+  const [systemStats, setSystemStats] = useState<any>(null);
+  const [systemLoading, setSystemLoading] = useState(false);
+
+  // Admin: AI config
+  const [aiConfig, setAiConfig] = useState<any>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiSaving, setAiSaving] = useState(false);
+  const [aiTestResult, setAiTestResult] = useState<any>(null);
+  const [aiTesting, setAiTesting] = useState(false);
 
   // New key form
   const [showNewKeyForm, setShowNewKeyForm] = useState(false);
@@ -77,12 +135,196 @@ export default function SettingsPage() {
   const [geoipTestResult, setGeoipTestResult] = useState<any>(null);
   const [geoipTesting, setGeoipTesting] = useState(false);
 
-  // Load API keys and GeoIP status
+  // Load API keys, preferences, and other data
   useEffect(() => {
     loadApiKeys();
+    loadPreferences();
     loadGeoipStatus();
     loadDemoStats();
-  }, []);
+    if (isAdmin) {
+      loadSystemStats();
+      loadAiConfig();
+    }
+  }, [isAdmin]);
+
+  const loadPreferences = async () => {
+    setPrefsLoading(true);
+    try {
+      const token = localStorage.getItem('lognog_access_token');
+      const response = await fetch('/api/settings/preferences', {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setPreferences(data);
+      }
+    } catch (err) {
+      console.error('Failed to load preferences:', err);
+    } finally {
+      setPrefsLoading(false);
+    }
+  };
+
+  const savePreferences = async (updates: Partial<UserPreferences>) => {
+    setPrefsSaving(true);
+    setPrefsSuccess(false);
+    try {
+      const token = localStorage.getItem('lognog_access_token');
+      const response = await fetch('/api/settings/preferences', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(updates),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setPreferences(data);
+        setPrefsSuccess(true);
+        setTimeout(() => setPrefsSuccess(false), 2000);
+
+        // Apply theme immediately
+        if (updates.theme) {
+          applyTheme(updates.theme);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to save preferences:', err);
+    } finally {
+      setPrefsSaving(false);
+    }
+  };
+
+  const applyTheme = (theme: 'light' | 'dark' | 'system') => {
+    const root = document.documentElement;
+    if (theme === 'system') {
+      const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      root.classList.toggle('dark', isDark);
+    } else {
+      root.classList.toggle('dark', theme === 'dark');
+    }
+    localStorage.setItem('lognog_theme', theme);
+  };
+
+  const handlePasswordChange = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword !== confirmPassword) {
+      setPasswordError('Passwords do not match');
+      return;
+    }
+    if (newPassword.length < 8) {
+      setPasswordError('Password must be at least 8 characters');
+      return;
+    }
+
+    setPasswordChanging(true);
+    setPasswordError(null);
+    setPasswordSuccess(false);
+
+    try {
+      const token = localStorage.getItem('lognog_access_token');
+      const response = await fetch('/api/auth/change-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          currentPassword,
+          newPassword,
+        }),
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        setPasswordSuccess(true);
+        setCurrentPassword('');
+        setNewPassword('');
+        setConfirmPassword('');
+        setTimeout(() => setPasswordSuccess(false), 3000);
+      } else {
+        setPasswordError(data.error || 'Failed to change password');
+      }
+    } catch (err) {
+      setPasswordError('Failed to connect to server');
+    } finally {
+      setPasswordChanging(false);
+    }
+  };
+
+  const loadSystemStats = async () => {
+    setSystemLoading(true);
+    try {
+      const token = localStorage.getItem('lognog_access_token');
+      const response = await fetch('/api/settings/system/stats', {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (response.ok) {
+        setSystemStats(await response.json());
+      }
+    } catch (err) {
+      console.error('Failed to load system stats:', err);
+    } finally {
+      setSystemLoading(false);
+    }
+  };
+
+  const loadAiConfig = async () => {
+    setAiLoading(true);
+    try {
+      const token = localStorage.getItem('lognog_access_token');
+      const response = await fetch('/api/settings/ai', {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (response.ok) {
+        setAiConfig(await response.json());
+      }
+    } catch (err) {
+      console.error('Failed to load AI config:', err);
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
+  const saveAiConfig = async (updates: any) => {
+    setAiSaving(true);
+    try {
+      const token = localStorage.getItem('lognog_access_token');
+      const response = await fetch('/api/settings/ai', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(updates),
+      });
+      if (response.ok) {
+        await loadAiConfig();
+      }
+    } catch (err) {
+      console.error('Failed to save AI config:', err);
+    } finally {
+      setAiSaving(false);
+    }
+  };
+
+  const testAiConnection = async () => {
+    setAiTesting(true);
+    setAiTestResult(null);
+    try {
+      const token = localStorage.getItem('lognog_access_token');
+      const response = await fetch('/api/settings/ai/test', {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      setAiTestResult(await response.json());
+    } catch (err) {
+      setAiTestResult({ success: false, error: 'Failed to connect' });
+    } finally {
+      setAiTesting(false);
+    }
+  };
 
   const loadApiKeys = async () => {
     try {
@@ -331,6 +573,169 @@ export default function SettingsPage() {
 
   // ========== TAB CONTENT COMPONENTS ==========
 
+  const PreferencesTab = () => (
+    <section className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-4 sm:p-6">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+          <Palette className="w-5 h-5" />
+          Preferences
+        </h2>
+        {prefsSuccess && (
+          <span className="flex items-center gap-1 text-sm text-green-600 dark:text-green-400">
+            <Check className="w-4 h-4" />
+            Saved
+          </span>
+        )}
+      </div>
+
+      {prefsLoading ? (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {/* Theme Selection */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
+              Theme
+            </label>
+            <div className="flex gap-3">
+              {[
+                { value: 'light', label: 'Light', icon: Sun },
+                { value: 'dark', label: 'Dark', icon: Moon },
+                { value: 'system', label: 'System', icon: Monitor },
+              ].map(({ value, label, icon: Icon }) => (
+                <button
+                  key={value}
+                  onClick={() => savePreferences({ theme: value as UserPreferences['theme'] })}
+                  disabled={prefsSaving}
+                  className={`flex-1 flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all ${
+                    preferences.theme === value
+                      ? 'border-sky-500 bg-sky-50 dark:bg-sky-900/20'
+                      : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+                  }`}
+                >
+                  <Icon className={`w-6 h-6 ${
+                    preferences.theme === value
+                      ? 'text-sky-500'
+                      : 'text-slate-400'
+                  }`} />
+                  <span className={`text-sm font-medium ${
+                    preferences.theme === value
+                      ? 'text-sky-700 dark:text-sky-300'
+                      : 'text-slate-600 dark:text-slate-400'
+                  }`}>
+                    {label}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Default Time Range */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Default Time Range
+            </label>
+            <select
+              value={preferences.default_time_range}
+              onChange={(e) => savePreferences({ default_time_range: e.target.value })}
+              disabled={prefsSaving}
+              className="w-full max-w-xs px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+            >
+              <option value="-15m">Last 15 minutes</option>
+              <option value="-1h">Last hour</option>
+              <option value="-4h">Last 4 hours</option>
+              <option value="-24h">Last 24 hours</option>
+              <option value="-7d">Last 7 days</option>
+              <option value="-30d">Last 30 days</option>
+            </select>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              Default time range for search queries
+            </p>
+          </div>
+
+          {/* Default View Mode */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Default View Mode
+            </label>
+            <div className="flex gap-2">
+              {[
+                { value: 'log', label: 'Log View' },
+                { value: 'table', label: 'Table View' },
+                { value: 'json', label: 'JSON View' },
+              ].map(({ value, label }) => (
+                <button
+                  key={value}
+                  onClick={() => savePreferences({ default_view_mode: value as UserPreferences['default_view_mode'] })}
+                  disabled={prefsSaving}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    preferences.default_view_mode === value
+                      ? 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300'
+                      : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Sidebar Default State */}
+          <div className="flex items-center justify-between">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                Field Sidebar Open by Default
+              </label>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Show the fields sidebar when opening the search page
+              </p>
+            </div>
+            <button
+              onClick={() => savePreferences({ sidebar_open: !preferences.sidebar_open })}
+              disabled={prefsSaving}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                preferences.sidebar_open
+                  ? 'bg-sky-500'
+                  : 'bg-slate-300 dark:bg-slate-600'
+              }`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  preferences.sidebar_open ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
+
+          {/* Query History Limit */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Query History Limit
+            </label>
+            <input
+              type="number"
+              value={preferences.query_history_limit}
+              onChange={(e) => {
+                const value = parseInt(e.target.value);
+                if (value >= 1 && value <= 100) {
+                  savePreferences({ query_history_limit: value });
+                }
+              }}
+              min="1"
+              max="100"
+              className="w-24 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+            />
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              Number of recent queries to remember (1-100)
+            </p>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+
   const AccountTab = () => (
     <>
       {/* User Profile Section */}
@@ -372,6 +777,85 @@ export default function SettingsPage() {
             Sign Out
           </button>
         </div>
+      </section>
+
+      {/* Password Change Section */}
+      <section className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-4 sm:p-6 mb-6">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2 mb-4">
+          <Lock className="w-5 h-5" />
+          Change Password
+        </h2>
+
+        {passwordSuccess && (
+          <div className="mb-4 p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800 flex items-center gap-2 text-green-700 dark:text-green-300 text-sm">
+            <Check className="w-4 h-4" />
+            Password changed successfully
+          </div>
+        )}
+
+        {passwordError && (
+          <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-200 dark:border-red-800 flex items-center gap-2 text-red-700 dark:text-red-300 text-sm">
+            <AlertCircle className="w-4 h-4" />
+            {passwordError}
+          </div>
+        )}
+
+        <form onSubmit={handlePasswordChange} className="space-y-4 max-w-md">
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              Current Password
+            </label>
+            <input
+              type="password"
+              value={currentPassword}
+              onChange={(e) => setCurrentPassword(e.target.value)}
+              required
+              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              New Password
+            </label>
+            <input
+              type="password"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              required
+              minLength={8}
+              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+            />
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              Minimum 8 characters
+            </p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              Confirm New Password
+            </label>
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+              required
+              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={passwordChanging || !currentPassword || !newPassword || !confirmPassword}
+            className="flex items-center gap-2 px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+          >
+            {passwordChanging ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Changing...
+              </>
+            ) : (
+              'Change Password'
+            )}
+          </button>
+        </form>
       </section>
 
       {/* API Keys Section */}
@@ -997,6 +1481,308 @@ export default function SettingsPage() {
     </section>
   );
 
+  const SystemTab = () => (
+    <section className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+          <Cpu className="w-5 h-5" />
+          System Information
+        </h2>
+        <button
+          onClick={loadSystemStats}
+          disabled={systemLoading}
+          className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+          title="Refresh stats"
+        >
+          <RefreshCw className={`w-4 h-4 ${systemLoading ? 'animate-spin' : ''}`} />
+        </button>
+      </div>
+
+      {systemLoading ? (
+        <div className="flex items-center justify-center py-8">
+          <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+        </div>
+      ) : systemStats ? (
+        <div className="space-y-6">
+          {/* System Stats */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-lg">
+              <span className="text-sm text-slate-500 dark:text-slate-400">API Version</span>
+              <div className="font-semibold text-slate-900 dark:text-slate-100 font-mono">
+                {systemStats.api_version}
+              </div>
+            </div>
+            <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-lg">
+              <span className="text-sm text-slate-500 dark:text-slate-400">Node.js Version</span>
+              <div className="font-semibold text-slate-900 dark:text-slate-100 font-mono">
+                {systemStats.node_version}
+              </div>
+            </div>
+            <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-lg">
+              <span className="text-sm text-slate-500 dark:text-slate-400">Uptime</span>
+              <div className="font-semibold text-slate-900 dark:text-slate-100">
+                {Math.floor(systemStats.uptime_seconds / 3600)}h {Math.floor((systemStats.uptime_seconds % 3600) / 60)}m
+              </div>
+            </div>
+            <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-lg">
+              <span className="text-sm text-slate-500 dark:text-slate-400">Memory Usage</span>
+              <div className="font-semibold text-slate-900 dark:text-slate-100">
+                {systemStats.memory_usage_mb} MB
+              </div>
+            </div>
+          </div>
+
+          {/* Configuration Info */}
+          <div className="pt-6 border-t border-slate-200 dark:border-slate-700">
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4">
+              Configuration
+            </h3>
+            <div className="space-y-3 text-sm">
+              <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-700">
+                <span className="text-slate-600 dark:text-slate-400">Data Retention</span>
+                <span className="font-medium text-slate-900 dark:text-slate-100">90 days</span>
+              </div>
+              <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-700">
+                <span className="text-slate-600 dark:text-slate-400">Rate Limit</span>
+                <span className="font-medium text-slate-900 dark:text-slate-100">1000 req/min</span>
+              </div>
+              <div className="flex justify-between py-2">
+                <span className="text-slate-600 dark:text-slate-400">Max Batch Size</span>
+                <span className="font-medium text-slate-900 dark:text-slate-100">10,000 logs</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="text-center py-8 text-slate-500 dark:text-slate-400">
+          Failed to load system information
+        </div>
+      )}
+    </section>
+  );
+
+  const AiTab = () => {
+    const [localOllamaUrl, setLocalOllamaUrl] = useState(aiConfig?.ollama?.url || '');
+    const [localOllamaModel, setLocalOllamaModel] = useState(aiConfig?.ollama?.model || '');
+    const [localReasoningModel, setLocalReasoningModel] = useState(aiConfig?.ollama?.reasoning_model || '');
+    const [localEmbedModel, setLocalEmbedModel] = useState(aiConfig?.ollama?.embed_model || '');
+    const [localOpenrouterKey, setLocalOpenrouterKey] = useState('');
+    const [localOpenrouterModel, setLocalOpenrouterModel] = useState(aiConfig?.openrouter?.model || '');
+
+    useEffect(() => {
+      if (aiConfig) {
+        setLocalOllamaUrl(aiConfig.ollama?.url || '');
+        setLocalOllamaModel(aiConfig.ollama?.model || '');
+        setLocalReasoningModel(aiConfig.ollama?.reasoning_model || '');
+        setLocalEmbedModel(aiConfig.ollama?.embed_model || '');
+        setLocalOpenrouterModel(aiConfig.openrouter?.model || '');
+      }
+    }, [aiConfig]);
+
+    const handleSaveOllama = () => {
+      saveAiConfig({
+        ollama: {
+          url: localOllamaUrl,
+          model: localOllamaModel,
+          reasoning_model: localReasoningModel,
+          embed_model: localEmbedModel,
+        },
+      });
+    };
+
+    const handleSaveOpenrouter = () => {
+      saveAiConfig({
+        openrouter: {
+          api_key: localOpenrouterKey || undefined,
+          model: localOpenrouterModel,
+        },
+      });
+    };
+
+    return (
+      <div className="space-y-6">
+        {/* Ollama Configuration */}
+        <section className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2 mb-4">
+            <Bot className="w-5 h-5" />
+            Ollama Configuration
+          </h2>
+
+          <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+            Configure local Ollama instance for AI-powered features like natural language queries and dashboard insights.
+          </p>
+
+          {aiLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Ollama URL
+                </label>
+                <input
+                  type="text"
+                  value={localOllamaUrl}
+                  onChange={(e) => setLocalOllamaUrl(e.target.value)}
+                  placeholder="http://localhost:11434"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-mono text-sm"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Chat Model
+                  </label>
+                  <input
+                    type="text"
+                    value={localOllamaModel}
+                    onChange={(e) => setLocalOllamaModel(e.target.value)}
+                    placeholder="llama3.2"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Reasoning Model (optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={localReasoningModel}
+                    onChange={(e) => setLocalReasoningModel(e.target.value)}
+                    placeholder="deepseek-r1"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Embedding Model
+                </label>
+                <input
+                  type="text"
+                  value={localEmbedModel}
+                  onChange={(e) => setLocalEmbedModel(e.target.value)}
+                  placeholder="nomic-embed-text"
+                  className="w-full max-w-xs px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                />
+              </div>
+
+              <div className="flex items-center gap-3 pt-4">
+                <button
+                  onClick={handleSaveOllama}
+                  disabled={aiSaving}
+                  className="flex items-center gap-2 px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {aiSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                  Save Ollama Settings
+                </button>
+                <button
+                  onClick={testAiConnection}
+                  disabled={aiTesting}
+                  className="flex items-center gap-2 px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 font-medium rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
+                >
+                  {aiTesting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                  Test Connection
+                </button>
+              </div>
+
+              {aiTestResult && (
+                <div className={`mt-4 p-4 rounded-lg border ${
+                  aiTestResult.success
+                    ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                    : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                }`}>
+                  {aiTestResult.success ? (
+                    <>
+                      <div className="flex items-center gap-2 text-green-700 dark:text-green-300 mb-2">
+                        <Check className="w-4 h-4" />
+                        <span className="font-medium">Connected to Ollama</span>
+                      </div>
+                      {aiTestResult.models_available?.length > 0 && (
+                        <div className="text-sm text-green-600 dark:text-green-400">
+                          Available models: {aiTestResult.models_available.slice(0, 5).join(', ')}
+                          {aiTestResult.models_available.length > 5 && ` (+${aiTestResult.models_available.length - 5} more)`}
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="flex items-center gap-2 text-red-700 dark:text-red-300">
+                      <AlertCircle className="w-4 h-4" />
+                      <span>{aiTestResult.error}</span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </section>
+
+        {/* OpenRouter Configuration */}
+        <section className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2 mb-4">
+            <Zap className="w-5 h-5" />
+            OpenRouter Configuration
+          </h2>
+
+          <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+            Configure OpenRouter for cloud-based AI models. Use as fallback or alternative to local Ollama.
+          </p>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                API Key
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="password"
+                  value={localOpenrouterKey}
+                  onChange={(e) => setLocalOpenrouterKey(e.target.value)}
+                  placeholder={aiConfig?.openrouter?.api_key_set ? '••••••••' : 'Enter API key'}
+                  className="flex-1 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                />
+                {aiConfig?.openrouter?.api_key_set && (
+                  <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs rounded">
+                    Set
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                Model
+              </label>
+              <input
+                type="text"
+                value={localOpenrouterModel}
+                onChange={(e) => setLocalOpenrouterModel(e.target.value)}
+                placeholder="anthropic/claude-3.5-sonnet"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+              />
+              <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                See <a href="https://openrouter.ai/models" target="_blank" rel="noopener noreferrer" className="text-sky-500 hover:underline">openrouter.ai/models</a> for available models
+              </p>
+            </div>
+
+            <button
+              onClick={handleSaveOpenrouter}
+              disabled={aiSaving}
+              className="flex items-center gap-2 px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+            >
+              {aiSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+              Save OpenRouter Settings
+            </button>
+          </div>
+        </section>
+      </div>
+    );
+  };
+
   // ========== MAIN RENDER ==========
 
   return (
@@ -1031,10 +1817,13 @@ export default function SettingsPage() {
 
       {/* Tab Content */}
       <div className="min-h-[400px]">
+        {activeTab === 'preferences' && <PreferencesTab />}
         {activeTab === 'account' && <AccountTab />}
         {activeTab === 'notifications' && <NotificationsTab />}
-        {activeTab === 'data' && <DataTab />}
-        {activeTab === 'geoip' && <GeoIPTab />}
+        {activeTab === 'data' && isAdmin && <DataTab />}
+        {activeTab === 'geoip' && isAdmin && <GeoIPTab />}
+        {activeTab === 'system' && isAdmin && <SystemTab />}
+        {activeTab === 'ai' && isAdmin && <AiTab />}
       </div>
     </div>
   );

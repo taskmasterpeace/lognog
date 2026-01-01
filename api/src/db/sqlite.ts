@@ -362,6 +362,24 @@ function initializeSchema(): void {
 
     CREATE INDEX IF NOT EXISTS idx_notification_channels_service ON notification_channels(service);
     CREATE INDEX IF NOT EXISTS idx_notification_channels_enabled ON notification_channels(enabled);
+
+    -- User Preferences (theme, defaults, etc.)
+    CREATE TABLE IF NOT EXISTS user_preferences (
+      user_id TEXT PRIMARY KEY,
+      theme TEXT DEFAULT 'system',
+      default_time_range TEXT DEFAULT '-24h',
+      sidebar_open INTEGER DEFAULT 1,
+      default_view_mode TEXT DEFAULT 'log',
+      query_history_limit INTEGER DEFAULT 10,
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+
+    -- System Settings (admin-configurable)
+    CREATE TABLE IF NOT EXISTS system_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL,
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
   `);
 
   // Add new columns to dashboards table if they don't exist
@@ -2510,4 +2528,100 @@ export function updateChannelTestResult(id: string, success: boolean): void {
     SET last_test = datetime('now'), last_test_success = ?, updated_at = datetime('now')
     WHERE id = ?
   `).run(success ? 1 : 0, id);
+}
+
+// ============ User Preferences ============
+
+export interface UserPreferences {
+  user_id: string;
+  theme: 'light' | 'dark' | 'system';
+  default_time_range: string;
+  sidebar_open: number;
+  default_view_mode: 'log' | 'table' | 'json';
+  query_history_limit: number;
+  updated_at: string;
+}
+
+export function getUserPreferences(userId: string): UserPreferences | null {
+  const database = getSQLiteDB();
+  const prefs = database.prepare('SELECT * FROM user_preferences WHERE user_id = ?').get(userId) as UserPreferences | undefined;
+  return prefs || null;
+}
+
+export function upsertUserPreferences(userId: string, prefs: Partial<Omit<UserPreferences, 'user_id' | 'updated_at'>>): UserPreferences {
+  const database = getSQLiteDB();
+  const existing = getUserPreferences(userId);
+
+  if (existing) {
+    const fields: string[] = [];
+    const values: unknown[] = [];
+
+    if (prefs.theme !== undefined) { fields.push('theme = ?'); values.push(prefs.theme); }
+    if (prefs.default_time_range !== undefined) { fields.push('default_time_range = ?'); values.push(prefs.default_time_range); }
+    if (prefs.sidebar_open !== undefined) { fields.push('sidebar_open = ?'); values.push(prefs.sidebar_open); }
+    if (prefs.default_view_mode !== undefined) { fields.push('default_view_mode = ?'); values.push(prefs.default_view_mode); }
+    if (prefs.query_history_limit !== undefined) { fields.push('query_history_limit = ?'); values.push(prefs.query_history_limit); }
+
+    if (fields.length > 0) {
+      fields.push("updated_at = datetime('now')");
+      values.push(userId);
+      database.prepare(`UPDATE user_preferences SET ${fields.join(', ')} WHERE user_id = ?`).run(...values);
+    }
+  } else {
+    database.prepare(`
+      INSERT INTO user_preferences (user_id, theme, default_time_range, sidebar_open, default_view_mode, query_history_limit)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(
+      userId,
+      prefs.theme || 'system',
+      prefs.default_time_range || '-24h',
+      prefs.sidebar_open ?? 1,
+      prefs.default_view_mode || 'log',
+      prefs.query_history_limit ?? 10
+    );
+  }
+
+  return getUserPreferences(userId)!;
+}
+
+// ============ System Settings ============
+
+export function getSystemSetting(key: string): string | null {
+  const database = getSQLiteDB();
+  const row = database.prepare('SELECT value FROM system_settings WHERE key = ?').get(key) as { value: string } | undefined;
+  return row?.value ?? null;
+}
+
+export function getAllSystemSettings(): Record<string, string> {
+  const database = getSQLiteDB();
+  const rows = database.prepare('SELECT key, value FROM system_settings').all() as Array<{ key: string; value: string }>;
+  const result: Record<string, string> = {};
+  for (const row of rows) {
+    result[row.key] = row.value;
+  }
+  return result;
+}
+
+export function setSystemSetting(key: string, value: string): void {
+  const database = getSQLiteDB();
+  database.prepare(`
+    INSERT INTO system_settings (key, value, updated_at) VALUES (?, ?, datetime('now'))
+    ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')
+  `).run(key, value);
+}
+
+export function setSystemSettings(settings: Record<string, string>): void {
+  const database = getSQLiteDB();
+  const stmt = database.prepare(`
+    INSERT INTO system_settings (key, value, updated_at) VALUES (?, ?, datetime('now'))
+    ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')
+  `);
+
+  const transaction = database.transaction((items: Array<[string, string]>) => {
+    for (const [key, value] of items) {
+      stmt.run(key, value);
+    }
+  });
+
+  transaction(Object.entries(settings));
 }
