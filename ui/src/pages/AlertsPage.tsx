@@ -24,6 +24,8 @@ import {
   TestTube,
   Settings,
   BellOff,
+  Send,
+  Terminal,
 } from 'lucide-react';
 import {
   getAlerts,
@@ -37,8 +39,11 @@ import {
   Alert,
   AlertAction,
   createSilence,
+  getNotificationChannels,
+  NotificationChannel,
 } from '../api/client';
 import VariableHelper from '../components/VariableHelper';
+// Note: VariableInsertHelper is available for advanced template editing
 import { InfoTip } from '../components/ui/InfoTip';
 
 // Local type for alert history (used in UI)
@@ -120,6 +125,9 @@ export default function AlertsPage() {
   const emailSubjectRefs = useRef<(HTMLInputElement | null)[]>([]);
   const emailBodyRefs = useRef<(HTMLTextAreaElement | null)[]>([]);
   const webhookPayloadRefs = useRef<(HTMLTextAreaElement | null)[]>([]);
+  const appriseTitleRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const appriseMessageRefs = useRef<(HTMLTextAreaElement | null)[]>([]);
+  const scriptCommandRefs = useRef<(HTMLInputElement | null)[]>([]);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -179,6 +187,12 @@ export default function AlertsPage() {
     queryKey: ['alertHistory', selectedAlertId],
     queryFn: () => getAlertHistory(selectedAlertId || undefined) as Promise<LocalAlertHistory[]>,
     enabled: showHistoryModal,
+  });
+
+  // Load notification channels for Apprise action
+  const { data: notificationChannels = [] } = useQuery<NotificationChannel[]>({
+    queryKey: ['notificationChannels'],
+    queryFn: getNotificationChannels,
   });
 
   const createMutation = useMutation({
@@ -298,6 +312,8 @@ export default function AlertsPage() {
       type,
       config: type === 'email' ? { to: '', subject: '', body: '' } :
               type === 'webhook' ? { url: '', method: 'POST' } :
+              type === 'apprise' ? { channel: '', title: '', message: '' } :
+              type === 'script' ? { command: '' } :
               {},
     };
     setFormData({ ...formData, actions: [...formData.actions, newAction] });
@@ -359,6 +375,14 @@ export default function AlertsPage() {
         const url = action.config.url || '';
         return url.trim() && (url.startsWith('http://') || url.startsWith('https://'));
       }
+      if (action.type === 'apprise') {
+        // Must have either a channel or custom URLs
+        return !!(action.config.channel || action.config.apprise_urls?.trim());
+      }
+      if (action.type === 'script') {
+        // Must have a command
+        return !!(action.config.command?.trim());
+      }
       return true; // log type doesn't need config
     });
   };
@@ -380,15 +404,15 @@ export default function AlertsPage() {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            <Bell className="w-7 h-7 text-sky-500" />
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <Bell className="w-6 sm:w-7 h-6 sm:h-7 text-sky-500" />
             Alerts
           </h1>
-          <p className="text-slate-500 dark:text-slate-400 mt-1">
+          <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 mt-1">
             Configure alert rules to notify you when conditions are met
           </p>
         </div>
@@ -398,10 +422,11 @@ export default function AlertsPage() {
               setSelectedAlertId(null);
               setShowHistoryModal(true);
             }}
-            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg flex items-center gap-2"
+            className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg flex items-center justify-center gap-2"
           >
             <History className="w-4 h-4" />
-            Alert History
+            <span className="hidden sm:inline">Alert History</span>
+            <span className="sm:hidden">History</span>
           </button>
           <button
             onClick={() => {
@@ -409,10 +434,11 @@ export default function AlertsPage() {
               setEditingAlert(null);
               setShowCreateModal(true);
             }}
-            className="px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg flex items-center gap-2"
+            className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg flex items-center justify-center gap-2"
           >
             <Plus className="w-4 h-4" />
-            Create Alert
+            <span className="hidden sm:inline">Create Alert</span>
+            <span className="sm:hidden">Create</span>
           </button>
         </div>
       </div>
@@ -433,44 +459,50 @@ export default function AlertsPage() {
                 }`}
               >
                 {/* Alert Header */}
-                <div className="p-4 flex items-center gap-4">
-                  <button
-                    onClick={() => toggleExpand(alert.id)}
-                    className="text-slate-400 hover:text-slate-600"
-                  >
-                    {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
-                  </button>
+                <div className="p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                  {/* Top row on mobile: expand button, severity, title */}
+                  <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+                    <button
+                      onClick={() => toggleExpand(alert.id)}
+                      className="text-slate-400 hover:text-slate-600 flex-shrink-0"
+                    >
+                      {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+                    </button>
 
-                  <div className={`p-2 rounded-lg ${severity.bg}`}>
-                    <SeverityIcon className={`w-5 h-5 ${severity.color}`} />
+                    <div className={`p-2 rounded-lg ${severity.bg} flex-shrink-0`}>
+                      <SeverityIcon className={`w-5 h-5 ${severity.color}`} />
+                    </div>
+
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-semibold text-slate-900 dark:text-slate-100 truncate text-sm sm:text-base">
+                        {alert.name}
+                      </h3>
+                      <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 truncate">
+                        {alert.search_query}
+                      </p>
+                    </div>
                   </div>
 
-                  <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-slate-900 dark:text-slate-100 truncate">
-                      {alert.name}
-                    </h3>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 truncate">
-                      {alert.search_query}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-4 text-sm text-slate-500">
+                  {/* Schedule and trigger info */}
+                  <div className="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm text-slate-500 ml-8 sm:ml-0 flex-wrap">
                     <div className="flex items-center gap-1">
-                      <Clock className="w-4 h-4" />
-                      {alert.cron_expression}
+                      <Clock className="w-3 sm:w-4 h-3 sm:h-4" />
+                      <span className="hidden sm:inline">{alert.cron_expression || '*/5 * * * *'}</span>
+                      <span className="sm:hidden">{(alert.cron_expression || '').split(' ')[0] === '*' ? '1m' : (alert.cron_expression || '').split(' ')[0].replace('*/', '') + 'm'}</span>
                     </div>
                     {alert.trigger_count > 0 && (
-                      <div className="px-2 py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium">
-                        Triggered {alert.trigger_count}x
+                      <div className="px-2 py-0.5 sm:py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium">
+                        {alert.trigger_count}x
                       </div>
                     )}
                   </div>
 
-                  <div className="flex items-center gap-2">
+                  {/* Action buttons - scrollable on mobile */}
+                  <div className="flex items-center gap-1 sm:gap-2 ml-8 sm:ml-0 overflow-x-auto scrollbar-hide">
                     <button
                       onClick={() => evaluateMutation.mutate(alert.id)}
                       disabled={evaluateMutation.isPending}
-                      className="p-2 text-slate-400 hover:text-sky-500 hover:bg-sky-50 rounded-lg"
+                      className="p-1.5 sm:p-2 text-slate-400 hover:text-sky-500 hover:bg-sky-50 rounded-lg flex-shrink-0"
                       title="Run Now"
                     >
                       <Play className="w-4 h-4" />
@@ -480,14 +512,14 @@ export default function AlertsPage() {
                         setSilencingAlertId(alert.id);
                         setShowSilenceModal(true);
                       }}
-                      className="p-2 text-slate-400 hover:text-purple-500 hover:bg-purple-50 rounded-lg"
+                      className="p-1.5 sm:p-2 text-slate-400 hover:text-purple-500 hover:bg-purple-50 rounded-lg flex-shrink-0"
                       title="Silence this alert"
                     >
                       <BellOff className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => toggleMutation.mutate(alert.id)}
-                      className={`p-2 rounded-lg ${
+                      className={`p-1.5 sm:p-2 rounded-lg flex-shrink-0 ${
                         alert.enabled
                           ? 'text-green-500 hover:bg-green-50'
                           : 'text-slate-400 hover:bg-slate-100'
@@ -498,7 +530,7 @@ export default function AlertsPage() {
                     </button>
                     <button
                       onClick={() => handleEdit(alert)}
-                      className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg"
+                      className="p-1.5 sm:p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg flex-shrink-0"
                       title="Edit"
                     >
                       <Settings className="w-4 h-4" />
@@ -509,7 +541,7 @@ export default function AlertsPage() {
                           deleteMutation.mutate(alert.id);
                         }
                       }}
-                      className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg"
+                      className="p-1.5 sm:p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg flex-shrink-0"
                       title="Delete"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -519,8 +551,8 @@ export default function AlertsPage() {
 
                 {/* Expanded Details */}
                 {isExpanded && (
-                  <div className="px-4 pb-4 border-t border-slate-100 dark:border-slate-700 pt-4">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div className="px-3 sm:px-4 pb-3 sm:pb-4 border-t border-slate-100 dark:border-slate-700 pt-3 sm:pt-4">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 text-xs sm:text-sm">
                       <div>
                         <div className="text-slate-500 dark:text-slate-400">Trigger Condition</div>
                         <div className="font-medium text-slate-900 dark:text-slate-100">
@@ -840,7 +872,15 @@ export default function AlertsPage() {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="font-medium text-slate-900 dark:text-slate-100">Actions</h3>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => addAction('apprise')}
+                      className="px-3 py-1 text-sm bg-sky-100 hover:bg-sky-200 dark:bg-sky-900/30 dark:hover:bg-sky-900/50 text-sky-700 dark:text-sky-300 rounded-lg flex items-center gap-1"
+                      title="Send to Slack, Discord, Telegram, PagerDuty, and 100+ more"
+                    >
+                      <Send className="w-3 h-3" /> Notify
+                    </button>
                     <button
                       type="button"
                       onClick={() => addAction('email')}
@@ -854,6 +894,13 @@ export default function AlertsPage() {
                       className="px-3 py-1 text-sm bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 rounded-lg flex items-center gap-1"
                     >
                       <Globe className="w-3 h-3" /> Webhook
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => addAction('script')}
+                      className="px-3 py-1 text-sm bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 rounded-lg flex items-center gap-1"
+                    >
+                      <Terminal className="w-3 h-3" /> Script
                     </button>
                     <button
                       type="button"
@@ -875,8 +922,10 @@ export default function AlertsPage() {
                           <div className="flex items-center gap-2 font-medium capitalize">
                             {action.type === 'email' && <Mail className="w-4 h-4" />}
                             {action.type === 'webhook' && <Globe className="w-4 h-4" />}
+                            {action.type === 'apprise' && <Send className="w-4 h-4" />}
+                            {action.type === 'script' && <Terminal className="w-4 h-4" />}
                             {action.type === 'log' && <FileText className="w-4 h-4" />}
-                            {action.type}
+                            {action.type === 'apprise' ? 'Notification Channel' : action.type}
                           </div>
                           <button
                             type="button"
@@ -1002,6 +1051,131 @@ export default function AlertsPage() {
                               />
                               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                                 Leave empty to use default payload
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                        {action.type === 'apprise' && (
+                          <div className="space-y-3">
+                            <div>
+                              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                Notification Channel
+                              </label>
+                              <select
+                                value={action.config.channel || ''}
+                                onChange={(e) => updateAction(index, { channel: e.target.value, apprise_urls: '' })}
+                                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm"
+                              >
+                                <option value="">Select a channel or use custom URL...</option>
+                                {notificationChannels?.filter(ch => ch.enabled).map((channel) => (
+                                  <option key={channel.id} value={channel.id}>
+                                    {channel.name} ({channel.service})
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+
+                            {!action.config.channel && (
+                              <div>
+                                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                  Custom Apprise URL
+                                </label>
+                                <input
+                                  type="text"
+                                  placeholder="e.g., slack://tokenA/tokenB/tokenC/#channel"
+                                  value={action.config.apprise_urls || ''}
+                                  onChange={(e) => updateAction(index, { apprise_urls: e.target.value })}
+                                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm font-mono"
+                                />
+                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                  <a href="https://github.com/caronc/apprise/wiki" target="_blank" rel="noopener noreferrer" className="text-sky-500 hover:underline">
+                                    View all supported services →
+                                  </a>
+                                </p>
+                              </div>
+                            )}
+
+                            <div>
+                              <div className="flex items-center justify-between mb-1">
+                                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+                                  Title (supports variables)
+                                </label>
+                                <VariableHelper onInsert={(variable) => insertVariableIntoField(variable, appriseTitleRefs.current[index])} />
+                              </div>
+                              <input
+                                ref={(el) => { appriseTitleRefs.current[index] = el; }}
+                                type="text"
+                                placeholder="e.g., 🚨 {{alert_name:upper}}"
+                                value={action.config.title || ''}
+                                onChange={(e) => updateAction(index, { title: e.target.value })}
+                                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm"
+                              />
+                            </div>
+
+                            <div>
+                              <div className="flex items-center justify-between mb-1">
+                                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+                                  Message (supports variables)
+                                </label>
+                                <VariableHelper onInsert={(variable) => insertVariableIntoField(variable, appriseMessageRefs.current[index])} />
+                              </div>
+                              <textarea
+                                ref={(el) => { appriseMessageRefs.current[index] = el; }}
+                                placeholder={"{{ai_summary}}\n\nResults: {{result_count:comma}}\nTime: {{timestamp:relative}}"}
+                                value={action.config.message || ''}
+                                onChange={(e) => updateAction(index, { message: e.target.value })}
+                                rows={4}
+                                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm font-mono"
+                              />
+                              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                Use <code className="text-sky-600">{'{{ai_summary}}'}</code> for AI-generated summary
+                              </p>
+                            </div>
+
+                            <div>
+                              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                Format
+                              </label>
+                              <select
+                                value={action.config.format || 'text'}
+                                onChange={(e) => updateAction(index, { format: e.target.value as 'text' | 'markdown' | 'html' })}
+                                className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm"
+                              >
+                                <option value="text">Plain Text</option>
+                                <option value="markdown">Markdown</option>
+                                <option value="html">HTML</option>
+                              </select>
+                            </div>
+                          </div>
+                        )}
+
+                        {action.type === 'script' && (
+                          <div className="space-y-3">
+                            <div>
+                              <div className="flex items-center justify-between mb-1">
+                                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+                                  Command (supports variables)
+                                </label>
+                                <VariableHelper onInsert={(variable) => insertVariableIntoField(variable, scriptCommandRefs.current[index])} />
+                              </div>
+                              <input
+                                ref={(el) => { scriptCommandRefs.current[index] = el; }}
+                                type="text"
+                                placeholder='e.g., python /scripts/alert.py --name "{{alert_name}}" --count {{result_count}}'
+                                value={action.config.command || ''}
+                                onChange={(e) => updateAction(index, { command: e.target.value })}
+                                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm font-mono"
+                              />
+                              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                Execute a shell command when the alert triggers
+                              </p>
+                            </div>
+
+                            <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                              <p className="text-xs text-amber-800 dark:text-amber-200">
+                                <strong>Security Note:</strong> Scripts run with the API server's permissions.
+                                Only use trusted commands and sanitize any dynamic content.
                               </p>
                             </div>
                           </div>

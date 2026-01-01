@@ -16,8 +16,10 @@ import {
   getRecentAlertTrigger,
   createAgentNotification,
   isAlertSilenced,
+  getNotificationChannelByName,
 } from '../db/sqlite.js';
 import { executeDSLQuery, getBackend } from '../db/backend.js';
+import { processTemplate, generateAISummary, TemplateContext } from './template-engine.js';
 
 // Parse time range string like "-5m", "-1h", "-24h" to milliseconds
 function parseTimeRange(timeRange: string): number {
@@ -281,6 +283,185 @@ async function executeLogAction(
   return { success: true, message: 'Logged to console' };
 }
 
+// Execute Apprise action (113+ notification services)
+async function executeAppriseAction(
+  alert: Alert,
+  action: AlertAction,
+  resultCount: number,
+  sampleResults: Record<string, unknown>[]
+): Promise<{ success: boolean; message: string }> {
+  try {
+    const config = action.config;
+    const appriseApiUrl = process.env.APPRISE_URL || 'http://apprise:8000';
+
+    // Get Apprise URL - either from configured channel or direct URL
+    let appriseUrl: string | undefined;
+    let channelName: string | undefined;
+
+    if (config.channel) {
+      // Look up channel by name
+      const channel = getNotificationChannelByName(config.channel);
+      if (!channel) {
+        return { success: false, message: `Notification channel "${config.channel}" not found` };
+      }
+      if (!channel.enabled) {
+        return { success: false, message: `Notification channel "${config.channel}" is disabled` };
+      }
+      appriseUrl = channel.apprise_url;
+      channelName = channel.name;
+    } else if (config.apprise_urls) {
+      // Direct Apprise URL(s)
+      appriseUrl = config.apprise_urls;
+    } else {
+      return { success: false, message: 'No notification channel or Apprise URL specified' };
+    }
+
+    // Build template context for enhanced template engine
+    const templateContext: TemplateContext = {
+      alert_name: alert.name,
+      alert_severity: alert.severity.toUpperCase(),
+      result_count: resultCount,
+      timestamp: new Date().toISOString(),
+      search_query: alert.search_query,
+      results: sampleResults,
+      result: sampleResults[0],
+    };
+
+    // Check if {{ai_summary}} is used in templates
+    const needsAI = (config.title?.includes('{{ai_summary}}') || config.message?.includes('{{ai_summary}}'));
+    if (needsAI) {
+      templateContext.ai_summary = await generateAISummary(templateContext);
+    }
+
+    // Build title and message with enhanced template engine
+    const defaultTitle = `[{{alert_severity:badge}}] {{alert_name}}`;
+    const defaultMessage = `Alert: {{alert_name}}
+Severity: {{alert_severity}}
+Time: {{timestamp:relative}}
+Results: {{result_count:comma}}
+
+Query: ${alert.search_query.substring(0, 200)}`;
+
+    const title = processTemplate(config.title || defaultTitle, templateContext);
+    const body = processTemplate(config.message || defaultMessage, templateContext);
+
+    // Map alert severity to Apprise notification type
+    const getAppriseType = (severity: string): string => {
+      switch (severity.toLowerCase()) {
+        case 'critical':
+        case 'high':
+          return 'failure';
+        case 'medium':
+          return 'warning';
+        case 'low':
+        case 'info':
+        default:
+          return 'info';
+      }
+    };
+
+    // Send via Apprise API
+    const response = await fetch(`${appriseApiUrl}/notify`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        urls: appriseUrl,
+        title,
+        body,
+        type: getAppriseType(alert.severity),
+        format: config.format || 'text',
+      }),
+    });
+
+    if (response.ok) {
+      const destination = channelName ? `channel "${channelName}"` : 'Apprise';
+      return { success: true, message: `Notification sent via ${destination}` };
+    } else {
+      const errorText = await response.text();
+      return {
+        success: false,
+        message: `Apprise notification failed: ${response.status} - ${errorText.substring(0, 100)}`,
+      };
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return { success: false, message: `Apprise action failed: ${message}` };
+  }
+}
+
+// Execute script action (run a command)
+async function executeScriptAction(
+  alert: Alert,
+  action: AlertAction,
+  resultCount: number,
+  sampleResults: Record<string, unknown>[]
+): Promise<{ success: boolean; message: string }> {
+  try {
+    const config = action.config;
+    if (!config.command) {
+      return { success: false, message: 'No command specified' };
+    }
+
+    // Alert metadata for variable substitution in command
+    const alertMetadata = {
+      alert_name: alert.name,
+      alert_severity: alert.severity.toUpperCase(),
+      result_count: resultCount,
+      timestamp: new Date().toISOString(),
+    };
+
+    // Substitute variables in command
+    const command = substituteVariables(config.command, sampleResults, alertMetadata);
+
+    // Set up environment variables for the script
+    const env = {
+      ...process.env,
+      LOGNOG_ALERT_NAME: alert.name,
+      LOGNOG_ALERT_SEVERITY: alert.severity,
+      LOGNOG_ALERT_RESULT_COUNT: String(resultCount),
+      LOGNOG_ALERT_QUERY: alert.search_query,
+      LOGNOG_ALERT_RESULTS_JSON: JSON.stringify(sampleResults.slice(0, 10)),
+    };
+
+    // Execute command with spawn
+    const { spawn } = await import('child_process');
+    const child = spawn(command, [], {
+      shell: true,
+      env,
+      timeout: 30000, // 30 second timeout
+    });
+
+    return new Promise((resolve) => {
+      let stdout = '';
+      let stderr = '';
+
+      child.stdout?.on('data', (data) => { stdout += data; });
+      child.stderr?.on('data', (data) => { stderr += data; });
+
+      child.on('close', (code) => {
+        if (code === 0) {
+          resolve({
+            success: true,
+            message: `Script executed successfully${stdout ? `: ${stdout.substring(0, 100)}` : ''}`,
+          });
+        } else {
+          resolve({
+            success: false,
+            message: `Script failed with code ${code}${stderr ? `: ${stderr.substring(0, 100)}` : ''}`,
+          });
+        }
+      });
+
+      child.on('error', (err) => {
+        resolve({ success: false, message: `Script error: ${err.message}` });
+      });
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return { success: false, message: `Script action failed: ${message}` };
+  }
+}
+
 // Execute all actions for an alert
 async function executeActions(
   alert: Alert,
@@ -302,6 +483,12 @@ async function executeActions(
         break;
       case 'log':
         result = await executeLogAction(alert, action, resultCount);
+        break;
+      case 'apprise':
+        result = await executeAppriseAction(alert, action, resultCount, sampleResults);
+        break;
+      case 'script':
+        result = await executeScriptAction(alert, action, resultCount, sampleResults);
         break;
       default:
         result = { success: false, message: `Unknown action type: ${action.type}` };

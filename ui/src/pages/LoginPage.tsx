@@ -80,21 +80,22 @@ export default function LoginPage() {
       {/* Back to Landing */}
       <Link
         to="/"
-        className="absolute top-6 left-6 flex items-center gap-2 px-3 py-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200/50 dark:hover:bg-slate-700/50 rounded-lg transition-all"
+        className="absolute top-4 sm:top-6 left-4 sm:left-6 flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200/50 dark:hover:bg-slate-700/50 rounded-lg transition-all text-sm sm:text-base"
       >
-        <ArrowLeft className="w-5 h-5" />
-        <span className="font-medium">Back to Home</span>
+        <ArrowLeft className="w-4 sm:w-5 h-4 sm:h-5" />
+        <span className="font-medium hidden sm:inline">Back to Home</span>
+        <span className="font-medium sm:hidden">Back</span>
       </Link>
 
-      <div className="w-full max-w-md">
+      <div className="w-full max-w-md mt-12 sm:mt-0">
         {/* Logo */}
-        <div className="text-center mb-8">
+        <div className="text-center mb-6 sm:mb-8">
           <img
             src="/logo.png"
             alt="LogNog"
-            className="w-24 h-24 mx-auto rounded-2xl shadow-xl object-cover"
+            className="w-20 h-20 sm:w-24 sm:h-24 mx-auto rounded-2xl shadow-xl object-cover"
           />
-          <h1 className="mt-4 text-3xl font-bold text-slate-900 dark:text-slate-100">
+          <h1 className="mt-3 sm:mt-4 text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100">
             LogNog
           </h1>
           <p className="text-slate-500 dark:text-slate-400">

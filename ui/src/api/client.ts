@@ -604,15 +604,25 @@ export async function deleteWorkflowAction(id: string): Promise<void> {
 
 // Alerts API
 export interface AlertAction {
-  type: 'email' | 'webhook' | 'log';
+  type: 'email' | 'webhook' | 'log' | 'apprise' | 'script';
   config: {
+    // Email
     to?: string;
     subject?: string;
     body?: string;
+    // Webhook
     url?: string;
     method?: 'GET' | 'POST' | 'PUT';
     headers?: Record<string, string>;
     payload?: string;
+    // Apprise
+    channel?: string;
+    apprise_urls?: string;
+    title?: string;
+    message?: string;
+    format?: 'text' | 'markdown' | 'html';
+    // Script
+    command?: string;
   };
 }
 
@@ -1194,4 +1204,156 @@ export async function deleteApiKey(id: string): Promise<{ message: string }> {
   return request(`/auth/api-keys/${id}`, {
     method: 'DELETE',
   });
+}
+
+// Notification Channels (Apprise integration)
+export interface NotificationService {
+  id: string;
+  name: string;
+  description: string;
+  urlPattern: string;
+  docsUrl: string;
+  fields: Array<{
+    name: string;
+    label: string;
+    type: 'text' | 'password' | 'select';
+    required: boolean;
+    placeholder?: string;
+    help?: string;
+  }>;
+}
+
+export interface NotificationChannel {
+  id: string;
+  name: string;
+  service: string;
+  apprise_url: string;
+  apprise_url_masked?: string;
+  description?: string;
+  enabled: number;
+  last_test?: string;
+  last_test_success?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getNotificationServices(): Promise<NotificationService[]> {
+  return request('/notifications/services');
+}
+
+export async function getNotificationChannels(): Promise<NotificationChannel[]> {
+  return request('/notifications/channels');
+}
+
+export async function getNotificationChannel(id: string): Promise<NotificationChannel> {
+  return request(`/notifications/channels/${id}`);
+}
+
+export async function createNotificationChannel(channel: {
+  name: string;
+  service: string;
+  apprise_url: string;
+  description?: string;
+  enabled?: boolean;
+}): Promise<NotificationChannel> {
+  return request('/notifications/channels', {
+    method: 'POST',
+    body: JSON.stringify(channel),
+  });
+}
+
+export async function updateNotificationChannel(
+  id: string,
+  updates: Partial<{
+    name: string;
+    service: string;
+    apprise_url: string;
+    description: string;
+    enabled: boolean;
+  }>
+): Promise<NotificationChannel> {
+  return request(`/notifications/channels/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(updates),
+  });
+}
+
+export async function deleteNotificationChannel(id: string): Promise<{ success: boolean }> {
+  return request(`/notifications/channels/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function testNotificationChannel(id: string): Promise<{
+  success: boolean;
+  message: string;
+  details?: string;
+}> {
+  return request(`/notifications/channels/${id}/test`, {
+    method: 'POST',
+  });
+}
+
+export async function testAppriseUrl(appriseUrl: string, title?: string, body?: string): Promise<{
+  success: boolean;
+  message: string;
+  details?: string;
+}> {
+  return request('/notifications/test', {
+    method: 'POST',
+    body: JSON.stringify({ apprise_url: appriseUrl, title, body }),
+  });
+}
+
+export async function getNotificationStatus(): Promise<{
+  available: boolean;
+  url: string;
+  message: string;
+}> {
+  return request('/notifications/status');
+}
+
+// Template engine helpers
+export interface TemplateFilter {
+  name: string;
+  description: string;
+  example: string;
+}
+
+export interface TemplateAggregate {
+  name: string;
+  description: string;
+  example: string;
+}
+
+export async function getTemplateFilters(): Promise<TemplateFilter[]> {
+  // Return hardcoded list (from template-engine.ts)
+  return [
+    { name: 'upper', description: 'Convert to uppercase', example: '{{name:upper}} → JOHN' },
+    { name: 'lower', description: 'Convert to lowercase', example: '{{name:lower}} → john' },
+    { name: 'capitalize', description: 'Capitalize first letter', example: '{{name:capitalize}} → John' },
+    { name: 'truncate', description: 'Limit length', example: '{{message:truncate:50}} → First 50 chars...' },
+    { name: 'comma', description: 'Add thousand separators', example: '{{count:comma}} → 1,234' },
+    { name: 'round', description: 'Round to decimals', example: '{{value:round:2}} → 123.46' },
+    { name: 'percent', description: 'Format as percentage', example: '{{ratio:percent}} → 94.5%' },
+    { name: 'bytes', description: 'Human-readable bytes', example: '{{size:bytes}} → 1.5 GB' },
+    { name: 'relative', description: 'Relative time', example: '{{timestamp:relative}} → 5 minutes ago' },
+    { name: 'date', description: 'Format date', example: '{{timestamp:date}} → Dec 31, 2025' },
+    { name: 'badge', description: 'Severity with emoji', example: '{{severity:badge}} → 🔴 CRITICAL' },
+    { name: 'json', description: 'Pretty JSON', example: '{{data:json}}' },
+    { name: 'default', description: 'Fallback value', example: '{{name:default:Unknown}}' },
+  ];
+}
+
+export async function getTemplateAggregates(): Promise<TemplateAggregate[]> {
+  return [
+    { name: 'count', description: 'Count results', example: '{{results:count}}' },
+    { name: 'sum', description: 'Sum a field', example: '{{results:sum:bytes}}' },
+    { name: 'avg', description: 'Average a field', example: '{{results:avg:latency}}' },
+    { name: 'min', description: 'Minimum value', example: '{{results:min:size}}' },
+    { name: 'max', description: 'Maximum value', example: '{{results:max:cpu}}' },
+    { name: 'pluck', description: 'Extract field values', example: '{{results:pluck:hostname}}' },
+    { name: 'unique', description: 'Unique values', example: '{{results:unique:hostname}}' },
+    { name: 'join', description: 'Join array', example: '{{results:pluck:hostname:join:", "}}' },
+  ];
 }

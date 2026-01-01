@@ -21,6 +21,7 @@ import templatesRouter from './routes/templates.js';
 import aiRouter from './routes/ai.js';
 import demoRouter from './routes/demo.js';
 import mcpRouter from './routes/mcp.js';
+import notificationsRouter from './routes/notifications.js';
 import { healthCheck as clickhouseHealth, executeQuery, closeConnection } from './db/clickhouse.js';
 import { closeDatabase } from './db/sqlite.js';
 import { startScheduler } from './services/scheduler.js';
@@ -68,6 +69,7 @@ app.use('/templates', templatesRouter);
 app.use('/ai', aiRouter);
 app.use('/demo', demoRouter);
 app.use('/mcp', mcpRouter);
+app.use('/notifications', notificationsRouter);
 
 // WebSocket endpoint for live tail
 const liveTailClients: Set<WebSocket> = new Set();

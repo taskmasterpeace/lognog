@@ -169,17 +169,17 @@ export default function TimePicker({ onRangeChange, defaultRange = '-24h', class
       {/* Main Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="btn-secondary h-12 min-w-[140px] group"
+        className="btn-secondary h-11 sm:h-12 min-w-[90px] sm:min-w-[140px] group px-2 sm:px-4"
         title={formatDisplayText()}
       >
         <Clock className="w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-all duration-200 group-hover:scale-110" />
-        <span className="font-medium">{formatShortText()}</span>
-        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+        <span className="font-medium text-sm sm:text-base">{formatShortText()}</span>
+        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 hidden sm:block ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="dropdown right-0 w-80 animate-fade-in">
+        <div className="dropdown right-0 w-64 sm:w-80 animate-fade-in max-h-[70vh] overflow-y-auto">
           {!isCustomMode ? (
             /* Preset Selection */
             <div className="py-2">

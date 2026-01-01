@@ -20,6 +20,7 @@ import {
   RefreshCw,
 } from 'lucide-react';
 import { InfoTip } from '../components/ui/InfoTip';
+import NotificationChannelsSection from '../components/NotificationChannelsSection';
 
 export default function SettingsPage() {
   const { user, logout, getApiKeys, createApiKey, revokeApiKey } = useAuth();
@@ -317,13 +318,13 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="p-8 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-8">
+    <div className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto">
+      <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 mb-6 sm:mb-8">
         Settings
       </h1>
 
       {/* User Profile Section */}
-      <section className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 mb-8">
+      <section className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-4 sm:p-6 mb-6 sm:mb-8">
         <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2 mb-4">
           <User className="w-5 h-5" />
           Profile
@@ -364,15 +365,15 @@ export default function SettingsPage() {
       </section>
 
       {/* API Keys Section */}
-      <section className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-        <div className="flex items-center justify-between mb-4">
+      <section className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-4 sm:p-6 mb-6 sm:mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
             <Key className="w-5 h-5" />
             API Keys
           </h2>
           <button
             onClick={() => setShowNewKeyForm(true)}
-            className="flex items-center gap-2 px-3 py-1.5 bg-sky-500 hover:bg-sky-600 text-white text-sm font-medium rounded-lg transition-colors"
+            className="flex items-center justify-center gap-2 px-3 py-1.5 bg-sky-500 hover:bg-sky-600 text-white text-sm font-medium rounded-lg transition-colors w-full sm:w-auto"
           >
             <Plus className="w-4 h-4" />
             New Key
@@ -535,16 +536,16 @@ export default function SettingsPage() {
             {apiKeys.map((key) => (
               <div
                 key={key.id}
-                className={`p-4 rounded-lg border ${
+                className={`p-3 sm:p-4 rounded-lg border ${
                   key.is_active
                     ? 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700'
                     : 'bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700 opacity-60'
                 }`}
               >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-medium text-slate-900 dark:text-slate-100">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4 className="font-medium text-slate-900 dark:text-slate-100 truncate">
                         {key.name}
                       </h4>
                       {!key.is_active && (
@@ -603,6 +604,11 @@ export default function SettingsPage() {
           </div>
         )}
       </section>
+
+      {/* Notification Channels Section */}
+      <div className="mt-8">
+        <NotificationChannelsSection />
+      </div>
 
       {/* GeoIP Section */}
       <section className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6 mt-8">

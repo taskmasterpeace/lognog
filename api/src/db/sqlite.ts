@@ -345,6 +345,23 @@ function initializeSchema(): void {
 
     CREATE INDEX IF NOT EXISTS idx_user_field_prefs_user ON user_field_preferences(user_id);
     CREATE INDEX IF NOT EXISTS idx_user_field_prefs_pinned ON user_field_preferences(user_id, is_pinned);
+
+    -- Notification Channels (for Apprise integration)
+    CREATE TABLE IF NOT EXISTS notification_channels (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL UNIQUE,
+      service TEXT NOT NULL,        -- 'slack', 'discord', 'pagerduty', 'telegram', etc.
+      apprise_url TEXT NOT NULL,    -- Full Apprise URL (e.g., slack://TokenA/TokenB/TokenC)
+      description TEXT,
+      enabled INTEGER DEFAULT 1,
+      last_test TEXT,               -- Last successful test timestamp
+      last_test_success INTEGER,    -- 1 = success, 0 = failure
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_notification_channels_service ON notification_channels(service);
+    CREATE INDEX IF NOT EXISTS idx_notification_channels_enabled ON notification_channels(enabled);
   `);
 
   // Add new columns to dashboards table if they don't exist
@@ -997,7 +1014,7 @@ export type AlertSeverity = 'info' | 'low' | 'medium' | 'high' | 'critical';
 export type AlertScheduleType = 'cron' | 'realtime';
 
 export interface AlertAction {
-  type: 'email' | 'webhook' | 'log' | 'script';
+  type: 'email' | 'webhook' | 'log' | 'script' | 'apprise';
   config: {
     // Email
     to?: string;
@@ -1010,6 +1027,12 @@ export interface AlertAction {
     payload?: string;
     // Script
     command?: string;
+    // Apprise
+    channel?: string;        // Pre-configured channel name (from notification_channels)
+    apprise_urls?: string;   // Direct Apprise URLs (fallback if no channel)
+    title?: string;          // Notification title template
+    message?: string;        // Notification body template
+    format?: 'text' | 'markdown' | 'html';
   };
 }
 
@@ -2352,4 +2375,139 @@ export function deleteFieldPreference(userId: string, fieldName: string): boolea
     'DELETE FROM user_field_preferences WHERE user_id = ? AND field_name = ?'
   ).run(userId, fieldName);
   return result.changes > 0;
+}
+
+// Notification Channels (for Apprise integration)
+export type NotificationService =
+  | 'slack' | 'discord' | 'telegram' | 'msteams' | 'pagerduty' | 'opsgenie'
+  | 'pushover' | 'ntfy' | 'email' | 'webhook' | 'gotify' | 'matrix'
+  | 'rocket_chat' | 'zulip' | 'twilio' | 'sns' | 'custom';
+
+export interface NotificationChannel {
+  id: string;
+  name: string;
+  service: NotificationService;
+  apprise_url: string;
+  description?: string;
+  enabled: number;
+  last_test?: string;
+  last_test_success?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export function getNotificationChannels(enabledOnly: boolean = false): NotificationChannel[] {
+  const database = getSQLiteDB();
+  if (enabledOnly) {
+    return database.prepare('SELECT * FROM notification_channels WHERE enabled = 1 ORDER BY name').all() as NotificationChannel[];
+  }
+  return database.prepare('SELECT * FROM notification_channels ORDER BY name').all() as NotificationChannel[];
+}
+
+export function getNotificationChannel(id: string): NotificationChannel | undefined {
+  const database = getSQLiteDB();
+  return database.prepare('SELECT * FROM notification_channels WHERE id = ?').get(id) as NotificationChannel | undefined;
+}
+
+export function getNotificationChannelByName(name: string): NotificationChannel | undefined {
+  const database = getSQLiteDB();
+  return database.prepare('SELECT * FROM notification_channels WHERE name = ?').get(name) as NotificationChannel | undefined;
+}
+
+export function createNotificationChannel(
+  name: string,
+  service: NotificationService,
+  appriseUrl: string,
+  options: {
+    description?: string;
+    enabled?: boolean;
+  } = {}
+): NotificationChannel {
+  const database = getSQLiteDB();
+  const id = uuidv4();
+
+  database.prepare(`
+    INSERT INTO notification_channels (
+      id, name, service, apprise_url, description, enabled
+    ) VALUES (?, ?, ?, ?, ?, ?)
+  `).run(
+    id,
+    name,
+    service,
+    appriseUrl,
+    options.description || null,
+    options.enabled !== false ? 1 : 0
+  );
+
+  return getNotificationChannel(id)!;
+}
+
+export function updateNotificationChannel(
+  id: string,
+  updates: {
+    name?: string;
+    service?: NotificationService;
+    apprise_url?: string;
+    description?: string;
+    enabled?: boolean;
+    last_test?: string;
+    last_test_success?: boolean;
+  }
+): NotificationChannel | undefined {
+  const database = getSQLiteDB();
+  const fields: string[] = [];
+  const values: unknown[] = [];
+
+  if (updates.name !== undefined) {
+    fields.push('name = ?');
+    values.push(updates.name);
+  }
+  if (updates.service !== undefined) {
+    fields.push('service = ?');
+    values.push(updates.service);
+  }
+  if (updates.apprise_url !== undefined) {
+    fields.push('apprise_url = ?');
+    values.push(updates.apprise_url);
+  }
+  if (updates.description !== undefined) {
+    fields.push('description = ?');
+    values.push(updates.description);
+  }
+  if (updates.enabled !== undefined) {
+    fields.push('enabled = ?');
+    values.push(updates.enabled ? 1 : 0);
+  }
+  if (updates.last_test !== undefined) {
+    fields.push('last_test = ?');
+    values.push(updates.last_test);
+  }
+  if (updates.last_test_success !== undefined) {
+    fields.push('last_test_success = ?');
+    values.push(updates.last_test_success ? 1 : 0);
+  }
+
+  if (fields.length === 0) {
+    return getNotificationChannel(id);
+  }
+
+  fields.push("updated_at = datetime('now')");
+  values.push(id);
+  database.prepare(`UPDATE notification_channels SET ${fields.join(', ')} WHERE id = ?`).run(...values);
+  return getNotificationChannel(id);
+}
+
+export function deleteNotificationChannel(id: string): boolean {
+  const database = getSQLiteDB();
+  const result = database.prepare('DELETE FROM notification_channels WHERE id = ?').run(id);
+  return result.changes > 0;
+}
+
+export function updateChannelTestResult(id: string, success: boolean): void {
+  const database = getSQLiteDB();
+  database.prepare(`
+    UPDATE notification_channels
+    SET last_test = datetime('now'), last_test_success = ?, updated_at = datetime('now')
+    WHERE id = ?
+  `).run(success ? 1 : 0, id);
 }

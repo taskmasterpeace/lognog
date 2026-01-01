@@ -70,6 +70,7 @@ services:
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       OPENROUTER_MODEL: ${OPENROUTER_MODEL:-anthropic/claude-3.5-sonnet}
       LLAMAINDEX_PERSIST_DIR: /data/llamaindex
+      APPRISE_URL: http://apprise:8000
     volumes:
       - api-data:/data
       - geoip-data:/data/geoip
@@ -169,6 +170,22 @@ services:
     profiles:
       - ai
 
+  # Apprise - Universal Notification Gateway (113+ services)
+  # Sends alerts to Slack, Discord, Telegram, PagerDuty, etc.
+  apprise:
+    image: caronc/apprise:latest
+    container_name: lognog-apprise
+    ports:
+      - "8002:8000"  # Internal API uses http://apprise:8000, external access on 8002
+    environment:
+      - APPRISE_STATEFUL_MODE=simple
+      - APPRISE_WORKER_COUNT=1
+    volumes:
+      - apprise-config:/config
+    restart: unless-stopped
+    networks:
+      - lognog-network
+
 networks:
   lognog-network:
     driver: bridge
@@ -180,3 +197,4 @@ volumes:
   geoip-data:
   ollama-data:
   llamaindex-data:
+  apprise-config:

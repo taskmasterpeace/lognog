@@ -346,12 +346,12 @@ export default function SearchPage() {
     <div className="h-full flex flex-col">
       {/* Header */}
       <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 shadow-sm">
-        <div className="p-6">
-          {/* Title */}
-          <div className="flex items-center justify-between mb-4">
-            <div>
+        <div className="p-4 sm:p-6">
+          {/* Title - responsive layout */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">Search & Explore</h1>
+                <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 truncate">Search & Explore</h1>
                 <InfoIcon
                   content={
                     <div className="space-y-2">
@@ -363,13 +363,13 @@ export default function SearchPage() {
                   placement="right"
                 />
               </div>
-              <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">
+              <p className="text-slate-500 dark:text-slate-400 text-sm mt-1 hidden sm:block">
                 {searchMode === 'ai'
                   ? 'Ask questions in plain English'
                   : 'Query your logs using LogNog Query Language'}
               </p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
               {/* Mode Toggle */}
               <div className="flex items-center bg-slate-100 dark:bg-slate-700 rounded-lg p-1">
                 <Tooltip
@@ -378,14 +378,14 @@ export default function SearchPage() {
                 >
                   <button
                     onClick={() => setSearchMode('dsl')}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                    className={`flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                       searchMode === 'dsl'
                         ? 'bg-white dark:bg-slate-600 text-slate-900 dark:text-slate-100 shadow-sm'
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
                     }`}
                   >
                     <Code2 className="w-4 h-4" />
-                    DSL
+                    <span className="hidden xs:inline">DSL</span>
                   </button>
                 </Tooltip>
                 <Tooltip
@@ -394,14 +394,14 @@ export default function SearchPage() {
                 >
                   <button
                     onClick={() => setSearchMode('ai')}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                    className={`flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                       searchMode === 'ai'
                         ? 'bg-white dark:bg-slate-600 text-slate-900 dark:text-slate-100 shadow-sm'
                         : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
                     }`}
                   >
                     <Wand2 className="w-4 h-4" />
-                    AI
+                    <span className="hidden xs:inline">AI</span>
                   </button>
                 </Tooltip>
               </div>
@@ -410,211 +410,213 @@ export default function SearchPage() {
                 className="btn-secondary"
               >
                 <Bookmark className="w-4 h-4" />
-                <span>Save</span>
+                <span className="hidden sm:inline">Save</span>
               </button>
             </div>
           </div>
 
-          {/* Search Bar */}
-          <div className="flex gap-3">
-            {searchMode === 'ai' ? (
-              /* AI Search Input */
-              <div className="flex-1 relative">
-                <MessageSquare className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-purple-400" />
-                <input
-                  type="text"
-                  value={aiQuestion}
-                  onChange={(e) => setAiQuestion(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Show me all errors from the last hour..."
-                  className="input-search h-12 pr-24 border-purple-200 focus:border-purple-400 focus:ring-purple-200"
-                  autoFocus
-                />
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                  {aiQuestion && (
-                    <button
-                      onClick={() => setAiQuestion('')}
-                      className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded transition-colors"
-                      title="Clear"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
-                  <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-slate-400 bg-slate-100 rounded">
-                    <span>Ctrl</span>
-                    <span>+</span>
-                    <span>Enter</span>
-                  </kbd>
+          {/* Search Bar - responsive layout */}
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
+            {/* Search Input Row */}
+            <div className="flex-1 flex gap-2">
+              {searchMode === 'ai' ? (
+                /* AI Search Input */
+                <div className="flex-1 relative">
+                  <MessageSquare className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 w-4 sm:w-5 h-4 sm:h-5 text-purple-400" />
+                  <input
+                    type="text"
+                    value={aiQuestion}
+                    onChange={(e) => setAiQuestion(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Show me all errors..."
+                    className="input-search h-11 sm:h-12 pl-10 sm:pl-12 pr-10 sm:pr-24 border-purple-200 focus:border-purple-400 focus:ring-purple-200 text-sm sm:text-base"
+                    autoFocus
+                  />
+                  <div className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                    {aiQuestion && (
+                      <button
+                        onClick={() => setAiQuestion('')}
+                        className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded transition-colors"
+                        title="Clear"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                    <kbd className="hidden lg:inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-slate-400 bg-slate-100 rounded">
+                      <span>Ctrl+Enter</span>
+                    </kbd>
+                  </div>
                 </div>
-              </div>
-            ) : (
-              /* DSL Query Input */
-              <div className="flex-1 relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                <TooltipWithCode
-                  content={
-                    <div className="space-y-2">
-                      <p className="font-semibold">DSL Query Syntax</p>
-                      <p>Start with <code className="bg-gray-800 px-1.5 py-0.5 rounded">search</code> followed by filters, then use pipes (<code className="bg-gray-800 px-1.5 py-0.5 rounded">|</code>) for transformations</p>
-                      <p className="text-xs mt-2 opacity-80">Examples:</p>
-                    </div>
-                  }
-                  code={`search severity<=3
+              ) : (
+                /* DSL Query Input */
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 w-4 sm:w-5 h-4 sm:h-5 text-slate-400" />
+                  <TooltipWithCode
+                    content={
+                      <div className="space-y-2">
+                        <p className="font-semibold">DSL Query Syntax</p>
+                        <p>Start with <code className="bg-gray-800 px-1.5 py-0.5 rounded">search</code> followed by filters, then use pipes (<code className="bg-gray-800 px-1.5 py-0.5 rounded">|</code>) for transformations</p>
+                        <p className="text-xs mt-2 opacity-80">Examples:</p>
+                      </div>
+                    }
+                    code={`search severity<=3
 search host=web* app_name="nginx"
 search * | stats count by hostname
 search error | timechart span=1h count
 search * | top 10 app_name`}
-                  placement="bottom"
-                >
-                  <input
-                    type="text"
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    placeholder="search host=* | stats count by hostname"
-                    className="input-search h-12 pr-24"
-                    autoFocus
-                  />
-                </TooltipWithCode>
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                  {query && query !== 'search *' && (
-                    <button
-                      onClick={() => setQuery('search *')}
-                      className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded transition-colors"
-                      title="Clear search"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
-                  <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-slate-400 bg-slate-100 rounded">
-                    <span>Ctrl</span>
-                    <span>+</span>
-                    <span>Enter</span>
-                  </kbd>
+                    placement="bottom"
+                  >
+                    <input
+                      type="text"
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      onKeyDown={handleKeyDown}
+                      placeholder="search host=* | stats count"
+                      className="input-search h-11 sm:h-12 pl-10 sm:pl-12 pr-10 sm:pr-24 text-sm sm:text-base"
+                      autoFocus
+                    />
+                  </TooltipWithCode>
+                  <div className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                    {query && query !== 'search *' && (
+                      <button
+                        onClick={() => setQuery('search *')}
+                        className="p-1 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded transition-colors"
+                        title="Clear search"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    )}
+                    <kbd className="hidden lg:inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-slate-400 bg-slate-100 rounded">
+                      <span>Ctrl+Enter</span>
+                    </kbd>
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Query History Dropdown */}
-            {searchMode === 'dsl' && queryHistory.length > 0 && (
-              <div className="relative" ref={historyDropdownRef}>
-                <button
-                  onClick={() => setShowHistory(!showHistory)}
-                  className="btn-secondary h-12 group"
-                  title="Query history"
-                >
-                  <History className="w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-all duration-200 group-hover:scale-110" />
-                </button>
+              {/* Query History Dropdown - visible on sm+ */}
+              {searchMode === 'dsl' && queryHistory.length > 0 && (
+                <div className="relative hidden sm:block" ref={historyDropdownRef}>
+                  <button
+                    onClick={() => setShowHistory(!showHistory)}
+                    className="btn-secondary h-11 sm:h-12 group"
+                    title="Query history"
+                  >
+                    <History className="w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-all duration-200 group-hover:scale-110" />
+                  </button>
 
-                {/* History Dropdown Menu */}
-                {showHistory && (
-                  <div className="dropdown right-0 w-96 animate-fade-in">
-                    <div className="py-2">
-                      <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-700">
-                        <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                          Recent Queries
-                        </p>
-                      </div>
-                      {queryHistory.map((historyQuery, index) => (
-                        <button
-                          key={index}
-                          onClick={() => {
-                            setQuery(historyQuery);
-                            setShowHistory(false);
-                          }}
-                          className={`dropdown-item flex items-center gap-3 text-left transition-all duration-150 animate-fade-in text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700`}
-                          style={{ animationDelay: `${index * 30}ms` }}
-                        >
-                          <History className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                          <span className="font-mono text-sm truncate flex-1">{historyQuery}</span>
-                        </button>
-                      ))}
-                      {queryHistory.length > 0 && (
-                        <div className="border-t border-slate-100 dark:border-slate-700 mt-2 pt-2 px-4">
+                  {/* History Dropdown Menu */}
+                  {showHistory && (
+                    <div className="dropdown right-0 w-80 sm:w-96 animate-fade-in">
+                      <div className="py-2">
+                        <div className="px-4 py-2 border-b border-slate-100 dark:border-slate-700">
+                          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                            Recent Queries
+                          </p>
+                        </div>
+                        {queryHistory.map((historyQuery, index) => (
                           <button
+                            key={index}
                             onClick={() => {
-                              setQueryHistory([]);
-                              localStorage.removeItem('lognog_query_history');
+                              setQuery(historyQuery);
                               setShowHistory(false);
                             }}
-                            className="text-xs text-slate-500 hover:text-red-600 transition-colors"
+                            className={`dropdown-item flex items-center gap-3 text-left transition-all duration-150 animate-fade-in text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700`}
+                            style={{ animationDelay: `${index * 30}ms` }}
                           >
-                            Clear history
+                            <History className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                            <span className="font-mono text-sm truncate flex-1">{historyQuery}</span>
                           </button>
-                        </div>
-                      )}
+                        ))}
+                        {queryHistory.length > 0 && (
+                          <div className="border-t border-slate-100 dark:border-slate-700 mt-2 pt-2 px-4">
+                            <button
+                              onClick={() => {
+                                setQueryHistory([]);
+                                localStorage.removeItem('lognog_query_history');
+                                setShowHistory(false);
+                              }}
+                              className="text-xs text-slate-500 hover:text-red-600 transition-colors"
+                            >
+                              Clear history
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
-            )}
+                  )}
+                </div>
+              )}
+            </div>
 
-            {/* Time Range */}
-            <TimePicker
-              onRangeChange={(earliest, latest) => {
-                setTimeRange(earliest);
-                setTimeRangeLatest(latest);
-              }}
-              defaultRange={timeRange}
-            />
+            {/* Controls Row - Time Range and Search Button */}
+            <div className="flex gap-2">
+              {/* Time Range */}
+              <TimePicker
+                onRangeChange={(earliest, latest) => {
+                  setTimeRange(earliest);
+                  setTimeRangeLatest(latest);
+                }}
+                defaultRange={timeRange}
+              />
 
-            {/* Search Button */}
-            {searchMode === 'ai' ? (
-              <button
-                onClick={handleAISearch}
-                disabled={aiSearchMutation.isPending || !aiQuestion.trim()}
-                className="btn-primary h-12 px-6 bg-purple-600 hover:bg-purple-700"
-              >
-                {aiSearchMutation.isPending ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <Wand2 className="w-5 h-5" />
-                )}
-                <span>Ask AI</span>
-              </button>
-            ) : (
-              <button
-                onClick={handleSearch}
-                disabled={searchMutation.isPending}
-                className="btn-primary h-12 px-6"
-              >
-                {searchMutation.isPending ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <Play className="w-5 h-5" />
-                )}
-                <span>Search</span>
-              </button>
-            )}
+              {/* Search Button */}
+              {searchMode === 'ai' ? (
+                <button
+                  onClick={handleAISearch}
+                  disabled={aiSearchMutation.isPending || !aiQuestion.trim()}
+                  className="btn-primary h-11 sm:h-12 px-4 sm:px-6 bg-purple-600 hover:bg-purple-700 flex-shrink-0"
+                >
+                  {aiSearchMutation.isPending ? (
+                    <Loader2 className="w-4 sm:w-5 h-4 sm:h-5 animate-spin" />
+                  ) : (
+                    <Wand2 className="w-4 sm:w-5 h-4 sm:h-5" />
+                  )}
+                  <span className="hidden sm:inline ml-2">Ask AI</span>
+                </button>
+              ) : (
+                <button
+                  onClick={handleSearch}
+                  disabled={searchMutation.isPending}
+                  className="btn-primary h-11 sm:h-12 px-4 sm:px-6 flex-shrink-0"
+                >
+                  {searchMutation.isPending ? (
+                    <Loader2 className="w-4 sm:w-5 h-4 sm:h-5 animate-spin" />
+                  ) : (
+                    <Play className="w-4 sm:w-5 h-4 sm:h-5" />
+                  )}
+                  <span className="hidden sm:inline ml-2">Search</span>
+                </button>
+              )}
+            </div>
           </div>
 
-          {/* Quick Searches / Saved */}
-          <div className="mt-4 flex items-center gap-4 overflow-x-auto">
+          {/* Quick Searches / Saved - hide on very small screens */}
+          <div className="mt-3 sm:mt-4 flex items-center gap-2 sm:gap-4 overflow-x-auto pb-2 -mb-2 scrollbar-hide">
             {searchMode === 'ai' ? (
               /* AI Suggestions */
               <>
-                <span className="text-xs font-semibold text-purple-400 uppercase whitespace-nowrap">Try asking:</span>
-                {aiSuggestions?.suggestions.slice(0, 5).map((suggestion, idx) => (
+                <span className="text-xs font-semibold text-purple-400 uppercase whitespace-nowrap hidden sm:inline">Try asking:</span>
+                {aiSuggestions?.suggestions.slice(0, 3).map((suggestion, idx) => (
                   <button
                     key={idx}
                     onClick={() => setAiQuestion(suggestion.text)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors whitespace-nowrap"
+                    className="flex items-center gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm bg-purple-50 text-purple-700 rounded-lg hover:bg-purple-100 transition-colors whitespace-nowrap flex-shrink-0"
                     title={suggestion.description}
                   >
                     <Wand2 className="w-3 h-3" />
-                    {suggestion.text.length > 30 ? suggestion.text.slice(0, 30) + '...' : suggestion.text}
+                    {suggestion.text.length > 20 ? suggestion.text.slice(0, 20) + '...' : suggestion.text}
                   </button>
                 ))}
               </>
             ) : (
               /* DSL Quick Searches */
               <>
-                <span className="text-xs font-semibold text-slate-400 uppercase whitespace-nowrap">Quick:</span>
+                <span className="text-xs font-semibold text-slate-400 uppercase whitespace-nowrap hidden sm:inline">Quick:</span>
                 {EXAMPLE_QUERIES.slice(0, 4).map((ex) => (
                   <button
                     key={ex.name}
                     onClick={() => setQuery(ex.query)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors whitespace-nowrap"
+                    className="flex items-center gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors whitespace-nowrap flex-shrink-0"
                   >
                     <Sparkles className="w-3 h-3 text-amber-500" />
                     {ex.name}
@@ -622,13 +624,13 @@ search * | top 10 app_name`}
                 ))}
                 {savedSearches && savedSearches.length > 0 && (
                   <>
-                    <span className="text-slate-300">|</span>
-                    <span className="text-xs font-semibold text-slate-400 uppercase whitespace-nowrap">Saved:</span>
-                    {savedSearches.slice(0, 3).map((search) => (
+                    <span className="text-slate-300 hidden sm:inline">|</span>
+                    <span className="text-xs font-semibold text-slate-400 uppercase whitespace-nowrap hidden sm:inline">Saved:</span>
+                    {savedSearches.slice(0, 2).map((search) => (
                       <button
                         key={search.id}
                         onClick={() => setQuery(search.query)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-sky-50 text-sky-700 rounded-lg hover:bg-sky-100 transition-colors whitespace-nowrap"
+                        className="flex items-center gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm bg-sky-50 text-sky-700 rounded-lg hover:bg-sky-100 transition-colors whitespace-nowrap flex-shrink-0"
                       >
                         <Bookmark className="w-3 h-3" />
                         {search.name}
@@ -644,9 +646,9 @@ search * | top 10 app_name`}
 
       {/* Main Content Area with Sidebar */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left Sidebar - Field Discovery */}
+        {/* Left Sidebar - Field Discovery (hidden on mobile) */}
         {sidebarOpen && (
-          <div className="w-64 flex-shrink-0 overflow-hidden">
+          <div className="hidden md:block w-64 flex-shrink-0 overflow-hidden border-r border-slate-200 dark:border-slate-700">
             <FieldSidebar
               results={(searchMutation.data?.results || aiSearchMutation.data?.results || []) as Record<string, unknown>[]}
               selectedFilters={selectedFilters}
@@ -657,7 +659,7 @@ search * | top 10 app_name`}
         )}
 
         {/* Results Area */}
-        <div className="flex-1 overflow-auto p-6">
+        <div className="flex-1 overflow-auto p-3 sm:p-6">
         {/* Error State */}
         {(searchMutation.isError || aiSearchMutation.isError) && (
           <div className="card border-red-200 bg-red-50 p-4 mb-6 flex items-start gap-3 animate-fade-in">
@@ -793,12 +795,12 @@ search * | top 10 app_name`}
 
           return (
             <div className="animate-slide-up">
-              {/* Result Stats */}
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-4">
+              {/* Result Stats - responsive */}
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                <div className="flex items-center gap-2 sm:gap-4">
                   <button
                     onClick={() => setSidebarOpen(!sidebarOpen)}
-                    className="btn-ghost p-2"
+                    className="btn-ghost p-2 hidden md:flex"
                     title={sidebarOpen ? 'Hide filters' : 'Show filters'}
                   >
                     {sidebarOpen ? (
@@ -808,24 +810,25 @@ search * | top 10 app_name`}
                     )}
                   </button>
                   <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                    <span className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+                    <span className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100">
                       {count.toLocaleString()}
                     </span>
                     {' '}results
                     {executionTime !== undefined && (
-                      <span className="text-slate-500 dark:text-slate-400">
+                      <span className="text-slate-500 dark:text-slate-400 hidden sm:inline">
                         {' '}in {executionTime.toLocaleString()}ms
                       </span>
                     )}
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                {/* Toolbar - scrollable on mobile */}
+                <div className="flex items-center gap-2 overflow-x-auto pb-1 -mb-1 scrollbar-hide">
                   {/* View Mode Toggle */}
-                  <div className="flex items-center bg-slate-100 dark:bg-slate-700 rounded-lg p-1">
+                  <div className="flex items-center bg-slate-100 dark:bg-slate-700 rounded-lg p-1 flex-shrink-0">
                     <button
                       onClick={() => setViewMode('log')}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                      className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-xs font-medium transition-colors ${
                         viewMode === 'log'
                           ? 'bg-white dark:bg-slate-600 text-slate-900 dark:text-slate-100 shadow-sm'
                           : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
@@ -833,11 +836,11 @@ search * | top 10 app_name`}
                       title="Log View"
                     >
                       <Eye className="w-4 h-4" />
-                      Log
+                      <span className="hidden sm:inline">Log</span>
                     </button>
                     <button
                       onClick={() => setViewMode('table')}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                      className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-xs font-medium transition-colors ${
                         viewMode === 'table'
                           ? 'bg-white dark:bg-slate-600 text-slate-900 dark:text-slate-100 shadow-sm'
                           : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
@@ -845,11 +848,11 @@ search * | top 10 app_name`}
                       title="Table View"
                     >
                       <Table2 className="w-4 h-4" />
-                      Table
+                      <span className="hidden sm:inline">Table</span>
                     </button>
                     <button
                       onClick={() => setViewMode('json')}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                      className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-xs font-medium transition-colors ${
                         viewMode === 'json'
                           ? 'bg-white dark:bg-slate-600 text-slate-900 dark:text-slate-100 shadow-sm'
                           : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
@@ -857,47 +860,43 @@ search * | top 10 app_name`}
                       title="JSON View"
                     >
                       <FileJson className="w-4 h-4" />
-                      JSON
+                      <span className="hidden sm:inline">JSON</span>
                     </button>
                   </div>
 
                   {sql && (
                     <button
                       onClick={() => setShowSqlPreview(!showSqlPreview)}
-                      className={`btn-ghost text-xs ${showSqlPreview ? 'bg-slate-100' : ''}`}
+                      className={`btn-ghost text-xs flex-shrink-0 ${showSqlPreview ? 'bg-slate-100' : ''}`}
+                      title="Show SQL"
                     >
                       <Code2 className="w-4 h-4" />
-                      {showSqlPreview ? 'Hide SQL' : 'Show SQL'}
+                      <span className="hidden sm:inline">{showSqlPreview ? 'Hide SQL' : 'SQL'}</span>
                     </button>
                   )}
                   <button
                     onClick={() => copyToClipboard(results as Record<string, unknown>[])}
-                    className="btn-ghost text-xs"
+                    className="btn-ghost text-xs flex-shrink-0"
                     title="Copy as JSON"
                   >
                     {jsonCopied ? (
-                      <>
-                        <Check className="w-4 h-4 text-green-500" />
-                        Copied!
-                      </>
+                      <Check className="w-4 h-4 text-green-500" />
                     ) : (
-                      <>
-                        <Copy className="w-4 h-4" />
-                        Copy JSON
-                      </>
+                      <Copy className="w-4 h-4" />
                     )}
+                    <span className="hidden sm:inline">{jsonCopied ? 'Copied!' : 'Copy'}</span>
                   </button>
                   <button
                     onClick={() => exportToCSV(results as Record<string, unknown>[])}
-                    className="btn-ghost text-xs"
+                    className="btn-ghost text-xs flex-shrink-0"
                     title="Export to CSV"
                   >
                     <Download className="w-4 h-4" />
-                    Export CSV
+                    <span className="hidden sm:inline">CSV</span>
                   </button>
 
-                  {/* Divider */}
-                  <div className="w-px h-6 bg-slate-200 dark:bg-slate-600" />
+                  {/* Divider - hidden on mobile */}
+                  <div className="hidden sm:block w-px h-6 bg-slate-200 dark:bg-slate-600 flex-shrink-0" />
 
                   {/* Create Alert Button */}
                   <button
@@ -909,11 +908,11 @@ search * | top 10 app_name`}
                       });
                       navigate(`/alerts?${params.toString()}`);
                     }}
-                    className="btn-ghost text-xs text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-900/20"
+                    className="btn-ghost text-xs text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-900/20 flex-shrink-0"
                     title="Create an alert from this search"
                   >
                     <Bell className="w-4 h-4" />
-                    Create Alert
+                    <span className="hidden sm:inline">Alert</span>
                   </button>
 
                   {/* Create Report Button */}
@@ -926,11 +925,11 @@ search * | top 10 app_name`}
                       });
                       navigate(`/reports?${params.toString()}`);
                     }}
-                    className="btn-ghost text-xs text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-900/20"
+                    className="btn-ghost text-xs text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 dark:text-emerald-400 dark:hover:bg-emerald-900/20 flex-shrink-0"
                     title="Create a scheduled report from this search"
                   >
                     <FileText className="w-4 h-4" />
-                    Create Report
+                    <span className="hidden sm:inline">Report</span>
                   </button>
                 </div>
               </div>
@@ -1035,7 +1034,7 @@ search * | top 10 app_name`}
 
             {/* Example Queries / AI Suggestions */}
             {searchMode === 'ai' ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-2xl">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 max-w-2xl w-full px-4 sm:px-0">
                 {aiSuggestions?.suggestions.map((suggestion, idx) => (
                   <button
                     key={idx}
@@ -1043,20 +1042,20 @@ search * | top 10 app_name`}
                       setAiQuestion(suggestion.text);
                       aiSearchMutation.mutate(suggestion.text);
                     }}
-                    className="card-hover p-4 text-left border-purple-200 hover:border-purple-300"
+                    className="card-hover p-3 sm:p-4 text-left border-purple-200 hover:border-purple-300"
                   >
                     <div className="flex items-start gap-2">
                       <Wand2 className="w-4 h-4 text-purple-500 mt-0.5 flex-shrink-0" />
-                      <div>
-                        <p className="font-medium text-slate-900">{suggestion.text}</p>
-                        <p className="text-xs text-slate-500 mt-1">{suggestion.description}</p>
+                      <div className="min-w-0">
+                        <p className="font-medium text-slate-900 text-sm sm:text-base truncate">{suggestion.text}</p>
+                        <p className="text-xs text-slate-500 mt-1 line-clamp-2">{suggestion.description}</p>
                       </div>
                     </div>
                   </button>
                 ))}
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-w-3xl">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-3 max-w-3xl w-full px-4 sm:px-0">
                 {EXAMPLE_QUERIES.map((ex) => (
                   <button
                     key={ex.name}
@@ -1064,9 +1063,9 @@ search * | top 10 app_name`}
                       setQuery(ex.query);
                       searchMutation.mutate();
                     }}
-                    className="card-hover p-4 text-left"
+                    className="card-hover p-3 sm:p-4 text-left"
                   >
-                    <p className="font-medium text-slate-900">{ex.name}</p>
+                    <p className="font-medium text-slate-900 text-sm sm:text-base">{ex.name}</p>
                     <p className="text-xs text-slate-500 mt-1">{ex.desc}</p>
                     <code className="text-xs text-sky-600 mt-2 block truncate">{ex.query}</code>
                   </button>
