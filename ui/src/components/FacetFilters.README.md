@@ -135,7 +135,7 @@ Other fields will display as-is with proper capitalization.
 
 ## Styling
 
-The component uses TailwindCSS and follows the existing Spunk design system:
+The component uses TailwindCSS and follows the existing LogNog design system:
 
 - Matches the color scheme (slate grays, sky blues)
 - Uses Lucide icons (ChevronDown, ChevronRight, X)

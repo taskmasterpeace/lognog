@@ -160,7 +160,7 @@ Here's what the search bar section should look like after integration:
 3. **Better UX** - Visual feedback with duration display
 4. **Reusable** - Can be used on other pages (Dashboards, Reports, etc.)
 5. **Type Safe** - Full TypeScript support
-6. **Consistent** - Matches Spunk design system
+6. **Consistent** - Matches LogNog design system
 
 ## API Compatibility
 

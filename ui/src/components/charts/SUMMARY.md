@@ -2,7 +2,7 @@
 
 ## What Was Created
 
-A complete suite of 6 advanced chart components for the Spunk UI, built with Apache ECharts and echarts-for-react.
+A complete suite of 6 advanced chart components for the LogNog UI, built with Apache ECharts and echarts-for-react.
 
 ## Files Created
 
@@ -125,7 +125,7 @@ import {
 
 ## Integration Points
 
-These charts integrate seamlessly with Spunk's architecture:
+These charts integrate seamlessly with LogNog's architecture:
 
 ### Search Results Page
 - TimeSeriesChart for log volume over time
@@ -234,4 +234,4 @@ Note: Unrelated errors in `KnowledgePage.tsx` (unused imports) do not affect cha
 
 ## License
 
-Part of the Spunk (Home Splunk) project.
+Part of the LogNog project.

@@ -518,4 +518,4 @@ Future enhancements for the template system:
 - [Implementation Roadmap](./IMPLEMENTATION-ROADMAP.md) - Full implementation plan
 - [LogNog Agent Documentation](../agent/README.md) - Agent configuration
 - [DSL Reference](./DSL_REFERENCE.md) - Query language documentation
-- [API Documentation](../api/README.md) - Complete API reference
+- [LogNog Guide](./LOGNOG-GUIDE.md) - Complete user guide with API reference

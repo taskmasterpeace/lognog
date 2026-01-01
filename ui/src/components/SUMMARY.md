@@ -2,7 +2,7 @@
 
 ## What Was Created
 
-A professional, feature-rich log viewer component for the Spunk UI that rivals commercial logging solutions like Splunk and Datadog.
+A professional, feature-rich log viewer component for the LogNog UI that rivals commercial logging solutions like Splunk and Datadog.
 
 ### Files Created
 

@@ -1,6 +1,6 @@
 # Chart Components
 
-Advanced chart components for the Spunk UI built with Apache ECharts and echarts-for-react.
+Advanced chart components for the LogNog UI built with Apache ECharts and echarts-for-react.
 
 ## Overview
 
@@ -321,7 +321,7 @@ function App() {
 }
 ```
 
-## Integration with Spunk
+## Integration with LogNog
 
 ### Search Results Visualization
 
@@ -447,4 +447,4 @@ function DashboardPage() {
 
 ## License
 
-Part of the Spunk project. See main project LICENSE.
+Part of the LogNog project. See main project LICENSE.

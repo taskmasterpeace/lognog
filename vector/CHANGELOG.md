@@ -101,7 +101,7 @@ All new fields follow consistent naming:
 
 Configuration validated successfully:
 ```bash
-docker exec spunk-vector vector validate
+docker exec lognog-vector vector validate
 # ✓ Loaded ["/etc/vector/vector.yaml"]
 # ✓ Component configuration
 # ✓ Validated

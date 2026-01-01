@@ -1,0 +1,55 @@
+# Docker Compose override for LogNog
+# Place this file next to docker-compose.yml to customize settings
+
+version: '3.8'
+
+services:
+  # Customize API settings
+  api:
+    environment:
+      # Enable debug logging
+      - LOG_LEVEL=debug
+      # Custom JWT secret (generate your own!)
+      - JWT_SECRET=your-secure-secret-here
+      # Ollama for AI features
+      - OLLAMA_URL=http://ollama:11434
+      - OLLAMA_MODEL=llama3.2
+
+  # Customize ClickHouse settings
+  clickhouse:
+    # Increase memory for larger datasets
+    environment:
+      - CLICKHOUSE_MAX_MEMORY_USAGE=8000000000
+    # Mount custom config
+    volumes:
+      - ./clickhouse/custom-config.xml:/etc/clickhouse-server/config.d/custom.xml
+
+  # Add Ollama for AI features
+  ollama:
+    image: ollama/ollama:latest
+    container_name: lognog-ollama
+    volumes:
+      - ollama_data:/root/.ollama
+    # GPU support (uncomment if available)
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+  # Add Apprise for notifications
+  apprise:
+    image: caronc/apprise:latest
+    container_name: lognog-apprise
+    ports:
+      - "8000:8000"
+    environment:
+      - APPRISE_STATEFUL_MODE=simple
+    volumes:
+      - apprise_config:/config
+
+volumes:
+  ollama_data:
+  apprise_config:

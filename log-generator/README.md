@@ -1,6 +1,6 @@
-# Spunk Log Generator
+# LogNog Log Generator
 
-A realistic log generator for testing the Spunk homelab log management system. Generates diverse, realistic syslog messages that simulate a real homelab/small company environment.
+A realistic log generator for testing the LogNog homelab log management system. Generates diverse, realistic syslog messages that simulate a real homelab/small company environment.
 
 ## Features
 
@@ -169,7 +169,7 @@ These patterns help test your log analysis and correlation capabilities.
 
 The generator sends logs via syslog (UDP port 514 by default), which integrates seamlessly with:
 
-- **Vector**: Default log ingestion in Spunk
+- **Vector**: Default log ingestion in LogNog
 - **rsyslog**: Traditional syslog daemon
 - **syslog-ng**: Alternative syslog implementation
 - **Fluentd**: Log collection and forwarding

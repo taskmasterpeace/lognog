@@ -1,0 +1,66 @@
+# Custom Vector configuration for LogNog
+# This extends the default configuration with additional sources/transforms
+
+# =============================================================================
+# ADDITIONAL SOURCES
+# =============================================================================
+
+# File source for application logs
+[sources.app_logs]
+type = "file"
+include = ["/var/log/myapp/*.log"]
+read_from = "end"
+
+# Docker logs source
+[sources.docker_logs]
+type = "docker_logs"
+docker_host = "unix:///var/run/docker.sock"
+
+# HTTP source for custom applications
+[sources.http_logs]
+type = "http_server"
+address = "0.0.0.0:8686"
+encoding = "json"
+
+# =============================================================================
+# CUSTOM TRANSFORMS
+# =============================================================================
+
+# Parse JSON application logs
+[transforms.parse_app_logs]
+type = "remap"
+inputs = ["app_logs"]
+source = '''
+  # Try to parse as JSON
+  parsed, err = parse_json(.message)
+  if err == null {
+    .json_data = parsed
+    .app_name = parsed.service ?? "myapp"
+    .severity = if parsed.level == "error" { 3 }
+                else if parsed.level == "warn" { 4 }
+                else if parsed.level == "info" { 6 }
+                else { 7 }
+  }
+'''
+
+# Add custom tags
+[transforms.add_tags]
+type = "remap"
+inputs = ["parse_app_logs"]
+source = '''
+  .index = "application"
+  .environment = get_env_var("ENVIRONMENT") ?? "production"
+'''
+
+# =============================================================================
+# SINKS
+# =============================================================================
+
+# Send to ClickHouse (same as default config)
+[sinks.clickhouse_custom]
+type = "clickhouse"
+inputs = ["add_tags"]
+endpoint = "http://clickhouse:8123"
+database = "lognog"
+table = "logs"
+encoding.codec = "json"

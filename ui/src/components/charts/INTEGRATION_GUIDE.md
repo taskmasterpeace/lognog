@@ -1,6 +1,6 @@
 # Chart Components Integration Guide
 
-This guide shows how to integrate the chart components into existing Spunk pages.
+This guide shows how to integrate the chart components into existing LogNog pages.
 
 ## Import Methods
 

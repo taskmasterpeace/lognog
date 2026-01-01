@@ -2,6 +2,26 @@
 
 LogNog's Alert Actions system provides a powerful, extensible framework for sending notifications when alerts trigger. It supports 113+ notification services via Apprise, enhanced template syntax with filters and math expressions, AI-powered summaries, and conditional content.
 
+## Table of Contents
+
+- [Overview](#overview)
+- [Quick Start](#quick-start)
+- [Notification Channels](#notification-channels)
+- [Template Syntax](#template-syntax)
+  - [Basic Variables](#basic-variables)
+  - [Filters](#filters)
+  - [Math Expressions](#math-expressions)
+  - [Aggregate Functions](#aggregate-functions)
+  - [Conditional Content](#conditional-content)
+- [AI-Powered Summaries](#ai-powered-summaries)
+- [Action Types](#action-types)
+- [Docker Setup](#docker-setup)
+- [Best Practices](#best-practices)
+- [Troubleshooting](#troubleshooting)
+- [API Reference](#api-reference)
+
+---
+
 ## Overview
 
 When an alert fires in LogNog, it can execute one or more **actions**. Each action sends a notification to a configured destination (Slack, Discord, PagerDuty, email, etc.).

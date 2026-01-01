@@ -1,8 +1,8 @@
-# Spunk Query Language (DSL) Reference
+# LogNog Query Language (DSL) Reference
 
 > **Your Data, Your Way** - Master the art of log searching
 
-The Spunk DSL (Domain Specific Language) is a powerful, Splunk-inspired query language that compiles to ClickHouse SQL. Learn it once, query forever.
+The LogNog DSL (Domain Specific Language) is a powerful, Splunk-inspired query language that compiles to ClickHouse SQL. Learn it once, query forever.
 
 ---
 
@@ -106,7 +106,7 @@ search hostname!=localhost message!~"debug"
 
 ### Field Aliases
 
-Spunk automatically translates common aliases:
+LogNog automatically translates common aliases:
 
 | Alias | Actual Field |
 |-------|--------------|
@@ -724,7 +724,7 @@ Common issues:
 
 ## DSL vs SQL
 
-For those familiar with SQL, here's how Spunk DSL maps:
+For those familiar with SQL, here's how LogNog DSL maps:
 
 | DSL | SQL Equivalent |
 |-----|----------------|

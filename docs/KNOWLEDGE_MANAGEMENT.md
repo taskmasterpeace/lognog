@@ -1,8 +1,8 @@
-# Knowledge Management in Spunk
+# Knowledge Management in LogNog
 
 > **The Brain Behind Your Logs** - Transform raw log data into actionable intelligence
 
-Welcome to Spunk's Knowledge Management system! This guide will take you from zero to hero, teaching you how to extract, classify, enrich, and automate your way to log mastery.
+Welcome to LogNog's Knowledge Management system! This guide will take you from zero to hero, teaching you how to extract, classify, enrich, and automate your way to log mastery.
 
 ---
 
@@ -22,7 +22,7 @@ Welcome to Spunk's Knowledge Management system! This guide will take you from ze
 
 ## The Big Picture
 
-Imagine your logs as a river of raw data flowing into Spunk. Knowledge Management is your toolkit for:
+Imagine your logs as a river of raw data flowing into LogNog. Knowledge Management is your toolkit for:
 
 ```
 Raw Logs → Field Extractions → Event Types → Tags → Lookups → Workflow Actions
@@ -61,7 +61,7 @@ With Knowledge Management:
 
 > **Level Up:** Turn unstructured text into queryable fields
 
-Field extractions are the foundation of everything in Spunk. They parse your raw log messages and pull out meaningful data points.
+Field extractions are the foundation of everything in LogNog. They parse your raw log messages and pull out meaningful data points.
 
 ### Understanding Extraction Types
 
@@ -105,7 +105,7 @@ Step 2: Build your Grok pattern:
 \[UFW %{WORD:fw_action}\] IN=%{WORD:interface} SRC=%{IP:source_ip} DST=%{IP:dest_ip} PROTO=%{WORD:protocol} DPT=%{NUMBER:dest_port}
 ```
 
-Step 3: Create the extraction in Spunk:
+Step 3: Create the extraction in LogNog:
 
 ```bash
 curl -X POST http://localhost:4000/knowledge/field-extractions \
@@ -641,7 +641,7 @@ curl -X POST http://localhost:4000/knowledge/workflow-actions \
 
 ### Tutorial: Search Actions
 
-Search actions generate new Spunk queries for drill-down analysis.
+Search actions generate new LogNog queries for drill-down analysis.
 
 **Example 1: Find Related Events**
 
@@ -699,7 +699,7 @@ Script actions are where the real magic happens. Execute Python code with full a
 
 ```
 ┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│  Log Event  │────▶│   Spunk     │────▶│   Python    │
+│  Log Event  │────▶│   LogNog     │────▶│   Python    │
 │  (context)  │     │   API       │     │   Script    │
 └─────────────┘     └─────────────┘     └─────────────┘
                            │                    │
@@ -725,7 +725,7 @@ Your Python scripts have access to these helpers:
 value = get_field("hostname")
 value = get_field("source_ip", "unknown")  # with default
 
-# Set the output that Spunk will display
+# Set the output that LogNog will display
 set_output("Operation completed successfully!")
 set_output({"status": "success", "details": {...}})  # JSON output
 
@@ -779,7 +779,7 @@ curl -X POST http://localhost:4000/knowledge/workflow-actions \
     "name": "Create Jira Issue",
     "type": "script",
     "config": {
-      "script": "import urllib.request\nimport json\nimport base64\n\n# Configuration\nJIRA_URL = \"https://your-domain.atlassian.net\"\nJIRA_EMAIL = \"your-email@domain.com\"\nJIRA_TOKEN = \"your-api-token\"\nPROJECT_KEY = \"OPS\"\n\n# Build the issue\nissue = {\n    \"fields\": {\n        \"project\": {\"key\": PROJECT_KEY},\n        \"summary\": f\"Alert: {get_field('"'"'hostname'"'"')} - {get_field('"'"'app_name'"'"')}\",\n        \"description\": f\"Automated issue from Spunk\\n\\nHostname: {get_field('"'"'hostname'"'"')}\\nSeverity: {get_field('"'"'severity'"'"')}\\nMessage: {get_field('"'"'message'"'"')}\\n\\nTimestamp: {get_field('"'"'timestamp'"'"')}\",\n        \"issuetype\": {\"name\": \"Bug\"}\n    }\n}\n\n# Auth header\nauth_string = base64.b64encode(f\"{JIRA_EMAIL}:{JIRA_TOKEN}\".encode()).decode()\n\nreq = urllib.request.Request(\n    f\"{JIRA_URL}/rest/api/3/issue\",\n    data=json.dumps(issue).encode(),\n    headers={\n        \"Content-Type\": \"application/json\",\n        \"Authorization\": f\"Basic {auth_string}\"\n    }\n)\n\ntry:\n    with urllib.request.urlopen(req, timeout=15) as response:\n        result = json.loads(response.read())\n        set_output({\n            \"status\": \"created\",\n            \"issue_key\": result.get(\"key\"),\n            \"url\": f\"{JIRA_URL}/browse/{result.get('"'"'key'"'"')}\"\n        })\nexcept Exception as e:\n    set_output({\"error\": str(e)})"
+      "script": "import urllib.request\nimport json\nimport base64\n\n# Configuration\nJIRA_URL = \"https://your-domain.atlassian.net\"\nJIRA_EMAIL = \"your-email@domain.com\"\nJIRA_TOKEN = \"your-api-token\"\nPROJECT_KEY = \"OPS\"\n\n# Build the issue\nissue = {\n    \"fields\": {\n        \"project\": {\"key\": PROJECT_KEY},\n        \"summary\": f\"Alert: {get_field('"'"'hostname'"'"')} - {get_field('"'"'app_name'"'"')}\",\n        \"description\": f\"Automated issue from LogNog\\n\\nHostname: {get_field('"'"'hostname'"'"')}\\nSeverity: {get_field('"'"'severity'"'"')}\\nMessage: {get_field('"'"'message'"'"')}\\n\\nTimestamp: {get_field('"'"'timestamp'"'"')}\",\n        \"issuetype\": {\"name\": \"Bug\"}\n    }\n}\n\n# Auth header\nauth_string = base64.b64encode(f\"{JIRA_EMAIL}:{JIRA_TOKEN}\".encode()).decode()\n\nreq = urllib.request.Request(\n    f\"{JIRA_URL}/rest/api/3/issue\",\n    data=json.dumps(issue).encode(),\n    headers={\n        \"Content-Type\": \"application/json\",\n        \"Authorization\": f\"Basic {auth_string}\"\n    }\n)\n\ntry:\n    with urllib.request.urlopen(req, timeout=15) as response:\n        result = json.loads(response.read())\n        set_output({\n            \"status\": \"created\",\n            \"issue_key\": result.get(\"key\"),\n            \"url\": f\"{JIRA_URL}/browse/{result.get('"'"'key'"'"')}\"\n        })\nexcept Exception as e:\n    set_output({\"error\": str(e)})"
     },
     "description": "Create a Jira issue from this log entry",
     "enabled": true
@@ -827,7 +827,7 @@ curl -X POST http://localhost:4000/knowledge/workflow-actions \
     "name": "Page On-Call",
     "type": "script",
     "config": {
-      "script": "import urllib.request\nimport json\n\nPD_ROUTING_KEY = \"your-pagerduty-routing-key\"\n\nevent = {\n    \"routing_key\": PD_ROUTING_KEY,\n    \"event_action\": \"trigger\",\n    \"dedup_key\": f\"{get_field('"'"'hostname'"'"')}-{get_field('"'"'app_name'"'"')}-{get_field('"'"'timestamp'"'"')}\",\n    \"payload\": {\n        \"summary\": f\"Spunk Alert: {get_field('"'"'hostname'"'"')} - {get_field('"'"'message'"'"')[:100]}\",\n        \"severity\": \"critical\" if int(get_field(\"severity\", \"6\")) <= 3 else \"warning\",\n        \"source\": get_field(\"hostname\"),\n        \"custom_details\": {\n            \"app_name\": get_field(\"app_name\"),\n            \"source_ip\": get_field(\"source_ip\"),\n            \"full_message\": get_field(\"message\")\n        }\n    }\n}\n\nreq = urllib.request.Request(\n    \"https://events.pagerduty.com/v2/enqueue\",\n    data=json.dumps(event).encode(),\n    headers={\"Content-Type\": \"application/json\"}\n)\n\ntry:\n    with urllib.request.urlopen(req, timeout=10) as response:\n        result = json.loads(response.read())\n        set_output({\n            \"status\": result.get(\"status\"),\n            \"dedup_key\": result.get(\"dedup_key\"),\n            \"message\": result.get(\"message\")\n        })\nexcept Exception as e:\n    set_output({\"error\": str(e)})"
+      "script": "import urllib.request\nimport json\n\nPD_ROUTING_KEY = \"your-pagerduty-routing-key\"\n\nevent = {\n    \"routing_key\": PD_ROUTING_KEY,\n    \"event_action\": \"trigger\",\n    \"dedup_key\": f\"{get_field('"'"'hostname'"'"')}-{get_field('"'"'app_name'"'"')}-{get_field('"'"'timestamp'"'"')}\",\n    \"payload\": {\n        \"summary\": f\"LogNog Alert: {get_field('"'"'hostname'"'"')} - {get_field('"'"'message'"'"')[:100]}\",\n        \"severity\": \"critical\" if int(get_field(\"severity\", \"6\")) <= 3 else \"warning\",\n        \"source\": get_field(\"hostname\"),\n        \"custom_details\": {\n            \"app_name\": get_field(\"app_name\"),\n            \"source_ip\": get_field(\"source_ip\"),\n            \"full_message\": get_field(\"message\")\n        }\n    }\n}\n\nreq = urllib.request.Request(\n    \"https://events.pagerduty.com/v2/enqueue\",\n    data=json.dumps(event).encode(),\n    headers={\"Content-Type\": \"application/json\"}\n)\n\ntry:\n    with urllib.request.urlopen(req, timeout=10) as response:\n        result = json.loads(response.read())\n        set_output({\n            \"status\": result.get(\"status\"),\n            \"dedup_key\": result.get(\"dedup_key\"),\n            \"message\": result.get(\"message\")\n        })\nexcept Exception as e:\n    set_output({\"error\": str(e)})"
     },
     "description": "Trigger PagerDuty incident for on-call",
     "enabled": true
@@ -1206,10 +1206,10 @@ POST   /knowledge/scripts/test             # Test script code
 Now that you've mastered Knowledge Management, explore:
 
 - **[Dashboard Guide](./DASHBOARDS.md)** - Visualize your enriched data
-- **[Alerting Guide](./ALERTS.md)** - Set up automated notifications
+- **[Alert Actions Guide](./ALERT-ACTIONS.md)** - Set up automated notifications
 - **[DSL Reference](./DSL_REFERENCE.md)** - Advanced query techniques
-- **[API Integration](./API_GUIDE.md)** - Build custom integrations
+- **[LogNog Guide](./LOGNOG-GUIDE.md)** - Complete user guide with API reference
 
 ---
 
-*Happy Spunking!* Your logs are now smarter than ever.
+*Happy LogNoging!* Your logs are now smarter than ever.

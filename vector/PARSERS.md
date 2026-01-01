@@ -1,6 +1,6 @@
 # Vector Log Parsers Documentation
 
-This document describes the log parsing pipeline in the Vector configuration for Spunk.
+This document describes the log parsing pipeline in the Vector configuration for LogNog.
 
 ## Overview
 

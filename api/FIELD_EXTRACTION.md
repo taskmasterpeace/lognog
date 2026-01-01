@@ -1,6 +1,6 @@
 # Field Extraction with Grok Patterns
 
-This document describes the Grok pattern-based field extraction feature in Spunk API.
+This document describes the Grok pattern-based field extraction feature in LogNog API.
 
 ## Overview
 

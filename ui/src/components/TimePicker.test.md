@@ -58,7 +58,7 @@ Test the following features:
 - [ ] Click "Cancel" - should revert to previous selection
 
 #### Visual Design
-- [ ] Matches Spunk color scheme (sky blue primary)
+- [ ] Matches LogNog color scheme (sky blue primary)
 - [ ] Smooth transitions and animations
 - [ ] Icons render correctly (Clock, Calendar, ChevronDown, X)
 - [ ] Button matches other buttons in the UI
@@ -171,7 +171,7 @@ const searchMutation = useMutation({
 Component is ready when:
 - ✅ All presets work and return correct values
 - ✅ Custom range picker opens and functions
-- ✅ Visual design matches Spunk aesthetic
+- ✅ Visual design matches LogNog aesthetic
 - ✅ No TypeScript errors
 - ✅ No runtime errors in console
 - ✅ Callbacks fire with correct data

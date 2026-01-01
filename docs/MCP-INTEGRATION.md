@@ -376,4 +376,4 @@ MCP endpoints respect LogNog's rate limiting settings. Default: 100 requests/min
 
 - [GitHub Issues](https://github.com/machinekinglabs/lognog/issues)
 - [Query Language Reference](QUERY-LANGUAGE.md)
-- [API Documentation](API.md)
+- [LogNog Guide](LOGNOG-GUIDE.md)

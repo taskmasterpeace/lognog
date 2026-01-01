@@ -35,13 +35,13 @@ Welcome to the LogNog documentation! Whether you're just getting started or look
 
 ### Path 1: I Just Want to Search Logs
 
-1. [Quick Start](./QUICK_START.md) - Get Spunk running
+1. [Quick Start](./QUICK_START.md) - Get LogNog running
 2. [DSL Reference](./DSL_REFERENCE.md) - Learn to query
 3. Done! You're searching.
 
 ### Path 2: I Want Powerful Analytics
 
-1. [Quick Start](./QUICK_START.md) - Get Spunk running
+1. [Quick Start](./QUICK_START.md) - Get LogNog running
 2. [DSL Reference](./DSL_REFERENCE.md) - Learn to query
 3. [Dashboards](./DASHBOARDS.md) - Build visualizations
 4. [Field Extraction](./FIELD_EXTRACTION.md) - Parse custom logs
@@ -59,7 +59,7 @@ Welcome to the LogNog documentation! Whether you're just getting started or look
 
 ### [Quick Start Guide](./QUICK_START.md)
 
-Get Spunk up and running in minutes:
+Get LogNog up and running in minutes:
 - Docker Compose deployment
 - Sending your first log
 - Configuring log sources
@@ -207,7 +207,7 @@ See individual guides for detailed API examples.
 
 | Term | Definition |
 |------|------------|
-| **DSL** | Domain Specific Language - Spunk's query language |
+| **DSL** | Domain Specific Language - LogNog's query language |
 | **Field Extraction** | Pattern that parses fields from log messages |
 | **Event Type** | Category applied to logs matching a search |
 | **Tag** | Label attached to specific field values |
@@ -218,4 +218,4 @@ See individual guides for detailed API examples.
 
 ---
 
-*Welcome to the Spunk community! Happy logging.*
+*Welcome to the LogNog community! Happy logging.*

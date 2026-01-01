@@ -645,7 +645,7 @@ Common Vercel edge regions:
 - [Vercel Log Drains Documentation](https://vercel.com/docs/observability/log-drains)
 - [LogNog Query Language Guide](./QUERY-LANGUAGE.md)
 - [LogNog Dashboard Guide](./DASHBOARDS.md)
-- [LogNog Alert Configuration](./ALERTS.md)
+- [LogNog Alert Actions](./ALERT-ACTIONS.md)
 
 ## Support
 

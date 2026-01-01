@@ -1,8 +1,8 @@
-# Spunk Use Cases & Recipes
+# LogNog Use Cases & Recipes
 
 > **Real-World Solutions for Real-World Problems**
 
-This guide is your cookbook for getting value out of Spunk. Each recipe solves a specific problem you'll encounter in your homelab or small business environment.
+This guide is your cookbook for getting value out of LogNog. Each recipe solves a specific problem you'll encounter in your homelab or small business environment.
 
 ---
 

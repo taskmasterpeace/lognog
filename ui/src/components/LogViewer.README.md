@@ -1,6 +1,6 @@
 # LogViewer Component
 
-A professional, feature-rich log viewer component for the Spunk UI, inspired by Splunk and Datadog.
+A professional, feature-rich log viewer component for the LogNog UI, inspired by Splunk and Datadog.
 
 ## Features
 

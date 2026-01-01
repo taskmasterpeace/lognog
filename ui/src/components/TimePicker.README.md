@@ -1,6 +1,6 @@
 # TimePicker Component
 
-A sophisticated time range picker component for the Spunk log analytics platform. Features quick preset selection and custom date/time range picking with a clean, modern UI that matches the Spunk design aesthetic.
+A sophisticated time range picker component for the LogNog log analytics platform. Features quick preset selection and custom date/time range picking with a clean, modern UI that matches the LogNog design aesthetic.
 
 ## Features
 
@@ -9,7 +9,7 @@ A sophisticated time range picker component for the Spunk log analytics platform
 - **Visual Feedback** - Clear display of selected range with duration calculation
 - **Responsive Design** - Works seamlessly on all screen sizes
 - **Keyboard Accessible** - Full keyboard navigation support
-- **TailwindCSS Styling** - Matches existing Spunk design system
+- **TailwindCSS Styling** - Matches existing LogNog design system
 - **TypeScript** - Fully typed for better developer experience
 
 ## Installation
@@ -150,7 +150,7 @@ When "Custom range" is selected, a date/time picker interface appears with:
 
 ## Styling
 
-The component uses TailwindCSS classes and matches the Spunk design system:
+The component uses TailwindCSS classes and matches the LogNog design system:
 
 - **Primary Color**: Sky blue (`sky-500`, `sky-600`)
 - **Font**: Inter (system font stack)
@@ -161,7 +161,7 @@ The component uses TailwindCSS classes and matches the Spunk design system:
 
 ### Custom Datepicker Styling
 
-The component includes custom CSS (`TimePicker.css`) that styles react-datepicker to match the Spunk aesthetic:
+The component includes custom CSS (`TimePicker.css`) that styles react-datepicker to match the LogNog aesthetic:
 
 - Custom header background
 - Styled date cells with hover effects
@@ -266,4 +266,4 @@ Potential improvements for future versions:
 
 ## License
 
-Part of the Spunk project - MIT License
+Part of the LogNog project - MIT License
