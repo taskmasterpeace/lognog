@@ -38,6 +38,12 @@ interface AuthContextType extends AuthState {
   getApiKeys: () => Promise<ApiKey[]>;
   createApiKey: (name: string, permissions?: string[], expiresInDays?: number) => Promise<{ apiKey: string; keyData: ApiKey }>;
   revokeApiKey: (keyId: string) => Promise<void>;
+  // Admin functions
+  getUsers: () => Promise<User[]>;
+  createUser: (username: string, email: string, password: string, role: string) => Promise<User>;
+  updateUserRole: (userId: string, role: string) => Promise<void>;
+  deactivateUser: (userId: string) => Promise<void>;
+  activateUser: (userId: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -281,6 +287,69 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!response.ok) throw new Error('Failed to revoke API key');
   };
 
+  // Admin: Get all users
+  const getUsers = async (): Promise<User[]> => {
+    const response = await authFetch('/auth/users');
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to get users');
+    }
+    return response.json();
+  };
+
+  // Admin: Create a new user
+  const createUser = async (
+    username: string,
+    email: string,
+    password: string,
+    role: string
+  ): Promise<User> => {
+    const response = await authFetch('/auth/users', {
+      method: 'POST',
+      body: JSON.stringify({ username, email, password, role }),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to create user');
+    }
+    const data = await response.json();
+    return data.user;
+  };
+
+  // Admin: Update user role
+  const updateUserRole = async (userId: string, role: string): Promise<void> => {
+    const response = await authFetch(`/auth/users/${userId}/role`, {
+      method: 'PATCH',
+      body: JSON.stringify({ role }),
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to update user role');
+    }
+  };
+
+  // Admin: Deactivate user
+  const deactivateUser = async (userId: string): Promise<void> => {
+    const response = await authFetch(`/auth/users/${userId}/deactivate`, {
+      method: 'POST',
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to deactivate user');
+    }
+  };
+
+  // Admin: Activate user
+  const activateUser = async (userId: string): Promise<void> => {
+    const response = await authFetch(`/auth/users/${userId}/activate`, {
+      method: 'POST',
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to activate user');
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -292,6 +361,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         getApiKeys,
         createApiKey,
         revokeApiKey,
+        getUsers,
+        createUser,
+        updateUserRole,
+        deactivateUser,
+        activateUser,
       }}
     >
       {children}
