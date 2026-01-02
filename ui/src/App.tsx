@@ -18,6 +18,8 @@ import {
   Menu,
   X,
   Radar,
+  Server,
+  Users,
 } from 'lucide-react';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -40,6 +42,8 @@ import AlertsPage from './pages/AlertsPage';
 import SilencesPage from './pages/SilencesPage';
 import DataSourcesPage from './pages/DataSourcesPage';
 import AnomalyPage from './pages/AnomalyPage';
+import AssetsPage from './pages/AssetsPage';
+import IdentitiesPage from './pages/IdentitiesPage';
 
 interface NavLinkProps {
   to: string;
@@ -203,6 +207,8 @@ function Layout({ children }: { children: React.ReactNode }) {
           <p className="px-3 py-2 mt-6 text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider">
             Configuration
           </p>
+          <NavLink to="/assets" icon={Server} onClick={closeSidebar}>Assets</NavLink>
+          <NavLink to="/identities" icon={Users} onClick={closeSidebar}>Identities</NavLink>
           <NavLink to="/data-sources" icon={Database} onClick={closeSidebar}>Data Sources</NavLink>
           <NavLink to="/knowledge" icon={BookOpen} onClick={closeSidebar}>Knowledge</NavLink>
 
@@ -379,6 +385,30 @@ function AppRoutes() {
             <Layout>
               <AnimatedPage>
                 <AnomalyPage />
+              </AnimatedPage>
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/assets"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <AnimatedPage>
+                <AssetsPage />
+              </AnimatedPage>
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/identities"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <AnimatedPage>
+                <IdentitiesPage />
               </AnimatedPage>
             </Layout>
           </ProtectedRoute>

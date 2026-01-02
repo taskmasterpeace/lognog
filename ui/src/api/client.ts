@@ -1357,3 +1357,146 @@ export async function getTemplateAggregates(): Promise<TemplateAggregate[]> {
     { name: 'join', description: 'Join array', example: '{{results:pluck:hostname:join:", "}}' },
   ];
 }
+
+// ============ Assets API ============
+
+export interface Asset {
+  id: string;
+  asset_type: string;
+  identifier: string;
+  display_name: string | null;
+  description: string | null;
+  criticality: number;
+  owner: string | null;
+  department: string | null;
+  location: string | null;
+  tags: string[];
+  first_seen: string | null;
+  last_seen: string | null;
+  status: string;
+  source: string;
+}
+
+export interface AssetStats {
+  total: number;
+  by_type: Record<string, number>;
+  by_status: Record<string, number>;
+}
+
+export async function getAssets(options?: {
+  asset_type?: string;
+  status?: string;
+  search?: string;
+}): Promise<{ assets: Asset[]; count: number }> {
+  const params = new URLSearchParams();
+  if (options?.asset_type) params.set('asset_type', options.asset_type);
+  if (options?.status) params.set('status', options.status);
+  if (options?.search) params.set('search', options.search);
+  return request(`/assets?${params}`);
+}
+
+export async function getAssetStats(): Promise<AssetStats> {
+  return request('/assets/stats');
+}
+
+export async function getAsset(id: string): Promise<{ asset: Asset; identities: unknown[] }> {
+  return request(`/assets/${id}`);
+}
+
+export async function createAsset(asset: Partial<Asset>): Promise<Asset> {
+  return request('/assets', {
+    method: 'POST',
+    body: JSON.stringify(asset),
+  });
+}
+
+export async function updateAsset(id: string, updates: Partial<Asset>): Promise<Asset> {
+  return request(`/assets/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(updates),
+  });
+}
+
+export async function deleteAsset(id: string): Promise<void> {
+  await request(`/assets/${id}`, { method: 'DELETE' });
+}
+
+export async function discoverAssets(lookbackHours?: number): Promise<{ discovered: number; updated: number; errors: number }> {
+  return request('/assets/discover', {
+    method: 'POST',
+    body: JSON.stringify({ lookbackHours: lookbackHours || 24 }),
+  });
+}
+
+// ============ Identities API ============
+
+export interface Identity {
+  id: string;
+  identity_type: string;
+  identifier: string;
+  display_name: string | null;
+  email: string | null;
+  department: string | null;
+  title: string | null;
+  manager: string | null;
+  is_privileged: boolean;
+  risk_score: number;
+  tags: string[];
+  first_seen: string | null;
+  last_seen: string | null;
+  status: string;
+  source: string;
+}
+
+export interface IdentityStats {
+  total: number;
+  by_type: Record<string, number>;
+  privileged_count: number;
+}
+
+export async function getIdentities(options?: {
+  identity_type?: string;
+  status?: string;
+  is_privileged?: string;
+  search?: string;
+}): Promise<{ identities: Identity[]; count: number }> {
+  const params = new URLSearchParams();
+  if (options?.identity_type) params.set('identity_type', options.identity_type);
+  if (options?.status) params.set('status', options.status);
+  if (options?.is_privileged) params.set('is_privileged', options.is_privileged);
+  if (options?.search) params.set('search', options.search);
+  return request(`/identities?${params}`);
+}
+
+export async function getIdentityStats(): Promise<IdentityStats> {
+  return request('/identities/stats');
+}
+
+export async function getIdentity(id: string): Promise<{ identity: Identity; assets: unknown[] }> {
+  return request(`/identities/${id}`);
+}
+
+export async function createIdentity(identity: Partial<Identity>): Promise<Identity> {
+  return request('/identities', {
+    method: 'POST',
+    body: JSON.stringify(identity),
+  });
+}
+
+export async function updateIdentity(id: string, updates: Partial<Identity>): Promise<Identity> {
+  return request(`/identities/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(updates),
+  });
+}
+
+export async function deleteIdentity(id: string): Promise<void> {
+  await request(`/identities/${id}`, { method: 'DELETE' });
+}
+
+export async function discoverIdentities(lookbackHours?: number): Promise<{ discovered: number; updated: number; errors: number }> {
+  return request('/identities/discover', {
+    method: 'POST',
+    body: JSON.stringify({ lookbackHours: lookbackHours || 24 }),
+  });
+}

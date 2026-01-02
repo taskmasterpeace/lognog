@@ -25,6 +25,8 @@ import notificationsRouter from './routes/notifications.js';
 import settingsRouter from './routes/settings.js';
 import onboardingRouter from './routes/onboarding.js';
 import anomalyRouter from './routes/anomaly.js';
+import assetsRouter from './routes/assets.js';
+import identitiesRouter from './routes/identities.js';
 import { healthCheck as clickhouseHealth, executeQuery, closeConnection } from './db/clickhouse.js';
 import { closeDatabase } from './db/sqlite.js';
 import { startScheduler } from './services/scheduler.js';
@@ -76,6 +78,8 @@ app.use('/notifications', notificationsRouter);
 app.use('/settings', settingsRouter);
 app.use('/onboarding', onboardingRouter);
 app.use('/anomaly', anomalyRouter);
+app.use('/assets', assetsRouter);
+app.use('/identities', identitiesRouter);
 
 // WebSocket endpoint for live tail
 const liveTailClients: Set<WebSocket> = new Set();
@@ -260,6 +264,8 @@ if (uiDistPath) {
         req.path.startsWith('/sse') ||
         req.path.startsWith('/settings') ||
         req.path.startsWith('/anomaly') ||
+        req.path.startsWith('/assets') ||
+        req.path.startsWith('/identities') ||
         req.path.startsWith('/onboarding')) {
       return next();
     }
