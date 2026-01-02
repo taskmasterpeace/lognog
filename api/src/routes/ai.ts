@@ -25,6 +25,10 @@ import {
   deleteAllDocuments,
 } from '../services/llamaindex.js';
 import { executeDSLQuery } from '../db/backend.js';
+import { hybridSearch, HybridSearchResponse, HybridSearchResult } from '../services/hybrid-search.js';
+import { rerankWithLLM } from '../services/reranker.js';
+import { formatCitations, CitedSource, getCitationStats } from '../services/citations.js';
+import { logAIRequest } from '../services/internal-logger.js';
 
 const router = Router();
 
@@ -102,26 +106,67 @@ async function generateWithOpenRouter(prompt: string, model?: string): Promise<s
 }
 
 // Unified generate function with fallback
-async function generateText(prompt: string, options?: { model?: string; useReasoning?: boolean }): Promise<{ response: string; provider: 'ollama' | 'openrouter' }> {
+async function generateText(prompt: string, options?: { model?: string; useReasoning?: boolean; endpoint?: string }): Promise<{ response: string; provider: 'ollama' | 'openrouter' }> {
   const ollamaAvailable = await isOllamaAvailable();
+  const startTime = Date.now();
 
   // Try Ollama first
   if (ollamaAvailable) {
+    const model = options?.useReasoning ? OLLAMA_REASONING_MODEL : (options?.model || OLLAMA_MODEL);
     try {
-      const model = options?.useReasoning ? OLLAMA_REASONING_MODEL : (options?.model || OLLAMA_MODEL);
       const response = await generateWithOllama(prompt, model);
+
+      // Log successful Ollama request
+      logAIRequest({
+        provider: 'ollama',
+        model,
+        duration_ms: Date.now() - startTime,
+        success: true,
+        endpoint: options?.endpoint,
+      });
+
       return { response, provider: 'ollama' };
     } catch (error) {
+      // Log failed Ollama request
+      logAIRequest({
+        provider: 'ollama',
+        model,
+        duration_ms: Date.now() - startTime,
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+        endpoint: options?.endpoint,
+      });
       console.warn('Ollama generation failed, trying OpenRouter fallback:', error);
     }
   }
 
   // Fallback to OpenRouter
   if (OPENROUTER_API_KEY) {
+    const model = options?.model || OPENROUTER_MODEL;
+    const openRouterStart = Date.now();
     try {
-      const response = await generateWithOpenRouter(prompt, options?.model);
+      const response = await generateWithOpenRouter(prompt, model);
+
+      // Log successful OpenRouter request
+      logAIRequest({
+        provider: 'openrouter',
+        model,
+        duration_ms: Date.now() - openRouterStart,
+        success: true,
+        endpoint: options?.endpoint,
+      });
+
       return { response, provider: 'openrouter' };
     } catch (error) {
+      // Log failed OpenRouter request
+      logAIRequest({
+        provider: 'openrouter',
+        model,
+        duration_ms: Date.now() - openRouterStart,
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+        endpoint: options?.endpoint,
+      });
       console.error('OpenRouter fallback failed:', error);
       throw error;
     }
@@ -2455,6 +2500,47 @@ DATA SOURCES PAGE FEATURES:
   }
 });
 
+// Seed FTS-only (for hybrid search fallback when Ollama unavailable)
+router.post('/llama/seed-fts', async (_req: Request, res: Response) => {
+  try {
+    // LogNog documentation for FTS search (same as seed-docs but without LlamaIndex)
+    const docs = [
+      { title: 'LogNog Overview', content: 'LogNog is a self-hosted, fully-local Splunk alternative for homelab log management. Zero cloud dependencies. Key features: 100% local data, Splunk-like query language (DSL), built-in alerting and dashboards, supports syslog/OTLP/HTTP ingestion, AI-powered features using local LLMs. Deploy in under 10 minutes with docker-compose up.' },
+      { title: 'LogNog Query Language Basics', content: 'LogNog uses a Splunk-like DSL (Domain Specific Language). Queries are pipelines connected by |. Basic search: search host=router severity>=warning. Common commands: search, filter, stats, sort, limit, table, timechart, dedup, rename, eval, rex. Operators: = (exact), != (not), >= <= > < (compare), ~ (regex match), !~ (regex not match). Example: search app_name=nginx | filter message~"404" | stats count by hostname' },
+      { title: 'LogNog Statistics Functions', content: 'Statistics functions for aggregation: count - count events, sum(field) - sum values, avg(field) - average, min(field) / max(field) - extremes, dc(field) - distinct count, values(field) - list unique values, list(field) - collect all values, p50/p90/p95/p99 - percentiles, stddev(field) - standard deviation, variance(field) - variance, range(field) - max minus min, earliest(field)/latest(field) - first/last value. Example: search * | stats count, avg(response_time), p95(response_time) by hostname' },
+      { title: 'Searching for Errors', content: 'To search for errors in LogNog: search severity>=4 finds warnings and errors (syslog severity 4 = warning, 3 = error, 2 = critical). search message~"error|fail|exception" searches message content. search app_name=nginx severity<=3 finds critical errors from nginx. Combine with stats: search severity<=3 | stats count by hostname, app_name | sort desc count. Use timechart for error trends: search severity<=3 | timechart span=1h count by app_name' },
+      { title: 'Time Filtering', content: 'LogNog uses the time picker in the UI for time ranges. Default is last 15 minutes. Time syntax in queries: earliest=-24h (last 24 hours), latest=-1h (up to 1 hour ago), earliest=2024-01-01T00:00:00 (specific time). The bin command buckets by time: bin span=1h timestamp creates hourly buckets. timechart is a shortcut: timechart span=5m count by hostname gives time-series data for charts.' },
+      { title: 'Ingestion Methods', content: 'LogNog supports multiple ingestion methods: Syslog UDP/TCP port 514 for network devices, OTLP endpoint POST /api/ingest/otlp/v1/logs for OpenTelemetry, HTTP POST /api/ingest for generic JSON logs, LogNog In Agent for Windows Event Logs and file monitoring, Supabase Log Drains POST /api/ingest/supabase, Vercel Log Drains POST /api/ingest/vercel. All except syslog support API key authentication via X-API-Key header.' },
+      { title: 'Dashboard Creation', content: 'To create dashboards: Go to Dashboards page, click New Dashboard, add panels using the DSL query editor. Panel types: Time series chart, table, single value stat, bar chart, pie chart. Use variables for dynamic dashboards: $hostname$ in queries, define in dashboard settings. Annotations mark events on charts. Dashboards auto-refresh (configurable interval).' },
+      { title: 'Alerts Configuration', content: 'LogNog alerts: Create from Alerts page or convert saved search. Define DSL query that returns results when alert should fire. Set schedule (cron syntax). Notification channels: email via SMTP, Slack/Discord/Telegram via Apprise. Alert silencing: global, per-host, or per-alert. Silence scheduling with expiration time.' },
+    ];
+
+    let added = 0;
+    for (const doc of docs) {
+      try {
+        createRAGDocument({
+          title: doc.title,
+          content: doc.content,
+          source_type: 'builtin-docs',
+          metadata: JSON.stringify({ category: 'documentation' }),
+        });
+        added++;
+      } catch (error) {
+        console.error(`Failed to add doc to FTS: ${doc.title}`, error);
+      }
+    }
+
+    return res.json({
+      message: 'FTS documentation seeded successfully',
+      added,
+      total: docs.length,
+    });
+  } catch (error) {
+    console.error('Error seeding FTS documentation:', error);
+    return res.status(500).json({ error: 'Failed to seed FTS documentation' });
+  }
+});
+
 // =============================================================================
 // AI ASSISTANT CHAT (for in-app help)
 // =============================================================================
@@ -2715,19 +2801,36 @@ async function executeInsightQuery(query: string): Promise<{ results: Record<str
   }
 }
 
-// NogChat endpoint with data insights capability
+// NogChat endpoint with data insights capability and hybrid RAG
 router.post('/nogchat', async (req: Request, res: Response) => {
   try {
-    const { message, requestInsights, history } = req.body;
+    const {
+      message,
+      requestInsights,
+      history,
+      useHybridSearch = true,
+      useReranking = false,
+      includeCitations = true,
+    } = req.body;
 
     if (!message) {
       return res.status(400).json({ error: 'Message is required' });
     }
 
-    const llamaReady = await ensureLlamaIndexReady();
+    // Check if Ollama is actually available (for embeddings and generation)
+    const ollamaAvailable = await isOllamaAvailable();
+    const llamaReady = ollamaAvailable && await ensureLlamaIndexReady();
     let response: string;
     let executedQuery: string | undefined;
     let responseType: 'text' | 'query' | 'insight' = 'text';
+    let citations: CitedSource[] = [];
+    let searchStats: {
+      vectorMatches: number;
+      textMatches: number;
+      hybridMatches: number;
+      reranked: boolean;
+      totalTimeMs: number;
+    } | undefined;
 
     // Build conversation context from history
     const historyContext = (history || [])
@@ -2796,12 +2899,65 @@ If the results are empty, suggest a different approach.`;
         response = genResult.response;
       }
     } else {
-      // Regular chat - use RAG for documentation
+      // Regular chat - use hybrid RAG for documentation
+      let sourceResults: HybridSearchResult[] = [];
+
+      if (useHybridSearch) {
+        try {
+          // Perform hybrid search (vector + full-text)
+          // FTS works even without Ollama, vector search will gracefully return []
+          const hybridResult: HybridSearchResponse = await hybridSearch(message, {
+            topK: 10,
+            vectorWeight: llamaReady ? 0.7 : 0,  // Skip vector weighting if Ollama unavailable
+            textWeight: llamaReady ? 0.3 : 1.0,  // Use full text weight as fallback
+          });
+
+          sourceResults = hybridResult.results;
+          searchStats = {
+            vectorMatches: hybridResult.stats.vectorMatches,
+            textMatches: hybridResult.stats.textMatches,
+            hybridMatches: hybridResult.stats.hybridMatches,
+            reranked: false,
+            totalTimeMs: hybridResult.stats.totalTimeMs,
+          };
+
+          // Optional: Re-rank results with LLM (requires Ollama)
+          if (useReranking && sourceResults.length > 0 && llamaReady) {
+            const rerankStart = Date.now();
+            const rerankResult = await rerankWithLLM(message, sourceResults, { topK: 5 });
+            sourceResults = rerankResult.results;
+            if (searchStats) {
+              searchStats.reranked = rerankResult.reranked;
+              searchStats.totalTimeMs += Date.now() - rerankStart;
+            }
+          }
+
+          // Format citations
+          if (includeCitations && sourceResults.length > 0) {
+            citations = formatCitations(sourceResults, message, {
+              excerptLength: 200,
+              highlightTag: 'mark',
+            });
+          }
+        } catch (hybridError) {
+          console.warn('Hybrid search failed, falling back to standard query:', hybridError);
+        }
+      }
+
+      // Build context from retrieved sources
+      const sourceContext = sourceResults.length > 0
+        ? `\n\nRelevant documentation:\n${sourceResults.slice(0, 5).map(s =>
+            `- ${s.title}: ${s.content.substring(0, 300)}...`
+          ).join('\n')}`
+        : '';
+
       const chatPrompt = `${NOGCHAT_SYSTEM_PROMPT}
+${sourceContext}
+${historyContext ? `\nRecent conversation:\n${historyContext}\n` : ''}
+User: ${message}
 
-${historyContext ? `Recent conversation:\n${historyContext}\n\n` : ''}User: ${message}
-
-Provide a helpful, concise response. If suggesting queries, wrap them in code blocks.`;
+Provide a helpful, concise response. If suggesting queries, wrap them in code blocks.
+${citations.length > 0 ? 'Reference the documentation sources in your answer when relevant.' : ''}`;
 
       if (llamaReady) {
         const result = await llamaQueryIndex({
@@ -2816,16 +2972,44 @@ Provide a helpful, concise response. If suggesting queries, wrap them in code bl
           responseType = 'query';
         }
       } else {
-        const genResult = await generateText(chatPrompt, { useReasoning: false });
-        response = genResult.response;
+        // Try generateText which has Ollama/OpenRouter fallback
+        try {
+          const genResult = await generateText(chatPrompt, { useReasoning: false });
+          response = genResult.response;
+        } catch (genError) {
+          // Final fallback: return citations without AI response
+          console.warn('AI generation unavailable, returning citations only:', genError);
+          if (citations.length > 0) {
+            response = `I found ${citations.length} relevant documentation sources for your question. Please see the citations panel for details.`;
+          } else {
+            response = 'AI services are currently unavailable. Please try again later or check that Ollama is running.';
+          }
+        }
       }
     }
 
-    return res.json({
+    // Build response with optional citations
+    const responseBody: {
+      response: string;
+      type: 'text' | 'query' | 'insight';
+      executedQuery?: string;
+      citations?: CitedSource[];
+      searchStats?: typeof searchStats;
+    } = {
       response,
       type: responseType,
       executedQuery,
-    });
+    };
+
+    if (includeCitations && citations.length > 0) {
+      responseBody.citations = citations;
+    }
+
+    if (searchStats) {
+      responseBody.searchStats = searchStats;
+    }
+
+    return res.json(responseBody);
   } catch (error) {
     console.error('Error in NogChat:', error);
     return res.status(500).json({ error: 'Failed to process message' });

@@ -7,6 +7,7 @@ import {
 import { Ollama, OllamaEmbedding } from '@llamaindex/ollama';
 import path from 'path';
 import fs from 'fs';
+import { createRAGDocument } from '../db/sqlite.js';
 
 // Configuration
 const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
@@ -109,8 +110,22 @@ export async function addDocument(options: AddDocumentOptions): Promise<string> 
     },
   });
 
-  // Insert document into index
+  // Insert document into LlamaIndex vector store
   await index.insert(doc);
+
+  // Also sync to SQLite for FTS search (hybrid search support)
+  try {
+    createRAGDocument({
+      title: options.title,
+      content: options.content,
+      source_type: options.sourceType || 'manual',
+      source_path: options.sourcePath,
+      metadata: options.metadata ? JSON.stringify(options.metadata) : '{}',
+    });
+  } catch (sqliteError) {
+    console.warn('Failed to sync document to SQLite FTS:', sqliteError);
+    // Don't fail - LlamaIndex document was added successfully
+  }
 
   return doc.id_;
 }

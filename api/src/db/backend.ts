@@ -14,6 +14,7 @@ import * as sqliteLogs from './sqlite-logs.js';
 import { parseToAST } from '../dsl/index.js';
 import { compileDSL } from '../dsl/compiler.js';
 import { compileDSLToSQLite, parseRelativeTimeSQLite } from '../dsl/compiler-sqlite.js';
+import { logQueryExecution } from '../services/internal-logger.js';
 
 export type Backend = 'clickhouse' | 'sqlite';
 
@@ -62,92 +63,125 @@ export async function executeDSLQuery<T = Record<string, unknown>>(
   options?: {
     earliest?: string;
     latest?: string;
+    user_id?: string;  // For internal logging
   }
 ): Promise<{ sql: string; results: T[] }> {
-  const ast = parseToAST(dslQuery);
+  const startTime = Date.now();
 
-  if (isLiteMode()) {
-    // Compile to SQLite SQL
-    const compiled = compileDSLToSQLite(ast);
-    let sql = compiled.sql;
+  try {
+    const ast = parseToAST(dslQuery);
 
-    // Add time range conditions
-    if (options?.earliest || options?.latest) {
-      const timeConditions: string[] = [];
+    if (isLiteMode()) {
+      // Compile to SQLite SQL
+      const compiled = compileDSLToSQLite(ast);
+      let sql = compiled.sql;
 
-      if (options.earliest) {
-        const timeExpr = parseRelativeTimeSQLite(options.earliest);
-        if (timeExpr) {
-          timeConditions.push(`timestamp >= ${timeExpr}`);
-        }
-      }
-      if (options.latest) {
-        const timeExpr = parseRelativeTimeSQLite(options.latest);
-        if (timeExpr) {
-          timeConditions.push(`timestamp <= ${timeExpr}`);
-        }
-      }
+      // Add time range conditions
+      if (options?.earliest || options?.latest) {
+        const timeConditions: string[] = [];
 
-      if (timeConditions.length > 0) {
-        if (sql.includes('WHERE')) {
-          sql = sql.replace('WHERE', `WHERE ${timeConditions.join(' AND ')} AND`);
-        } else if (sql.includes('FROM logs')) {
-          sql = sql.replace('FROM logs', `FROM logs WHERE ${timeConditions.join(' AND ')}`);
-        }
-      }
-    }
-
-    const results = await sqliteLogs.executeQuery<T>(sql);
-    return { sql, results };
-  } else {
-    // Compile to ClickHouse SQL
-    const compiled = compileDSL(ast);
-    let sql = compiled.sql;
-
-    // Add time range conditions (ClickHouse format)
-    if (options?.earliest || options?.latest) {
-      const timeConditions: string[] = [];
-
-      if (options.earliest) {
-        const match = options.earliest.match(/^-(\d+)([mhdw])$/i);
-        if (match) {
-          const value = parseInt(match[1], 10);
-          const unit = match[2].toLowerCase();
-          const unitMap: Record<string, string> = {
-            'm': 'MINUTE', 'h': 'HOUR', 'd': 'DAY', 'w': 'WEEK',
-          };
-          const clickhouseUnit = unitMap[unit];
-          if (clickhouseUnit) {
-            timeConditions.push(`timestamp >= now() - INTERVAL ${value} ${clickhouseUnit}`);
+        if (options.earliest) {
+          const timeExpr = parseRelativeTimeSQLite(options.earliest);
+          if (timeExpr) {
+            timeConditions.push(`timestamp >= ${timeExpr}`);
           }
         }
-      }
-      if (options.latest) {
-        const match = options.latest.match(/^-(\d+)([mhdw])$/i);
-        if (match) {
-          const value = parseInt(match[1], 10);
-          const unit = match[2].toLowerCase();
-          const unitMap: Record<string, string> = {
-            'm': 'MINUTE', 'h': 'HOUR', 'd': 'DAY', 'w': 'WEEK',
-          };
-          const clickhouseUnit = unitMap[unit];
-          if (clickhouseUnit) {
-            timeConditions.push(`timestamp <= now() - INTERVAL ${value} ${clickhouseUnit}`);
+        if (options.latest) {
+          const timeExpr = parseRelativeTimeSQLite(options.latest);
+          if (timeExpr) {
+            timeConditions.push(`timestamp <= ${timeExpr}`);
+          }
+        }
+
+        if (timeConditions.length > 0) {
+          if (sql.includes('WHERE')) {
+            sql = sql.replace('WHERE', `WHERE ${timeConditions.join(' AND ')} AND`);
+          } else if (sql.includes('FROM logs')) {
+            sql = sql.replace('FROM logs', `FROM logs WHERE ${timeConditions.join(' AND ')}`);
           }
         }
       }
 
-      if (timeConditions.length > 0) {
-        if (sql.includes('WHERE')) {
-          sql = sql.replace('WHERE', `WHERE ${timeConditions.join(' AND ')} AND`);
-        } else if (sql.includes('FROM lognog.logs')) {
-          sql = sql.replace('FROM lognog.logs', `FROM lognog.logs WHERE ${timeConditions.join(' AND ')}`);
+      const results = await sqliteLogs.executeQuery<T>(sql);
+
+      // Log query execution
+      logQueryExecution({
+        dsl_query: dslQuery.substring(0, 500),  // Truncate long queries
+        execution_time_ms: Date.now() - startTime,
+        row_count: results.length,
+        user_id: options?.user_id,
+      });
+
+      return { sql, results };
+    } else {
+      // Compile to ClickHouse SQL
+      const compiled = compileDSL(ast);
+      let sql = compiled.sql;
+
+      // Add time range conditions (ClickHouse format)
+      if (options?.earliest || options?.latest) {
+        const timeConditions: string[] = [];
+
+        if (options.earliest) {
+          const match = options.earliest.match(/^-(\d+)([mhdw])$/i);
+          if (match) {
+            const value = parseInt(match[1], 10);
+            const unit = match[2].toLowerCase();
+            const unitMap: Record<string, string> = {
+              'm': 'MINUTE', 'h': 'HOUR', 'd': 'DAY', 'w': 'WEEK',
+            };
+            const clickhouseUnit = unitMap[unit];
+            if (clickhouseUnit) {
+              timeConditions.push(`timestamp >= now() - INTERVAL ${value} ${clickhouseUnit}`);
+            }
+          }
+        }
+        if (options.latest) {
+          const match = options.latest.match(/^-(\d+)([mhdw])$/i);
+          if (match) {
+            const value = parseInt(match[1], 10);
+            const unit = match[2].toLowerCase();
+            const unitMap: Record<string, string> = {
+              'm': 'MINUTE', 'h': 'HOUR', 'd': 'DAY', 'w': 'WEEK',
+            };
+            const clickhouseUnit = unitMap[unit];
+            if (clickhouseUnit) {
+              timeConditions.push(`timestamp <= now() - INTERVAL ${value} ${clickhouseUnit}`);
+            }
+          }
+        }
+
+        if (timeConditions.length > 0) {
+          if (sql.includes('WHERE')) {
+            sql = sql.replace('WHERE', `WHERE ${timeConditions.join(' AND ')} AND`);
+          } else if (sql.includes('FROM lognog.logs')) {
+            sql = sql.replace('FROM lognog.logs', `FROM lognog.logs WHERE ${timeConditions.join(' AND ')}`);
+          }
         }
       }
-    }
 
-    const results = await clickhouse.executeQuery<T>(sql);
-    return { sql, results };
+      const results = await clickhouse.executeQuery<T>(sql);
+
+      // Log query execution
+      logQueryExecution({
+        dsl_query: dslQuery.substring(0, 500),  // Truncate long queries
+        execution_time_ms: Date.now() - startTime,
+        row_count: results.length,
+        user_id: options?.user_id,
+      });
+
+      return { sql, results };
+    }
+  } catch (err) {
+    // Log failed query execution
+    logQueryExecution({
+      dsl_query: dslQuery.substring(0, 500),
+      execution_time_ms: Date.now() - startTime,
+      row_count: 0,
+      user_id: options?.user_id,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    throw err;
   }
 }
 

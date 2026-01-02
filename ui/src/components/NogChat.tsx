@@ -19,12 +19,15 @@ import {
   Check,
   Database,
 } from 'lucide-react';
+import { CitationsPanel, CitedSource, SearchStats } from './NogChat/CitationsPanel';
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
   type?: 'text' | 'query' | 'insight';
   query?: string;
+  citations?: CitedSource[];
+  searchStats?: SearchStats;
 }
 
 interface QuickAction {
@@ -172,6 +175,8 @@ export function NogChat() {
           content: data.response,
           type: data.type || 'text',
           query: data.executedQuery,
+          citations: data.citations,
+          searchStats: data.searchStats,
         },
       ]);
     } catch {
@@ -281,6 +286,13 @@ export function NogChat() {
                   <Database className="w-3 h-3" />
                   <span>Analyzed your data with: <code className="text-emerald-600 dark:text-emerald-400">{msg.query}</code></span>
                 </div>
+              )}
+              {/* Show citations panel for RAG-enhanced responses */}
+              {msg.citations && msg.citations.length > 0 && (
+                <CitationsPanel
+                  citations={msg.citations}
+                  searchStats={msg.searchStats}
+                />
               )}
             </>
           )}

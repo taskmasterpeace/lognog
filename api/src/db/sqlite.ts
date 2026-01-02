@@ -332,6 +332,16 @@ function initializeSchema(): void {
     CREATE INDEX IF NOT EXISTS idx_rag_documents_source ON rag_documents(source_type);
     CREATE INDEX IF NOT EXISTS idx_rag_documents_title ON rag_documents(title);
 
+    -- FTS5 Full-Text Search for RAG documents (hybrid search support)
+    -- Note: Not using content='' so we can retrieve doc_id for joining
+    CREATE VIRTUAL TABLE IF NOT EXISTS rag_documents_fts USING fts5(
+      doc_id,
+      title,
+      content,
+      source_type,
+      tokenize='porter unicode61'
+    );
+
     -- User Field Preferences (for pinning/ordering fields in sidebar)
     CREATE TABLE IF NOT EXISTS user_field_preferences (
       id TEXT PRIMARY KEY,
@@ -2459,6 +2469,8 @@ export function createRAGDocument(doc: {
 }): RAGDocument {
   const database = getSQLiteDB();
   const id = uuidv4();
+  const sourceType = doc.source_type || 'manual';
+
   database.prepare(`
     INSERT INTO rag_documents (id, title, content, source_type, source_path, chunk_index, embedding, metadata)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -2466,12 +2478,23 @@ export function createRAGDocument(doc: {
     id,
     doc.title,
     doc.content,
-    doc.source_type || 'manual',
+    sourceType,
     doc.source_path || null,
     doc.chunk_index || 0,
     doc.embedding || null,
     doc.metadata || '{}'
   );
+
+  // Also index into FTS5 for full-text search
+  try {
+    database.prepare(`
+      INSERT INTO rag_documents_fts (doc_id, title, content, source_type)
+      VALUES (?, ?, ?, ?)
+    `).run(id, doc.title, doc.content, sourceType);
+  } catch {
+    // FTS indexing failure shouldn't fail document creation
+  }
+
   return getRAGDocument(id)!;
 }
 
@@ -2482,12 +2505,37 @@ export function updateRAGDocumentEmbedding(id: string, embedding: string): void 
 
 export function deleteRAGDocument(id: string): boolean {
   const database = getSQLiteDB();
+
+  // Also remove from FTS5 index
+  try {
+    database.prepare('DELETE FROM rag_documents_fts WHERE doc_id = ?').run(id);
+  } catch {
+    // FTS deletion failure shouldn't fail document deletion
+  }
+
   const result = database.prepare('DELETE FROM rag_documents WHERE id = ?').run(id);
   return result.changes > 0;
 }
 
 export function deleteRAGDocumentsBySource(sourceType: string, sourcePath?: string): number {
   const database = getSQLiteDB();
+
+  // Get IDs to delete from FTS5 first
+  const docsToDelete = sourcePath
+    ? database.prepare('SELECT id FROM rag_documents WHERE source_type = ? AND source_path = ?').all(sourceType, sourcePath) as Array<{ id: string }>
+    : database.prepare('SELECT id FROM rag_documents WHERE source_type = ?').all(sourceType) as Array<{ id: string }>;
+
+  // Remove from FTS5
+  try {
+    const deleteStmt = database.prepare('DELETE FROM rag_documents_fts WHERE doc_id = ?');
+    for (const doc of docsToDelete) {
+      deleteStmt.run(doc.id);
+    }
+  } catch {
+    // FTS deletion failure shouldn't fail document deletion
+  }
+
+  // Delete from main table
   if (sourcePath) {
     const result = database.prepare('DELETE FROM rag_documents WHERE source_type = ? AND source_path = ?').run(sourceType, sourcePath);
     return result.changes;
@@ -2499,6 +2547,91 @@ export function deleteRAGDocumentsBySource(sourceType: string, sourcePath?: stri
 export function getRAGDocumentsWithEmbeddings(): RAGDocument[] {
   const database = getSQLiteDB();
   return database.prepare('SELECT * FROM rag_documents WHERE embedding IS NOT NULL').all() as RAGDocument[];
+}
+
+// FTS5 Full-Text Search for RAG documents
+export interface FTSSearchResult {
+  doc_id: string;
+  title: string;
+  content: string;
+  source_type: string;
+  rank: number;
+  snippet: string;
+}
+
+export function searchRAGDocumentsFTS(query: string, limit: number = 20): FTSSearchResult[] {
+  const database = getSQLiteDB();
+  try {
+    // Use FTS5 MATCH query with BM25 ranking
+    // Join with rag_documents table to get actual content (FTS table is contentless)
+    const results = database.prepare(`
+      SELECT
+        fts.doc_id,
+        docs.title,
+        docs.content,
+        docs.source_type,
+        bm25(rag_documents_fts) as rank,
+        snippet(rag_documents_fts, 2, '<mark>', '</mark>', '...', 50) as snippet
+      FROM rag_documents_fts fts
+      JOIN rag_documents docs ON fts.doc_id = docs.id
+      WHERE rag_documents_fts MATCH ?
+      ORDER BY rank
+      LIMIT ?
+    `).all(query, limit) as FTSSearchResult[];
+    return results;
+  } catch (error) {
+    // Fallback to empty results if FTS fails (e.g., invalid query syntax)
+    console.error('FTS search error:', error);
+    return [];
+  }
+}
+
+export function indexRAGDocumentFTS(docId: string, title: string, content: string, sourceType: string): void {
+  const database = getSQLiteDB();
+  try {
+    database.prepare(`
+      INSERT INTO rag_documents_fts (doc_id, title, content, source_type)
+      VALUES (?, ?, ?, ?)
+    `).run(docId, title, content, sourceType);
+  } catch (error) {
+    console.error('FTS index error:', error);
+  }
+}
+
+export function removeRAGDocumentFTS(docId: string): void {
+  const database = getSQLiteDB();
+  try {
+    database.prepare(`
+      DELETE FROM rag_documents_fts WHERE doc_id = ?
+    `).run(docId);
+  } catch (error) {
+    console.error('FTS remove error:', error);
+  }
+}
+
+export function rebuildFTSIndex(): number {
+  const database = getSQLiteDB();
+  // Clear existing FTS index
+  database.prepare('DELETE FROM rag_documents_fts').run();
+
+  // Re-index all documents
+  const docs = database.prepare('SELECT id, title, content, source_type FROM rag_documents').all() as Array<{
+    id: string;
+    title: string;
+    content: string;
+    source_type: string;
+  }>;
+
+  const insertStmt = database.prepare(`
+    INSERT INTO rag_documents_fts (doc_id, title, content, source_type)
+    VALUES (?, ?, ?, ?)
+  `);
+
+  for (const doc of docs) {
+    insertStmt.run(doc.id, doc.title, doc.content, doc.source_type);
+  }
+
+  return docs.length;
 }
 
 // User Field Preferences (for sidebar field pinning/ordering)

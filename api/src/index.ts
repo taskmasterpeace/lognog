@@ -32,6 +32,8 @@ import syntheticRouter from './routes/synthetic.js';
 import { healthCheck as clickhouseHealth, executeQuery, closeConnection } from './db/clickhouse.js';
 import { closeDatabase } from './db/sqlite.js';
 import { startScheduler } from './services/scheduler.js';
+import { apiLogger } from './middleware/api-logger.js';
+import { shutdown as shutdownInternalLogger, logError } from './services/internal-logger.js';
 import { startScheduler as startSyntheticScheduler } from './services/synthetic/index.js';
 import { executeDSLQuery } from './db/backend.js';
 import { seedBuiltinTemplates } from './data/builtin-templates.js';
@@ -46,6 +48,7 @@ const { app } = expressWs(express());
 // Middleware
 app.use(cors());
 app.use(express.json());
+app.use(apiLogger);  // Log all API requests for self-monitoring
 
 // Health check endpoint
 app.get('/health', async (_req, res) => {
@@ -288,8 +291,17 @@ if (uiDistPath) {
 }
 
 // Error handling middleware
-app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+app.use((err: Error, req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error('Unhandled error:', err);
+
+  // Log error to internal logs
+  logError({
+    error_type: err.name || 'Error',
+    message: err.message,
+    stack_trace: err.stack,
+    endpoint: req.path,
+  });
+
   res.status(500).json({
     error: 'Internal server error',
     message: process.env.NODE_ENV === 'development' ? err.message : undefined,
@@ -299,6 +311,7 @@ app.use((err: Error, _req: express.Request, res: express.Response, _next: expres
 // Graceful shutdown
 process.on('SIGTERM', async () => {
   console.log('Shutting down...');
+  await shutdownInternalLogger();  // Flush queued internal logs
   await closeConnection();
   closeDatabase();
   process.exit(0);

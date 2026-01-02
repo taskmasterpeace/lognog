@@ -4,6 +4,7 @@ import { authenticate, requirePermission, authenticateIngestion } from '../auth/
 import { logAuthEvent } from '../auth/auth.js';
 import { insertLogs, getBackendInfo } from '../db/backend.js';
 import { getPendingNotifications, markNotificationDelivered, AgentNotification } from '../db/sqlite.js';
+import { logIngestionStats } from '../services/internal-logger.js';
 
 const router = Router();
 
@@ -130,9 +131,20 @@ router.post(
       });
 
       // Insert into database
+      const ingestStart = Date.now();
       await insertLogs(logs);
+      const ingestDuration = Date.now() - ingestStart;
 
-      // Log the ingestion
+      // Log the ingestion stats for self-monitoring
+      logIngestionStats({
+        source_type: 'agent',
+        event_count: events.length,
+        batch_size: events.length,
+        duration_ms: ingestDuration,
+        user_id: req.user?.id,
+      });
+
+      // Log the auth event
       logAuthEvent(req.user!.id, 'agent_ingest', req.ip, req.get('user-agent'), {
         events_count: events.length,
         hostname: events[0]?.hostname,
@@ -400,7 +412,18 @@ router.post('/otlp/v1/logs', authenticateIngestion, async (req, res) => {
     }
 
     // Insert into database
+    const ingestStart = Date.now();
     await insertLogs(logs);
+    const ingestDuration = Date.now() - ingestStart;
+
+    // Log the ingestion stats for self-monitoring
+    logIngestionStats({
+      source_type: 'otlp',
+      event_count: logs.length,
+      batch_size: logs.length,
+      duration_ms: ingestDuration,
+      user_id: req.user?.id,
+    });
 
     console.log(`OTLP: Ingested ${logs.length} log records`);
 
@@ -734,7 +757,18 @@ router.post('/http', authenticateIngestion, async (req, res) => {
       return res.status(200).json({ accepted: 0 });
     }
 
+    const ingestStart = Date.now();
     await insertLogs(logs);
+    const ingestDuration = Date.now() - ingestStart;
+
+    // Log the ingestion stats for self-monitoring
+    logIngestionStats({
+      source_type: 'http',
+      event_count: logs.length,
+      batch_size: logs.length,
+      duration_ms: ingestDuration,
+      user_id: req.user?.id,
+    });
 
     console.log(`HTTP: Ingested ${logs.length} log events to index '${customIndex}'`);
 
