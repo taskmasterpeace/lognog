@@ -24,6 +24,7 @@ import mcpRouter from './routes/mcp.js';
 import notificationsRouter from './routes/notifications.js';
 import settingsRouter from './routes/settings.js';
 import onboardingRouter from './routes/onboarding.js';
+import anomalyRouter from './routes/anomaly.js';
 import { healthCheck as clickhouseHealth, executeQuery, closeConnection } from './db/clickhouse.js';
 import { closeDatabase } from './db/sqlite.js';
 import { startScheduler } from './services/scheduler.js';
@@ -74,6 +75,7 @@ app.use('/mcp', mcpRouter);
 app.use('/notifications', notificationsRouter);
 app.use('/settings', settingsRouter);
 app.use('/onboarding', onboardingRouter);
+app.use('/anomaly', anomalyRouter);
 
 // WebSocket endpoint for live tail
 const liveTailClients: Set<WebSocket> = new Set();
@@ -256,7 +258,9 @@ if (uiDistPath) {
         req.path.startsWith('/health') ||
         req.path.startsWith('/ws') ||
         req.path.startsWith('/sse') ||
-        req.path.startsWith('/settings')) {
+        req.path.startsWith('/settings') ||
+        req.path.startsWith('/anomaly') ||
+        req.path.startsWith('/onboarding')) {
       return next();
     }
 

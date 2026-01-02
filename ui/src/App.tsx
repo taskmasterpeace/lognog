@@ -17,6 +17,7 @@ import {
   Bell,
   Menu,
   X,
+  Radar,
 } from 'lucide-react';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -38,6 +39,7 @@ import SettingsPage from './pages/SettingsPage';
 import AlertsPage from './pages/AlertsPage';
 import SilencesPage from './pages/SilencesPage';
 import DataSourcesPage from './pages/DataSourcesPage';
+import AnomalyPage from './pages/AnomalyPage';
 
 interface NavLinkProps {
   to: string;
@@ -194,6 +196,7 @@ function Layout({ children }: { children: React.ReactNode }) {
           <NavLink to="/search" icon={Search} onClick={closeSidebar}>Search & Explore</NavLink>
           <NavLink to="/dashboards" icon={LayoutDashboard} onClick={closeSidebar}>Dashboards</NavLink>
           <NavLink to="/alerts" icon={Bell} onClick={closeSidebar}>Alerts</NavLink>
+          <NavLink to="/anomaly" icon={Radar} onClick={closeSidebar}>Anomaly Detection</NavLink>
           <NavLink to="/stats" icon={Activity} onClick={closeSidebar}>Analytics</NavLink>
           <NavLink to="/reports" icon={FileBarChart} onClick={closeSidebar}>Reports</NavLink>
 
@@ -364,6 +367,18 @@ function AppRoutes() {
             <Layout>
               <AnimatedPage>
                 <AlertsPage />
+              </AnimatedPage>
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/anomaly"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <AnimatedPage>
+                <AnomalyPage />
               </AnimatedPage>
             </Layout>
           </ProtectedRoute>
