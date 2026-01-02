@@ -297,8 +297,8 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
           onSkip={completeOnboarding}
         />
       )}
-      {/* Show login notifications modal if there are pending notifications */}
-      {showNotifications && loginNotifications.length > 0 && (
+      {/* Show login notifications modal if there are pending notifications (but not during onboarding) */}
+      {!showWizard && showNotifications && loginNotifications.length > 0 && (
         <LoginNotificationsModal
           notifications={loginNotifications}
           onClose={() => setShowNotifications(false)}
