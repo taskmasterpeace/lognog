@@ -19,11 +19,19 @@ const CSRF_TOKEN_LENGTH = 32;
 // Methods that don't require CSRF validation
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
-// Paths exempt from CSRF (API key authenticated endpoints)
+// Paths exempt from CSRF (API key authenticated or pre-auth endpoints)
 const EXEMPT_PATHS = [
-  '/ingest/',       // Agent ingestion uses API keys
-  '/api/ingest/',   // Alternate path
-  '/health',        // Health checks
+  '/ingest/',           // Agent ingestion uses API keys
+  '/api/ingest/',       // Alternate path
+  '/health',            // Health checks
+  '/auth/login',        // Login - no CSRF token exists yet
+  '/auth/setup',        // Initial setup - no CSRF token exists yet
+  '/auth/refresh',      // Token refresh - uses refresh token auth
+  '/auth/setup-required', // Check if setup needed
+  '/api/auth/login',    // Alternate paths
+  '/api/auth/setup',
+  '/api/auth/refresh',
+  '/api/auth/setup-required',
 ];
 
 /**

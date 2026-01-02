@@ -15,6 +15,7 @@ import {
   createAlertHistoryEntry,
   getRecentAlertTrigger,
   createAgentNotification,
+  createLoginNotification,
   isAlertSilenced,
   getNotificationChannelByName,
 } from '../db/sqlite.js';
@@ -462,6 +463,75 @@ async function executeScriptAction(
   }
 }
 
+// Parse duration string like "24h", "7d" to milliseconds
+function parseDuration(duration: string): number {
+  const match = duration.match(/^(\d+)(s|m|h|d|w)$/);
+  if (!match) return 24 * 60 * 60 * 1000; // Default 24 hours
+
+  const value = parseInt(match[1], 10);
+  const unit = match[2];
+
+  switch (unit) {
+    case 's': return value * 1000;
+    case 'm': return value * 60 * 1000;
+    case 'h': return value * 60 * 60 * 1000;
+    case 'd': return value * 24 * 60 * 60 * 1000;
+    case 'w': return value * 7 * 24 * 60 * 60 * 1000;
+    default: return 24 * 60 * 60 * 1000;
+  }
+}
+
+// Execute show_on_login action - queue notification for display on login
+async function executeShowOnLoginAction(
+  alert: Alert,
+  action: AlertAction,
+  resultCount: number,
+  sampleResults: Record<string, unknown>[]
+): Promise<{ success: boolean; message: string }> {
+  try {
+    const config = action.config;
+
+    // Alert metadata for variable substitution
+    const alertMetadata = {
+      alert_name: alert.name,
+      alert_severity: alert.severity.toUpperCase(),
+      result_count: resultCount,
+      timestamp: new Date().toISOString(),
+    };
+
+    // Process title and message templates
+    const title = substituteVariables(config.title || alert.name, sampleResults, alertMetadata);
+    const message = substituteVariables(
+      config.message || `Alert "${alert.name}" triggered with ${resultCount} results`,
+      sampleResults,
+      alertMetadata
+    );
+
+    // Calculate expiration if specified
+    let expiresAt: string | null = null;
+    if (config.expires_in) {
+      const expiresMs = parseDuration(config.expires_in);
+      expiresAt = new Date(Date.now() + expiresMs).toISOString();
+    }
+
+    // Create the login notification
+    createLoginNotification(alert.name, title, message, {
+      user_id: config.user_id || null,
+      alert_id: alert.id,
+      severity: alert.severity as AlertSeverity,
+      expires_at: expiresAt,
+    });
+
+    return {
+      success: true,
+      message: `Login notification queued${config.user_id ? ` for user ${config.user_id}` : ' for all users'}`,
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return { success: false, message: `Show on login action failed: ${message}` };
+  }
+}
+
 // Execute all actions for an alert
 async function executeActions(
   alert: Alert,
@@ -489,6 +559,9 @@ async function executeActions(
         break;
       case 'script':
         result = await executeScriptAction(alert, action, resultCount, sampleResults);
+        break;
+      case 'show_on_login':
+        result = await executeShowOnLoginAction(alert, action, resultCount, sampleResults);
         break;
       default:
         result = { success: false, message: `Unknown action type: ${action.type}` };

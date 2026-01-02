@@ -19,6 +19,11 @@ import {
   logAuthEvent,
   getAuthAuditLog,
 } from '../auth/auth.js';
+import {
+  getLoginNotifications,
+  dismissLoginNotification,
+  dismissAllLoginNotifications,
+} from '../db/sqlite.js';
 import { authenticate, requireAdmin, requireRole, rateLimit } from '../auth/middleware.js';
 
 const router = Router();
@@ -101,9 +106,13 @@ router.post('/login', rateLimit(10, 60000), async (req, res) => {
 
     logAuthEvent(result.user.id, 'login_success', req.ip, req.get('user-agent'));
 
+    // Get pending login notifications for this user
+    const notifications = getLoginNotifications(result.user.id);
+
     res.json({
       user: result.user,
       ...result.tokens,
+      notifications,  // Include pending notifications
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -399,6 +408,42 @@ router.get('/audit-log', authenticate, requireAdmin, (req, res) => {
   } catch (error) {
     console.error('Get audit log error:', error);
     res.status(500).json({ error: 'Failed to get audit log' });
+  }
+});
+
+// Get pending login notifications for current user
+router.get('/notifications', authenticate, (req, res) => {
+  try {
+    const notifications = getLoginNotifications(req.user!.id);
+    res.json(notifications);
+  } catch (error) {
+    console.error('Get notifications error:', error);
+    res.status(500).json({ error: 'Failed to get notifications' });
+  }
+});
+
+// Dismiss a single login notification
+router.post('/notifications/:id/dismiss', authenticate, (req, res) => {
+  try {
+    const success = dismissLoginNotification(req.params.id, req.user!.id);
+    if (!success) {
+      return res.status(404).json({ error: 'Notification not found or already dismissed' });
+    }
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Dismiss notification error:', error);
+    res.status(500).json({ error: 'Failed to dismiss notification' });
+  }
+});
+
+// Dismiss all login notifications for current user
+router.post('/notifications/dismiss-all', authenticate, (req, res) => {
+  try {
+    const count = dismissAllLoginNotifications(req.user!.id);
+    res.json({ success: true, dismissed: count });
+  } catch (error) {
+    console.error('Dismiss all notifications error:', error);
+    res.status(500).json({ error: 'Failed to dismiss notifications' });
   }
 });
 

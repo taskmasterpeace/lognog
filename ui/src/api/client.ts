@@ -1,5 +1,11 @@
 const API_BASE = '/api';
 
+// Helper to read CSRF token from cookie
+function getCsrfToken(): string | null {
+  const match = document.cookie.match(/(?:^|;\s*)lognog_csrf=([^;]*)/);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
 export interface SearchResult {
   query: string;
   sql: string;
@@ -68,11 +74,23 @@ export interface TimeSeriesData {
 }
 
 async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...(options?.headers as Record<string, string>),
+  };
+
+  // Add CSRF token for state-changing methods
+  const method = options?.method?.toUpperCase() || 'GET';
+  if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
+    const csrfToken = getCsrfToken();
+    if (csrfToken) {
+      headers['X-CSRF-Token'] = csrfToken;
+    }
+  }
+
   const response = await fetch(`${API_BASE}${endpoint}`, {
-    headers: {
-      'Content-Type': 'application/json',
-    },
     ...options,
+    headers,
   });
 
   if (!response.ok) {
@@ -604,7 +622,7 @@ export async function deleteWorkflowAction(id: string): Promise<void> {
 
 // Alerts API
 export interface AlertAction {
-  type: 'email' | 'webhook' | 'log' | 'apprise' | 'script';
+  type: 'email' | 'webhook' | 'log' | 'apprise' | 'script' | 'show_on_login';
   config: {
     // Email
     to?: string;
@@ -623,6 +641,9 @@ export interface AlertAction {
     format?: 'text' | 'markdown' | 'html';
     // Script
     command?: string;
+    // Show on login
+    expires_in?: string;
+    user_id?: string;
   };
 }
 
@@ -1203,6 +1224,37 @@ export async function revokeApiKey(id: string): Promise<{ message: string }> {
 export async function deleteApiKey(id: string): Promise<{ message: string }> {
   return request(`/auth/api-keys/${id}`, {
     method: 'DELETE',
+  });
+}
+
+// Login Notifications (in-app alert notifications)
+export interface LoginNotification {
+  id: string;
+  user_id?: string;
+  alert_id?: string;
+  alert_name: string;
+  severity: string;
+  title: string;
+  message: string;
+  created_at: string;
+  expires_at?: string;
+  dismissed: number;
+  dismissed_at?: string;
+}
+
+export async function getLoginNotifications(): Promise<LoginNotification[]> {
+  return request('/auth/notifications');
+}
+
+export async function dismissLoginNotification(id: string): Promise<{ success: boolean }> {
+  return request(`/auth/notifications/${id}/dismiss`, {
+    method: 'POST',
+  });
+}
+
+export async function dismissAllLoginNotifications(): Promise<{ success: boolean; dismissed: number }> {
+  return request('/auth/notifications/dismiss-all', {
+    method: 'POST',
   });
 }
 

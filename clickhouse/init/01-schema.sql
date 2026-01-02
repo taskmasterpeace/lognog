@@ -85,15 +85,7 @@ CREATE TABLE IF NOT EXISTS lognog.severity_levels
 )
 ENGINE = Memory;
 
-INSERT INTO lognog.severity_levels VALUES
-    (0, 'Emergency', '#FF0000'),
-    (1, 'Alert', '#FF3300'),
-    (2, 'Critical', '#FF6600'),
-    (3, 'Error', '#FF9900'),
-    (4, 'Warning', '#FFCC00'),
-    (5, 'Notice', '#99CC00'),
-    (6, 'Informational', '#00CC00'),
-    (7, 'Debug', '#0099CC');
+INSERT INTO lognog.severity_levels VALUES (0, 'Emergency', '#FF0000'), (1, 'Alert', '#FF3300'), (2, 'Critical', '#FF6600'), (3, 'Error', '#FF9900'), (4, 'Warning', '#FFCC00'), (5, 'Notice', '#99CC00'), (6, 'Informational', '#00CC00'), (7, 'Debug', '#0099CC');
 
 -- Facility mapping table
 CREATE TABLE IF NOT EXISTS lognog.facility_names
@@ -103,9 +95,4 @@ CREATE TABLE IF NOT EXISTS lognog.facility_names
 )
 ENGINE = Memory;
 
-INSERT INTO lognog.facility_names VALUES
-    (0, 'kern'), (1, 'user'), (2, 'mail'), (3, 'daemon'),
-    (4, 'auth'), (5, 'syslog'), (6, 'lpr'), (7, 'news'),
-    (8, 'uucp'), (9, 'cron'), (10, 'authpriv'), (11, 'ftp'),
-    (16, 'local0'), (17, 'local1'), (18, 'local2'), (19, 'local3'),
-    (20, 'local4'), (21, 'local5'), (22, 'local6'), (23, 'local7');
+INSERT INTO lognog.facility_names VALUES (0, 'kern'), (1, 'user'), (2, 'mail'), (3, 'daemon'), (4, 'auth'), (5, 'syslog'), (6, 'lpr'), (7, 'news'), (8, 'uucp'), (9, 'cron'), (10, 'authpriv'), (11, 'ftp'), (16, 'local0'), (17, 'local1'), (18, 'local2'), (19, 'local3'), (20, 'local4'), (21, 'local5'), (22, 'local6'), (23, 'local7');

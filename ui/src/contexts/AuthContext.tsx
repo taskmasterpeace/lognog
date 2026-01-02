@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
+import { LoginNotification } from '../api/client';
 
 const API_BASE = '/api';
 
@@ -28,6 +29,7 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   setupRequired: boolean | null;
+  loginNotifications: LoginNotification[];
 }
 
 interface AuthContextType extends AuthState {
@@ -44,6 +46,8 @@ interface AuthContextType extends AuthState {
   updateUserRole: (userId: string, role: string) => Promise<void>;
   deactivateUser: (userId: string) => Promise<void>;
   activateUser: (userId: string) => Promise<void>;
+  // Login notifications
+  clearLoginNotifications: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -138,6 +142,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isAuthenticated: false,
     isLoading: true,
     setupRequired: null,
+    loginNotifications: [],
   });
 
   // Check if setup is required
@@ -162,6 +167,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated: false,
         isLoading: false,
         setupRequired,
+        loginNotifications: [],
       });
       return;
     }
@@ -171,12 +177,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (response.ok) {
         const user = await response.json();
-        setState({
+        setState((prev) => ({
+          ...prev,
           user,
           isAuthenticated: true,
           isLoading: false,
           setupRequired: false,
-        });
+        }));
       } else {
         clearTokens();
         const setupRequired = await checkSetup();
@@ -185,6 +192,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           isAuthenticated: false,
           isLoading: false,
           setupRequired,
+          loginNotifications: [],
         });
       }
     } catch {
@@ -195,6 +203,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isAuthenticated: false,
         isLoading: false,
         setupRequired,
+        loginNotifications: [],
       });
     }
   }, [checkSetup]);
@@ -224,6 +233,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAuthenticated: true,
       isLoading: false,
       setupRequired: false,
+      loginNotifications: data.notifications || [],
     });
   };
 
@@ -240,7 +250,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isAuthenticated: false,
       isLoading: false,
       setupRequired: false,
+      loginNotifications: [],
     });
+  };
+
+  // Clear login notifications (after they've been dismissed)
+  const clearLoginNotifications = () => {
+    setState((prev) => ({
+      ...prev,
+      loginNotifications: [],
+    }));
   };
 
   // Initial setup
@@ -366,6 +385,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         updateUserRole,
         deactivateUser,
         activateUser,
+        clearLoginNotifications,
       }}
     >
       {children}

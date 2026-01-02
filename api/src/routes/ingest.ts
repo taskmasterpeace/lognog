@@ -103,8 +103,8 @@ router.post(
       // Transform events for storage
       const logs = events.map((event) => {
         const baseLog = {
-          timestamp: event.timestamp,
-          received_at: new Date().toISOString(),
+          timestamp: event.timestamp.replace('Z', ''),
+          received_at: new Date().toISOString().replace('Z', ''),
           hostname: event.hostname,
           app_name: event.source,
           message: event.message || '',
@@ -362,7 +362,7 @@ router.post('/otlp/v1/logs', authenticateIngestion, async (req, res) => {
       index_name: string;
     }> = [];
 
-    const receivedAt = new Date().toISOString();
+    const receivedAt = new Date().toISOString().replace('Z', '');
 
     for (const resourceLog of body.resourceLogs) {
       // Extract resource attributes (service.name, host.name, etc.)
@@ -377,13 +377,14 @@ router.post('/otlp/v1/logs', authenticateIngestion, async (req, res) => {
 
         for (const logRecord of scopeLog.logRecords || []) {
           // Parse timestamp (nanoseconds since epoch)
+          // Note: Remove 'Z' suffix as ClickHouse DateTime64 doesn't accept it in JSON format
           let timestamp: string;
           if (logRecord.timeUnixNano) {
             const ms = Number(BigInt(logRecord.timeUnixNano) / BigInt(1000000));
-            timestamp = new Date(ms).toISOString();
+            timestamp = new Date(ms).toISOString().replace('Z', '');
           } else if (logRecord.observedTimeUnixNano) {
             const ms = Number(BigInt(logRecord.observedTimeUnixNano) / BigInt(1000000));
-            timestamp = new Date(ms).toISOString();
+            timestamp = new Date(ms).toISOString().replace('Z', '');
           } else {
             timestamp = receivedAt;
           }
@@ -579,15 +580,16 @@ router.post('/supabase', authenticateIngestion, async (req, res) => {
     }
 
     const events = body as SupabaseLogEvent[];
-    const receivedAt = new Date().toISOString();
+    const receivedAt = new Date().toISOString().replace('Z', '');
 
     const logs = events.map((event) => {
       const metadata = event.metadata || {};
 
       // Parse timestamp
+      // Note: Remove 'Z' suffix as ClickHouse DateTime64 doesn't accept it in JSON format
       let timestamp: string;
       if (event.timestamp) {
-        timestamp = new Date(event.timestamp).toISOString();
+        timestamp = new Date(event.timestamp).toISOString().replace('Z', '');
       } else {
         timestamp = receivedAt;
       }
@@ -717,7 +719,7 @@ router.post('/http', authenticateIngestion, async (req, res) => {
     const customIndex = sanitizeIndexName(req.headers['x-index'] as string, 'http');
     const customAppName = req.headers['x-app-name'] as string || req.headers['x-source-name'] as string;
 
-    const receivedAt = new Date().toISOString();
+    const receivedAt = new Date().toISOString().replace('Z', '');
 
     const logs = body.map((event: Record<string, unknown>) => {
       // Try to extract timestamp from various common field names
@@ -726,9 +728,10 @@ router.post('/http', authenticateIngestion, async (req, res) => {
       if (tsField) {
         if (typeof tsField === 'number') {
           // Unix timestamp (seconds or milliseconds)
-          timestamp = new Date(tsField > 1e12 ? tsField : tsField * 1000).toISOString();
+          // Note: Remove 'Z' suffix as ClickHouse DateTime64 doesn't accept it in JSON format
+          timestamp = new Date(tsField > 1e12 ? tsField : tsField * 1000).toISOString().replace('Z', '');
         } else if (typeof tsField === 'string') {
-          timestamp = new Date(tsField).toISOString();
+          timestamp = new Date(tsField).toISOString().replace('Z', '');
         }
       }
 
@@ -923,7 +926,7 @@ function getVercelComponent(event: VercelLogEvent): string {
 router.post('/vercel', authenticateIngestion, async (req, res) => {
   try {
     const body = req.body;
-    const receivedAt = new Date().toISOString();
+    const receivedAt = new Date().toISOString().replace('Z', '');
 
     // Handle Vercel's verification request
     if (req.headers['x-vercel-verify']) {
@@ -939,11 +942,12 @@ router.post('/vercel', authenticateIngestion, async (req, res) => {
 
     const logs = events.map((event) => {
       // Parse timestamp
+      // Note: Remove 'Z' suffix as ClickHouse DateTime64 doesn't accept it in JSON format
       let timestamp: string;
       if (event.timestamp) {
-        timestamp = new Date(event.timestamp).toISOString();
+        timestamp = new Date(event.timestamp).toISOString().replace('Z', '');
       } else if (event.proxy?.timestamp) {
-        timestamp = new Date(event.proxy.timestamp).toISOString();
+        timestamp = new Date(event.proxy.timestamp).toISOString().replace('Z', '');
       } else {
         timestamp = receivedAt;
       }
@@ -1558,8 +1562,8 @@ function generateTestLog(): Record<string, unknown> {
     : randomChoice(TEST_APPS);
 
   return {
-    timestamp: timestamp.toISOString(),
-    received_at: now.toISOString(),
+    timestamp: timestamp.toISOString().replace('Z', ''),
+    received_at: now.toISOString().replace('Z', ''),
     hostname,
     app_name,
     severity,
@@ -1685,7 +1689,7 @@ function smartThingsEventToSeverity(event: SmartThingsEvent): number {
 router.post('/smartthings', authenticateIngestion, async (req, res) => {
   try {
     const payload = req.body as SmartThingsWebhookPayload;
-    const receivedAt = new Date().toISOString();
+    const receivedAt = new Date().toISOString().replace('Z', '');
 
     // Handle sink verification (CONFIRMATION)
     if (payload.messageType === 'CONFIRMATION') {
@@ -1784,7 +1788,7 @@ router.post('/smartthings', authenticateIngestion, async (req, res) => {
       }
 
       return {
-        timestamp: event.eventTime || receivedAt,
+        timestamp: (event.eventTime || receivedAt).replace('Z', ''),
         hostname,
         app_name: appName,
         severity,

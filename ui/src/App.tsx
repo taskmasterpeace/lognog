@@ -49,6 +49,7 @@ import IdentitiesPage from './pages/IdentitiesPage';
 import CIMPage from './pages/CIMPage';
 import AgentPage from './pages/AgentPage';
 import SyntheticPage from './pages/SyntheticPage';
+import LoginNotificationsModal from './components/LoginNotificationsModal';
 
 interface NavLinkProps {
   to: string;
@@ -272,8 +273,9 @@ function Layout({ children }: { children: React.ReactNode }) {
 }
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading, setupRequired } = useAuth();
+  const { isAuthenticated, isLoading, setupRequired, loginNotifications, clearLoginNotifications } = useAuth();
   const { showWizard, isLoading: onboardingLoading, completeOnboarding } = useOnboarding();
+  const [showNotifications, setShowNotifications] = useState(true);
 
   if (isLoading || onboardingLoading) {
     return (
@@ -293,6 +295,14 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
         <WelcomeWizard
           onComplete={completeOnboarding}
           onSkip={completeOnboarding}
+        />
+      )}
+      {/* Show login notifications modal if there are pending notifications */}
+      {showNotifications && loginNotifications.length > 0 && (
+        <LoginNotificationsModal
+          notifications={loginNotifications}
+          onClose={() => setShowNotifications(false)}
+          onNotificationsDismissed={clearLoginNotifications}
         />
       )}
       {children}

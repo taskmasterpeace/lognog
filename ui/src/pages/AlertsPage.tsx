@@ -26,6 +26,7 @@ import {
   BellOff,
   Send,
   Terminal,
+  LogIn,
 } from 'lucide-react';
 import {
   getAlerts,
@@ -128,6 +129,8 @@ export default function AlertsPage() {
   const appriseTitleRefs = useRef<(HTMLInputElement | null)[]>([]);
   const appriseMessageRefs = useRef<(HTMLTextAreaElement | null)[]>([]);
   const scriptCommandRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const loginNotifTitleRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const loginNotifMessageRefs = useRef<(HTMLTextAreaElement | null)[]>([]);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -314,6 +317,7 @@ export default function AlertsPage() {
               type === 'webhook' ? { url: '', method: 'POST' } :
               type === 'apprise' ? { channel: '', title: '', message: '' } :
               type === 'script' ? { command: '' } :
+              type === 'show_on_login' ? { title: '', message: '', expires_in: '24h' } :
               {},
     };
     setFormData({ ...formData, actions: [...formData.actions, newAction] });
@@ -382,6 +386,10 @@ export default function AlertsPage() {
       if (action.type === 'script') {
         // Must have a command
         return !!(action.config.command?.trim());
+      }
+      if (action.type === 'show_on_login') {
+        // Title is required (message is optional, will use alert name as fallback)
+        return !!(action.config.title?.trim());
       }
       return true; // log type doesn't need config
     });
@@ -592,7 +600,10 @@ export default function AlertsPage() {
                               {action.type === 'email' && <Mail className="w-3 h-3" />}
                               {action.type === 'webhook' && <Globe className="w-3 h-3" />}
                               {action.type === 'log' && <FileText className="w-3 h-3" />}
-                              {action.type}
+                              {action.type === 'apprise' && <Send className="w-3 h-3" />}
+                              {action.type === 'script' && <Terminal className="w-3 h-3" />}
+                              {action.type === 'show_on_login' && <LogIn className="w-3 h-3" />}
+                              {action.type === 'show_on_login' ? 'On Login' : action.type}
                             </div>
                           ))}
                         </div>
@@ -909,6 +920,14 @@ export default function AlertsPage() {
                     >
                       <FileText className="w-3 h-3" /> Log
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => addAction('show_on_login')}
+                      className="px-3 py-1 text-sm bg-purple-100 hover:bg-purple-200 dark:bg-purple-900/30 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 rounded-lg flex items-center gap-1"
+                      title="Show notification in UI on next login"
+                    >
+                      <LogIn className="w-3 h-3" /> On Login
+                    </button>
                   </div>
                 </div>
 
@@ -925,7 +944,9 @@ export default function AlertsPage() {
                             {action.type === 'apprise' && <Send className="w-4 h-4" />}
                             {action.type === 'script' && <Terminal className="w-4 h-4" />}
                             {action.type === 'log' && <FileText className="w-4 h-4" />}
-                            {action.type === 'apprise' ? 'Notification Channel' : action.type}
+                            {action.type === 'show_on_login' && <LogIn className="w-4 h-4" />}
+                            {action.type === 'apprise' ? 'Notification Channel' :
+                             action.type === 'show_on_login' ? 'Login Notification' : action.type}
                           </div>
                           <button
                             type="button"
@@ -1176,6 +1197,74 @@ export default function AlertsPage() {
                               <p className="text-xs text-amber-800 dark:text-amber-200">
                                 <strong>Security Note:</strong> Scripts run with the API server's permissions.
                                 Only use trusted commands and sanitize any dynamic content.
+                              </p>
+                            </div>
+                          </div>
+                        )}
+
+                        {action.type === 'show_on_login' && (
+                          <div className="space-y-3">
+                            <div className="p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg">
+                              <p className="text-xs text-purple-800 dark:text-purple-200">
+                                This notification will appear in the LogNog UI when users log in.
+                              </p>
+                            </div>
+
+                            <div>
+                              <div className="flex items-center justify-between mb-1">
+                                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+                                  Title (supports variables)
+                                </label>
+                                <VariableHelper onInsert={(variable) => insertVariableIntoField(variable, loginNotifTitleRefs.current[index])} />
+                              </div>
+                              <input
+                                ref={(el) => { loginNotifTitleRefs.current[index] = el; }}
+                                type="text"
+                                placeholder="e.g., High Error Rate on {{hostname}}"
+                                value={action.config.title || ''}
+                                onChange={(e) => updateAction(index, { title: e.target.value })}
+                                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm"
+                              />
+                            </div>
+
+                            <div>
+                              <div className="flex items-center justify-between mb-1">
+                                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+                                  Message (supports variables)
+                                </label>
+                                <VariableHelper onInsert={(variable) => insertVariableIntoField(variable, loginNotifMessageRefs.current[index])} />
+                              </div>
+                              <textarea
+                                ref={(el) => { loginNotifMessageRefs.current[index] = el; }}
+                                placeholder={"{{result_count}} errors detected in the last {{time_range}}. Check the logs for details."}
+                                value={action.config.message || ''}
+                                onChange={(e) => updateAction(index, { message: e.target.value })}
+                                rows={3}
+                                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm font-mono"
+                              />
+                              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                Leave empty to use alert name as message
+                              </p>
+                            </div>
+
+                            <div>
+                              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                Expires After
+                              </label>
+                              <select
+                                value={action.config.expires_in || '24h'}
+                                onChange={(e) => updateAction(index, { expires_in: e.target.value })}
+                                className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm"
+                              >
+                                <option value="1h">1 hour</option>
+                                <option value="4h">4 hours</option>
+                                <option value="12h">12 hours</option>
+                                <option value="24h">24 hours</option>
+                                <option value="7d">7 days</option>
+                                <option value="">Never (manual dismiss only)</option>
+                              </select>
+                              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                                How long the notification remains visible before auto-expiring
                               </p>
                             </div>
                           </div>

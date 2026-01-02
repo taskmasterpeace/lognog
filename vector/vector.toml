@@ -584,7 +584,7 @@ database = "lognog"
 table = "logs"
 auth.strategy = "basic"
 auth.user = "lognog"
-auth.password = "lognog123"
+auth.password = "lognog-dev-only"
 skip_unknown_fields = true
 compression = "gzip"
 
