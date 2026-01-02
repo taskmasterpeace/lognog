@@ -132,7 +132,7 @@ router.post('/generate', async (req: Request, res: Response) => {
       let timeCondition: string;
       const match = timeRange.match(/^-(\d+)([hdwm])$/);
       if (match) {
-        const value = parseInt(match[1]);
+        const value = parseInt(match[1], 10);
         const unit = match[2];
         const unitMap: Record<string, string> = {
           'h': 'HOUR',

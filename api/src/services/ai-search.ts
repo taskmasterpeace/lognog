@@ -53,7 +53,7 @@ const TIME_PATTERNS: Array<{ pattern: RegExp; handler: (match: RegExpMatchArray)
   {
     pattern: /last\s+(\d+)\s+(minute|minutes|min|mins|hour|hours|hr|hrs|day|days|week|weeks)/i,
     handler: (match) => {
-      const amount = parseInt(match[1]);
+      const amount = parseInt(match[1], 10);
       const unit = match[2].toLowerCase();
       let minutes = amount;
       if (unit.startsWith('hour') || unit.startsWith('hr')) minutes = amount * 60;
@@ -77,7 +77,7 @@ const TIME_PATTERNS: Array<{ pattern: RegExp; handler: (match: RegExpMatchArray)
   {
     pattern: /past\s+(\d+)\s+(minute|minutes|hour|hours|day|days)/i,
     handler: (match) => {
-      const amount = parseInt(match[1]);
+      const amount = parseInt(match[1], 10);
       const unit = match[2].toLowerCase();
       let minutes = amount;
       if (unit.startsWith('hour')) minutes = amount * 60;
@@ -172,7 +172,7 @@ const QUERY_PATTERNS: Array<{
       /top\s+(\d+)?\s*(\w+)(?:\s+(?:by|with)\s+(?:most\s+)?(\w+))?/i,
     ],
     handler: (match) => {
-      const limit = match[1] ? parseInt(match[1]) : 10;
+      const limit = match[1] ? parseInt(match[1], 10) : 10;
       const field = match[2].toLowerCase();
       const metric = match[3]?.toLowerCase();
 

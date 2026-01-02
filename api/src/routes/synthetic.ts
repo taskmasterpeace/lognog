@@ -250,7 +250,7 @@ router.post('/tests/:id/run', async (req: Request, res: Response) => {
 // Get results for a test
 router.get('/tests/:id/results', (req: Request, res: Response) => {
   try {
-    const limit = parseInt(req.query.limit as string) || 100;
+    const limit = parseInt(req.query.limit as string, 10) || 100;
     const results = getSyntheticResults({ test_id: req.params.id, limit });
 
     // Parse JSON fields
@@ -269,7 +269,7 @@ router.get('/tests/:id/results', (req: Request, res: Response) => {
 // Get uptime for a test
 router.get('/tests/:id/uptime', (req: Request, res: Response) => {
   try {
-    const hours = parseInt(req.query.hours as string) || 24;
+    const hours = parseInt(req.query.hours as string, 10) || 24;
     const uptime = getSyntheticUptime(req.params.id, hours);
     res.json(uptime);
   } catch (error) {
@@ -281,7 +281,7 @@ router.get('/tests/:id/uptime', (req: Request, res: Response) => {
 // Get all results (across all tests)
 router.get('/results', (req: Request, res: Response) => {
   try {
-    const limit = parseInt(req.query.limit as string) || 100;
+    const limit = parseInt(req.query.limit as string, 10) || 100;
     const results = getSyntheticResults({ limit });
 
     // Parse JSON fields

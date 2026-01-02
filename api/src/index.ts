@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import expressWs from 'express-ws';
 import { WebSocket } from 'ws';
 import path from 'path';
@@ -33,6 +34,7 @@ import { healthCheck as clickhouseHealth, executeQuery, closeConnection } from '
 import { closeDatabase } from './db/sqlite.js';
 import { startScheduler } from './services/scheduler.js';
 import { apiLogger } from './middleware/api-logger.js';
+import { csrfProtection } from './middleware/csrf.js';
 import { shutdown as shutdownInternalLogger, logError } from './services/internal-logger.js';
 import { startScheduler as startSyntheticScheduler } from './services/synthetic/index.js';
 import { executeDSLQuery } from './db/backend.js';
@@ -47,7 +49,9 @@ const { app } = expressWs(express());
 
 // Middleware
 app.use(cors());
+app.use(cookieParser());
 app.use(express.json());
+app.use(csrfProtection);  // CSRF protection (exempts /ingest and /health)
 app.use(apiLogger);  // Log all API requests for self-monitoring
 
 // Health check endpoint
@@ -317,10 +321,42 @@ process.on('SIGTERM', async () => {
   process.exit(0);
 });
 
+// Validate security configuration on startup
+function validateSecurityConfig(): void {
+  const warnings: string[] = [];
+
+  // Check JWT secrets
+  const jwtSecret = process.env.JWT_SECRET;
+  const jwtRefreshSecret = process.env.JWT_REFRESH_SECRET;
+
+  if (!jwtSecret || jwtSecret.length < 32) {
+    warnings.push('JWT_SECRET is not set or too short (should be 32+ characters)');
+  }
+  if (!jwtRefreshSecret || jwtRefreshSecret.length < 32) {
+    warnings.push('JWT_REFRESH_SECRET is not set or too short (should be 32+ characters)');
+  }
+
+  // Check for default/weak passwords
+  const clickhousePassword = process.env.CLICKHOUSE_PASSWORD;
+  if (!clickhousePassword || clickhousePassword === 'lognog123' || clickhousePassword === 'lognog-dev-only') {
+    warnings.push('CLICKHOUSE_PASSWORD is using a default value - change for production');
+  }
+
+  // Print warnings
+  if (warnings.length > 0) {
+    console.warn('\n⚠️  SECURITY WARNINGS:');
+    warnings.forEach(w => console.warn(`   - ${w}`));
+    console.warn('');
+  }
+}
+
 // Start server
 app.listen(PORT, () => {
   console.log(`LogNog API server running on port ${PORT}`);
   console.log(`Health check: http://localhost:${PORT}/health`);
+
+  // Validate security configuration
+  validateSecurityConfig();
 
   // Seed built-in templates
   try {

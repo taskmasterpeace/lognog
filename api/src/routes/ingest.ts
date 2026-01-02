@@ -8,10 +8,21 @@ import { logIngestionStats } from '../services/internal-logger.js';
 
 const router = Router();
 
+// SQL reserved keywords that cannot be used as index names
+const SQL_RESERVED_KEYWORDS = new Set([
+  'select', 'from', 'where', 'insert', 'update', 'delete', 'drop', 'create',
+  'alter', 'table', 'index', 'database', 'grant', 'revoke', 'truncate',
+  'union', 'join', 'left', 'right', 'inner', 'outer', 'on', 'and', 'or',
+  'not', 'null', 'true', 'false', 'order', 'by', 'group', 'having', 'limit',
+  'offset', 'as', 'case', 'when', 'then', 'else', 'end', 'if', 'exists',
+  'in', 'like', 'between', 'is', 'distinct', 'all', 'any', 'some',
+]);
+
 /**
  * Sanitize index name to prevent injection and ensure valid ClickHouse table naming.
  * Only allows alphanumeric characters, hyphens, and underscores.
  * Converts to lowercase and limits length.
+ * Rejects SQL reserved keywords.
  */
 function sanitizeIndexName(name: string, defaultValue: string = 'http'): string {
   if (!name || typeof name !== 'string') return defaultValue;
@@ -25,6 +36,11 @@ function sanitizeIndexName(name: string, defaultValue: string = 'http'): string 
 
   // Must start with a letter
   if (!/^[a-z]/.test(sanitized)) {
+    return defaultValue;
+  }
+
+  // Reject SQL reserved keywords
+  if (SQL_RESERVED_KEYWORDS.has(sanitized)) {
     return defaultValue;
   }
 
@@ -1564,7 +1580,7 @@ function generateTestLog(): Record<string, unknown> {
  */
 router.post('/generate-test-data', authenticate, async (req, res) => {
   try {
-    const count = Math.min(parseInt(req.body.count) || 100, 1000);
+    const count = Math.min(parseInt(req.body.count, 10) || 100, 1000);
 
     const logs = Array.from({ length: count }, generateTestLog);
 

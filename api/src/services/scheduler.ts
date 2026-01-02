@@ -19,7 +19,7 @@ interface ScheduledReport {
 // SMTP Configuration
 const SMTP_CONFIG = {
   host: process.env.SMTP_HOST,
-  port: parseInt(process.env.SMTP_PORT || '587'),
+  port: parseInt(process.env.SMTP_PORT || '587', 10),
   secure: process.env.SMTP_SECURE === 'true',
   auth: process.env.SMTP_USER && process.env.SMTP_PASS ? {
     user: process.env.SMTP_USER,
@@ -62,9 +62,9 @@ function shouldRunNow(schedule: string, lastRun: string | null): boolean {
   if (minute !== '*' && minute !== '*/1') {
     const nowMinute = now.getMinutes();
     if (minute.startsWith('*/')) {
-      const interval = parseInt(minute.slice(2));
+      const interval = parseInt(minute.slice(2), 10);
       if (nowMinute % interval !== 0) return false;
-    } else if (parseInt(minute) !== nowMinute) {
+    } else if (parseInt(minute, 10) !== nowMinute) {
       return false;
     }
   }
@@ -73,26 +73,26 @@ function shouldRunNow(schedule: string, lastRun: string | null): boolean {
   if (hour !== '*') {
     const nowHour = now.getHours();
     if (hour.startsWith('*/')) {
-      const interval = parseInt(hour.slice(2));
+      const interval = parseInt(hour.slice(2), 10);
       if (nowHour % interval !== 0) return false;
-    } else if (parseInt(hour) !== nowHour) {
+    } else if (parseInt(hour, 10) !== nowHour) {
       return false;
     }
   }
 
   // Check day of month
   if (dayOfMonth !== '*') {
-    if (parseInt(dayOfMonth) !== now.getDate()) return false;
+    if (parseInt(dayOfMonth, 10) !== now.getDate()) return false;
   }
 
   // Check month
   if (month !== '*') {
-    if (parseInt(month) !== now.getMonth() + 1) return false;
+    if (parseInt(month, 10) !== now.getMonth() + 1) return false;
   }
 
   // Check day of week (0 = Sunday)
   if (dayOfWeek !== '*') {
-    if (parseInt(dayOfWeek) !== now.getDay()) return false;
+    if (parseInt(dayOfWeek, 10) !== now.getDay()) return false;
   }
 
   return true;
@@ -106,10 +106,10 @@ function getMinimumInterval(schedule: string): number {
 
   // Calculate minimum interval based on schedule
   if (minute.startsWith('*/')) {
-    return parseInt(minute.slice(2)) * 60 * 1000;
+    return parseInt(minute.slice(2), 10) * 60 * 1000;
   }
   if (hour.startsWith('*/')) {
-    return parseInt(hour.slice(2)) * 60 * 60 * 1000;
+    return parseInt(hour.slice(2), 10) * 60 * 60 * 1000;
   }
   if (hour !== '*') {
     return 24 * 60 * 60 * 1000; // Daily

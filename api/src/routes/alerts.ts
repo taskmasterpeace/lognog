@@ -297,7 +297,7 @@ router.post('/evaluate-all', async (_req: Request, res: Response) => {
 // Get alert history
 router.get('/history', (_req: Request, res: Response) => {
   try {
-    const limit = parseInt(_req.query.limit as string) || 100;
+    const limit = parseInt(_req.query.limit as string, 10) || 100;
     const history = getAlertHistory(undefined, limit);
 
     // Parse JSON fields
@@ -317,7 +317,7 @@ router.get('/history', (_req: Request, res: Response) => {
 // Get history for specific alert
 router.get('/:id/history', (req: Request, res: Response) => {
   try {
-    const limit = parseInt(req.query.limit as string) || 100;
+    const limit = parseInt(req.query.limit as string, 10) || 100;
     const history = getAlertHistory(req.params.id, limit);
 
     // Parse JSON fields

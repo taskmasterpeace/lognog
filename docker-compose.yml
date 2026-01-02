@@ -11,7 +11,8 @@ services:
     environment:
       CLICKHOUSE_DB: lognog
       CLICKHOUSE_USER: lognog
-      CLICKHOUSE_PASSWORD: lognog123
+      # SECURITY: Change this password in production!
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-lognog-dev-only}
     ulimits:
       nofile:
         soft: 262144
@@ -56,7 +57,7 @@ services:
       CLICKHOUSE_HOST: clickhouse
       CLICKHOUSE_PORT: 8123
       CLICKHOUSE_USER: lognog
-      CLICKHOUSE_PASSWORD: lognog123
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-lognog-dev-only}
       CLICKHOUSE_DATABASE: lognog
       SQLITE_PATH: /data/lognog.db
       JWT_SECRET: ${JWT_SECRET:-lognog-jwt-secret-change-me}

@@ -163,7 +163,7 @@ router.post('/import', authenticate, requirePermission('write'), async (req, res
  */
 router.get('/export', authenticate, requirePermission('read'), async (req, res) => {
   try {
-    const limit = Math.min(parseInt(req.query.limit as string) || 1000, 10000);
+    const limit = Math.min(parseInt(req.query.limit as string, 10) || 1000, 10000);
     const earliest = req.query.earliest as string || '-24h';
     const latest = req.query.latest as string || 'now';
 

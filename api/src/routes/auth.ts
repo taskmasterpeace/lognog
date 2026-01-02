@@ -392,7 +392,7 @@ router.post('/users/:id/activate', authenticate, requireAdmin, (req, res) => {
 router.get('/audit-log', authenticate, requireAdmin, (req, res) => {
   try {
     const userId = req.query.userId as string | undefined;
-    const limit = parseInt(req.query.limit as string) || 100;
+    const limit = parseInt(req.query.limit as string, 10) || 100;
 
     const logs = getAuthAuditLog(userId, limit);
     res.json(logs);
