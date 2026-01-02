@@ -1500,3 +1500,117 @@ export async function discoverIdentities(lookbackHours?: number): Promise<{ disc
     body: JSON.stringify({ lookbackHours: lookbackHours || 24 }),
   });
 }
+
+// ============================================================================
+// CIM (Common Information Model) API
+// ============================================================================
+
+export interface CIMField {
+  name: string;
+  type: 'string' | 'number' | 'boolean' | 'timestamp' | 'ip' | 'array';
+  description?: string;
+  required?: boolean;
+  aliases?: string[];
+}
+
+export interface DataModel {
+  id: string;
+  name: string;
+  description: string | null;
+  category: 'authentication' | 'network' | 'endpoint' | 'web' | 'custom';
+  fields: CIMField[];
+  constraints: string[];
+  is_builtin: boolean;
+  enabled: boolean;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface FieldMapping {
+  id: string;
+  source_type: string;
+  source_field: string;
+  data_model: string;
+  cim_field: string;
+  transform: string | null;
+  priority: number;
+  enabled: boolean;
+  created_at: string | null;
+}
+
+export interface CIMStats {
+  total_models: number;
+  by_category: Record<string, number>;
+  total_mappings: number;
+  mappings_by_source: Record<string, number>;
+}
+
+export async function getDataModels(options?: {
+  category?: string;
+  enabled?: boolean;
+}): Promise<{ models: DataModel[]; count: number }> {
+  const params = new URLSearchParams();
+  if (options?.category) params.set('category', options.category);
+  if (options?.enabled !== undefined) params.set('enabled', String(options.enabled));
+  return request(`/cim/models?${params}`);
+}
+
+export async function getDataModel(name: string): Promise<{ model: DataModel; mappings: FieldMapping[]; mappings_count: number }> {
+  return request(`/cim/models/${encodeURIComponent(name)}`);
+}
+
+export async function createDataModel(model: Partial<DataModel>): Promise<{ model: DataModel }> {
+  return request('/cim/models', {
+    method: 'POST',
+    body: JSON.stringify(model),
+  });
+}
+
+export async function updateDataModel(name: string, updates: Partial<DataModel>): Promise<{ model: DataModel }> {
+  return request(`/cim/models/${encodeURIComponent(name)}`, {
+    method: 'PUT',
+    body: JSON.stringify(updates),
+  });
+}
+
+export async function deleteDataModel(name: string): Promise<void> {
+  await request(`/cim/models/${encodeURIComponent(name)}`, { method: 'DELETE' });
+}
+
+export async function getCIMStats(): Promise<CIMStats> {
+  return request('/cim/models/stats');
+}
+
+export async function getFieldMappings(options?: {
+  source_type?: string;
+  data_model?: string;
+  enabled?: boolean;
+}): Promise<{ mappings: FieldMapping[]; count: number }> {
+  const params = new URLSearchParams();
+  if (options?.source_type) params.set('source_type', options.source_type);
+  if (options?.data_model) params.set('data_model', options.data_model);
+  if (options?.enabled !== undefined) params.set('enabled', String(options.enabled));
+  return request(`/cim/mappings?${params}`);
+}
+
+export async function createFieldMapping(mapping: Partial<FieldMapping>): Promise<{ mapping: FieldMapping }> {
+  return request('/cim/mappings', {
+    method: 'POST',
+    body: JSON.stringify(mapping),
+  });
+}
+
+export async function updateFieldMapping(id: string, updates: Partial<FieldMapping>): Promise<{ mapping: FieldMapping }> {
+  return request(`/cim/mappings/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(updates),
+  });
+}
+
+export async function deleteFieldMapping(id: string): Promise<void> {
+  await request(`/cim/mappings/${id}`, { method: 'DELETE' });
+}
+
+export async function getCIMSources(): Promise<{ sources: Array<{ source_type: string; mapping_count: number }>; count: number }> {
+  return request('/cim/sources');
+}
