@@ -28,9 +28,11 @@ import anomalyRouter from './routes/anomaly.js';
 import assetsRouter from './routes/assets.js';
 import identitiesRouter from './routes/identities.js';
 import cimRouter from './routes/cim.js';
+import syntheticRouter from './routes/synthetic.js';
 import { healthCheck as clickhouseHealth, executeQuery, closeConnection } from './db/clickhouse.js';
 import { closeDatabase } from './db/sqlite.js';
 import { startScheduler } from './services/scheduler.js';
+import { startScheduler as startSyntheticScheduler } from './services/synthetic/index.js';
 import { executeDSLQuery } from './db/backend.js';
 import { seedBuiltinTemplates } from './data/builtin-templates.js';
 import { seedDashboardTemplates } from './data/seed-templates.js';
@@ -83,6 +85,7 @@ app.use('/anomaly', anomalyRouter);
 app.use('/assets', assetsRouter);
 app.use('/identities', identitiesRouter);
 app.use('/cim', cimRouter);
+app.use('/synthetic', syntheticRouter);
 
 // WebSocket endpoint for live tail
 const liveTailClients: Set<WebSocket> = new Set();
@@ -270,6 +273,7 @@ if (uiDistPath) {
         req.path.startsWith('/assets') ||
         req.path.startsWith('/identities') ||
         req.path.startsWith('/cim') ||
+        req.path.startsWith('/synthetic') ||
         req.path.startsWith('/onboarding')) {
       return next();
     }
@@ -316,6 +320,9 @@ app.listen(PORT, () => {
 
   // Start the report scheduler
   startScheduler();
+
+  // Start the synthetic monitoring scheduler
+  startSyntheticScheduler();
 });
 
 export default app;

@@ -48,6 +48,7 @@ import AssetsPage from './pages/AssetsPage';
 import IdentitiesPage from './pages/IdentitiesPage';
 import CIMPage from './pages/CIMPage';
 import AgentPage from './pages/AgentPage';
+import SyntheticPage from './pages/SyntheticPage';
 
 interface NavLinkProps {
   to: string;
@@ -215,6 +216,7 @@ function Layout({ children }: { children: React.ReactNode }) {
           <NavLink to="/identities" icon={Users} onClick={closeSidebar}>Identities</NavLink>
           <NavLink to="/cim" icon={Layers} onClick={closeSidebar}>Data Models</NavLink>
           <NavLink to="/agent" icon={Bot} onClick={closeSidebar}>AI Agent</NavLink>
+          <NavLink to="/synthetic" icon={Activity} onClick={closeSidebar}>Synthetic</NavLink>
           <NavLink to="/data-sources" icon={Database} onClick={closeSidebar}>Data Sources</NavLink>
           <NavLink to="/knowledge" icon={BookOpen} onClick={closeSidebar}>Knowledge</NavLink>
 
@@ -439,6 +441,18 @@ function AppRoutes() {
             <Layout>
               <AnimatedPage>
                 <AgentPage />
+              </AnimatedPage>
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/synthetic"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <AnimatedPage>
+                <SyntheticPage />
               </AnimatedPage>
             </Layout>
           </ProtectedRoute>

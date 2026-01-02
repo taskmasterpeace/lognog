@@ -1614,3 +1614,144 @@ export async function deleteFieldMapping(id: string): Promise<void> {
 export async function getCIMSources(): Promise<{ sources: Array<{ source_type: string; mapping_count: number }>; count: number }> {
   return request('/cim/sources');
 }
+
+// ============================================================================
+// Synthetic Monitoring API
+// ============================================================================
+
+export type SyntheticTestType = 'http' | 'tcp' | 'browser' | 'api';
+export type SyntheticStatus = 'success' | 'failure' | 'timeout' | 'error';
+
+export interface SyntheticTestConfig {
+  url?: string;
+  method?: string;
+  headers?: Record<string, string>;
+  body?: string;
+  host?: string;
+  port?: number;
+  followRedirects?: boolean;
+  assertions?: Array<{
+    type: 'status' | 'responseTime' | 'bodyContains' | 'headerContains' | 'jsonPath';
+    operator: 'equals' | 'notEquals' | 'contains' | 'greaterThan' | 'lessThan';
+    value: string | number;
+    target?: string;
+  }>;
+}
+
+export interface SyntheticTest {
+  id: string;
+  name: string;
+  description: string | null;
+  test_type: SyntheticTestType;
+  config: SyntheticTestConfig;
+  schedule: string;
+  timeout_ms: number;
+  enabled: boolean;
+  tags: string[];
+  last_run: string | null;
+  last_status: SyntheticStatus | null;
+  last_response_time_ms: number | null;
+  consecutive_failures: number;
+  alert_after_failures: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SyntheticResult {
+  id: string;
+  test_id: string;
+  timestamp: string;
+  status: SyntheticStatus;
+  response_time_ms: number | null;
+  status_code: number | null;
+  error_message: string | null;
+  response_body: string | null;
+  assertions_passed: number;
+  assertions_failed: number;
+  metadata: Record<string, unknown>;
+}
+
+export interface SyntheticDashboard {
+  total_tests: number;
+  enabled_tests: number;
+  disabled_tests: number;
+  by_type: Record<string, number>;
+  by_status: Record<string, number>;
+  avg_response_time_ms: number;
+  tests_with_failures: number;
+}
+
+export interface SyntheticUptime {
+  uptime_percent: number;
+  total_checks: number;
+  successful_checks: number;
+  failed_checks: number;
+  avg_response_time_ms: number;
+}
+
+export async function getSyntheticTests(options?: {
+  enabled?: boolean;
+  type?: SyntheticTestType;
+}): Promise<SyntheticTest[]> {
+  const params = new URLSearchParams();
+  if (options?.enabled !== undefined) params.set('enabled', String(options.enabled));
+  if (options?.type) params.set('type', options.type);
+  const query = params.toString();
+  return request(`/synthetic/tests${query ? `?${query}` : ''}`);
+}
+
+export async function getSyntheticTest(id: string): Promise<SyntheticTest> {
+  return request(`/synthetic/tests/${id}`);
+}
+
+export async function createSyntheticTest(test: Partial<SyntheticTest>): Promise<SyntheticTest> {
+  return request('/synthetic/tests', {
+    method: 'POST',
+    body: JSON.stringify(test),
+  });
+}
+
+export async function updateSyntheticTest(id: string, updates: Partial<SyntheticTest>): Promise<SyntheticTest> {
+  return request(`/synthetic/tests/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(updates),
+  });
+}
+
+export async function deleteSyntheticTest(id: string): Promise<void> {
+  await request(`/synthetic/tests/${id}`, { method: 'DELETE' });
+}
+
+export async function toggleSyntheticTest(id: string): Promise<SyntheticTest> {
+  return request(`/synthetic/tests/${id}/toggle`, { method: 'POST' });
+}
+
+export async function runSyntheticTest(id: string): Promise<{ status: string; response_time_ms: number; error_message?: string }> {
+  return request(`/synthetic/tests/${id}/run`, { method: 'POST' });
+}
+
+export async function getSyntheticResults(testId?: string, limit?: number): Promise<SyntheticResult[]> {
+  if (testId) {
+    const params = limit ? `?limit=${limit}` : '';
+    return request(`/synthetic/tests/${testId}/results${params}`);
+  }
+  const params = limit ? `?limit=${limit}` : '';
+  return request(`/synthetic/results${params}`);
+}
+
+export async function getSyntheticUptime(testId: string, hours?: number): Promise<SyntheticUptime> {
+  const params = hours ? `?hours=${hours}` : '';
+  return request(`/synthetic/tests/${testId}/uptime${params}`);
+}
+
+export async function getSyntheticDashboard(): Promise<SyntheticDashboard> {
+  return request('/synthetic/dashboard');
+}
+
+export async function getSyntheticSchedulerStatus(): Promise<{ running: boolean; scheduledCount: number }> {
+  return request('/synthetic/scheduler/status');
+}
+
+export async function refreshSyntheticScheduler(): Promise<{ success: boolean; running: boolean; scheduledCount: number }> {
+  return request('/synthetic/scheduler/refresh', { method: 'POST' });
+}
