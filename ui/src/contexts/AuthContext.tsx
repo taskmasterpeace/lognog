@@ -74,6 +74,12 @@ function clearTokens(): void {
   localStorage.removeItem(REFRESH_TOKEN_KEY);
 }
 
+// Helper to read CSRF token from cookie
+function getCsrfToken(): string | null {
+  const match = document.cookie.match(/(?:^|;\s*)lognog_csrf=([^;]*)/);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
 // Authenticated request helper
 export async function authFetch(
   endpoint: string,
@@ -90,9 +96,19 @@ export async function authFetch(
     (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
   }
 
+  // Add CSRF token for state-changing methods
+  const method = options.method?.toUpperCase() || 'GET';
+  if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
+    const csrfToken = getCsrfToken();
+    if (csrfToken) {
+      (headers as Record<string, string>)['X-CSRF-Token'] = csrfToken;
+    }
+  }
+
   let response = await fetch(`${API_BASE}${endpoint}`, {
     ...options,
     headers,
+    credentials: 'include', // Ensure cookies are sent
   });
 
   // If 401 and we have a refresh token, try to refresh
@@ -104,6 +120,7 @@ export async function authFetch(
       response = await fetch(`${API_BASE}${endpoint}`, {
         ...options,
         headers,
+        credentials: 'include',
       });
     }
   }
