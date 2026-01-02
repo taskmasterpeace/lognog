@@ -32,6 +32,7 @@ import TimePicker from '../components/TimePicker';
 import FieldSidebar from '../components/FieldSidebar';
 import { Tooltip, TooltipWithCode } from '../components/ui/Tooltip';
 import { InfoIcon } from '../components/ui/InfoTip';
+import NewSourceBanner from '../components/NewSourceBanner';
 
 const SEVERITY_NAMES = ['Emergency', 'Alert', 'Critical', 'Error', 'Warning', 'Notice', 'Info', 'Debug'];
 
@@ -708,6 +709,9 @@ search * | top 10 app_name`}
 
         {/* Results Area */}
         <div className="flex-1 overflow-auto p-3 sm:p-6">
+        {/* New Source Detection Banner */}
+        <NewSourceBanner />
+
         {/* Error State */}
         {(searchMutation.isError || aiSearchMutation.isError) && (
           <div className="card border-red-200 bg-red-50 p-4 mb-6 flex items-start gap-3 animate-fade-in">

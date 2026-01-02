@@ -2379,6 +2379,53 @@ Q: Does this require cloud services? No - everything runs locally with Ollama
 Q: Will this slow down my system? Minimal - baselines calculate in background
 Q: Do I need to set up everything? No - each feature is independent`,
       },
+      {
+        title: 'LogNog Index Management and Data Sources',
+        content: `INDEX MANAGEMENT - How logs are organized in LogNog
+
+HOW INDEXES WORK:
+Logs are grouped into indexes (similar to Splunk indexes or folders). Each log belongs to one index.
+- Default index is 'main' if not specified during ingestion
+- Different ingestion sources have default indexes: agent='agent', supabase='supabase', vercel='vercel', http='http', otel='otel'
+- You can specify a custom index when sending logs
+
+HOW TO SPECIFY CUSTOM INDEX:
+When sending logs via HTTP API, add the X-Index header:
+curl -X POST /api/ingest/http \\
+  -H "X-Index: my-custom-app" \\
+  -H "X-API-Key: your-api-key" \\
+  -H "Content-Type: application/json" \\
+  -d '[{"message": "test log", "severity": 6}]'
+
+Index name rules:
+- Lowercase only
+- Alphanumeric characters, hyphens, and underscores allowed
+- Must start with a letter
+- Maximum 32 characters
+- Special characters are removed automatically
+
+WHERE TO VIEW YOUR INDEXES:
+Go to Data Sources in the sidebar, then click the Active Sources tab.
+- See all indexes with their log counts
+- View which app_names/sources are sending to each index
+- Check error counts and last seen timestamps
+
+CAN I RENAME AN INDEX?
+No - once logs are ingested to an index, they cannot be moved to a different index.
+To use a different index name, update your log sender to use the X-Index header with the desired name.
+
+HOW TO NORMALIZE FIELDS ACROSS DIFFERENT SOURCES:
+Use the Common Information Model (CIM) feature:
+1. Go to Data Models in the sidebar
+2. Create field mappings to translate different field names to standard names
+3. Example: Map Windows 'AccountName' and Linux 'user' both to CIM field 'user'
+4. Then queries like 'search user=admin' work across all sources
+
+DATA SOURCES PAGE FEATURES:
+- Active Sources tab: See all indexes and sources currently sending logs
+- Source Templates tab: Pre-configured templates for common log sources (MySQL, Nginx, sshd, etc.)
+- Each template includes: field extraction patterns, sample queries, setup instructions`,
+      },
     ];
 
     // Add documents to LlamaIndex
@@ -2612,6 +2659,39 @@ How to use:
 
 Similar to: Splunk Synthetic Monitoring (formerly Rigor), but built-in and free
 
+## 6. INDEX MANAGEMENT & DATA SOURCES
+How logs are organized and how to customize where they go.
+
+HOW INDEXES WORK:
+- Logs are grouped into indexes (like folders in Splunk)
+- Default index is 'main' if not specified
+- Each ingestion source has a default: agent='agent', supabase='supabase', vercel='vercel', http='http'
+- View all your indexes: Go to Data Sources in the sidebar → Active Sources tab
+
+HOW TO SPECIFY CUSTOM INDEX (when sending logs):
+- HTTP API: Add X-Index header to your request
+  Example: curl -H "X-Index: my-custom-app" -H "X-API-Key: <key>" -d '[{"message":"test"}]' /api/ingest/http
+- Index name rules: lowercase, alphanumeric with hyphens/underscores, max 32 characters
+- Once logs are ingested, their index cannot be changed
+
+WHERE TO SEE YOUR INDEXES:
+- Go to Data Sources in the sidebar
+- Active Sources tab shows all indexes with log counts
+- Each index shows: sources (app_names), log count, error count, last seen
+- Click an index to filter and see which sources are sending to it
+
+HOW TO NORMALIZE FIELDS ACROSS SOURCES (CIM):
+- Different sources use different field names for the same thing
+- Go to Data Models in the sidebar to set up field mappings
+- Example: Map Windows 'AccountName' AND Linux 'user' → standard CIM field 'user'
+- Then search user=admin works across all sources
+
+COMMON QUESTIONS:
+- "How do I rename an index?" → You can't rename after ingestion. Set the index when sending logs using X-Index header.
+- "How do I see where my logs are coming from?" → Data Sources → Active Sources shows all sources by index.
+- "How do I organize logs from my app?" → Use X-Index header to send to a custom index like "my-app-name".
+- "How do I make field names consistent?" → Use Data Models (CIM) to create field mappings.
+
 === QUICK NAVIGATION ===
 | Feature | Sidebar Location |
 |---------|------------------|
@@ -2621,6 +2701,7 @@ Similar to: Splunk Synthetic Monitoring (formerly Rigor), but built-in and free
 | Data Models (CIM) | Data Models |
 | AI Agent | AI Agent |
 | Synthetic Monitoring | Synthetic |
+| Data Sources / Indexes | Data Sources |
 
 All features run locally - no cloud dependencies. AI uses Ollama.`;
 

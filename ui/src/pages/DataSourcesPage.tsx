@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import {
   Database,
   Shield,
@@ -21,6 +21,9 @@ import {
   ExternalLink,
   Loader2,
   Settings,
+  Lightbulb,
+  Terminal,
+  Layers,
 } from 'lucide-react';
 import { getTemplatesByCategory, getTemplateStats, getActiveSources, SourceTemplate } from '../api/client';
 import AddDataSourceWizard from '../components/AddDataSourceWizard';
@@ -87,6 +90,16 @@ export default function DataSourcesPage() {
   const [showSetupModal, setShowSetupModal] = useState(false);
   const [showWizard, setShowWizard] = useState(false);
   const [copiedSection, setCopiedSection] = useState<string | null>(null);
+  const [showIndexTip, setShowIndexTip] = useState(() => {
+    return localStorage.getItem('lognog_hide_index_tip') !== 'true';
+  });
+
+  const dismissIndexTip = (permanent: boolean) => {
+    setShowIndexTip(false);
+    if (permanent) {
+      localStorage.setItem('lognog_hide_index_tip', 'true');
+    }
+  };
 
   // Sync tab with URL
   useEffect(() => {
@@ -239,6 +252,58 @@ export default function DataSourcesPage() {
         {/* Active Sources Tab */}
         {activeTab === 'active' && (
           <div>
+            {/* Index Management Tip Banner */}
+            {showIndexTip && (
+              <div className="mb-6 bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-800 rounded-xl p-4">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 bg-sky-100 dark:bg-sky-800 rounded-lg">
+                    <Lightbulb className="w-5 h-5 text-sky-600 dark:text-sky-400" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-sky-900 dark:text-sky-100 mb-1">
+                      Organize your logs with indexes
+                    </h3>
+                    <p className="text-sm text-sky-700 dark:text-sky-300 mb-3">
+                      Logs are grouped into indexes (like folders). When sending logs via HTTP API, use the{' '}
+                      <code className="px-1.5 py-0.5 bg-sky-100 dark:bg-sky-800 rounded font-mono text-xs">X-Index</code>{' '}
+                      header to specify a custom index name. You can also normalize field names across sources using{' '}
+                      <Link to="/data-models" className="underline hover:text-sky-900 dark:hover:text-sky-100">
+                        Data Models (CIM)
+                      </Link>.
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <code className="text-xs bg-slate-800 text-slate-100 px-3 py-1.5 rounded font-mono">
+                        curl -H "X-Index: my-app" -H "X-API-Key: ..." /api/ingest/http
+                      </code>
+                      <Link
+                        to="/docs"
+                        className="text-sm text-sky-600 dark:text-sky-400 hover:underline flex items-center gap-1"
+                      >
+                        Learn more <ExternalLink className="w-3 h-3" />
+                      </Link>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => dismissIndexTip(false)}
+                      className="p-1.5 hover:bg-sky-100 dark:hover:bg-sky-800 rounded text-sky-600 dark:text-sky-400"
+                      title="Dismiss for now"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => dismissIndexTip(true)}
+                      className="p-1.5 hover:bg-sky-100 dark:hover:bg-sky-800 rounded text-sky-600 dark:text-sky-400 text-xs"
+                      title="Don't show again"
+                    >
+                      <span className="sr-only">Don't show again</span>
+                      <CheckCircle2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Index Summary Cards */}
             {activeSources && activeSources.by_index.length > 0 && (
               <div className="flex flex-wrap gap-3 mb-6">
@@ -372,20 +437,97 @@ export default function DataSourcesPage() {
                 </table>
               </div>
             ) : (
-              <div className="bg-white dark:bg-slate-800 rounded-xl p-12 text-center border border-slate-200 dark:border-slate-700">
-                <Activity className="w-16 h-16 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">
-                  No active sources in the last 7 days
-                </h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
-                  Configure a data source to start ingesting logs
-                </p>
-                <button
-                  onClick={() => handleTabChange('templates')}
-                  className="px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg font-medium transition-colors"
-                >
-                  Browse Source Templates
-                </button>
+              <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+                {/* Header */}
+                <div className="p-6 border-b border-slate-200 dark:border-slate-700 text-center">
+                  <Activity className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-1">
+                    No log sources detected yet
+                  </h3>
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    Here are 3 ways to start sending logs to LogNog
+                  </p>
+                </div>
+
+                {/* Getting Started Options */}
+                <div className="grid md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-slate-200 dark:divide-slate-700">
+                  {/* Option 1: Syslog */}
+                  <div className="p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
+                        <Server className="w-5 h-5 text-green-600 dark:text-green-400" />
+                      </div>
+                      <h4 className="font-medium text-slate-900 dark:text-slate-100">Syslog</h4>
+                    </div>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
+                      Point any syslog-compatible device to LogNog.
+                    </p>
+                    <code className="block text-xs bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 p-2 rounded font-mono mb-2">
+                      Port: UDP/TCP 514
+                    </code>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Logs go to index: <strong>main</strong>
+                    </p>
+                  </div>
+
+                  {/* Option 2: HTTP API */}
+                  <div className="p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="p-2 bg-sky-100 dark:bg-sky-900/30 rounded-lg">
+                        <Terminal className="w-5 h-5 text-sky-600 dark:text-sky-400" />
+                      </div>
+                      <h4 className="font-medium text-slate-900 dark:text-slate-100">HTTP API</h4>
+                    </div>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
+                      Send JSON logs with custom index names.
+                    </p>
+                    <code className="block text-xs bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 p-2 rounded font-mono mb-2 break-all">
+                      POST /api/ingest/http
+                      <br />
+                      X-Index: my-app
+                    </code>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Set index via <strong>X-Index</strong> header
+                    </p>
+                  </div>
+
+                  {/* Option 3: Agent */}
+                  <div className="p-6">
+                    <div className="flex items-center gap-2 mb-3">
+                      <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
+                        <Layers className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                      </div>
+                      <h4 className="font-medium text-slate-900 dark:text-slate-100">LogNog In Agent</h4>
+                    </div>
+                    <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
+                      Install on Windows/Linux to collect logs and events.
+                    </p>
+                    <code className="block text-xs bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 p-2 rounded font-mono mb-2">
+                      LogNogIn.exe init
+                    </code>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Logs go to index: <strong>agent</strong>
+                    </p>
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div className="p-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    Need help? Check out our{' '}
+                    <Link to="/docs" className="text-sky-600 dark:text-sky-400 hover:underline">
+                      documentation
+                    </Link>{' '}
+                    or ask{' '}
+                    <span className="text-sky-600 dark:text-sky-400">NogChat</span> (bottom right).
+                  </p>
+                  <button
+                    onClick={() => handleTabChange('templates')}
+                    className="px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg font-medium text-sm transition-colors"
+                  >
+                    Browse Templates
+                  </button>
+                </div>
               </div>
             )}
           </div>
