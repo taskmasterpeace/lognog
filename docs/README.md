@@ -23,16 +23,22 @@ Welcome to the LogNog documentation! Whether you're just getting started or look
 | **[Dashboards](./DASHBOARDS.md)** | Build powerful visualizations |
 | **[Field Extraction](./FIELD_EXTRACTION.md)** | Parse any log format |
 
-### Advanced Features (NEW!)
+### Security & Intelligence
 
-| Guide | Description |
-|-------|-------------|
-| **[New Features Guide](./NEW-FEATURES-GUIDE.md)** | Complete guide to all 5 advanced features |
-| **Anomaly Detection** | UEBA with behavioral baselines and AI risk scoring |
-| **Assets & Identities** | Auto-discover and track all devices and users |
-| **Data Models (CIM)** | Normalize field names across log sources |
-| **AI Agent** | Chat with your logs in natural language |
-| **Synthetic Monitoring** | Proactive uptime testing for endpoints |
+| Feature | Description |
+|---------|-------------|
+| **Anomaly Detection (UEBA)** | Behavioral baselines + AI risk scoring |
+| **Assets & Identities** | Auto-discover and track devices/users |
+
+### Data & Monitoring
+
+| Feature | Description |
+|---------|-------------|
+| **Data Models (CIM)** | Normalize field names across sources |
+| **AI Agent** | Chat with logs in natural language |
+| **Synthetic Monitoring** | Proactive uptime testing |
+
+> **📖 Full Guide:** [New Features Guide](./NEW-FEATURES-GUIDE.md) - step-by-step for all features
 
 ### Real-World Applications
 

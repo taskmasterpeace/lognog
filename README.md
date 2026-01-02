@@ -36,12 +36,8 @@
   - [Search & Query](#search--query)
   - [User Experience](#user-experience)
   - [AI Features](#ai-features)
-  - [Security & Authentication](#security--authentication)
-- [Advanced Features](#advanced-features)
-  - [Anomaly Detection (UEBA)](#anomaly-detection-ueba)
-  - [Assets & Identities](#assets--identities)
-  - [Common Information Model (CIM)](#common-information-model-cim)
-  - [AI Agent](#ai-agent)
+  - [Security & Compliance](#security--compliance)
+  - [Data Management](#data-management)
   - [Synthetic Monitoring](#synthetic-monitoring)
 - [Installation](#installation)
   - [LogNog Full (Docker)](#lognog-full-docker-installation)
@@ -320,8 +316,24 @@ LogNog includes a powerful dashboard system with 7 visualization types:
 | **Dashboard Insights** | AI-generated anomaly detection and trends |
 | **NogChat Assistant** | Chat interface for query help |
 | **Codebase Interview Wizard** | Generate logging implementation guides for dev teams |
+| **AI Agent** | Conversational investigation assistant with tool use |
 
-### Security & Authentication
+**AI Agent** - Chat with your logs like you're talking to a SOC analyst:
+
+| You Ask | AI Does |
+|---------|---------|
+| "Show me failed logins in the last hour" | Runs search, shows results |
+| "Is there anything unusual with the DB server?" | Checks anomalies, reviews errors |
+| "Who logged in from outside the US?" | Searches, enriches IPs with GeoIP |
+| "Create an alert for brute force attacks" | Creates alert rule with proper config |
+
+Supports multiple personas: **Security Analyst**, **SRE**, **Compliance**
+
+**Location:** Sidebar → **AI Agent**
+
+### Security & Compliance
+
+**Authentication & Access Control:**
 
 | Feature | Description |
 |---------|-------------|
@@ -334,15 +346,7 @@ LogNog includes a powerful dashboard system with 7 visualization types:
 | **Password Hashing** | bcrypt with 12 rounds |
 | **User Management** | Admin UI for user lifecycle |
 
----
-
-## Advanced Features
-
-LogNog includes enterprise-grade features typically found in premium SIEM solutions like Splunk Enterprise Security.
-
-### Anomaly Detection (UEBA)
-
-User and Entity Behavior Analytics - LogNog learns what "normal" looks like and alerts when something's off.
+**Anomaly Detection (UEBA)** - LogNog learns what "normal" looks like and alerts when something's off:
 
 | Feature | Description |
 |---------|-------------|
@@ -352,17 +356,11 @@ User and Entity Behavior Analytics - LogNog learns what "normal" looks like and 
 | **AI Analysis** | Optional LLM-powered risk scoring via Ollama |
 | **Risk Dashboard** | See highest-risk entities at a glance |
 
-**Example Detections:**
-- User logging in at unusual hours or locations
-- Host transferring 10x normal data volume
-- Service account with sudden failed logins
-- Application with abnormal error rates
+Example detections: unusual login times/locations, abnormal data transfers, sudden failed logins, error rate spikes
 
 **Location:** Sidebar → **Anomaly**
 
-### Assets & Identities
-
-Automatic discovery and tracking of all devices and users in your environment.
+**Assets & Identities** - Know what's in your environment:
 
 | Feature | Description |
 |---------|-------------|
@@ -372,14 +370,11 @@ Automatic discovery and tracking of all devices and users in your environment.
 | **Privileged Flags** | Mark admin/service accounts |
 | **First/Last Seen** | Track when entities appear |
 
-**Use Cases:**
-- Know if an IP belongs to a critical server or a dev laptop
-- Find all privileged accounts that haven't logged in for 90 days
-- Track asset ownership for compliance
+Use cases: asset inventory, privileged access reviews, compliance tracking
 
 **Location:** Sidebar → **Assets** / **Identities**
 
-### Common Information Model (CIM)
+### Data Management
 
 Normalize field names across all your log sources. Write one search, query everything.
 
@@ -402,27 +397,6 @@ search user=admin
 ```
 
 **Location:** Sidebar → **Data Models**
-
-### AI Agent
-
-Conversational AI assistant that searches your logs using natural language.
-
-| Feature | Description |
-|---------|-------------|
-| **Natural Language** | Ask questions in plain English |
-| **Multi-Step Reasoning** | Breaks down complex investigations |
-| **Tool Use** | Runs searches, looks up assets, enriches IPs |
-| **Personas** | Security Analyst, SRE, Compliance modes |
-
-**Example Conversations:**
-
-| You Ask | AI Does |
-|---------|---------|
-| "Show me failed logins in the last hour" | Runs search, shows results |
-| "Is there anything unusual with the DB server?" | Checks anomalies, reviews errors |
-| "Who logged in from outside the US?" | Searches, enriches IPs with GeoIP |
-
-**Location:** Sidebar → **AI Agent**
 
 ### Synthetic Monitoring
 
