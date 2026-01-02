@@ -4,6 +4,7 @@ import { getSQLiteDB } from '../db/sqlite.js';
 import { executeQuery } from '../db/clickhouse.js';
 import { compileDSL, parseAndCompile } from '../dsl/index.js';
 import { triggerReport } from '../services/scheduler.js';
+import { rateLimit } from '../auth/middleware.js';
 
 const router = Router();
 
@@ -88,8 +89,8 @@ router.put('/:id', (req: Request, res: Response) => {
   }
 });
 
-// Trigger a scheduled report manually
-router.post('/:id/trigger', async (req: Request, res: Response) => {
+// Trigger a scheduled report manually (rate limited: 10/min - CPU intensive)
+router.post('/:id/trigger', rateLimit(10, 60000), async (req: Request, res: Response) => {
   try {
     await triggerReport(req.params.id);
     return res.json({ message: 'Report triggered successfully' });

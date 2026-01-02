@@ -50,7 +50,16 @@ const { app } = expressWs(express());
 // Middleware
 app.use(cors());
 app.use(cookieParser());
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));  // Explicit size limit
+
+// Security headers
+app.use((_req, res, next) => {
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  next();
+});
+
 app.use(csrfProtection);  // CSRF protection (exempts /ingest and /health)
 app.use(apiLogger);  // Log all API requests for self-monitoring
 
@@ -225,12 +234,22 @@ async function pollSSEClients(): Promise<void> {
           data: results.slice(0, 100), // Limit to 100 per update
         });
 
-        client.res.write(`data: ${message}\n\n`);
+        try {
+          client.res.write(`data: ${message}\n\n`);
+        } catch (writeError) {
+          console.error('SSE write failed, removing dead client:', writeError);
+          sseClients.delete(client);
+        }
       }
     } catch (error) {
       console.error('Error polling for SSE client:', error);
-      // Send error to client
-      client.res.write(`data: ${JSON.stringify({ type: 'error', message: 'Query error' })}\n\n`);
+      // Send error to client (with error handling for dead connections)
+      try {
+        client.res.write(`data: ${JSON.stringify({ type: 'error', message: 'Query error' })}\n\n`);
+      } catch (writeError) {
+        console.error('SSE error write failed, removing dead client:', writeError);
+        sseClients.delete(client);
+      }
     }
   }
 }

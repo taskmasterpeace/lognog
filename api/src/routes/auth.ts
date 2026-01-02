@@ -81,7 +81,7 @@ router.post('/setup', rateLimit(5, 60000), async (req, res) => {
       return;
     }
     console.error('Setup error:', error);
-    res.status(500).json({ error: error instanceof Error ? error.message : 'Setup failed' });
+    res.status(500).json({ error: 'Setup failed' });
   }
 });
 
@@ -314,7 +314,7 @@ router.post('/users', authenticate, requireAdmin, async (req, res) => {
       return;
     }
     console.error('Create user error:', error);
-    res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to create user' });
+    res.status(500).json({ error: 'Failed to create user' });
   }
 });
 

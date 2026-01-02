@@ -57,8 +57,16 @@ router.post('/', (req: Request, res: Response) => {
       return res.status(400).json({ error: 'level must be global, host, or alert' });
     }
 
-    if (!duration) {
-      return res.status(400).json({ error: 'duration is required' });
+    if (!duration || typeof duration !== 'string') {
+      return res.status(400).json({ error: 'duration is required (e.g., "1h", "4h", "24h", "1w", "indefinite")' });
+    }
+
+    // Validate duration format
+    const validDurations = ['1h', '4h', '8h', '12h', '24h', '2d', '3d', '1w', 'indefinite'];
+    if (!validDurations.includes(duration) && !/^\d+[hdw]$/.test(duration)) {
+      return res.status(400).json({
+        error: 'Invalid duration format. Use: 1h, 4h, 24h, 1w, indefinite, or Nh/Nd/Nw'
+      });
     }
 
     const options: CreateSilenceOptions = {

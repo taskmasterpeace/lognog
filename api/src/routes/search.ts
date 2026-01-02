@@ -13,17 +13,22 @@ import {
 } from '../db/sqlite.js';
 import { translateNaturalLanguage, getSuggestedQueries } from '../services/ai-search.js';
 import { applyFieldExtraction } from '../services/field-extractor.js';
-import { optionalAuth } from '../auth/middleware.js';
+import { optionalAuth, rateLimit } from '../auth/middleware.js';
 
 const router = Router();
 
-// Execute a DSL query
-router.post('/query', async (req: Request, res: Response) => {
+// Execute a DSL query (rate limited: 120/min for CPU-intensive parsing)
+router.post('/query', rateLimit(120, 60000), async (req: Request, res: Response) => {
   try {
     const { query, earliest, latest, extract_fields = false, source_type } = req.body;
 
     if (!query || typeof query !== 'string') {
       return res.status(400).json({ error: 'Query is required' });
+    }
+
+    // Prevent DoS via excessively long queries
+    if (query.length > 50000) {
+      return res.status(400).json({ error: 'Query exceeds maximum length (50KB)' });
     }
 
     // Measure execution time

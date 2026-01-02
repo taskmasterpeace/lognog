@@ -6,6 +6,7 @@ import {
   isValidIPv4,
   type IPClassification,
 } from '../services/ip-classifier.js';
+import { rateLimit } from '../auth/middleware.js';
 
 const router = Router();
 
@@ -43,7 +44,7 @@ router.get('/classify-ip', (req, res) => {
     if (!isValidIPv4(ip)) {
       return res.status(400).json({
         error: 'Invalid IP address',
-        message: `"${ip}" is not a valid IPv4 address`,
+        message: 'The provided value is not a valid IPv4 address',
       });
     }
 
@@ -57,7 +58,7 @@ router.get('/classify-ip', (req, res) => {
     console.error('Error classifying IP:', error);
     res.status(500).json({
       error: 'Internal server error',
-      message: error instanceof Error ? error.message : 'Unknown error',
+      message: 'Failed to classify IP address',
     });
   }
 });
@@ -85,7 +86,7 @@ router.post('/classify-ip', (req, res) => {
     if (!isValidIPv4(ip)) {
       return res.status(400).json({
         error: 'Invalid IP address',
-        message: `"${ip}" is not a valid IPv4 address`,
+        message: 'The provided value is not a valid IPv4 address',
       });
     }
 
@@ -99,21 +100,21 @@ router.post('/classify-ip', (req, res) => {
     console.error('Error classifying IP:', error);
     res.status(500).json({
       error: 'Internal server error',
-      message: error instanceof Error ? error.message : 'Unknown error',
+      message: 'Failed to classify IP address',
     });
   }
 });
 
 /**
  * POST /utils/classify-ips
- * Classify multiple IP addresses in batch
+ * Classify multiple IP addresses in batch (rate limited: 30/min)
  *
  * Body:
  *   - ips: Array of IP addresses to classify
  *
  * Returns a map of IP -> classification
  */
-router.post('/classify-ips', (req, res) => {
+router.post('/classify-ips', rateLimit(30, 60000), (req, res) => {
   try {
     const parseResult = classifyIPsSchema.safeParse(req.body);
 
@@ -144,7 +145,7 @@ router.post('/classify-ips', (req, res) => {
     console.error('Error classifying IPs:', error);
     res.status(500).json({
       error: 'Internal server error',
-      message: error instanceof Error ? error.message : 'Unknown error',
+      message: 'Failed to classify IP addresses',
     });
   }
 });
@@ -168,7 +169,7 @@ router.get('/ip-info', (req, res) => {
     if (!isValidIPv4(ip)) {
       return res.status(400).json({
         error: 'Invalid IP address',
-        message: `"${ip}" is not a valid IPv4 address`,
+        message: 'The provided value is not a valid IPv4 address',
       });
     }
 
@@ -194,7 +195,7 @@ router.get('/ip-info', (req, res) => {
     console.error('Error getting IP info:', error);
     res.status(500).json({
       error: 'Internal server error',
-      message: error instanceof Error ? error.message : 'Unknown error',
+      message: 'Failed to get IP info',
     });
   }
 });

@@ -6,6 +6,7 @@
 
 import { Router, Request, Response } from 'express';
 import { getGeoIPService } from '../services/geoip.js';
+import { rateLimit } from '../auth/middleware.js';
 
 const router = Router();
 
@@ -57,8 +58,8 @@ router.get('/lookup/:ip', async (req: Request, res: Response) => {
   }
 });
 
-// Batch lookup multiple IPs
-router.post('/lookup', async (req: Request, res: Response) => {
+// Batch lookup multiple IPs (rate limited: 30/min - database intensive)
+router.post('/lookup', rateLimit(30, 60000), async (req: Request, res: Response) => {
   try {
     const { ips } = req.body;
 
