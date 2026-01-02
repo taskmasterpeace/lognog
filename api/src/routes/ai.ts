@@ -2172,6 +2172,213 @@ REVOKING KEYS:
 - Click delete on the key to revoke
 - Revoked keys stop working immediately`,
       },
+      {
+        title: 'LogNog Anomaly Detection (UEBA)',
+        content: `ANOMALY DETECTION - User and Entity Behavior Analytics
+
+WHAT IT IS:
+LogNog learns what "normal" looks like for your users, hosts, and applications, then alerts you when something unusual happens. Traditional alerts are static thresholds ("alert if failed logins > 5"), but anomaly detection learns each entity's unique baseline so "unusual" is personalized.
+
+HOW IT WORKS:
+1. Baselines: LogNog calculates moving averages for metrics like login counts, data transferred, error rates, activity by hour/day
+2. Detection: When a new value deviates significantly (X standard deviations) from baseline, it's flagged as anomalous
+3. LLM Analysis: Optional AI review provides risk scores (0-100), plain English explanations, and investigation steps
+
+EXAMPLE SCENARIOS:
+- User normally logs in 9-5 from Seattle, suddenly logs in at 3am from Russia
+- Host normally sends 50MB/day, today sent 5GB (data exfiltration?)
+- Service account with 0 failed logins suddenly has 50 in 5 minutes
+- Employee accessing files they've never touched after giving notice
+
+HOW TO USE:
+1. Go to Anomaly in the sidebar
+2. View Risk Dashboard showing entities with highest risk scores
+3. Click anomaly to see: baseline vs actual value, AI analysis, recommendations
+4. Mark as "true positive" or "false positive" to improve accuracy
+
+Similar to Splunk UBA, but built-in and runs locally with Ollama.`,
+      },
+      {
+        title: 'LogNog Assets and Identities',
+        content: `ASSETS & IDENTITIES - Auto-discovered inventory from logs
+
+WHAT IT IS:
+A database of all "things" (assets) and "people" (identities) in your environment, automatically discovered from your logs.
+
+Assets: Servers, workstations, network devices, applications, databases
+Identities: Users, service accounts, API keys, email addresses
+
+WHY IT MATTERS:
+When you see "Failed login from 192.168.1.50 for jsmith" you want to know:
+- Is 192.168.1.50 a critical server or random workstation?
+- Is jsmith in finance or IT? A privileged admin?
+- When did we first see this IP? Is it new?
+
+HOW IT WORKS:
+1. Auto-Discovery: LogNog scans logs and extracts hostnames, IPs, MAC addresses → Assets; usernames, emails, service accounts → Identities
+2. Enrichment: Add metadata like criticality (1-100), owner, department/role, privileged flag
+3. Correlation: When viewing logs or anomalies, see full context about who/what is involved
+
+HOW TO USE:
+1. Go to Assets or Identities in the sidebar
+2. Click Discover to auto-populate from recent logs
+3. Edit entries to add criticality scores, owners, tags
+4. Use in searches: search host=* | lookup assets by hostname
+
+Similar to Splunk Asset & Identity Framework from Enterprise Security, but simpler.`,
+      },
+      {
+        title: 'LogNog Common Information Model (CIM)',
+        content: `COMMON INFORMATION MODEL - Normalize field names across log sources
+
+WHAT IT IS:
+A way to standardize field names so you can write ONE query that works across all log sources.
+
+THE PROBLEM:
+Different systems call the same thing different names:
+- Windows: AccountName, IpAddress, EventType
+- Linux: user, src, action
+- AWS CloudTrail: userIdentity.userName, sourceIPAddress, eventName
+- Firewall: srcuser, src_ip, act
+
+Without CIM: You need different searches for each source
+With CIM: Write one search using standard field names
+
+DATA MODELS (built-in):
+- Authentication: user, src, dest, action, result
+- Network Traffic: src_ip, dest_ip, src_port, dest_port, bytes
+- Endpoint: host, process, file_path, action
+- Web: src_ip, uri, method, status, user_agent
+
+HOW TO USE:
+1. Go to Data Models in the sidebar
+2. View built-in models (Authentication, Network, etc.)
+3. Click Field Mappings to set up translations
+4. Example: Source Type=windows:security, Source Field=AccountName, CIM Field=user
+5. Now searches using "user" automatically find Windows AccountName
+
+BEFORE CIM:
+search (sourcetype=windows AccountName=admin) OR (sourcetype=linux user=admin) OR (sourcetype=aws userIdentity.userName=admin)
+
+AFTER CIM:
+search user=admin
+
+Similar to Splunk Common Information Model, just simplified.`,
+      },
+      {
+        title: 'LogNog AI Agent Framework',
+        content: `AI AGENT - Conversational assistant that searches and investigates logs
+
+WHAT IT IS:
+An AI assistant you can talk to in plain English. It searches logs, investigates issues, looks up assets, and creates alerts - all through natural conversation.
+
+THE PROBLEM IT SOLVES:
+Writing log queries requires knowing query syntax, field names, and how to structure complex searches. The AI Agent lets you just ask questions.
+
+AGENT PERSONAS:
+- Security Analyst: Threat hunting, investigating incidents
+- SRE: Troubleshooting outages, performance issues
+- Compliance: Audit queries, access reviews
+
+WHAT THE AGENT CAN DO:
+- "Show me failed logins in the last hour" → Runs: search action=failure | stats count by user
+- "Is there anything unusual with the database server?" → Checks anomalies, reviews recent errors
+- "Who logged into the VPN from outside the US?" → Searches VPN logs, enriches IPs with GeoIP, filters by country
+- "Create an alert for more than 10 failed SSH logins" → Creates alert rule with proper thresholds
+
+AVAILABLE TOOLS:
+- search_logs: Execute DSL queries
+- get_asset: Look up asset details
+- enrich_ip: GeoIP lookup
+- create_alert: Create alert rules
+- get_anomalies: Check anomaly data
+
+HOW TO USE:
+1. Go to AI Agent in the sidebar
+2. Select a persona (or use default)
+3. Type your question in plain English
+4. Watch the AI think, run searches, provide answers with evidence
+5. Ask follow-up questions to dig deeper
+
+Similar to Splunk AI Assistant, but runs locally with Ollama - no cloud costs.`,
+      },
+      {
+        title: 'LogNog Synthetic Monitoring',
+        content: `SYNTHETIC MONITORING - Proactive uptime testing
+
+WHAT IT IS:
+Automated tests that regularly check if your websites, APIs, and services are up and responding correctly - like a robot user continuously testing your services.
+
+THE PROBLEM IT SOLVES:
+Traditional monitoring is reactive - you find out something is down when users complain or logs show errors. Synthetic monitoring is proactive - it continuously tests from the outside and alerts before real users are affected.
+
+TEST TYPES:
+- HTTP: Is this URL responding with 200 OK?
+- API: Does endpoint return valid JSON with expected fields?
+- TCP: Can we connect to this database port?
+- Browser: Full page render test (coming soon)
+
+ASSERTIONS YOU CAN ADD:
+- status equals 200
+- responseTime lessThan 1000 (ms)
+- body contains "Welcome"
+- header Content-Type contains application/json
+- jsonPath data.status equals "healthy"
+
+EXAMPLE TESTS:
+- Homepage returns 200: Know immediately if site is down
+- API response < 500ms: Catch performance degradation before users notice
+- Login page contains "Sign In": Detect if page is broken or showing errors
+- Database port reachable: Know if DB is accepting connections
+
+HOW TO USE:
+1. Go to Synthetic in the sidebar
+2. Click New Test
+3. Fill in: Name, Type (HTTP/TCP/API), URL, Schedule (every 5 min), Assertions
+4. Save and watch dashboard for results
+5. View history for uptime percentages and trends
+
+ALERTING:
+After X consecutive failures, trigger an alert via email or webhook.
+
+Similar to Splunk Synthetic Monitoring (formerly Rigor), but built-in and free.`,
+      },
+      {
+        title: 'LogNog Feature Quick Reference',
+        content: `LOGNOG FEATURE QUICK REFERENCE
+
+WHERE TO FIND EVERYTHING:
+| Feature | Sidebar Location | What You'll See |
+|---------|------------------|-----------------|
+| Anomaly Detection | Anomaly | Risk dashboard, anomaly timeline, baseline charts |
+| Assets | Assets | Asset inventory, criticality scores, discovery |
+| Identities | Identities | User/account inventory, privilege flags |
+| Data Models (CIM) | Data Models | Field definitions, mappings, validation |
+| AI Agent | AI Agent | Chat interface, tool execution, personas |
+| Synthetic Monitoring | Synthetic | Test list, uptime stats, results history |
+
+GETTING STARTED RECOMMENDATIONS:
+
+If just exploring:
+1. AI Agent: Ask "What are the most common errors in the last hour?"
+2. Synthetic: Add HTTP check for a website you care about
+3. Assets: Click Discover to auto-populate from logs
+
+If you want security monitoring:
+1. Run Asset & Identity discovery
+2. Set criticality on important servers
+3. Enable Anomaly Detection baseline calculation
+4. Review Risk Dashboard daily
+
+If you want unified searching:
+1. Set up CIM field mappings for your main log sources
+2. Now searches like user=admin work everywhere
+
+FAQ:
+Q: Does this require cloud services? No - everything runs locally with Ollama
+Q: Will this slow down my system? Minimal - baselines calculate in background
+Q: Do I need to set up everything? No - each feature is independent`,
+      },
     ];
 
     // Add documents to LlamaIndex
@@ -2272,6 +2479,7 @@ YOUR EXPERTISE:
 - Log ingestion from syslog, HTTP, OTLP, agents
 - Alerts, dashboards, and monitoring best practices
 - Helping Splunk users transition to LogNog
+- All LogNog features including security, monitoring, and AI capabilities
 
 YOUR PERSONALITY:
 - Concise and practical - give actionable answers
@@ -2290,7 +2498,131 @@ Key differences:
 - LogNog uses "search" instead of implicit search
 - Field names use snake_case (hostname, app_name, severity)
 - Time ranges are passed separately, not in query
-- regex uses ~ operator: message~"pattern"`;
+- regex uses ~ operator: message~"pattern"
+
+=== LOGNOG FEATURES ===
+
+## 1. ANOMALY DETECTION (UEBA)
+User and Entity Behavior Analytics - learns what "normal" looks like, then alerts on unusual behavior.
+
+How it works:
+- Calculates moving averages for metrics (login counts, bytes sent, error rates)
+- Tracks patterns by hour of day and day of week
+- Flags events that deviate significantly from baseline
+- Optional LLM analysis provides risk scores (0-100) and explanations
+
+Location: Go to "Anomaly" in the sidebar
+- View Risk Dashboard showing entities with highest risk scores
+- Click anomalies to see baseline vs actual value + AI analysis
+- Mark anomalies as true/false positive to improve accuracy
+
+Example use cases:
+- User normally logs in 9-5 from Seattle, suddenly logs in at 3am from Russia
+- Host normally sends 50MB/day, today it sent 5GB (data exfiltration?)
+- Service account with 0 failed logins suddenly has 50 in 5 minutes
+
+Similar to: Splunk UBA (User Behavior Analytics), but runs locally with Ollama
+
+## 2. ASSETS & IDENTITIES
+Auto-discovered inventory of devices and users from your logs.
+
+Assets = servers, workstations, network devices, applications, databases
+Identities = users, service accounts, API keys, email addresses
+
+How to use:
+- Go to "Assets" or "Identities" in the sidebar
+- Click "Discover" to auto-populate from recent logs
+- Edit entries to add criticality scores (1-100), owners, tags
+- Use in searches: search host=* | lookup assets by hostname
+
+Why it matters:
+- When you see "Failed login from 192.168.1.50 for jsmith" you know:
+  - Is that IP a critical server or random workstation?
+  - Is jsmith in finance or IT? Privileged admin?
+  - When did we first see this IP?
+
+Similar to: Splunk Asset & Identity Framework from Enterprise Security
+
+## 3. COMMON INFORMATION MODEL (CIM) / DATA MODELS
+Normalizes field names across different log sources for unified queries.
+
+The problem: Different systems call the same thing different names:
+- Windows: AccountName, IpAddress, EventType
+- Linux: user, src, action
+- AWS: userIdentity.userName, sourceIPAddress, eventName
+- Firewall: srcuser, src_ip, act
+
+With CIM, write ONE query using standard names:
+- Authentication model: user, src, dest, action, result
+- Network model: src_ip, dest_ip, src_port, dest_port, bytes
+- Endpoint model: host, process, file_path, action
+- Web model: src_ip, uri, method, status, user_agent
+
+How to use:
+- Go to "Data Models" in the sidebar
+- View built-in models (Authentication, Network, etc.)
+- Click "Field Mappings" to set up translations
+- Example: Map Windows AccountName → user, then search user=admin works everywhere
+
+Similar to: Splunk Common Information Model, just simplified
+
+## 4. AI AGENT
+Conversational AI that searches logs and investigates issues using natural language.
+
+Available Personas:
+- Security Analyst: Threat hunting, investigating incidents
+- SRE: Troubleshooting outages, performance issues
+- Compliance: Audit queries, access reviews
+
+What it can do:
+- "Show me failed logins in the last hour" → runs appropriate DSL query
+- "Is there anything unusual with the database server?" → checks anomalies
+- "Who logged into the VPN from outside the US?" → searches + GeoIP enrichment
+- "Create an alert for more than 10 failed SSH logins" → creates alert rule
+
+How to use:
+- Go to "AI Agent" in the sidebar
+- Select a persona (or use default)
+- Type questions in plain English
+- Watch the AI think, run searches, and provide answers with evidence
+
+Similar to: Splunk AI Assistant, but runs locally with Ollama
+
+## 5. SYNTHETIC MONITORING
+Proactive uptime testing - automated tests that regularly check if services are up.
+
+Test Types:
+- HTTP: Is this URL responding with 200 OK?
+- API: Does this endpoint return valid JSON with expected fields?
+- TCP: Can we connect to this database port?
+- Browser: Full page render test (coming soon)
+
+Assertions you can add:
+- Status code equals 200
+- Response time under 500ms
+- Body contains "healthy"
+- JSON path data.status equals "ok"
+
+How to use:
+- Go to "Synthetic" in the sidebar
+- Click "New Test"
+- Fill in: Name, Type (HTTP/TCP/API), URL, Schedule (every 5 min), Assertions
+- Save and watch dashboard for results
+- View history for uptime percentages and trends
+
+Similar to: Splunk Synthetic Monitoring (formerly Rigor), but built-in and free
+
+=== QUICK NAVIGATION ===
+| Feature | Sidebar Location |
+|---------|------------------|
+| Anomaly Detection | Anomaly |
+| Assets | Assets |
+| Identities | Identities |
+| Data Models (CIM) | Data Models |
+| AI Agent | AI Agent |
+| Synthetic Monitoring | Synthetic |
+
+All features run locally - no cloud dependencies. AI uses Ollama.`;
 
 // Execute a DSL query and return results for insights
 async function executeInsightQuery(query: string): Promise<{ results: Record<string, unknown>[]; error?: string }> {
