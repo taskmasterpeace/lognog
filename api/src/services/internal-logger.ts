@@ -96,9 +96,11 @@ export async function logInternalEvent(event: InternalEvent): Promise<void> {
   const severity = event.severity ?? SEVERITY.INFO;
 
   // Build the log entry matching ClickHouse schema
+  // Note: ClickHouse DateTime64 doesn't accept 'Z' suffix, need space-separated format
+  const ts = timestamp.toISOString().replace('T', ' ').replace('Z', '');
   const logEntry: Record<string, unknown> = {
-    timestamp: timestamp.toISOString(),
-    received_at: timestamp.toISOString(),
+    timestamp: ts,
+    received_at: ts,
     severity,
     facility: 1, // user-level
     priority: (1 * 8) + severity, // facility * 8 + severity
