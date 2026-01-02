@@ -21,8 +21,10 @@ const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 // Paths exempt from CSRF (API key authenticated or pre-auth endpoints)
 const EXEMPT_PATHS = [
-  '/ingest/',           // Agent ingestion uses API keys
-  '/api/ingest/',       // Alternate path
+  '/ingest',            // Agent ingestion uses API keys (exact match)
+  '/ingest/',           // Agent ingestion uses API keys (with trailing slash)
+  '/api/ingest',        // Alternate path (exact match)
+  '/api/ingest/',       // Alternate path (with trailing slash)
   '/health',            // Health checks
   '/auth/login',        // Login - no CSRF token exists yet
   '/auth/setup',        // Initial setup - no CSRF token exists yet
