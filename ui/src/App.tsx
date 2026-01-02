@@ -21,6 +21,7 @@ import {
   Server,
   Users,
   Layers,
+  Bot,
 } from 'lucide-react';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
@@ -46,6 +47,7 @@ import AnomalyPage from './pages/AnomalyPage';
 import AssetsPage from './pages/AssetsPage';
 import IdentitiesPage from './pages/IdentitiesPage';
 import CIMPage from './pages/CIMPage';
+import AgentPage from './pages/AgentPage';
 
 interface NavLinkProps {
   to: string;
@@ -212,6 +214,7 @@ function Layout({ children }: { children: React.ReactNode }) {
           <NavLink to="/assets" icon={Server} onClick={closeSidebar}>Assets</NavLink>
           <NavLink to="/identities" icon={Users} onClick={closeSidebar}>Identities</NavLink>
           <NavLink to="/cim" icon={Layers} onClick={closeSidebar}>Data Models</NavLink>
+          <NavLink to="/agent" icon={Bot} onClick={closeSidebar}>AI Agent</NavLink>
           <NavLink to="/data-sources" icon={Database} onClick={closeSidebar}>Data Sources</NavLink>
           <NavLink to="/knowledge" icon={BookOpen} onClick={closeSidebar}>Knowledge</NavLink>
 
@@ -424,6 +427,18 @@ function AppRoutes() {
             <Layout>
               <AnimatedPage>
                 <CIMPage />
+              </AnimatedPage>
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/agent"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <AnimatedPage>
+                <AgentPage />
               </AnimatedPage>
             </Layout>
           </ProtectedRoute>

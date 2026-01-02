@@ -483,6 +483,33 @@ function initializeSchema(): void {
     CREATE INDEX IF NOT EXISTS idx_data_models_enabled ON data_models(enabled);
     CREATE INDEX IF NOT EXISTS idx_field_mappings_source ON field_mappings(source_type);
     CREATE INDEX IF NOT EXISTS idx_field_mappings_model ON field_mappings(data_model);
+
+    -- AI Agent Conversations
+    CREATE TABLE IF NOT EXISTS agent_conversations (
+      id TEXT PRIMARY KEY,
+      persona_id TEXT NOT NULL,
+      title TEXT NOT NULL,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+
+    -- AI Agent Messages
+    CREATE TABLE IF NOT EXISTS agent_messages (
+      id TEXT PRIMARY KEY,
+      conversation_id TEXT NOT NULL,
+      role TEXT NOT NULL,  -- 'user', 'assistant', 'system'
+      content TEXT NOT NULL,
+      tool_calls TEXT,  -- JSON array of tool calls with results
+      thinking TEXT,  -- Optional thinking/reasoning content
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (conversation_id) REFERENCES agent_conversations(id) ON DELETE CASCADE
+    );
+
+    -- Create indexes for agent tables
+    CREATE INDEX IF NOT EXISTS idx_agent_conversations_persona ON agent_conversations(persona_id);
+    CREATE INDEX IF NOT EXISTS idx_agent_conversations_updated ON agent_conversations(updated_at);
+    CREATE INDEX IF NOT EXISTS idx_agent_messages_conversation ON agent_messages(conversation_id);
+    CREATE INDEX IF NOT EXISTS idx_agent_messages_created ON agent_messages(created_at);
   `);
 
   // Add new columns to dashboards table if they don't exist
@@ -3703,4 +3730,136 @@ export function getDataModelStats(): {
     total_mappings: totalMappings,
     mappings_by_source,
   };
+}
+
+// ============================================================================
+// AI Agent Conversations
+// ============================================================================
+
+export interface AgentConversation {
+  id: string;
+  persona_id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+  messages?: AgentMessage[];
+}
+
+export interface AgentMessage {
+  id: string;
+  conversation_id: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  tool_calls?: string;
+  thinking?: string;
+  created_at: string;
+}
+
+export function getAgentConversations(filters?: {
+  persona_id?: string;
+  limit?: number;
+}): AgentConversation[] {
+  const database = getSQLiteDB();
+
+  let sql = 'SELECT * FROM agent_conversations WHERE 1=1';
+  const params: unknown[] = [];
+
+  if (filters?.persona_id) {
+    sql += ' AND persona_id = ?';
+    params.push(filters.persona_id);
+  }
+
+  sql += ' ORDER BY updated_at DESC';
+
+  if (filters?.limit) {
+    sql += ' LIMIT ?';
+    params.push(filters.limit);
+  }
+
+  return database.prepare(sql).all(...params) as AgentConversation[];
+}
+
+export function getAgentConversation(id: string): AgentConversation | null {
+  const database = getSQLiteDB();
+
+  const conversation = database.prepare(
+    'SELECT * FROM agent_conversations WHERE id = ?'
+  ).get(id) as AgentConversation | undefined;
+
+  if (!conversation) {
+    return null;
+  }
+
+  // Load messages
+  const messages = database.prepare(
+    'SELECT * FROM agent_messages WHERE conversation_id = ? ORDER BY created_at ASC'
+  ).all(id) as AgentMessage[];
+
+  return {
+    ...conversation,
+    messages,
+  };
+}
+
+export function createAgentConversation(data: {
+  persona_id: string;
+  title: string;
+}): AgentConversation {
+  const database = getSQLiteDB();
+  const id = uuidv4();
+
+  database.prepare(`
+    INSERT INTO agent_conversations (id, persona_id, title)
+    VALUES (?, ?, ?)
+  `).run(id, data.persona_id, data.title);
+
+  return getAgentConversation(id)!;
+}
+
+export function updateConversationTitle(id: string, title: string): AgentConversation | null {
+  const database = getSQLiteDB();
+
+  database.prepare(`
+    UPDATE agent_conversations
+    SET title = ?, updated_at = datetime('now')
+    WHERE id = ?
+  `).run(title, id);
+
+  return getAgentConversation(id);
+}
+
+export function deleteAgentConversation(id: string): boolean {
+  const database = getSQLiteDB();
+  const result = database.prepare('DELETE FROM agent_conversations WHERE id = ?').run(id);
+  return result.changes > 0;
+}
+
+export function addAgentMessage(data: {
+  conversation_id: string;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  tool_calls?: string;
+  thinking?: string;
+}): AgentMessage {
+  const database = getSQLiteDB();
+  const id = uuidv4();
+
+  database.prepare(`
+    INSERT INTO agent_messages (id, conversation_id, role, content, tool_calls, thinking)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `).run(id, data.conversation_id, data.role, data.content, data.tool_calls || null, data.thinking || null);
+
+  // Update conversation's updated_at
+  database.prepare(`
+    UPDATE agent_conversations SET updated_at = datetime('now') WHERE id = ?
+  `).run(data.conversation_id);
+
+  return database.prepare('SELECT * FROM agent_messages WHERE id = ?').get(id) as AgentMessage;
+}
+
+export function getConversationMessages(conversationId: string): AgentMessage[] {
+  const database = getSQLiteDB();
+  return database.prepare(
+    'SELECT * FROM agent_messages WHERE conversation_id = ? ORDER BY created_at ASC'
+  ).all(conversationId) as AgentMessage[];
 }
