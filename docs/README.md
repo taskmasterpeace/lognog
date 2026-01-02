@@ -23,6 +23,17 @@ Welcome to the LogNog documentation! Whether you're just getting started or look
 | **[Dashboards](./DASHBOARDS.md)** | Build powerful visualizations |
 | **[Field Extraction](./FIELD_EXTRACTION.md)** | Parse any log format |
 
+### Advanced Features (NEW!)
+
+| Guide | Description |
+|-------|-------------|
+| **[New Features Guide](./NEW-FEATURES-GUIDE.md)** | Complete guide to all 5 advanced features |
+| **Anomaly Detection** | UEBA with behavioral baselines and AI risk scoring |
+| **Assets & Identities** | Auto-discover and track all devices and users |
+| **Data Models (CIM)** | Normalize field names across log sources |
+| **AI Agent** | Chat with your logs in natural language |
+| **Synthetic Monitoring** | Proactive uptime testing for endpoints |
+
 ### Real-World Applications
 
 | Guide | Description |
@@ -148,6 +159,12 @@ Real-world solutions:
 | Vercel Log Drains | ✅ Complete | [Vercel Integration](./VERCEL-INTEGRATION.md) |
 | Supabase Log Drains | ✅ Complete | [Supabase Integration](./SUPABASE-INTEGRATION.md) |
 | MCP (Claude Desktop) | ✅ Complete | [MCP Integration](./MCP-INTEGRATION.md) |
+| Anomaly Detection (UEBA) | ✅ Complete | [New Features Guide](./NEW-FEATURES-GUIDE.md) |
+| Asset Management | ✅ Complete | [New Features Guide](./NEW-FEATURES-GUIDE.md) |
+| Identity Management | ✅ Complete | [New Features Guide](./NEW-FEATURES-GUIDE.md) |
+| Common Info Model (CIM) | ✅ Complete | [New Features Guide](./NEW-FEATURES-GUIDE.md) |
+| AI Agent | ✅ Complete | [New Features Guide](./NEW-FEATURES-GUIDE.md) |
+| Synthetic Monitoring | ✅ Complete | [New Features Guide](./NEW-FEATURES-GUIDE.md) |
 
 ---
 
@@ -215,6 +232,13 @@ See individual guides for detailed API examples.
 | **Workflow Action** | Automated action triggered from logs |
 | **Index** | Collection of logs (by source type) |
 | **Severity** | Syslog severity level (0=emergency, 7=debug) |
+| **UEBA** | User and Entity Behavior Analytics - detects abnormal behavior |
+| **Asset** | A device, server, or endpoint tracked in LogNog |
+| **Identity** | A user, service account, or API key tracked in LogNog |
+| **CIM** | Common Information Model - standardized field names |
+| **Data Model** | A CIM schema defining canonical fields for a category |
+| **Baseline** | The "normal" pattern for an entity used in anomaly detection |
+| **Synthetic Test** | An automated check that verifies endpoint availability |
 
 ---
 

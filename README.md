@@ -37,6 +37,12 @@
   - [User Experience](#user-experience)
   - [AI Features](#ai-features)
   - [Security & Authentication](#security--authentication)
+- [Advanced Features](#advanced-features)
+  - [Anomaly Detection (UEBA)](#anomaly-detection-ueba)
+  - [Assets & Identities](#assets--identities)
+  - [Common Information Model (CIM)](#common-information-model-cim)
+  - [AI Agent](#ai-agent)
+  - [Synthetic Monitoring](#synthetic-monitoring)
 - [Installation](#installation)
   - [LogNog Full (Docker)](#lognog-full-docker-installation)
   - [LogNog Lite (Windows)](#lognog-lite-installation)
@@ -132,6 +138,11 @@ That's it! You're now running a fully-featured log management platform.
 | **Real-time Tail** | Yes (SSE) | Yes | Yes | Yes |
 | **AI Features** | Yes (Ollama) | Premium | No | No |
 | **GeoIP** | Yes | Yes | Yes | Plugin |
+| **UEBA/Anomaly Detection** | Yes | Premium | No | No |
+| **Asset Management** | Yes | Premium | No | No |
+| **Common Info Model** | Yes | Yes | No | No |
+| **AI Agent** | Yes (Ollama) | Premium | No | No |
+| **Synthetic Monitoring** | Yes | No | No | No |
 | **Components** | 1-3 | 1 | 3+ | 3+ |
 
 *ELK and Loki are free but require significant infrastructure and expertise
@@ -322,6 +333,125 @@ LogNog includes a powerful dashboard system with 7 visualization types:
 | **No Default Passwords** | You create credentials on first run |
 | **Password Hashing** | bcrypt with 12 rounds |
 | **User Management** | Admin UI for user lifecycle |
+
+---
+
+## Advanced Features
+
+LogNog includes enterprise-grade features typically found in premium SIEM solutions like Splunk Enterprise Security.
+
+### Anomaly Detection (UEBA)
+
+User and Entity Behavior Analytics - LogNog learns what "normal" looks like and alerts when something's off.
+
+| Feature | Description |
+|---------|-------------|
+| **Baseline Learning** | Moving averages for login counts, data transfer, error rates |
+| **Per-Entity Profiles** | Each user/host/app has its own "normal" |
+| **Time-Aware** | Understands patterns by hour and day of week |
+| **AI Analysis** | Optional LLM-powered risk scoring via Ollama |
+| **Risk Dashboard** | See highest-risk entities at a glance |
+
+**Example Detections:**
+- User logging in at unusual hours or locations
+- Host transferring 10x normal data volume
+- Service account with sudden failed logins
+- Application with abnormal error rates
+
+**Location:** Sidebar → **Anomaly**
+
+### Assets & Identities
+
+Automatic discovery and tracking of all devices and users in your environment.
+
+| Feature | Description |
+|---------|-------------|
+| **Auto-Discovery** | Extracts hosts, IPs, users from your logs |
+| **Criticality Scoring** | Rate importance 1-100 |
+| **Ownership Tracking** | Assign owners to assets |
+| **Privileged Flags** | Mark admin/service accounts |
+| **First/Last Seen** | Track when entities appear |
+
+**Use Cases:**
+- Know if an IP belongs to a critical server or a dev laptop
+- Find all privileged accounts that haven't logged in for 90 days
+- Track asset ownership for compliance
+
+**Location:** Sidebar → **Assets** / **Identities**
+
+### Common Information Model (CIM)
+
+Normalize field names across all your log sources. Write one search, query everything.
+
+| Feature | Description |
+|---------|-------------|
+| **Built-in Models** | Authentication, Network, Endpoint, Web |
+| **Field Mappings** | Map source fields to standard names |
+| **Auto-Normalization** | Searches use canonical fields automatically |
+
+**Before CIM:**
+```
+search (sourcetype=windows AccountName=admin) OR
+       (sourcetype=linux user=admin) OR
+       (sourcetype=aws userIdentity.userName=admin)
+```
+
+**After CIM:**
+```
+search user=admin
+```
+
+**Location:** Sidebar → **Data Models**
+
+### AI Agent
+
+Conversational AI assistant that searches your logs using natural language.
+
+| Feature | Description |
+|---------|-------------|
+| **Natural Language** | Ask questions in plain English |
+| **Multi-Step Reasoning** | Breaks down complex investigations |
+| **Tool Use** | Runs searches, looks up assets, enriches IPs |
+| **Personas** | Security Analyst, SRE, Compliance modes |
+
+**Example Conversations:**
+
+| You Ask | AI Does |
+|---------|---------|
+| "Show me failed logins in the last hour" | Runs search, shows results |
+| "Is there anything unusual with the DB server?" | Checks anomalies, reviews errors |
+| "Who logged in from outside the US?" | Searches, enriches IPs with GeoIP |
+
+**Location:** Sidebar → **AI Agent**
+
+### Synthetic Monitoring
+
+Proactive uptime testing - be the first to know when services go down.
+
+| Test Type | Description |
+|-----------|-------------|
+| **HTTP** | Check if URLs return expected status codes |
+| **API** | Validate endpoints with JSON assertions |
+| **TCP** | Verify port connectivity |
+| **Browser** | Playwright-based page load tests (coming soon) |
+
+**Features:**
+
+| Feature | Description |
+|---------|-------------|
+| **Scheduling** | Every 1/5/15/30 min, hourly, daily |
+| **Assertions** | Status code, response time, body content, JSON paths |
+| **Uptime Tracking** | Historical uptime percentages |
+| **Consecutive Failures** | Alert after X failures in a row |
+
+**Example Tests:**
+- Homepage returns 200 in under 500ms
+- `/api/health` returns `{"status":"ok"}`
+- Database port 5432 is reachable
+
+**Location:** Sidebar → **Synthetic**
+
+> **📖 Detailed Guide:** See [New Features Guide](docs/NEW-FEATURES-GUIDE.md) for step-by-step usage and real-world examples.
 
 ---
 
@@ -751,6 +881,7 @@ LogNog supports 14+ notification services via Apprise:
 
 | Document | Description |
 |----------|-------------|
+| [New Features Guide](docs/NEW-FEATURES-GUIDE.md) | UEBA, Assets, CIM, AI Agent, Synthetic Monitoring |
 | [Query Language](docs/QUERY-LANGUAGE.md) | Complete DSL reference |
 | [Dashboards](docs/DASHBOARDS.md) | Dashboard features and templates |
 | [Codebase Interview Wizard](docs/CODEBASE-INTERVIEW-WIZARD.md) | AI logging implementation guides |
@@ -826,6 +957,11 @@ python build.py  # Build EXE
 - Windows Event Log collection
 - File Integrity Monitoring
 - GeoIP and IP classification
+- **Anomaly Detection (UEBA)** - Behavioral baselines + AI-powered risk scoring
+- **Asset & Identity Framework** - Auto-discovery and tracking
+- **Common Information Model (CIM)** - Field normalization across sources
+- **AI Agent** - Conversational log investigation
+- **Synthetic Monitoring** - Proactive uptime testing
 
 ### Planned
 
@@ -833,6 +969,7 @@ python build.py  # Build EXE
 - JSON batch import via UI
 - PDF export for dashboards
 - Dashboard template gallery
+- Browser-based synthetic tests (Playwright)
 
 **Medium Term:**
 - Sigma rule importer (3000+ security rules)
@@ -840,7 +977,6 @@ python build.py  # Build EXE
 - macOS/Linux agent packages
 
 **Long Term:**
-- Machine learning anomaly detection
 - Grafana data source plugin
 - Kubernetes deployment (Helm chart)
 - Multi-tenant support
