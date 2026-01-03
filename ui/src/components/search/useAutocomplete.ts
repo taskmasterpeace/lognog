@@ -38,6 +38,9 @@ export function useAutocomplete(options: UseAutocompleteOptions) {
     context: null,
   });
 
+  // Track if manually closed to prevent auto-reopen
+  const [manuallyClosed, setManuallyClosed] = useState(false);
+
   const context = useContextDetection(query, cursorPosition);
   const { fields, fieldValues, loading: fieldsLoading, fetchFieldValues } = useFieldSuggestions();
 
@@ -143,6 +146,11 @@ export function useAutocomplete(options: UseAutocompleteOptions) {
     return items.slice(0, MAX_SUGGESTIONS);
   }, [context, fields, fieldValues, queryHistory, enabled]);
 
+  // Reset manually closed when query changes (user is typing)
+  useEffect(() => {
+    setManuallyClosed(false);
+  }, [query]);
+
   // Update state when suggestions change
   useEffect(() => {
     if (!enabled) {
@@ -150,12 +158,15 @@ export function useAutocomplete(options: UseAutocompleteOptions) {
       return;
     }
 
+    // Only auto-open if not manually closed
+    const shouldBeOpen = !manuallyClosed && suggestions.length > 0 && context.type !== 'unknown';
+
     setState((prev) => ({
       ...prev,
       suggestions,
       selectedIndex: 0,
       context,
-      isOpen: suggestions.length > 0 && context.type !== 'unknown',
+      isOpen: shouldBeOpen,
       loading: fieldsLoading,
     }));
 
@@ -163,7 +174,7 @@ export function useAutocomplete(options: UseAutocompleteOptions) {
     if (context.type === 'field-value' && context.fieldName) {
       fetchFieldValues(context.fieldName);
     }
-  }, [suggestions, context, fieldsLoading, fetchFieldValues, enabled]);
+  }, [suggestions, context, fieldsLoading, fetchFieldValues, enabled, manuallyClosed]);
 
   // Keyboard navigation
   const handleKeyDown = useCallback(
@@ -200,6 +211,7 @@ export function useAutocomplete(options: UseAutocompleteOptions) {
         case 'Escape':
           e.preventDefault();
           setState((prev) => ({ ...prev, isOpen: false }));
+          setManuallyClosed(true);
           return true;
 
         default:
@@ -225,6 +237,7 @@ export function useAutocomplete(options: UseAutocompleteOptions) {
   // Close dropdown
   const close = useCallback(() => {
     setState((prev) => ({ ...prev, isOpen: false }));
+    setManuallyClosed(true);
   }, []);
 
   // Open dropdown
