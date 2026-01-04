@@ -1030,11 +1030,11 @@ export default function SearchPage() {
                                     {SEVERITY_NAMES[Number(value)] || String(value)}
                                   </span>
                                 ) : key === 'timestamp' ? (
-                                  <span className="text-slate-600 whitespace-nowrap">
+                                  <span className="text-slate-600 dark:text-slate-300 whitespace-nowrap">
                                     {new Date(String(value)).toLocaleString()}
                                   </span>
                                 ) : key === 'message' ? (
-                                  <span className="font-mono text-xs text-slate-700 max-w-md truncate block">
+                                  <span className="font-mono text-xs text-slate-700 dark:text-slate-300 max-w-md truncate block">
                                     {String(value)}
                                   </span>
                                 ) : key === 'hostname' || key === 'app_name' ? (

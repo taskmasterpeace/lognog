@@ -125,7 +125,8 @@ export default function StorageTab() {
   }
 
   // Calculate days until oldest data expires (based on 90 day default)
-  const oldestDate = storage.oldest_data ? new Date(storage.oldest_data) : null;
+  const rawOldestDate = storage.oldest_data ? new Date(storage.oldest_data) : null;
+  const oldestDate = rawOldestDate && rawOldestDate.getFullYear() >= 2000 ? rawOldestDate : null;
   const daysOfData = oldestDate
     ? Math.ceil((Date.now() - oldestDate.getTime()) / (1000 * 60 * 60 * 24))
     : 0;
