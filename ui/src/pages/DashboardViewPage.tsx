@@ -14,7 +14,6 @@ import {
   LineChart,
   Table2,
   Hash,
-  Clock,
   ChevronDown,
   Grid3X3,
   Gauge,
@@ -63,7 +62,6 @@ import {
 import { HeatmapChart, HeatmapData } from '../components/charts/HeatmapChart';
 import { GaugeChart } from '../components/charts/GaugeChart';
 import TimePickerEnhanced from '../components/TimePickerEnhanced';
-import { TimeSeriesChartEnhanced, YAxisScaleModeSelector, type YAxisScaleMode } from '../components/charts/TimeSeriesChartEnhanced';
 import {
   DashboardGrid,
   DashboardHeader,
@@ -97,14 +95,6 @@ const AUTO_REFRESH_OPTIONS = [
   { label: '30 seconds', value: 30000 },
   { label: '1 minute', value: 60000 },
   { label: '5 minutes', value: 300000 },
-];
-
-const TIME_PRESETS = [
-  { label: 'Last 15 minutes', value: '-15m' },
-  { label: 'Last hour', value: '-1h' },
-  { label: 'Last 4 hours', value: '-4h' },
-  { label: 'Last 24 hours', value: '-24h' },
-  { label: 'Last 7 days', value: '-7d' },
 ];
 
 interface PanelData {
@@ -864,17 +854,20 @@ export default function DashboardViewPage() {
     }
   };
 
-  // Convert panels to layout format
+  // Convert panels to layout format (filtered by selected page)
   const panelLayouts: PanelLayout[] = useMemo(() => {
     if (!dashboard?.panels) return [];
-    return dashboard.panels.map((panel, index) => ({
+    const filteredPanels = dashboard.panels.filter(
+      panel => !selectedPageId || panel.page_id === selectedPageId
+    );
+    return filteredPanels.map((panel, index) => ({
       id: panel.id,
       x: panel.position_x ?? (index % 3) * 4,
       y: panel.position_y ?? Math.floor(index / 3) * 4,
       w: panel.width ?? 4,
       h: panel.height ?? 4,
     }));
-  }, [dashboard?.panels]);
+  }, [dashboard?.panels, selectedPageId]);
 
   if (isLoading) {
     return (
@@ -926,7 +919,7 @@ export default function DashboardViewPage() {
 
             {/* Time Range Selector - Enhanced */}
             <TimePickerEnhanced
-              onRangeChange={(earliest, latest) => {
+              onRangeChange={(earliest, _latest) => {
                 setTimeRange(earliest);
               }}
               defaultRange={timeRange}

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import './TimePicker.css';
-import { Clock, Calendar, ChevronDown, X, ChevronRight, Sliders } from 'lucide-react';
+import { Clock, ChevronDown, ChevronRight } from 'lucide-react';
 import { Tooltip } from './ui/Tooltip';
 
 interface TimeRange {
