@@ -58,6 +58,8 @@ import {
 } from '../api/client';
 import { HeatmapChart, HeatmapData } from '../components/charts/HeatmapChart';
 import { GaugeChart } from '../components/charts/GaugeChart';
+import TimePickerEnhanced from '../components/TimePickerEnhanced';
+import { TimeSeriesChartEnhanced, YAxisScaleModeSelector, type YAxisScaleMode } from '../components/charts/TimeSeriesChartEnhanced';
 import {
   DashboardGrid,
   DashboardHeader,
@@ -530,7 +532,7 @@ export default function DashboardViewPage() {
   const { drilldown } = useDrilldown();
 
   const [timeRange, setTimeRange] = useState('-24h');
-  const [showTimeDropdown, setShowTimeDropdown] = useState(false);
+  // const [showTimeDropdown, setShowTimeDropdown] = useState(false); // Now handled by TimePickerEnhanced
   const [showAutoRefreshDropdown, setShowAutoRefreshDropdown] = useState(false);
   const [autoRefreshInterval, setAutoRefreshInterval] = useState(0);
   const [showPanelEditor, setShowPanelEditor] = useState(false);
@@ -765,7 +767,7 @@ export default function DashboardViewPage() {
     );
   }
 
-  const selectedPreset = TIME_PRESETS.find(p => p.value === timeRange) || TIME_PRESETS[3];
+  // selectedPreset moved to TimePickerEnhanced component
 
   return (
     <div className="min-h-full bg-slate-50 dark:bg-slate-900 flex flex-col">
@@ -790,36 +792,13 @@ export default function DashboardViewPage() {
               </button>
             )}
 
-            {/* Time Range Selector */}
-            <div className="relative">
-              <button
-                onClick={() => setShowTimeDropdown(!showTimeDropdown)}
-                className="btn-secondary"
-              >
-                <Clock className="w-4 h-4 text-slate-400" />
-                <span>{selectedPreset.label}</span>
-                <ChevronDown className="w-4 h-4 text-slate-400" />
-              </button>
-
-              {showTimeDropdown && (
-                <div className="dropdown right-0 w-48 animate-fade-in">
-                  {TIME_PRESETS.map((preset) => (
-                    <button
-                      key={preset.value}
-                      onClick={() => {
-                        setTimeRange(preset.value);
-                        setShowTimeDropdown(false);
-                      }}
-                      className={`dropdown-item ${
-                        timeRange === preset.value ? 'bg-sky-50 text-sky-600 font-medium' : ''
-                      }`}
-                    >
-                      {preset.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            {/* Time Range Selector - Enhanced */}
+            <TimePickerEnhanced
+              onRangeChange={(earliest, latest) => {
+                setTimeRange(earliest);
+              }}
+              defaultRange={timeRange}
+            />
 
             {/* Auto-Refresh Selector */}
             <div className="relative">
