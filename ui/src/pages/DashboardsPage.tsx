@@ -238,9 +238,9 @@ export default function DashboardsPage() {
         <section>
           <div className="flex items-center gap-2 mb-4">
             <Sparkles className="w-5 h-5 text-amber-500" />
-            <h2 className="text-lg font-semibold text-slate-900">Starter Templates</h2>
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Starter Templates</h2>
           </div>
-          <p className="text-slate-500 text-sm mb-4">
+          <p className="text-slate-500 dark:text-slate-400 text-sm mb-4">
             Quick-start with pre-configured dashboards for common use cases
           </p>
 
@@ -255,8 +255,8 @@ export default function DashboardsPage() {
                   <div className={`w-12 h-12 bg-gradient-to-br ${template.color} rounded-xl flex items-center justify-center text-2xl mb-3 shadow-lg group-hover:scale-110 transition-transform`}>
                     {template.icon}
                   </div>
-                  <h4 className="font-semibold text-slate-900 mb-1">{template.name}</h4>
-                  <p className="text-sm text-slate-500 line-clamp-2">{template.description}</p>
+                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-1">{template.name}</h4>
+                  <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2">{template.description}</p>
                 </div>
               </button>
             ))}
