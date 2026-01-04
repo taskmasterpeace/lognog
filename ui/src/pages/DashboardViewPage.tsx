@@ -27,6 +27,7 @@ import {
   Sparkles,
   Variable,
   Copy,
+  Cloud,
 } from 'lucide-react';
 import {
   XAxis,
@@ -61,6 +62,7 @@ import {
 } from '../api/client';
 import { HeatmapChart, HeatmapData } from '../components/charts/HeatmapChart';
 import { GaugeChart } from '../components/charts/GaugeChart';
+import { WordCloudChart } from '../components/charts/WordCloudChart';
 import TimePickerEnhanced from '../components/TimePickerEnhanced';
 import {
   DashboardGrid,
@@ -88,6 +90,7 @@ const VISUALIZATION_OPTIONS = [
   { value: 'stat', label: 'Single Stat', icon: Hash },
   { value: 'heatmap', label: 'Heatmap', icon: Grid3X3 },
   { value: 'gauge', label: 'Gauge', icon: Gauge },
+  { value: 'wordcloud', label: 'Word Cloud', icon: Cloud },
 ];
 
 const AUTO_REFRESH_OPTIONS = [
@@ -308,6 +311,29 @@ function PanelVisualization({
             max={maxGaugeValue}
             height={200}
             thresholds={{ low: maxGaugeValue * 0.33, medium: maxGaugeValue * 0.66, high: maxGaugeValue }}
+          />
+        </div>
+      );
+
+    case 'wordcloud':
+      // Transform data for word cloud: first column = name, second column = value
+      const wordCloudData = results.map(row => {
+        const values = Object.values(row);
+        return {
+          name: String(values[0] || ''),
+          value: Number(values[1]) || 1,
+        };
+      }).filter(item => item.name);
+      return (
+        <div className="h-full w-full">
+          <WordCloudChart
+            data={wordCloudData}
+            height={240}
+            onWordClick={(word) => {
+              if (onDrilldown && keys.length > 0) {
+                onDrilldown(keys[0], word);
+              }
+            }}
           />
         </div>
       );
@@ -565,12 +591,13 @@ search error | timechart span=1h count"
                     <p><strong>Single Stat:</strong> Show one key metric prominently</p>
                     <p><strong>Heatmap:</strong> Visualize patterns in 2D data</p>
                     <p><strong>Gauge:</strong> Display a metric with min/max range</p>
+                    <p><strong>Word Cloud:</strong> Visualize word frequency from aggregated data</p>
                   </div>
                 }
                 placement="right"
               />
             </label>
-            <div className="grid grid-cols-4 sm:grid-cols-7 gap-2">
+            <div className="grid grid-cols-4 sm:grid-cols-8 gap-2">
               {VISUALIZATION_OPTIONS.map((option) => {
                 const Icon = option.icon;
                 return (

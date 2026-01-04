@@ -21,6 +21,7 @@ import {
 } from 'recharts';
 import { HeatmapChart } from '../components/charts/HeatmapChart';
 import { GaugeChart } from '../components/charts/GaugeChart';
+import { WordCloudChart } from '../components/charts/WordCloudChart';
 import { executeSearch } from '../api/client';
 
 const CHART_COLORS = ['#0ea5e9', '#8b5cf6', '#22c55e', '#f59e0b', '#ef4444', '#ec4899', '#06b6d4', '#84cc16'];
@@ -374,6 +375,17 @@ function PanelVisualization({
           thresholds={{ low: 33, medium: 66, high: 100 }}
         />
       );
+    }
+
+    case 'wordcloud': {
+      const wordCloudData = data.map(row => {
+        const values = Object.values(row);
+        return {
+          name: String(values[0] || ''),
+          value: Number(values[1]) || 1,
+        };
+      }).filter(item => item.name);
+      return <WordCloudChart data={wordCloudData} height={240} />;
     }
 
     default:

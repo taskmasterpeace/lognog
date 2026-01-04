@@ -15,3 +15,6 @@ export type { BarChartProps, BarChartData } from './BarChart';
 
 export { StatCard } from './StatCard';
 export type { StatCardProps } from './StatCard';
+
+export { WordCloudChart } from './WordCloudChart';
+export type { WordCloudChartProps, WordCloudData } from './WordCloudChart';
