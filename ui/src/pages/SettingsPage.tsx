@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import { InfoTip } from '../components/ui/InfoTip';
 import NotificationChannelsSection from '../components/NotificationChannelsSection';
+import { useDateFormat } from '../contexts/DateFormatContext';
 
 // User preferences interface
 interface UserPreferences {
@@ -41,6 +42,7 @@ interface UserPreferences {
   sidebar_open: boolean;
   default_view_mode: 'log' | 'table' | 'json';
   query_history_limit: number;
+  date_format: '12-hour' | '24-hour' | 'day-of-week' | 'iso' | 'short';
 }
 
 // Tab configuration - base tabs for all users
@@ -74,6 +76,7 @@ export default function SettingsPage() {
     deactivateUser,
     activateUser,
   } = useAuth();
+  const { setDateFormat } = useDateFormat();
   const [activeTab, setActiveTab] = useState<TabId>('preferences');
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [loading, setLoading] = useState(true);
@@ -102,6 +105,7 @@ export default function SettingsPage() {
     sidebar_open: true,
     default_view_mode: 'log',
     query_history_limit: 10,
+    date_format: '12-hour',
   });
   const [prefsLoading, setPrefsLoading] = useState(true);
   const [prefsSaving, setPrefsSaving] = useState(false);
@@ -248,6 +252,10 @@ export default function SettingsPage() {
       if (response.ok) {
         const data = await response.json();
         setPreferences(data);
+        // Sync date format with context
+        if (data.date_format) {
+          setDateFormat(data.date_format);
+        }
       }
     } catch (err) {
       console.error('Failed to load preferences:', err);
@@ -278,6 +286,11 @@ export default function SettingsPage() {
         // Apply theme immediately
         if (updates.theme) {
           applyTheme(updates.theme);
+        }
+
+        // Apply date format immediately
+        if (updates.date_format) {
+          setDateFormat(updates.date_format);
         }
       }
     } catch (err) {
@@ -743,6 +756,28 @@ export default function SettingsPage() {
             </select>
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
               Default time range for search queries
+            </p>
+          </div>
+
+          {/* Date Format */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Date & Time Format
+            </label>
+            <select
+              value={preferences.date_format}
+              onChange={(e) => savePreferences({ date_format: e.target.value as UserPreferences['date_format'] })}
+              disabled={prefsSaving}
+              className="w-full max-w-xs px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+            >
+              <option value="12-hour">12-hour (Dec 28, 2025 2:30 PM)</option>
+              <option value="24-hour">24-hour (Dec 28, 2025 14:30)</option>
+              <option value="day-of-week">With day (Sat, Dec 28, 2025 2:30 PM)</option>
+              <option value="iso">ISO (2025-12-28 14:30:00)</option>
+              <option value="short">Short (12/28/25 2:30 PM)</option>
+            </select>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              How timestamps are displayed throughout the app
             </p>
           </div>
 

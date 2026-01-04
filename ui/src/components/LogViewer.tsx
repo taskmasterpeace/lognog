@@ -10,6 +10,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { AnnotatedValue, useSourceAnnotationsOptional } from './SourceAnnotations';
+import { useDateFormat } from '../contexts/DateFormatContext';
 
 // Types
 export interface LogEntry {
@@ -38,22 +39,6 @@ const SEVERITY_CONFIG = {
   5: { name: 'Notice', color: 'text-amber-700 bg-amber-100 ring-amber-600/30', bgColor: 'bg-amber-50/50' },
   6: { name: 'Info', color: 'text-amber-700 bg-amber-100 ring-amber-600/30', bgColor: 'bg-amber-50/50' },
   7: { name: 'Debug', color: 'text-slate-700 bg-slate-100 ring-slate-600/30', bgColor: 'bg-slate-50/50' },
-};
-
-// Helper function to format timestamp
-const formatTimestamp = (timestamp: string): string => {
-  try {
-    return new Date(timestamp).toLocaleString('en-US', {
-      month: 'short',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-      hour12: false,
-    });
-  } catch {
-    return timestamp;
-  }
 };
 
 // Helper function to get relative time
@@ -129,6 +114,7 @@ const FieldValue: React.FC<FieldValueProps> = ({ field, value, onAddFilter, sear
   const [showActions, setShowActions] = useState(false);
   const [copied, setCopied] = useState(false);
   const annotationContext = useSourceAnnotationsOptional();
+  const { formatDate } = useDateFormat();
 
   const handleCopy = async () => {
     try {
@@ -156,7 +142,7 @@ const FieldValue: React.FC<FieldValueProps> = ({ field, value, onAddFilter, sear
     if (field === 'timestamp') {
       return (
         <span className="text-slate-600 dark:text-slate-400 flex items-center gap-2">
-          <span>{formatTimestamp(valueStr)}</span>
+          <span>{formatDate(valueStr)}</span>
           <span className="text-xs text-slate-400">({getRelativeTime(valueStr)})</span>
         </span>
       );
@@ -245,6 +231,7 @@ const LogRow: React.FC<LogRowProps> = ({
   onAddFilter,
   searchTerms,
 }) => {
+  const { formatDate } = useDateFormat();
   const severity = typeof log.severity === 'number' ? log.severity : 6;
   const severityConfig = SEVERITY_CONFIG[severity as keyof typeof SEVERITY_CONFIG] || SEVERITY_CONFIG[6];
 
@@ -299,8 +286,8 @@ const LogRow: React.FC<LogRowProps> = ({
           {/* Collapsed View - Single Line */}
           {!isExpanded && (
             <div className="flex items-start gap-3 text-sm">
-              <span className="text-slate-500 dark:text-nog-400 font-mono text-xs whitespace-nowrap flex-shrink-0 w-32">
-                {log.timestamp ? formatTimestamp(log.timestamp) : '—'}
+              <span className="text-slate-500 dark:text-nog-400 font-mono text-xs whitespace-nowrap flex-shrink-0 w-40">
+                {log.timestamp ? formatDate(log.timestamp) : '—'}
               </span>
 
               {log.severity !== undefined && (

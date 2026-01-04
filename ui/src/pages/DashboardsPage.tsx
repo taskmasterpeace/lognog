@@ -17,6 +17,7 @@ import {
 import { getDashboards, createDashboard, deleteDashboard, duplicateDashboard, Dashboard } from '../api/client';
 import DashboardBuilderWizard from '../components/DashboardBuilderWizard';
 import AppScopeFilter from '../components/AppScopeFilter';
+import { useDateFormat } from '../contexts/DateFormatContext';
 
 const TEMPLATES = [
   {
@@ -46,6 +47,7 @@ const TEMPLATES = [
 ];
 
 export default function DashboardsPage() {
+  const { formatDatePart } = useDateFormat();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showWizard, setShowWizard] = useState(false);
   const [newDashboardName, setNewDashboardName] = useState('');
@@ -201,7 +203,7 @@ export default function DashboardsPage() {
                         )}
                         <span className="flex items-center gap-1">
                           <Calendar className="w-3 sm:w-3.5 h-3 sm:h-3.5" />
-                          {new Date(dashboard.created_at).toLocaleDateString()}
+                          {formatDatePart(dashboard.created_at)}
                         </span>
                         <span className="flex items-center gap-1">
                           <Grid3X3 className="w-3 sm:w-3.5 h-3 sm:h-3.5" />

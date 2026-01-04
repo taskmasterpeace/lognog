@@ -381,6 +381,7 @@ function initializeSchema(): void {
       sidebar_open INTEGER DEFAULT 1,
       default_view_mode TEXT DEFAULT 'log',
       query_history_limit INTEGER DEFAULT 10,
+      date_format TEXT DEFAULT '12-hour',
       updated_at TEXT DEFAULT (datetime('now'))
     );
 
@@ -3542,6 +3543,7 @@ export interface UserPreferences {
   sidebar_open: number;
   default_view_mode: 'log' | 'table' | 'json';
   query_history_limit: number;
+  date_format: '12-hour' | '24-hour' | 'day-of-week' | 'iso' | 'short';
   updated_at: string;
 }
 
@@ -3564,6 +3566,7 @@ export function upsertUserPreferences(userId: string, prefs: Partial<Omit<UserPr
     if (prefs.sidebar_open !== undefined) { fields.push('sidebar_open = ?'); values.push(prefs.sidebar_open); }
     if (prefs.default_view_mode !== undefined) { fields.push('default_view_mode = ?'); values.push(prefs.default_view_mode); }
     if (prefs.query_history_limit !== undefined) { fields.push('query_history_limit = ?'); values.push(prefs.query_history_limit); }
+    if (prefs.date_format !== undefined) { fields.push('date_format = ?'); values.push(prefs.date_format); }
 
     if (fields.length > 0) {
       fields.push("updated_at = datetime('now')");
@@ -3572,15 +3575,16 @@ export function upsertUserPreferences(userId: string, prefs: Partial<Omit<UserPr
     }
   } else {
     database.prepare(`
-      INSERT INTO user_preferences (user_id, theme, default_time_range, sidebar_open, default_view_mode, query_history_limit)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO user_preferences (user_id, theme, default_time_range, sidebar_open, default_view_mode, query_history_limit, date_format)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `).run(
       userId,
       prefs.theme || 'system',
       prefs.default_time_range || '-24h',
       prefs.sidebar_open ?? 1,
       prefs.default_view_mode || 'log',
-      prefs.query_history_limit ?? 10
+      prefs.query_history_limit ?? 10,
+      prefs.date_format || '12-hour'
     );
   }
 

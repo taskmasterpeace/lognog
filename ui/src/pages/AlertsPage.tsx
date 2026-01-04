@@ -48,6 +48,7 @@ import VariableHelper from '../components/VariableHelper';
 // Note: VariableInsertHelper is available for advanced template editing
 import { InfoTip } from '../components/ui/InfoTip';
 import AppScopeFilter from '../components/AppScopeFilter';
+import { useDateFormat } from '../contexts/DateFormatContext';
 
 // Local type for alert history (used in UI)
 interface LocalAlertHistory {
@@ -115,6 +116,7 @@ const TIME_RANGES = [
 ];
 
 export default function AlertsPage() {
+  const { formatDate } = useDateFormat();
   const [searchParams, setSearchParams] = useSearchParams();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
@@ -585,13 +587,13 @@ export default function AlertsPage() {
                       <div>
                         <div className="text-slate-500 dark:text-slate-400">Last Run</div>
                         <div className="font-medium text-slate-900 dark:text-slate-100">
-                          {alert.last_run ? new Date(alert.last_run).toLocaleString() : 'Never'}
+                          {alert.last_run ? formatDate(alert.last_run) : 'Never'}
                         </div>
                       </div>
                       <div>
                         <div className="text-slate-500 dark:text-slate-400">Last Triggered</div>
                         <div className="font-medium text-slate-900 dark:text-slate-100">
-                          {alert.last_triggered ? new Date(alert.last_triggered).toLocaleString() : 'Never'}
+                          {alert.last_triggered ? formatDate(alert.last_triggered) : 'Never'}
                         </div>
                       </div>
                     </div>
@@ -1373,7 +1375,7 @@ export default function AlertsPage() {
                                 {alert?.name || 'Unknown Alert'}
                               </div>
                               <div className="text-sm text-slate-500">
-                                {new Date(entry.triggered_at).toLocaleString()}
+                                {formatDate(entry.triggered_at)}
                               </div>
                             </div>
                             <div className="text-sm text-slate-600 dark:text-slate-400 mt-1">

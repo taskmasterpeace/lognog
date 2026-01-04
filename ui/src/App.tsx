@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { DateFormatProvider } from './contexts/DateFormatContext';
 import ThemeToggle from './components/ThemeToggle';
 import NogChat from './components/NogChat';
 import AnimatedPage from './components/ui/AnimatedPage';
@@ -640,11 +641,13 @@ function AppRoutes() {
 export default function App() {
   return (
     <ThemeProvider>
-      <AuthProvider>
-        <BrowserRouter>
-          <AppRoutes />
-        </BrowserRouter>
-      </AuthProvider>
+      <DateFormatProvider>
+        <AuthProvider>
+          <BrowserRouter>
+            <AppRoutes />
+          </BrowserRouter>
+        </AuthProvider>
+      </DateFormatProvider>
     </ThemeProvider>
   );
 }

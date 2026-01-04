@@ -31,6 +31,7 @@ router.get('/preferences', authenticate, (req: Request, res: Response) => {
       sidebar_open: true,
       default_view_mode: 'log',
       query_history_limit: 10,
+      date_format: '12-hour',
     });
   }
 
@@ -40,6 +41,7 @@ router.get('/preferences', authenticate, (req: Request, res: Response) => {
     sidebar_open: prefs.sidebar_open === 1,
     default_view_mode: prefs.default_view_mode,
     query_history_limit: prefs.query_history_limit,
+    date_format: prefs.date_format || '12-hour',
   });
 });
 
@@ -51,7 +53,7 @@ router.put('/preferences', authenticate, (req: Request, res: Response) => {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  const { theme, default_time_range, sidebar_open, default_view_mode, query_history_limit } = req.body;
+  const { theme, default_time_range, sidebar_open, default_view_mode, query_history_limit, date_format } = req.body;
 
   // Validate inputs
   if (theme && !['light', 'dark', 'system'].includes(theme)) {
@@ -66,12 +68,17 @@ router.put('/preferences', authenticate, (req: Request, res: Response) => {
     return res.status(400).json({ error: 'Query history limit must be between 1 and 100' });
   }
 
+  if (date_format && !['12-hour', '24-hour', 'day-of-week', 'iso', 'short'].includes(date_format)) {
+    return res.status(400).json({ error: 'Invalid date format. Must be 12-hour, 24-hour, day-of-week, iso, or short' });
+  }
+
   const prefs = upsertUserPreferences(userId, {
     theme,
     default_time_range,
     sidebar_open: sidebar_open === undefined ? undefined : (sidebar_open ? 1 : 0),
     default_view_mode,
     query_history_limit,
+    date_format,
   });
 
   return res.json({
@@ -80,6 +87,7 @@ router.put('/preferences', authenticate, (req: Request, res: Response) => {
     sidebar_open: prefs.sidebar_open === 1,
     default_view_mode: prefs.default_view_mode,
     query_history_limit: prefs.query_history_limit,
+    date_format: prefs.date_format || '12-hour',
   });
 });
 
