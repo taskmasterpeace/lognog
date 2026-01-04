@@ -28,11 +28,22 @@ import {
 
 const router = Router();
 
-// Get all dashboards
+// Get all dashboards with their panels
 router.get('/', (_req: Request, res: Response) => {
   try {
     const dashboards = getDashboards();
-    return res.json(dashboards);
+    // Include panels for each dashboard so UI can show panel count
+    const dashboardsWithPanels = dashboards.map(dashboard => {
+      const panels = getDashboardPanels(dashboard.id);
+      return {
+        ...dashboard,
+        panels: panels.map(p => ({
+          ...p,
+          options: JSON.parse(p.options),
+        })),
+      };
+    });
+    return res.json(dashboardsWithPanels);
   } catch (error) {
     console.error('Error fetching dashboards:', error);
     return res.status(500).json({ error: 'Failed to fetch dashboards' });
