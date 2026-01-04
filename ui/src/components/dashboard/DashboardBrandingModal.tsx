@@ -46,7 +46,7 @@ export function DashboardBrandingModal({
         <div className="modal-header">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Palette className="w-5 h-5 text-sky-500" />
+              <Palette className="w-5 h-5 text-amber-500" />
               <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                 Dashboard Branding
               </h3>
@@ -101,7 +101,7 @@ export function DashboardBrandingModal({
                   onClick={() => setLogoPosition(pos)}
                   className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-medium transition-colors ${
                     logoPosition === pos
-                      ? 'border-sky-500 bg-sky-50 text-sky-700 dark:bg-sky-900/20 dark:text-sky-400'
+                      ? 'border-amber-500 bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400'
                       : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:border-slate-300'
                   }`}
                 >

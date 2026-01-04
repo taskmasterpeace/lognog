@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Plus,
@@ -11,21 +11,25 @@ import {
   X,
   Sparkles,
   Copy,
+  Wand2,
+  Filter,
 } from 'lucide-react';
 import { getDashboards, createDashboard, deleteDashboard, duplicateDashboard, Dashboard } from '../api/client';
+import DashboardBuilderWizard from '../components/DashboardBuilderWizard';
+import AppScopeFilter from '../components/AppScopeFilter';
 
 const TEMPLATES = [
   {
     name: 'System Overview',
     description: 'Monitor system health, log volume, and errors across all hosts',
     icon: '🖥️',
-    color: 'from-blue-500 to-cyan-500',
+    color: 'from-amber-500 to-amber-500',
   },
   {
     name: 'Network Traffic',
     description: 'Firewall logs, connection states, and traffic patterns',
     icon: '🌐',
-    color: 'from-purple-500 to-pink-500',
+    color: 'from-amber-500 to-pink-500',
   },
   {
     name: 'Security Events',
@@ -37,25 +41,28 @@ const TEMPLATES = [
     name: 'Application Logs',
     description: 'Application performance, errors, and usage metrics',
     icon: '📱',
-    color: 'from-green-500 to-emerald-500',
+    color: 'from-green-500 to-amber-500',
   },
 ];
 
 export default function DashboardsPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showWizard, setShowWizard] = useState(false);
   const [newDashboardName, setNewDashboardName] = useState('');
   const [newDashboardDescription, setNewDashboardDescription] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+  const [appScope, setAppScope] = useState<string>('all');
 
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const { data: dashboards, isLoading, error } = useQuery({
-    queryKey: ['dashboards'],
-    queryFn: getDashboards,
+    queryKey: ['dashboards', appScope],
+    queryFn: () => getDashboards(appScope === 'all' ? undefined : appScope),
   });
 
   const createMutation = useMutation({
-    mutationFn: () => createDashboard(newDashboardName, newDashboardDescription),
+    mutationFn: () => createDashboard(newDashboardName, newDashboardDescription, appScope === 'all' ? 'default' : appScope),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dashboards'] });
       setShowCreateModal(false);
@@ -89,7 +96,7 @@ export default function DashboardsPage() {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-full">
-        <Loader2 className="w-10 h-10 text-sky-500 animate-spin mb-4" />
+        <Loader2 className="w-10 h-10 text-amber-500 animate-spin mb-4" />
         <p className="text-slate-600">Loading dashboards...</p>
       </div>
     );
@@ -116,13 +123,26 @@ export default function DashboardsPage() {
               <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100">Dashboards</h1>
               <p className="text-slate-500 dark:text-slate-400 text-sm mt-1 hidden sm:block">Create and manage log visualization dashboards</p>
             </div>
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="btn-primary w-full sm:w-auto justify-center"
-            >
-              <Plus className="w-5 h-5" />
-              <span>New Dashboard</span>
-            </button>
+            <div className="flex gap-2 w-full sm:w-auto items-center">
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-slate-400" />
+                <AppScopeFilter value={appScope} onChange={setAppScope} />
+              </div>
+              <button
+                onClick={() => setShowWizard(true)}
+                className="btn-primary flex-1 sm:flex-initial justify-center"
+              >
+                <Wand2 className="w-5 h-5" />
+                <span>Build from Index</span>
+              </button>
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="btn-secondary flex-1 sm:flex-initial justify-center"
+              >
+                <Plus className="w-5 h-5" />
+                <span className="hidden sm:inline">Blank</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -138,7 +158,7 @@ export default function DashboardsPage() {
                   <div className="p-4 sm:p-5">
                     <div className="flex items-start justify-between mb-3 gap-2">
                       <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-                        <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-sky-400 to-sky-600 rounded-lg flex items-center justify-center shadow-md flex-shrink-0">
+                        <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-amber-400 to-amber-600 rounded-lg flex items-center justify-center shadow-md flex-shrink-0">
                           <LayoutDashboard className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                         </div>
                         <div className="min-w-0">
@@ -153,7 +173,7 @@ export default function DashboardsPage() {
                         <button
                           onClick={() => duplicateMutation.mutate(dashboard.id)}
                           disabled={duplicateMutation.isPending}
-                          className="p-1.5 text-slate-400 hover:text-sky-500 hover:bg-sky-50 dark:hover:bg-sky-900/30 rounded-lg sm:opacity-0 sm:group-hover:opacity-100 transition-all disabled:opacity-50"
+                          className="p-1.5 text-slate-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded-lg sm:opacity-0 sm:group-hover:opacity-100 transition-all disabled:opacity-50"
                           title="Duplicate dashboard"
                         >
                           <Copy className="w-4 h-4" />
@@ -174,16 +194,21 @@ export default function DashboardsPage() {
 
                     <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-700">
                       <div className="flex items-center gap-3 sm:gap-4 text-xs text-slate-500 dark:text-slate-400">
+                        {dashboard.app_scope && dashboard.app_scope !== 'default' && (
+                          <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded text-xs font-medium">
+                            {dashboard.app_scope}
+                          </span>
+                        )}
                         <span className="flex items-center gap-1">
                           <Calendar className="w-3 sm:w-3.5 h-3 sm:h-3.5" />
                           {new Date(dashboard.created_at).toLocaleDateString()}
                         </span>
                         <span className="flex items-center gap-1">
                           <Grid3X3 className="w-3 sm:w-3.5 h-3 sm:h-3.5" />
-                          {dashboard.panels?.length || 0} panels
+                          {dashboard.panel_count || 0} panels
                         </span>
                       </div>
-                      <Link to={`/dashboards/${dashboard.id}`} className="text-xs sm:text-sm font-medium text-sky-600 hover:text-sky-700 dark:text-sky-400">
+                      <Link to={`/dashboards/${dashboard.id}`} className="text-xs sm:text-sm font-medium text-amber-600 hover:text-amber-700 dark:text-amber-400">
                         Open →
                       </Link>
                     </div>
@@ -239,23 +264,23 @@ export default function DashboardsPage() {
         </section>
 
         {/* Tips */}
-        <section className="card p-6 bg-gradient-to-r from-sky-50 to-cyan-50 border-sky-100">
-          <h3 className="font-semibold text-sky-900 mb-3">Dashboard Tips</h3>
-          <ul className="space-y-2 text-sm text-sky-800">
+        <section className="card p-6 bg-gradient-to-r from-amber-50 to-amber-50 border-amber-100">
+          <h3 className="font-semibold text-amber-900 mb-3">Dashboard Tips</h3>
+          <ul className="space-y-2 text-sm text-amber-800">
             <li className="flex items-start gap-2">
-              <span className="text-sky-500 mt-0.5">•</span>
+              <span className="text-amber-500 mt-0.5">•</span>
               Use time filters to focus on relevant data and improve performance
             </li>
             <li className="flex items-start gap-2">
-              <span className="text-sky-500 mt-0.5">•</span>
+              <span className="text-amber-500 mt-0.5">•</span>
               Create saved searches first, then add them as dashboard panels
             </li>
             <li className="flex items-start gap-2">
-              <span className="text-sky-500 mt-0.5">•</span>
+              <span className="text-amber-500 mt-0.5">•</span>
               Use stats commands for aggregated views instead of raw log tables
             </li>
             <li className="flex items-start gap-2">
-              <span className="text-sky-500 mt-0.5">•</span>
+              <span className="text-amber-500 mt-0.5">•</span>
               Check the Documentation page for query language reference
             </li>
           </ul>
@@ -336,6 +361,16 @@ export default function DashboardsPage() {
           </div>
         </div>
       )}
+
+      {/* Dashboard Builder Wizard */}
+      <DashboardBuilderWizard
+        isOpen={showWizard}
+        onClose={() => setShowWizard(false)}
+        onSuccess={(dashboardId) => {
+          queryClient.invalidateQueries({ queryKey: ['dashboards'] });
+          navigate(`/dashboards/${dashboardId}`);
+        }}
+      />
     </div>
   );
 }

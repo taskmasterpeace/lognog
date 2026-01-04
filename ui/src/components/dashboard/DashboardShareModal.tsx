@@ -56,7 +56,7 @@ export function DashboardShareModal({
         <div className="modal-header">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Link2 className="w-5 h-5 text-sky-500" />
+              <Link2 className="w-5 h-5 text-amber-500" />
               <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                 Share "{dashboardName}"
               </h3>
@@ -81,7 +81,7 @@ export function DashboardShareModal({
             <button
               onClick={() => setIsPublic(!isPublic)}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                isPublic ? 'bg-sky-500' : 'bg-slate-300 dark:bg-slate-600'
+                isPublic ? 'bg-amber-500' : 'bg-slate-300 dark:bg-slate-600'
               }`}
             >
               <span

@@ -42,7 +42,7 @@ const identityTypeLabels: Record<string, string> = {
 };
 
 const statusColors: Record<string, string> = {
-  active: 'text-emerald-600 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-900/30',
+  active: 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-900/30',
   inactive: 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-900/30',
   disabled: 'text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-900/30',
 };
@@ -125,7 +125,7 @@ export default function IdentitiesPage() {
           </button>
           <button
             onClick={() => { setEditingIdentity(null); setShowForm(true); }}
-            className="flex items-center gap-2 px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg text-sm font-medium transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-medium transition-colors"
           >
             <Plus className="w-4 h-4" />
             Add Identity
@@ -150,13 +150,13 @@ export default function IdentitiesPage() {
             <div className="text-sm text-slate-500 dark:text-slate-400">Privileged</div>
           </div>
           <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-            <div className="text-2xl font-bold text-sky-600 dark:text-sky-400">
+            <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
               {stats.by_type?.user || 0}
             </div>
             <div className="text-sm text-slate-500 dark:text-slate-400">Users</div>
           </div>
           <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-            <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+            <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
               {stats.by_type?.service_account || 0}
             </div>
             <div className="text-sm text-slate-500 dark:text-slate-400">Service Accounts</div>
@@ -173,14 +173,14 @@ export default function IdentitiesPage() {
             placeholder="Search identities..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+            className="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
           />
         </div>
         <div className="relative">
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
-            className="appearance-none pl-4 pr-10 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+            className="appearance-none pl-4 pr-10 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
           >
             <option value="">All Types</option>
             <option value="user">User</option>
@@ -194,7 +194,7 @@ export default function IdentitiesPage() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="appearance-none pl-4 pr-10 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+            className="appearance-none pl-4 pr-10 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
           >
             <option value="">All Status</option>
             <option value="active">Active</option>
@@ -207,7 +207,7 @@ export default function IdentitiesPage() {
           <select
             value={privilegedFilter}
             onChange={(e) => setPrivilegedFilter(e.target.value)}
-            className="appearance-none pl-4 pr-10 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+            className="appearance-none pl-4 pr-10 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
           >
             <option value="">All Privilege</option>
             <option value="true">Privileged Only</option>
@@ -551,7 +551,7 @@ function IdentityFormModal({
             <button
               type="submit"
               disabled={mutation.isPending}
-              className="px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg text-sm font-medium disabled:opacity-50"
+              className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-medium disabled:opacity-50"
             >
               {mutation.isPending ? 'Saving...' : identity ? 'Update' : 'Create'}
             </button>

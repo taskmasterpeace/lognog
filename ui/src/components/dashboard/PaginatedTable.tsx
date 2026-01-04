@@ -102,9 +102,9 @@ export function PaginatedTable({
                     <span>{column}</span>
                     {sortColumn === column && (
                       sortDirection === 'asc' ? (
-                        <ArrowUp className="w-3.5 h-3.5 text-sky-500" />
+                        <ArrowUp className="w-3.5 h-3.5 text-amber-500" />
                       ) : (
-                        <ArrowDown className="w-3.5 h-3.5 text-sky-500" />
+                        <ArrowDown className="w-3.5 h-3.5 text-amber-500" />
                       )
                     )}
                   </div>
@@ -193,7 +193,7 @@ export function PaginatedTable({
                   onClick={() => setPage(p as number)}
                   className={`px-2.5 py-1 rounded text-sm ${
                     page === p
-                      ? 'bg-sky-500 text-white'
+                      ? 'bg-amber-500 text-white'
                       : 'hover:bg-slate-200 dark:hover:bg-slate-700'
                   }`}
                 >

@@ -27,6 +27,7 @@ import {
   Send,
   Terminal,
   LogIn,
+  Filter,
 } from 'lucide-react';
 import {
   getAlerts,
@@ -46,6 +47,7 @@ import {
 import VariableHelper from '../components/VariableHelper';
 // Note: VariableInsertHelper is available for advanced template editing
 import { InfoTip } from '../components/ui/InfoTip';
+import AppScopeFilter from '../components/AppScopeFilter';
 
 // Local type for alert history (used in UI)
 interface LocalAlertHistory {
@@ -80,7 +82,7 @@ const TRIGGER_CONDITIONS = [
 ];
 
 const SEVERITIES = [
-  { value: 'info', label: 'Info', icon: Info, color: 'text-blue-500', bg: 'bg-blue-100' },
+  { value: 'info', label: 'Info', icon: Info, color: 'text-amber-500', bg: 'bg-amber-100' },
   { value: 'low', label: 'Low', icon: AlertCircle, color: 'text-slate-500', bg: 'bg-slate-100' },
   { value: 'medium', label: 'Medium', icon: AlertTriangle, color: 'text-yellow-500', bg: 'bg-yellow-100' },
   { value: 'high', label: 'High', icon: AlertTriangle, color: 'text-orange-500', bg: 'bg-orange-100' },
@@ -121,6 +123,7 @@ export default function AlertsPage() {
   const [selectedAlertId, setSelectedAlertId] = useState<string | null>(null);
   const [silencingAlertId, setSilencingAlertId] = useState<string | null>(null);
   const [expandedAlerts, setExpandedAlerts] = useState<Set<string>>(new Set());
+  const [appScope, setAppScope] = useState<string>('all');
 
   // Refs for action inputs (for variable insertion)
   const emailSubjectRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -182,8 +185,8 @@ export default function AlertsPage() {
   }, [searchParams, setSearchParams]);
 
   const { data: alerts, isLoading, error } = useQuery({
-    queryKey: ['alerts'],
-    queryFn: getAlerts,
+    queryKey: ['alerts', appScope],
+    queryFn: () => getAlerts(appScope === 'all' ? undefined : appScope),
   });
 
   const { data: alertHistory } = useQuery<LocalAlertHistory[]>({
@@ -398,7 +401,7 @@ export default function AlertsPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-sky-500" />
+        <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
       </div>
     );
   }
@@ -417,14 +420,18 @@ export default function AlertsPage() {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
           <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            <Bell className="w-6 sm:w-7 h-6 sm:h-7 text-sky-500" />
+            <Bell className="w-6 sm:w-7 h-6 sm:h-7 text-amber-500" />
             Alerts
           </h1>
           <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 mt-1">
             Configure alert rules to notify you when conditions are met
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-center">
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-slate-400" />
+            <AppScopeFilter value={appScope} onChange={setAppScope} />
+          </div>
           <button
             onClick={() => {
               setSelectedAlertId(null);
@@ -442,7 +449,7 @@ export default function AlertsPage() {
               setEditingAlert(null);
               setShowCreateModal(true);
             }}
-            className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg flex items-center justify-center gap-2"
+            className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg flex items-center justify-center gap-2"
           >
             <Plus className="w-4 h-4" />
             <span className="hidden sm:inline">Create Alert</span>
@@ -510,7 +517,7 @@ export default function AlertsPage() {
                     <button
                       onClick={() => evaluateMutation.mutate(alert.id)}
                       disabled={evaluateMutation.isPending}
-                      className="p-1.5 sm:p-2 text-slate-400 hover:text-sky-500 hover:bg-sky-50 rounded-lg flex-shrink-0"
+                      className="p-1.5 sm:p-2 text-slate-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg flex-shrink-0"
                       title="Run Now"
                     >
                       <Play className="w-4 h-4" />
@@ -520,7 +527,7 @@ export default function AlertsPage() {
                         setSilencingAlertId(alert.id);
                         setShowSilenceModal(true);
                       }}
-                      className="p-1.5 sm:p-2 text-slate-400 hover:text-purple-500 hover:bg-purple-50 rounded-lg flex-shrink-0"
+                      className="p-1.5 sm:p-2 text-slate-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg flex-shrink-0"
                       title="Silence this alert"
                     >
                       <BellOff className="w-4 h-4" />
@@ -627,7 +634,7 @@ export default function AlertsPage() {
               resetForm();
               setShowCreateModal(true);
             }}
-            className="px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg inline-flex items-center gap-2"
+            className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg inline-flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
             Create Alert
@@ -887,7 +894,7 @@ export default function AlertsPage() {
                     <button
                       type="button"
                       onClick={() => addAction('apprise')}
-                      className="px-3 py-1 text-sm bg-sky-100 hover:bg-sky-200 dark:bg-sky-900/30 dark:hover:bg-sky-900/50 text-sky-700 dark:text-sky-300 rounded-lg flex items-center gap-1"
+                      className="px-3 py-1 text-sm bg-amber-100 hover:bg-amber-200 dark:bg-amber-900/30 dark:hover:bg-amber-900/50 text-amber-700 dark:text-amber-300 rounded-lg flex items-center gap-1"
                       title="Send to Slack, Discord, Telegram, PagerDuty, and 100+ more"
                     >
                       <Send className="w-3 h-3" /> Notify
@@ -923,7 +930,7 @@ export default function AlertsPage() {
                     <button
                       type="button"
                       onClick={() => addAction('show_on_login')}
-                      className="px-3 py-1 text-sm bg-purple-100 hover:bg-purple-200 dark:bg-purple-900/30 dark:hover:bg-purple-900/50 text-purple-700 dark:text-purple-300 rounded-lg flex items-center gap-1"
+                      className="px-3 py-1 text-sm bg-amber-100 hover:bg-amber-200 dark:bg-amber-900/30 dark:hover:bg-amber-900/50 text-amber-700 dark:text-amber-300 rounded-lg flex items-center gap-1"
                       title="Show notification in UI on next login"
                     >
                       <LogIn className="w-3 h-3" /> On Login
@@ -1110,7 +1117,7 @@ export default function AlertsPage() {
                                   className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm font-mono"
                                 />
                                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                                  <a href="https://github.com/caronc/apprise/wiki" target="_blank" rel="noopener noreferrer" className="text-sky-500 hover:underline">
+                                  <a href="https://github.com/caronc/apprise/wiki" target="_blank" rel="noopener noreferrer" className="text-amber-500 hover:underline">
                                     View all supported services →
                                   </a>
                                 </p>
@@ -1150,7 +1157,7 @@ export default function AlertsPage() {
                                 className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm font-mono"
                               />
                               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                                Use <code className="text-sky-600">{'{{ai_summary}}'}</code> for AI-generated summary
+                                Use <code className="text-amber-600">{'{{ai_summary}}'}</code> for AI-generated summary
                               </p>
                             </div>
 
@@ -1204,8 +1211,8 @@ export default function AlertsPage() {
 
                         {action.type === 'show_on_login' && (
                           <div className="space-y-3">
-                            <div className="p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg">
-                              <p className="text-xs text-purple-800 dark:text-purple-200">
+                            <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+                              <p className="text-xs text-amber-800 dark:text-amber-200">
                                 This notification will appear in the LogNog UI when users log in.
                               </p>
                             </div>
@@ -1315,7 +1322,7 @@ export default function AlertsPage() {
                 <button
                   onClick={() => editingAlert ? updateMutation.mutate() : createMutation.mutate()}
                   disabled={!formData.name.trim() || !formData.search_query.trim() || !areActionsValid() || createMutation.isPending || updateMutation.isPending}
-                  className="px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg flex items-center gap-2 disabled:opacity-50"
+                  className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg flex items-center gap-2 disabled:opacity-50"
                 >
                   {(createMutation.isPending || updateMutation.isPending) && <Loader2 className="w-4 h-4 animate-spin" />}
                   {editingAlert ? 'Update Alert' : 'Create Alert'}
@@ -1463,7 +1470,7 @@ function QuickSilenceModal({ alertId, alertName, onClose }: QuickSilenceModalPro
         <div className="p-6 border-b border-slate-200 dark:border-slate-700">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <BellOff className="h-5 w-5 text-purple-500" />
+              <BellOff className="h-5 w-5 text-amber-500" />
               Silence Alert
             </h2>
             <button
@@ -1490,7 +1497,7 @@ function QuickSilenceModal({ alertId, alertName, onClose }: QuickSilenceModalPro
               <select
                 value={duration}
                 onChange={(e) => setDuration(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-slate-700 dark:text-slate-100"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 dark:bg-slate-700 dark:text-slate-100"
               >
                 {durationOptions.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -1507,7 +1514,7 @@ function QuickSilenceModal({ alertId, alertName, onClose }: QuickSilenceModalPro
               <textarea
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 dark:bg-slate-700 dark:text-slate-100"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 dark:bg-slate-700 dark:text-slate-100"
                 rows={3}
                 placeholder="Why are you silencing this alert?"
               />
@@ -1525,7 +1532,7 @@ function QuickSilenceModal({ alertId, alertName, onClose }: QuickSilenceModalPro
             <button
               type="submit"
               disabled={silenceMutation.isPending}
-              className="flex-1 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {silenceMutation.isPending ? (
                 <span className="flex items-center justify-center gap-2">

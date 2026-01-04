@@ -583,6 +583,37 @@ function initializeSchema(): void {
     CREATE INDEX IF NOT EXISTS idx_login_notifications_user ON login_notifications(user_id);
     CREATE INDEX IF NOT EXISTS idx_login_notifications_dismissed ON login_notifications(dismissed);
     CREATE INDEX IF NOT EXISTS idx_login_notifications_expires ON login_notifications(expires_at);
+
+    -- Source Annotations (for adding context/notes to field values)
+    CREATE TABLE IF NOT EXISTS source_annotations (
+      id TEXT PRIMARY KEY,
+      field_name TEXT NOT NULL,        -- e.g., 'hostname', 'app_name', 'source'
+      field_value TEXT NOT NULL,       -- e.g., 'router', 'nginx', '192.168.1.1'
+      title TEXT,                      -- Short label for tooltip
+      description TEXT,                -- Brief description (tooltip)
+      details TEXT,                    -- Full details (card view, markdown supported)
+      icon TEXT,                       -- Optional emoji/icon
+      color TEXT,                      -- Optional highlight color
+      lookup_id TEXT,                  -- Link to knowledge lookup table
+      tags TEXT DEFAULT '[]',          -- JSON array of tags
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now')),
+      UNIQUE(field_name, field_value)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_source_annotations_field ON source_annotations(field_name, field_value);
+    CREATE INDEX IF NOT EXISTS idx_source_annotations_lookup ON source_annotations(lookup_id);
+
+    -- Index Retention Settings (per-index TTL configuration)
+    CREATE TABLE IF NOT EXISTS index_retention_settings (
+      id TEXT PRIMARY KEY,
+      index_name TEXT NOT NULL UNIQUE,
+      retention_days INTEGER NOT NULL DEFAULT 90,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_retention_settings_index ON index_retention_settings(index_name);
   `);
 
   // Add new columns to dashboards table if they don't exist
@@ -610,6 +641,34 @@ function initializeSchema(): void {
   if (!columnNames.includes('public_expires_at')) {
     database.exec('ALTER TABLE dashboards ADD COLUMN public_expires_at TEXT');
   }
+  if (!columnNames.includes('icon')) {
+    database.exec('ALTER TABLE dashboards ADD COLUMN icon TEXT');
+  }
+
+  // Add dashboard_pages table for multi-page dashboards
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS dashboard_pages (
+      id TEXT PRIMARY KEY,
+      dashboard_id TEXT NOT NULL,
+      name TEXT NOT NULL,
+      icon TEXT,
+      sort_order INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (dashboard_id) REFERENCES dashboards(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_dashboard_pages_dashboard ON dashboard_pages(dashboard_id);
+  `);
+
+  // Add new columns to dashboard_panels for descriptions and pages
+  const panelColumns = database.pragma('table_info(dashboard_panels)') as Array<{ name: string }>;
+  const panelColumnNames = panelColumns.map((col) => col.name);
+
+  if (!panelColumnNames.includes('description')) {
+    database.exec('ALTER TABLE dashboard_panels ADD COLUMN description TEXT');
+  }
+  if (!panelColumnNames.includes('page_id')) {
+    database.exec('ALTER TABLE dashboard_panels ADD COLUMN page_id TEXT');
+  }
 
   // Add onboarding columns to users table if they don't exist
   const userColumns = database.pragma('table_info(users)') as Array<{ name: string }>;
@@ -621,6 +680,99 @@ function initializeSchema(): void {
   if (!userColumnNames.includes('onboarding_completed_at')) {
     database.exec('ALTER TABLE users ADD COLUMN onboarding_completed_at TEXT');
   }
+
+  // Add new columns to saved_searches table for enhanced functionality
+  const ssColumns = database.pragma('table_info(saved_searches)') as Array<{ name: string }>;
+  const ssColumnNames = ssColumns.map((col) => col.name);
+
+  if (!ssColumnNames.includes('owner_id')) {
+    database.exec('ALTER TABLE saved_searches ADD COLUMN owner_id TEXT');
+  }
+  if (!ssColumnNames.includes('is_shared')) {
+    database.exec('ALTER TABLE saved_searches ADD COLUMN is_shared INTEGER DEFAULT 0');
+  }
+  if (!ssColumnNames.includes('time_range')) {
+    database.exec("ALTER TABLE saved_searches ADD COLUMN time_range TEXT DEFAULT '-24h'");
+  }
+  if (!ssColumnNames.includes('schedule')) {
+    database.exec('ALTER TABLE saved_searches ADD COLUMN schedule TEXT');
+  }
+  if (!ssColumnNames.includes('schedule_enabled')) {
+    database.exec('ALTER TABLE saved_searches ADD COLUMN schedule_enabled INTEGER DEFAULT 0');
+  }
+  if (!ssColumnNames.includes('cache_ttl_seconds')) {
+    database.exec('ALTER TABLE saved_searches ADD COLUMN cache_ttl_seconds INTEGER DEFAULT 3600');
+  }
+  if (!ssColumnNames.includes('cached_results')) {
+    database.exec('ALTER TABLE saved_searches ADD COLUMN cached_results TEXT');
+  }
+  if (!ssColumnNames.includes('cached_at')) {
+    database.exec('ALTER TABLE saved_searches ADD COLUMN cached_at TEXT');
+  }
+  if (!ssColumnNames.includes('cached_count')) {
+    database.exec('ALTER TABLE saved_searches ADD COLUMN cached_count INTEGER');
+  }
+  if (!ssColumnNames.includes('cached_sql')) {
+    database.exec('ALTER TABLE saved_searches ADD COLUMN cached_sql TEXT');
+  }
+  if (!ssColumnNames.includes('last_run')) {
+    database.exec('ALTER TABLE saved_searches ADD COLUMN last_run TEXT');
+  }
+  if (!ssColumnNames.includes('last_run_duration_ms')) {
+    database.exec('ALTER TABLE saved_searches ADD COLUMN last_run_duration_ms INTEGER');
+  }
+  if (!ssColumnNames.includes('last_error')) {
+    database.exec('ALTER TABLE saved_searches ADD COLUMN last_error TEXT');
+  }
+  if (!ssColumnNames.includes('run_count')) {
+    database.exec('ALTER TABLE saved_searches ADD COLUMN run_count INTEGER DEFAULT 0');
+  }
+  if (!ssColumnNames.includes('tags')) {
+    database.exec("ALTER TABLE saved_searches ADD COLUMN tags TEXT DEFAULT '[]'");
+  }
+  if (!ssColumnNames.includes('version')) {
+    database.exec('ALTER TABLE saved_searches ADD COLUMN version INTEGER DEFAULT 1');
+  }
+  if (!ssColumnNames.includes('previous_versions')) {
+    database.exec("ALTER TABLE saved_searches ADD COLUMN previous_versions TEXT DEFAULT '[]'");
+  }
+
+  // Create indexes for saved_searches
+  database.exec(`
+    CREATE INDEX IF NOT EXISTS idx_saved_searches_owner ON saved_searches(owner_id);
+    CREATE INDEX IF NOT EXISTS idx_saved_searches_schedule ON saved_searches(schedule_enabled);
+    CREATE INDEX IF NOT EXISTS idx_saved_searches_cached_at ON saved_searches(cached_at);
+  `);
+
+  // Add app_scope column to organize dashboards, alerts, reports by application
+  // This allows filtering by app (e.g., "hey-youre-hired", "directors-palette")
+  if (!columnNames.includes('app_scope')) {
+    database.exec("ALTER TABLE dashboards ADD COLUMN app_scope TEXT DEFAULT 'default'");
+  }
+
+  const alertColumns = database.pragma('table_info(alerts)') as Array<{ name: string }>;
+  const alertColumnNames = alertColumns.map((col) => col.name);
+  if (!alertColumnNames.includes('app_scope')) {
+    database.exec("ALTER TABLE alerts ADD COLUMN app_scope TEXT DEFAULT 'default'");
+  }
+
+  const reportColumns = database.pragma('table_info(scheduled_reports)') as Array<{ name: string }>;
+  const reportColumnNames = reportColumns.map((col) => col.name);
+  if (!reportColumnNames.includes('app_scope')) {
+    database.exec("ALTER TABLE scheduled_reports ADD COLUMN app_scope TEXT DEFAULT 'default'");
+  }
+
+  if (!ssColumnNames.includes('app_scope')) {
+    database.exec("ALTER TABLE saved_searches ADD COLUMN app_scope TEXT DEFAULT 'default'");
+  }
+
+  // Create indexes for app_scope filtering
+  database.exec(`
+    CREATE INDEX IF NOT EXISTS idx_dashboards_app_scope ON dashboards(app_scope);
+    CREATE INDEX IF NOT EXISTS idx_alerts_app_scope ON alerts(app_scope);
+    CREATE INDEX IF NOT EXISTS idx_reports_app_scope ON scheduled_reports(app_scope);
+    CREATE INDEX IF NOT EXISTS idx_saved_searches_app_scope ON saved_searches(app_scope);
+  `);
 }
 
 // Saved Searches
@@ -629,13 +781,92 @@ export interface SavedSearch {
   name: string;
   query: string;
   description?: string;
+  owner_id?: string;
+  is_shared: number;
+  time_range: string;
+  schedule?: string;
+  schedule_enabled: number;
+  cache_ttl_seconds: number;
+  cached_results?: string;
+  cached_at?: string;
+  cached_count?: number;
+  cached_sql?: string;
+  last_run?: string;
+  last_run_duration_ms?: number;
+  last_error?: string;
+  run_count: number;
+  tags: string;
+  version: number;
+  previous_versions: string;
   created_at: string;
   updated_at: string;
 }
 
-export function getSavedSearches(): SavedSearch[] {
+export interface SavedSearchFilters {
+  owner_id?: string;
+  is_shared?: boolean;
+  tags?: string[];
+  schedule_enabled?: boolean;
+  search?: string;
+}
+
+export interface SavedSearchCreateOptions {
+  description?: string;
+  owner_id?: string;
+  is_shared?: boolean;
+  time_range?: string;
+  schedule?: string;
+  schedule_enabled?: boolean;
+  cache_ttl_seconds?: number;
+  tags?: string[];
+}
+
+export interface SavedSearchUpdateOptions {
+  name?: string;
+  query?: string;
+  description?: string;
+  is_shared?: boolean;
+  time_range?: string;
+  schedule?: string;
+  schedule_enabled?: boolean;
+  cache_ttl_seconds?: number;
+  tags?: string[];
+}
+
+export function getSavedSearches(filters?: SavedSearchFilters): SavedSearch[] {
   const database = getSQLiteDB();
-  return database.prepare('SELECT * FROM saved_searches ORDER BY updated_at DESC').all() as SavedSearch[];
+
+  let sql = 'SELECT * FROM saved_searches WHERE 1=1';
+  const params: unknown[] = [];
+
+  if (filters) {
+    if (filters.owner_id) {
+      sql += ' AND owner_id = ?';
+      params.push(filters.owner_id);
+    }
+    if (filters.is_shared !== undefined) {
+      sql += ' AND is_shared = ?';
+      params.push(filters.is_shared ? 1 : 0);
+    }
+    if (filters.schedule_enabled !== undefined) {
+      sql += ' AND schedule_enabled = ?';
+      params.push(filters.schedule_enabled ? 1 : 0);
+    }
+    if (filters.search) {
+      sql += ' AND (name LIKE ? OR description LIKE ? OR query LIKE ?)';
+      const searchTerm = `%${filters.search}%`;
+      params.push(searchTerm, searchTerm, searchTerm);
+    }
+    if (filters.tags && filters.tags.length > 0) {
+      // Match any of the provided tags
+      const tagConditions = filters.tags.map(() => 'tags LIKE ?').join(' OR ');
+      sql += ` AND (${tagConditions})`;
+      filters.tags.forEach(tag => params.push(`%"${tag}"%`));
+    }
+  }
+
+  sql += ' ORDER BY updated_at DESC';
+  return database.prepare(sql).all(...params) as SavedSearch[];
 }
 
 export function getSavedSearch(id: string): SavedSearch | undefined {
@@ -643,20 +874,112 @@ export function getSavedSearch(id: string): SavedSearch | undefined {
   return database.prepare('SELECT * FROM saved_searches WHERE id = ?').get(id) as SavedSearch | undefined;
 }
 
-export function createSavedSearch(name: string, query: string, description?: string): SavedSearch {
+export function getScheduledSavedSearches(): SavedSearch[] {
+  const database = getSQLiteDB();
+  return database.prepare(
+    'SELECT * FROM saved_searches WHERE schedule_enabled = 1 AND schedule IS NOT NULL'
+  ).all() as SavedSearch[];
+}
+
+export function createSavedSearch(
+  name: string,
+  query: string,
+  options?: SavedSearchCreateOptions
+): SavedSearch {
   const database = getSQLiteDB();
   const id = uuidv4();
-  database.prepare(
-    'INSERT INTO saved_searches (id, name, query, description) VALUES (?, ?, ?, ?)'
-  ).run(id, name, query, description || null);
+
+  database.prepare(`
+    INSERT INTO saved_searches (
+      id, name, query, description, owner_id, is_shared, time_range,
+      schedule, schedule_enabled, cache_ttl_seconds, tags
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    id,
+    name,
+    query,
+    options?.description || null,
+    options?.owner_id || null,
+    options?.is_shared ? 1 : 0,
+    options?.time_range || '-24h',
+    options?.schedule || null,
+    options?.schedule_enabled ? 1 : 0,
+    options?.cache_ttl_seconds || 3600,
+    JSON.stringify(options?.tags || [])
+  );
+
   return getSavedSearch(id)!;
 }
 
-export function updateSavedSearch(id: string, name: string, query: string, description?: string): SavedSearch | undefined {
+export function updateSavedSearch(
+  id: string,
+  updates: SavedSearchUpdateOptions
+): SavedSearch | undefined {
   const database = getSQLiteDB();
-  database.prepare(
-    "UPDATE saved_searches SET name = ?, query = ?, description = ?, updated_at = datetime('now') WHERE id = ?"
-  ).run(name, query, description || null, id);
+  const existing = getSavedSearch(id);
+  if (!existing) return undefined;
+
+  // Track version history if query changed
+  let newVersion = existing.version;
+  let previousVersions = JSON.parse(existing.previous_versions || '[]');
+
+  if (updates.query && updates.query !== existing.query) {
+    previousVersions.push({
+      version: existing.version,
+      query: existing.query,
+      time_range: existing.time_range,
+      changed_at: new Date().toISOString(),
+    });
+    newVersion = existing.version + 1;
+  }
+
+  const fields: string[] = ["updated_at = datetime('now')"];
+  const values: unknown[] = [];
+
+  if (updates.name !== undefined) {
+    fields.push('name = ?');
+    values.push(updates.name);
+  }
+  if (updates.query !== undefined) {
+    fields.push('query = ?');
+    values.push(updates.query);
+    fields.push('version = ?');
+    values.push(newVersion);
+    fields.push('previous_versions = ?');
+    values.push(JSON.stringify(previousVersions));
+  }
+  if (updates.description !== undefined) {
+    fields.push('description = ?');
+    values.push(updates.description);
+  }
+  if (updates.is_shared !== undefined) {
+    fields.push('is_shared = ?');
+    values.push(updates.is_shared ? 1 : 0);
+  }
+  if (updates.time_range !== undefined) {
+    fields.push('time_range = ?');
+    values.push(updates.time_range);
+  }
+  if (updates.schedule !== undefined) {
+    fields.push('schedule = ?');
+    values.push(updates.schedule);
+  }
+  if (updates.schedule_enabled !== undefined) {
+    fields.push('schedule_enabled = ?');
+    values.push(updates.schedule_enabled ? 1 : 0);
+  }
+  if (updates.cache_ttl_seconds !== undefined) {
+    fields.push('cache_ttl_seconds = ?');
+    values.push(updates.cache_ttl_seconds);
+  }
+  if (updates.tags !== undefined) {
+    fields.push('tags = ?');
+    values.push(JSON.stringify(updates.tags));
+  }
+
+  values.push(id);
+  database.prepare(`UPDATE saved_searches SET ${fields.join(', ')} WHERE id = ?`).run(...values);
+
   return getSavedSearch(id);
 }
 
@@ -664,6 +987,110 @@ export function deleteSavedSearch(id: string): boolean {
   const database = getSQLiteDB();
   const result = database.prepare('DELETE FROM saved_searches WHERE id = ?').run(id);
   return result.changes > 0;
+}
+
+export function updateSavedSearchCache(
+  id: string,
+  results: unknown[],
+  sql: string,
+  executionTimeMs: number
+): SavedSearch | undefined {
+  const database = getSQLiteDB();
+
+  database.prepare(`
+    UPDATE saved_searches SET
+      cached_results = ?,
+      cached_sql = ?,
+      cached_at = datetime('now'),
+      cached_count = ?,
+      last_run = datetime('now'),
+      last_run_duration_ms = ?,
+      last_error = NULL,
+      run_count = run_count + 1,
+      updated_at = datetime('now')
+    WHERE id = ?
+  `).run(
+    JSON.stringify(results),
+    sql,
+    results.length,
+    executionTimeMs,
+    id
+  );
+
+  return getSavedSearch(id);
+}
+
+export function updateSavedSearchError(id: string, error: string): void {
+  const database = getSQLiteDB();
+  database.prepare(`
+    UPDATE saved_searches SET
+      last_run = datetime('now'),
+      last_error = ?,
+      updated_at = datetime('now')
+    WHERE id = ?
+  `).run(error, id);
+}
+
+export function clearSavedSearchCache(id: string): void {
+  const database = getSQLiteDB();
+  database.prepare(`
+    UPDATE saved_searches SET
+      cached_results = NULL,
+      cached_sql = NULL,
+      cached_at = NULL,
+      cached_count = NULL
+    WHERE id = ?
+  `).run(id);
+}
+
+export function cleanupExpiredSearchCache(): number {
+  const database = getSQLiteDB();
+
+  // Find and clear expired caches
+  const result = database.prepare(`
+    UPDATE saved_searches SET
+      cached_results = NULL,
+      cached_sql = NULL,
+      cached_at = NULL,
+      cached_count = NULL
+    WHERE cached_at IS NOT NULL
+    AND (julianday('now') - julianday(cached_at)) * 86400 > cache_ttl_seconds
+  `).run();
+
+  return result.changes;
+}
+
+export function getSavedSearchTags(): string[] {
+  const database = getSQLiteDB();
+  const searches = database.prepare('SELECT tags FROM saved_searches').all() as { tags: string }[];
+
+  const allTags = new Set<string>();
+  searches.forEach(s => {
+    const tags = JSON.parse(s.tags || '[]') as string[];
+    tags.forEach(tag => allTags.add(tag));
+  });
+
+  return Array.from(allTags).sort();
+}
+
+export function duplicateSavedSearch(id: string, newOwnerId?: string): SavedSearch | undefined {
+  const existing = getSavedSearch(id);
+  if (!existing) return undefined;
+
+  return createSavedSearch(
+    `${existing.name} (Copy)`,
+    existing.query,
+    {
+      description: existing.description,
+      owner_id: newOwnerId || existing.owner_id,
+      is_shared: false,
+      time_range: existing.time_range,
+      schedule: existing.schedule,
+      schedule_enabled: false, // Don't auto-enable schedule on copy
+      cache_ttl_seconds: existing.cache_ttl_seconds,
+      tags: JSON.parse(existing.tags || '[]'),
+    }
+  );
 }
 
 // Dashboards
@@ -678,6 +1105,7 @@ export interface Dashboard {
   is_public?: number;
   public_token?: string;
   public_password?: string;
+  app_scope?: string;
   created_at: string;
   updated_at: string;
 }
@@ -693,11 +1121,45 @@ export interface DashboardPanel {
   position_y: number;
   width: number;
   height: number;
+  description?: string;
+  page_id?: string;
 }
 
-export function getDashboards(): Dashboard[] {
+export interface DashboardPage {
+  id: string;
+  dashboard_id: string;
+  name: string;
+  icon?: string;
+  sort_order: number;
+  created_at?: string;
+}
+
+export function getDashboards(appScope?: string): (Dashboard & { panel_count: number })[] {
   const database = getSQLiteDB();
-  return database.prepare('SELECT * FROM dashboards ORDER BY updated_at DESC').all() as Dashboard[];
+  const baseQuery = `
+    SELECT d.*, COUNT(p.id) as panel_count
+    FROM dashboards d
+    LEFT JOIN dashboard_panels p ON d.id = p.dashboard_id
+  `;
+  if (appScope && appScope !== 'all') {
+    return database.prepare(baseQuery + ' WHERE d.app_scope = ? GROUP BY d.id ORDER BY d.updated_at DESC').all(appScope) as (Dashboard & { panel_count: number })[];
+  }
+  return database.prepare(baseQuery + ' GROUP BY d.id ORDER BY d.updated_at DESC').all() as (Dashboard & { panel_count: number })[];
+}
+
+export function getAppScopes(): string[] {
+  const database = getSQLiteDB();
+  const dashboardScopes = database.prepare("SELECT DISTINCT app_scope FROM dashboards WHERE app_scope IS NOT NULL AND app_scope != ''").all() as Array<{ app_scope: string }>;
+  const alertScopes = database.prepare("SELECT DISTINCT app_scope FROM alerts WHERE app_scope IS NOT NULL AND app_scope != ''").all() as Array<{ app_scope: string }>;
+  const reportScopes = database.prepare("SELECT DISTINCT app_scope FROM scheduled_reports WHERE app_scope IS NOT NULL AND app_scope != ''").all() as Array<{ app_scope: string }>;
+
+  const allScopes = new Set([
+    ...dashboardScopes.map(s => s.app_scope),
+    ...alertScopes.map(s => s.app_scope),
+    ...reportScopes.map(s => s.app_scope),
+  ]);
+
+  return Array.from(allScopes).sort();
 }
 
 export function getDashboard(id: string): Dashboard | undefined {
@@ -710,12 +1172,12 @@ export function getDashboardPanels(dashboardId: string): DashboardPanel[] {
   return database.prepare('SELECT * FROM dashboard_panels WHERE dashboard_id = ?').all(dashboardId) as DashboardPanel[];
 }
 
-export function createDashboard(name: string, description?: string): Dashboard {
+export function createDashboard(name: string, description?: string, appScope?: string): Dashboard {
   const database = getSQLiteDB();
   const id = uuidv4();
   database.prepare(
-    'INSERT INTO dashboards (id, name, description) VALUES (?, ?, ?)'
-  ).run(id, name, description || null);
+    'INSERT INTO dashboards (id, name, description, app_scope) VALUES (?, ?, ?, ?)'
+  ).run(id, name, description || null, appScope || 'default');
   return getDashboard(id)!;
 }
 
@@ -1290,6 +1752,7 @@ export interface Alert {
   last_run?: string;
   last_triggered?: string;
   trigger_count: number;
+  app_scope?: string;
   created_at: string;
   updated_at: string;
 }
@@ -1309,10 +1772,16 @@ export interface AlertHistory {
   notes?: string;
 }
 
-export function getAlerts(enabledOnly: boolean = false): Alert[] {
+export function getAlerts(enabledOnly: boolean = false, appScope?: string): Alert[] {
   const database = getSQLiteDB();
+  if (enabledOnly && appScope && appScope !== 'all') {
+    return database.prepare('SELECT * FROM alerts WHERE enabled = 1 AND app_scope = ? ORDER BY name').all(appScope) as Alert[];
+  }
   if (enabledOnly) {
     return database.prepare('SELECT * FROM alerts WHERE enabled = 1 ORDER BY name').all() as Alert[];
+  }
+  if (appScope && appScope !== 'all') {
+    return database.prepare('SELECT * FROM alerts WHERE app_scope = ? ORDER BY name').all(appScope) as Alert[];
   }
   return database.prepare('SELECT * FROM alerts ORDER BY name').all() as Alert[];
 }
@@ -1338,6 +1807,7 @@ export function createAlert(
     throttle_window_seconds?: number;
     severity?: AlertSeverity;
     enabled?: boolean;
+    app_scope?: string;
   } = {}
 ): Alert {
   const database = getSQLiteDB();
@@ -1349,8 +1819,8 @@ export function createAlert(
       trigger_type, trigger_condition, trigger_threshold,
       schedule_type, cron_expression, time_range,
       actions, throttle_enabled, throttle_window_seconds,
-      severity, enabled
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      severity, enabled, app_scope
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
     name,
@@ -1366,7 +1836,8 @@ export function createAlert(
     options.throttle_enabled ? 1 : 0,
     options.throttle_window_seconds || 300,
     options.severity || 'medium',
-    options.enabled !== false ? 1 : 0
+    options.enabled !== false ? 1 : 0,
+    options.app_scope || 'default'
   );
 
   return getAlert(id)!;
@@ -1392,6 +1863,7 @@ export function updateAlert(
     last_run?: string;
     last_triggered?: string;
     trigger_count?: number;
+    app_scope?: string;
   }
 ): Alert | undefined {
   const database = getSQLiteDB();
@@ -1465,6 +1937,10 @@ export function updateAlert(
   if (updates.trigger_count !== undefined) {
     fields.push('trigger_count = ?');
     values.push(updates.trigger_count);
+  }
+  if (updates.app_scope !== undefined) {
+    fields.push('app_scope = ?');
+    values.push(updates.app_scope);
   }
 
   if (fields.length === 0) {
@@ -2266,6 +2742,85 @@ export function deleteDashboardAnnotation(id: string): boolean {
   return result.changes > 0;
 }
 
+// Dashboard Pages
+export function getDashboardPages(dashboardId: string): DashboardPage[] {
+  const database = getSQLiteDB();
+  return database.prepare(
+    'SELECT * FROM dashboard_pages WHERE dashboard_id = ? ORDER BY sort_order ASC'
+  ).all(dashboardId) as DashboardPage[];
+}
+
+export function getDashboardPage(id: string): DashboardPage | undefined {
+  const database = getSQLiteDB();
+  return database.prepare('SELECT * FROM dashboard_pages WHERE id = ?').get(id) as DashboardPage | undefined;
+}
+
+export function createDashboardPage(
+  dashboardId: string,
+  name: string,
+  options: { icon?: string; sort_order?: number } = {}
+): DashboardPage {
+  const database = getSQLiteDB();
+  const id = uuidv4();
+
+  // Get max sort_order if not specified
+  const sortOrder = options.sort_order ?? (
+    (database.prepare('SELECT MAX(sort_order) as max FROM dashboard_pages WHERE dashboard_id = ?').get(dashboardId) as { max: number | null })?.max ?? -1
+  ) + 1;
+
+  database.prepare(`
+    INSERT INTO dashboard_pages (id, dashboard_id, name, icon, sort_order)
+    VALUES (?, ?, ?, ?, ?)
+  `).run(id, dashboardId, name, options.icon || null, sortOrder);
+
+  return getDashboardPage(id)!;
+}
+
+export function updateDashboardPage(
+  id: string,
+  updates: { name?: string; icon?: string; sort_order?: number }
+): DashboardPage | undefined {
+  const database = getSQLiteDB();
+  const sets: string[] = [];
+  const values: (string | number)[] = [];
+
+  if (updates.name !== undefined) {
+    sets.push('name = ?');
+    values.push(updates.name);
+  }
+  if (updates.icon !== undefined) {
+    sets.push('icon = ?');
+    values.push(updates.icon);
+  }
+  if (updates.sort_order !== undefined) {
+    sets.push('sort_order = ?');
+    values.push(updates.sort_order);
+  }
+
+  if (sets.length > 0) {
+    values.push(id);
+    database.prepare(`UPDATE dashboard_pages SET ${sets.join(', ')} WHERE id = ?`).run(...values);
+  }
+
+  return getDashboardPage(id);
+}
+
+export function deleteDashboardPage(id: string): boolean {
+  const database = getSQLiteDB();
+  // First, unlink any panels from this page
+  database.prepare('UPDATE dashboard_panels SET page_id = NULL WHERE page_id = ?').run(id);
+  const result = database.prepare('DELETE FROM dashboard_pages WHERE id = ?').run(id);
+  return result.changes > 0;
+}
+
+export function reorderDashboardPages(dashboardId: string, pageIds: string[]): void {
+  const database = getSQLiteDB();
+  pageIds.forEach((id, index) => {
+    database.prepare('UPDATE dashboard_pages SET sort_order = ? WHERE id = ? AND dashboard_id = ?')
+      .run(index, id, dashboardId);
+  });
+}
+
 // Dashboard Templates
 export interface DashboardTemplate {
   id: string;
@@ -2340,6 +2895,7 @@ export function updateDashboard(
     public_token?: string;
     public_password?: string;
     public_expires_at?: string;
+    app_scope?: string;
   }
 ): Dashboard | undefined {
   const database = getSQLiteDB();
@@ -2381,6 +2937,10 @@ export function updateDashboard(
   if (updates.public_expires_at !== undefined) {
     fields.push('public_expires_at = ?');
     values.push(updates.public_expires_at);
+  }
+  if (updates.app_scope !== undefined) {
+    fields.push('app_scope = ?');
+    values.push(updates.app_scope);
   }
 
   if (fields.length === 0) {
@@ -4581,4 +5141,193 @@ export function getSyntheticDashboard(): {
     overall_uptime_24h: Math.round(overall_uptime_24h * 100) / 100,
     failing_tests,
   };
+}
+
+// Source Annotations
+export interface SourceAnnotation {
+  id: string;
+  field_name: string;
+  field_value: string;
+  title?: string;
+  description?: string;
+  details?: string;
+  icon?: string;
+  color?: string;
+  lookup_id?: string;
+  tags: string[];
+  created_at: string;
+  updated_at: string;
+}
+
+export function getSourceAnnotations(fieldName?: string): SourceAnnotation[] {
+  const database = getSQLiteDB();
+  let query = 'SELECT * FROM source_annotations';
+  const params: string[] = [];
+
+  if (fieldName) {
+    query += ' WHERE field_name = ?';
+    params.push(fieldName);
+  }
+
+  query += ' ORDER BY field_name, field_value';
+
+  const rows = database.prepare(query).all(...params) as Array<SourceAnnotation & { tags: string }>;
+  return rows.map(row => ({
+    ...row,
+    tags: JSON.parse(row.tags || '[]'),
+  }));
+}
+
+export function getSourceAnnotation(fieldName: string, fieldValue: string): SourceAnnotation | undefined {
+  const database = getSQLiteDB();
+  const row = database.prepare(
+    'SELECT * FROM source_annotations WHERE field_name = ? AND field_value = ?'
+  ).get(fieldName, fieldValue) as (SourceAnnotation & { tags: string }) | undefined;
+
+  if (!row) return undefined;
+
+  return {
+    ...row,
+    tags: JSON.parse(row.tags || '[]'),
+  };
+}
+
+export function getSourceAnnotationById(id: string): SourceAnnotation | undefined {
+  const database = getSQLiteDB();
+  const row = database.prepare(
+    'SELECT * FROM source_annotations WHERE id = ?'
+  ).get(id) as (SourceAnnotation & { tags: string }) | undefined;
+
+  if (!row) return undefined;
+
+  return {
+    ...row,
+    tags: JSON.parse(row.tags || '[]'),
+  };
+}
+
+export function getSourceAnnotationsBatch(
+  items: Array<{ field: string; value: string }>
+): Map<string, SourceAnnotation> {
+  const database = getSQLiteDB();
+  const result = new Map<string, SourceAnnotation>();
+
+  if (items.length === 0) return result;
+
+  // Build a query with multiple OR conditions
+  const conditions = items.map(() => '(field_name = ? AND field_value = ?)').join(' OR ');
+  const params = items.flatMap(item => [item.field, item.value]);
+
+  const rows = database.prepare(
+    `SELECT * FROM source_annotations WHERE ${conditions}`
+  ).all(...params) as Array<SourceAnnotation & { tags: string }>;
+
+  for (const row of rows) {
+    const key = `${row.field_name}:${row.field_value}`;
+    result.set(key, {
+      ...row,
+      tags: JSON.parse(row.tags || '[]'),
+    });
+  }
+
+  return result;
+}
+
+export function createSourceAnnotation(data: {
+  field_name: string;
+  field_value: string;
+  title?: string;
+  description?: string;
+  details?: string;
+  icon?: string;
+  color?: string;
+  lookup_id?: string;
+  tags?: string[];
+}): SourceAnnotation {
+  const database = getSQLiteDB();
+  const id = uuidv4();
+
+  database.prepare(`
+    INSERT INTO source_annotations
+    (id, field_name, field_value, title, description, details, icon, color, lookup_id, tags)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    id,
+    data.field_name,
+    data.field_value,
+    data.title || null,
+    data.description || null,
+    data.details || null,
+    data.icon || null,
+    data.color || null,
+    data.lookup_id || null,
+    JSON.stringify(data.tags || [])
+  );
+
+  return getSourceAnnotationById(id)!;
+}
+
+export function updateSourceAnnotation(
+  id: string,
+  updates: {
+    title?: string;
+    description?: string;
+    details?: string;
+    icon?: string;
+    color?: string;
+    lookup_id?: string | null;
+    tags?: string[];
+  }
+): SourceAnnotation | undefined {
+  const database = getSQLiteDB();
+  const fields: string[] = [];
+  const values: unknown[] = [];
+
+  if (updates.title !== undefined) {
+    fields.push('title = ?');
+    values.push(updates.title || null);
+  }
+  if (updates.description !== undefined) {
+    fields.push('description = ?');
+    values.push(updates.description || null);
+  }
+  if (updates.details !== undefined) {
+    fields.push('details = ?');
+    values.push(updates.details || null);
+  }
+  if (updates.icon !== undefined) {
+    fields.push('icon = ?');
+    values.push(updates.icon || null);
+  }
+  if (updates.color !== undefined) {
+    fields.push('color = ?');
+    values.push(updates.color || null);
+  }
+  if (updates.lookup_id !== undefined) {
+    fields.push('lookup_id = ?');
+    values.push(updates.lookup_id);
+  }
+  if (updates.tags !== undefined) {
+    fields.push('tags = ?');
+    values.push(JSON.stringify(updates.tags));
+  }
+
+  if (fields.length === 0) {
+    return getSourceAnnotationById(id);
+  }
+
+  fields.push('updated_at = datetime(\'now\')');
+  values.push(id);
+
+  database.prepare(
+    `UPDATE source_annotations SET ${fields.join(', ')} WHERE id = ?`
+  ).run(...values);
+
+  return getSourceAnnotationById(id);
+}
+
+export function deleteSourceAnnotation(id: string): boolean {
+  const database = getSQLiteDB();
+  const result = database.prepare('DELETE FROM source_annotations WHERE id = ?').run(id);
+  return result.changes > 0;
 }

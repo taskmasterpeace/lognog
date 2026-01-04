@@ -53,7 +53,11 @@ import {
   getDashboardVariables,
   exportDashboard,
   duplicateDashboard,
+  createDashboardPage,
+  updateDashboardPage,
+  deleteDashboardPage,
   DashboardPanel,
+  DashboardPage,
   DashboardVariable as APIDashboardVariable,
 } from '../api/client';
 import { HeatmapChart, HeatmapData } from '../components/charts/HeatmapChart';
@@ -123,7 +127,7 @@ function PanelVisualization({
   if (data.loading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <Loader2 className="w-6 h-6 text-sky-500 animate-spin" />
+        <Loader2 className="w-6 h-6 text-amber-500 animate-spin" />
       </div>
     );
   }
@@ -133,7 +137,7 @@ function PanelVisualization({
       <div className="flex flex-col items-center justify-center h-full p-4 text-center">
         <AlertCircle className="w-8 h-8 text-red-400 mb-2" />
         <p className="text-sm text-red-600">{data.error}</p>
-        <button onClick={onRefresh} className="mt-2 text-xs text-sky-600 hover:underline">
+        <button onClick={onRefresh} className="mt-2 text-xs text-amber-600 hover:underline">
           Retry
         </button>
       </div>
@@ -359,20 +363,27 @@ function PanelCard({
 
   return (
     <div className="card flex flex-col h-full">
-      <div className={`flex items-center justify-between p-3 border-b border-slate-100 ${editMode ? 'panel-drag-handle cursor-move' : ''}`}>
-        <div className="flex items-center gap-2">
-          {editMode && <Move className="w-4 h-4 text-slate-400" />}
-          <VizIcon className="w-4 h-4 text-slate-400" />
-          <h3 className="font-medium text-slate-900 truncate">{panel.title}</h3>
+      <div className={`flex items-center justify-between p-3 border-b border-slate-100 dark:border-nog-700 ${editMode ? 'panel-drag-handle cursor-move' : ''}`}>
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          {editMode && <Move className="w-4 h-4 text-slate-400 dark:text-nog-400 flex-shrink-0" />}
+          <VizIcon className="w-4 h-4 text-slate-400 dark:text-nog-400 flex-shrink-0" />
+          <div className="min-w-0 flex-1">
+            <h3 className="font-medium text-slate-900 dark:text-nog-100 truncate">{panel.title}</h3>
+            {panel.description && (
+              <p className="text-xs text-slate-500 dark:text-nog-400 truncate" title={panel.description}>
+                {panel.description}
+              </p>
+            )}
+          </div>
         </div>
         <div className={`flex items-center gap-1 ${editMode ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}>
-          <button onClick={onRefresh} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded">
+          <button onClick={onRefresh} className="p-1.5 text-slate-400 dark:text-nog-400 hover:text-slate-600 dark:hover:text-nog-200 hover:bg-slate-100 dark:hover:bg-nog-700 rounded">
             <RefreshCw className="w-3.5 h-3.5" />
           </button>
-          <button onClick={onEdit} className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded">
+          <button onClick={onEdit} className="p-1.5 text-slate-400 dark:text-nog-400 hover:text-slate-600 dark:hover:text-nog-200 hover:bg-slate-100 dark:hover:bg-nog-700 rounded">
             <Edit3 className="w-3.5 h-3.5" />
           </button>
-          <button onClick={onDelete} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded">
+          <button onClick={onDelete} className="p-1.5 text-slate-400 dark:text-nog-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded">
             <Trash2 className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -384,21 +395,93 @@ function PanelCard({
   );
 }
 
+// Page Editor Modal for creating/editing dashboard pages
+function PageEditorModal({
+  page,
+  onSave,
+  onCancel,
+}: {
+  page: DashboardPage | null;
+  onSave: (name: string, icon?: string) => void;
+  onCancel: () => void;
+}) {
+  const [name, setName] = useState(page?.name || '');
+  const [icon, setIcon] = useState(page?.icon || '');
+
+  return (
+    <div className="modal-overlay" onClick={onCancel}>
+      <div className="modal animate-slide-up max-w-md" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-nog-100">
+              {page ? 'Edit Page' : 'Add Page'}
+            </h3>
+            <button onClick={onCancel} className="btn-ghost p-1">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+        <div className="modal-body space-y-4">
+          <div>
+            <label className="text-sm font-medium text-slate-700 dark:text-nog-200 mb-1.5 block">
+              Page Name
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g., User Acquisition, Revenue, API Health"
+              className="input"
+              autoFocus
+            />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-slate-700 dark:text-nog-200 mb-1.5 block">
+              Icon (optional emoji)
+            </label>
+            <input
+              type="text"
+              value={icon}
+              onChange={(e) => setIcon(e.target.value)}
+              placeholder="e.g., 📈 or 💰"
+              className="input"
+              maxLength={4}
+            />
+          </div>
+        </div>
+        <div className="modal-footer">
+          <button onClick={onCancel} className="btn-secondary">
+            Cancel
+          </button>
+          <button
+            onClick={() => onSave(name, icon || undefined)}
+            disabled={!name.trim()}
+            className="btn-primary"
+          >
+            {page ? 'Save' : 'Create Page'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface PanelEditorProps {
   panel?: DashboardPanel;
-  onSave: (data: { title: string; query: string; visualization: string }) => void;
+  onSave: (data: { title: string; query: string; visualization: string; description?: string }) => void;
   onCancel: () => void;
   saving: boolean;
 }
 
 function PanelEditor({ panel, onSave, onCancel, saving }: PanelEditorProps) {
   const [title, setTitle] = useState(panel?.title || '');
+  const [description, setDescription] = useState(panel?.description || '');
   const [query, setQuery] = useState(panel?.query || 'search * | stats count by hostname');
   const [visualization, setVisualization] = useState(panel?.visualization || 'bar');
 
   const handleSubmit = () => {
     if (title && query) {
-      onSave({ title, query, visualization });
+      onSave({ title, query, visualization, description: description || undefined });
     }
   };
 
@@ -432,6 +515,23 @@ function PanelEditor({ panel, onSave, onCancel, saving }: PanelEditorProps) {
               placeholder="Panel title"
               className="input"
               autoFocus
+            />
+          </div>
+
+          <div>
+            <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-nog-200 mb-1.5">
+              Description
+              <InfoTip
+                content="Optional description shown below the panel title"
+                placement="right"
+              />
+            </label>
+            <input
+              type="text"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Brief description of what this panel shows"
+              className="input"
             />
           </div>
 
@@ -493,7 +593,7 @@ search error | timechart span=1h count"
                       onClick={() => setVisualization(option.value)}
                       className={`flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-all ${
                         visualization === option.value
-                          ? 'border-sky-500 bg-sky-50 text-sky-700'
+                          ? 'border-amber-500 bg-amber-50 text-amber-700'
                           : 'border-slate-200 hover:border-slate-300 text-slate-600'
                       }`}
                     >
@@ -547,6 +647,9 @@ export default function DashboardViewPage() {
   const [showVariableEditor, setShowVariableEditor] = useState(false);
   const [variableValues, setVariableValues] = useState<Record<string, string>>({});
   const [showActionsDropdown, setShowActionsDropdown] = useState(false);
+  const [selectedPageId, setSelectedPageId] = useState<string | null>(null);
+  const [showPageEditor, setShowPageEditor] = useState(false);
+  const [editingPage, setEditingPage] = useState<DashboardPage | null>(null);
   const [showAIInsights, setShowAIInsights] = useState(false);
 
   const { data: dashboard, isLoading, error } = useQuery({
@@ -608,7 +711,7 @@ export default function DashboardViewPage() {
   });
 
   const updatePanelMutation = useMutation({
-    mutationFn: ({ panelId, data }: { panelId: string; data: { title: string; query: string; visualization: string } }) =>
+    mutationFn: ({ panelId, data }: { panelId: string; data: { title: string; query: string; visualization: string; description?: string } }) =>
       updateDashboardPanel(id!, panelId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dashboard', id] });
@@ -637,6 +740,35 @@ export default function DashboardViewPage() {
     onSuccess: (newDashboard) => {
       queryClient.invalidateQueries({ queryKey: ['dashboards'] });
       navigate(`/dashboards/${newDashboard.id}`);
+    },
+  });
+
+  // Page mutations
+  const createPageMutation = useMutation({
+    mutationFn: ({ name, icon }: { name: string; icon?: string }) =>
+      createDashboardPage(id!, name, { icon }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dashboard', id] });
+      setShowPageEditor(false);
+      setEditingPage(null);
+    },
+  });
+
+  const updatePageMutation = useMutation({
+    mutationFn: ({ pageId, updates }: { pageId: string; updates: { name?: string; icon?: string } }) =>
+      updateDashboardPage(id!, pageId, updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dashboard', id] });
+      setShowPageEditor(false);
+      setEditingPage(null);
+    },
+  });
+
+  const deletePageMutation = useMutation({
+    mutationFn: (pageId: string) => deleteDashboardPage(id!, pageId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dashboard', id] });
+      setSelectedPageId(null);
     },
   });
 
@@ -747,7 +879,7 @@ export default function DashboardViewPage() {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-full">
-        <Loader2 className="w-10 h-10 text-sky-500 animate-spin mb-4" />
+        <Loader2 className="w-10 h-10 text-amber-500 animate-spin mb-4" />
         <p className="text-slate-600">Loading dashboard...</p>
       </div>
     );
@@ -759,7 +891,7 @@ export default function DashboardViewPage() {
         <div className="card border-red-200 bg-red-50 p-6">
           <p className="font-semibold text-red-900">Failed to load dashboard</p>
           <p className="text-sm text-red-700 mt-1">{String(error)}</p>
-          <Link to="/dashboards" className="mt-4 inline-block text-sm text-sky-600 hover:underline">
+          <Link to="/dashboards" className="mt-4 inline-block text-sm text-amber-600 hover:underline">
             Back to Dashboards
           </Link>
         </div>
@@ -770,7 +902,7 @@ export default function DashboardViewPage() {
   // selectedPreset moved to TimePickerEnhanced component
 
   return (
-    <div className="min-h-full bg-slate-50 dark:bg-slate-900 flex flex-col">
+    <div className="min-h-full bg-slate-50 dark:bg-nog-900 flex flex-col">
       {/* Header */}
       <DashboardHeader
         name={dashboard.name}
@@ -827,7 +959,7 @@ export default function DashboardViewPage() {
                         setShowAutoRefreshDropdown(false);
                       }}
                       className={`dropdown-item ${
-                        autoRefreshInterval === option.value ? 'bg-sky-50 text-sky-600 font-medium' : ''
+                        autoRefreshInterval === option.value ? 'bg-amber-50 text-amber-600 font-medium' : ''
                       }`}
                     >
                       {option.label}
@@ -924,6 +1056,78 @@ export default function DashboardViewPage() {
         />
       )}
 
+      {/* Page Tabs */}
+      {(dashboard.pages && dashboard.pages.length > 0 || editMode) && (
+        <div className="bg-white dark:bg-nog-800 border-b border-slate-200 dark:border-nog-700 px-4">
+          <div className="flex items-center gap-1 overflow-x-auto">
+            <button
+              onClick={() => setSelectedPageId(null)}
+              className={`px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                selectedPageId === null
+                  ? 'border-amber-500 text-amber-600 dark:text-amber-400'
+                  : 'border-transparent text-slate-600 dark:text-nog-300 hover:text-slate-900 dark:hover:text-nog-100'
+              }`}
+            >
+              All Panels
+            </button>
+            {dashboard.pages?.map((page) => (
+              <div key={page.id} className="relative group flex items-center">
+                <button
+                  onClick={() => setSelectedPageId(page.id)}
+                  className={`px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
+                    selectedPageId === page.id
+                      ? 'border-amber-500 text-amber-600 dark:text-amber-400'
+                      : 'border-transparent text-slate-600 dark:text-nog-300 hover:text-slate-900 dark:hover:text-nog-100'
+                  }`}
+                >
+                  {page.icon && <span className="mr-1.5">{page.icon}</span>}
+                  {page.name}
+                </button>
+                {editMode && (
+                  <div className="flex items-center gap-0.5 ml-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setEditingPage(page);
+                        setShowPageEditor(true);
+                      }}
+                      className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-nog-200"
+                      title="Edit Page"
+                    >
+                      <Edit3 className="w-3 h-3" />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (confirm(`Delete page "${page.name}"?`)) {
+                          deletePageMutation.mutate(page.id);
+                        }
+                      }}
+                      className="p-1 text-slate-400 hover:text-red-500"
+                      title="Delete Page"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+            {editMode && (
+              <button
+                onClick={() => {
+                  setEditingPage(null);
+                  setShowPageEditor(true);
+                }}
+                className="px-3 py-2.5 text-sm text-slate-400 hover:text-slate-600 dark:hover:text-nog-200"
+                title="Add Page"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Edit Mode Banner */}
       {editMode && (
         <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 flex items-center justify-between">
@@ -975,7 +1179,9 @@ export default function DashboardViewPage() {
             editMode={editMode}
             onLayoutChange={handleLayoutChange}
           >
-            {dashboard.panels.map((panel) => (
+            {dashboard.panels
+              .filter(panel => !selectedPageId || panel.page_id === selectedPageId)
+              .map((panel) => (
               <div key={panel.id} className="group">
                 <PanelCard
                   panel={panel}
@@ -999,6 +1205,24 @@ export default function DashboardViewPage() {
           editMode={isEditing}
         />
       )} */}
+
+      {/* Page Editor Modal */}
+      {showPageEditor && (
+        <PageEditorModal
+          page={editingPage}
+          onSave={(name: string, icon?: string) => {
+            if (editingPage) {
+              updatePageMutation.mutate({ pageId: editingPage.id, updates: { name, icon } });
+            } else {
+              createPageMutation.mutate({ name, icon });
+            }
+          }}
+          onCancel={() => {
+            setShowPageEditor(false);
+            setEditingPage(null);
+          }}
+        />
+      )}
 
       {/* Panel Editor Modal */}
       {showPanelEditor && (

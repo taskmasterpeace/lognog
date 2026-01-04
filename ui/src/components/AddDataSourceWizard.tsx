@@ -329,9 +329,9 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
                 <div
                   className={`w-8 h-8 rounded-full flex items-center justify-center font-medium transition-colors ${
                     s === step
-                      ? 'bg-sky-500 text-white'
+                      ? 'bg-amber-500 text-white'
                       : s < step
-                      ? 'bg-sky-100 text-sky-600 dark:bg-sky-900/30 dark:text-sky-400'
+                      ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'
                       : 'bg-slate-100 text-slate-400 dark:bg-slate-700 dark:text-slate-500'
                   }`}
                 >
@@ -340,7 +340,7 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
                 {s < 3 && (
                   <div
                     className={`w-12 h-0.5 mx-1 ${
-                      s < step ? 'bg-sky-500' : 'bg-slate-200 dark:bg-slate-600'
+                      s < step ? 'bg-amber-500' : 'bg-slate-200 dark:bg-slate-600'
                     }`}
                   />
                 )}
@@ -370,14 +370,14 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
                     onClick={() => setSourceType(type.id)}
                     className={`p-4 rounded-xl border-2 transition-all text-left ${
                       sourceType === type.id
-                        ? 'border-sky-500 bg-sky-50 dark:bg-sky-900/20'
+                        ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/20'
                         : 'border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500'
                     }`}
                   >
                     <div className="flex items-start justify-between mb-2">
                       <type.icon
                         className={`w-8 h-8 ${
-                          sourceType === type.id ? 'text-sky-500' : 'text-slate-400'
+                          sourceType === type.id ? 'text-amber-500' : 'text-slate-400'
                         }`}
                       />
                       {type.popular && (
@@ -389,7 +389,7 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
                     <h3
                       className={`font-semibold mb-1 ${
                         sourceType === type.id
-                          ? 'text-sky-700 dark:text-sky-300'
+                          ? 'text-amber-700 dark:text-amber-300'
                           : 'text-slate-900 dark:text-slate-100'
                       }`}
                     >
@@ -449,7 +449,7 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
                     <button
                       onClick={handleCreateApiKey}
                       disabled={creatingKey || !newApiKeyName.trim()}
-                      className="px-4 py-2 bg-sky-500 hover:bg-sky-600 disabled:bg-sky-300 text-white rounded-lg flex items-center gap-2"
+                      className="px-4 py-2 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 text-white rounded-lg flex items-center gap-2"
                     >
                       {creatingKey ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
@@ -488,7 +488,7 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
                         setSelectedApiKey('');
                         setShowCreateKey(true);
                       }}
-                      className="text-sm text-sky-500 hover:text-sky-600"
+                      className="text-sm text-amber-500 hover:text-amber-600"
                     >
                       Change
                     </button>
@@ -497,7 +497,7 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => setShowCreateKey(true)}
-                      className="flex-1 px-4 py-2 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg text-slate-600 dark:text-slate-400 hover:border-sky-500 hover:text-sky-500 transition-colors flex items-center justify-center gap-2"
+                      className="flex-1 px-4 py-2 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg text-slate-600 dark:text-slate-400 hover:border-amber-500 hover:text-amber-500 transition-colors flex items-center justify-center gap-2"
                     >
                       <Plus className="w-4 h-4" />
                       Create New API Key
@@ -522,20 +522,20 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
                   className="w-full px-4 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
                 />
                 {indexName && (
-                  <p className="text-xs text-sky-600 dark:text-sky-400 mt-1">
-                    Logs will be searchable as: <code className="bg-sky-50 dark:bg-sky-900/30 px-1 rounded">search index={indexName}</code>
+                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                    Logs will be searchable as: <code className="bg-amber-50 dark:bg-amber-900/30 px-1 rounded">search index={indexName}</code>
                   </p>
                 )}
               </div>
 
               {/* Syslog-specific info */}
               {sourceType === 'syslog' && (
-                <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                  <h4 className="font-medium text-blue-700 dark:text-blue-300 mb-2">Syslog Configuration</h4>
-                  <p className="text-sm text-blue-600 dark:text-blue-400">
-                    LogNog listens for syslog on <code className="bg-blue-100 dark:bg-blue-900/50 px-1 rounded">UDP/TCP port 514</code>
+                <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
+                  <h4 className="font-medium text-amber-700 dark:text-amber-300 mb-2">Syslog Configuration</h4>
+                  <p className="text-sm text-amber-600 dark:text-amber-400">
+                    LogNog listens for syslog on <code className="bg-amber-100 dark:bg-amber-900/50 px-1 rounded">UDP/TCP port 514</code>
                   </p>
-                  <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
+                  <p className="text-sm text-amber-600 dark:text-amber-400 mt-1">
                     Point your routers, firewalls, or servers to send syslog to your LogNog server.
                   </p>
                 </div>
@@ -543,16 +543,16 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
 
               {/* Agent-specific info */}
               {sourceType === 'agent' && (
-                <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
-                  <h4 className="font-medium text-purple-700 dark:text-purple-300 mb-2">LogNog In Agent</h4>
-                  <p className="text-sm text-purple-600 dark:text-purple-400">
+                <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
+                  <h4 className="font-medium text-amber-700 dark:text-amber-300 mb-2">LogNog In Agent</h4>
+                  <p className="text-sm text-amber-600 dark:text-amber-400">
                     Download the LogNog In agent for Windows or Linux to collect log files and Windows Event Logs.
                   </p>
                   <a
                     href="https://github.com/machinekinglabs/lognog/releases"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-sm text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 mt-2"
+                    className="inline-flex items-center gap-1 text-sm text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 mt-2"
                   >
                     Download Agent
                     <ExternalLink className="w-3 h-3" />
@@ -600,7 +600,7 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
                 <button
                   onClick={handleSendTest}
                   disabled={testStatus === 'sending' || !selectedApiKey}
-                  className="px-4 py-2 bg-sky-500 hover:bg-sky-600 disabled:bg-sky-300 text-white rounded-lg flex items-center gap-2"
+                  className="px-4 py-2 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 text-white rounded-lg flex items-center gap-2"
                 >
                   {testStatus === 'sending' ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -707,7 +707,7 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
                       onClick={() => setActiveSnippet(lang)}
                       className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
                         activeSnippet === lang
-                          ? 'bg-sky-500 text-white'
+                          ? 'bg-amber-500 text-white'
                           : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600'
                       }`}
                     >
@@ -759,7 +759,7 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
               <button
                 onClick={() => setStep(step + 1)}
                 disabled={step === 1 && !sourceType}
-                className="flex items-center gap-2 px-4 py-2 bg-sky-500 hover:bg-sky-600 disabled:bg-sky-300 text-white rounded-lg"
+                className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 text-white rounded-lg"
               >
                 Next
                 <ChevronRight className="w-4 h-4" />
@@ -770,7 +770,7 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
                   onComplete();
                   onClose();
                 }}
-                className="flex items-center gap-2 px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg"
+                className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg"
               >
                 <Check className="w-4 h-4" />
                 Done

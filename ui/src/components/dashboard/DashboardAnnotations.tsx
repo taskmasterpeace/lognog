@@ -40,7 +40,7 @@ export function DashboardAnnotations({
         {editMode && onAdd && (
           <button
             onClick={() => setShowAddForm(true)}
-            className="text-sm text-sky-600 hover:text-sky-700 dark:text-sky-400"
+            className="text-sm text-amber-600 hover:text-amber-700 dark:text-amber-400"
           >
             + Add
           </button>

@@ -83,8 +83,8 @@ export function NaturalLanguageInput({
   return (
     <div className="relative">
       {/* Main Input */}
-      <div className="flex items-center gap-2 p-3 bg-gradient-to-r from-purple-50 to-sky-50 dark:from-purple-900/20 dark:to-sky-900/20 border border-purple-200 dark:border-purple-800 rounded-lg">
-        <Sparkles className="w-5 h-5 text-purple-500 flex-shrink-0" />
+      <div className="flex items-center gap-2 p-3 bg-gradient-to-r from-amber-50 to-amber-50 dark:from-amber-900/20 dark:to-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
+        <Sparkles className="w-5 h-5 text-amber-500 flex-shrink-0" />
         <input
           ref={inputRef}
           type="text"
@@ -104,7 +104,7 @@ export function NaturalLanguageInput({
         <button
           onClick={handleSubmit}
           disabled={!input.trim() || loading}
-          className="p-1.5 bg-purple-500 hover:bg-purple-600 disabled:bg-purple-300 text-white rounded transition-colors"
+          className="p-1.5 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 text-white rounded transition-colors"
         >
           {loading ? (
             <Loader2 className="w-4 h-4 animate-spin" />
@@ -171,7 +171,7 @@ export function NaturalLanguageInput({
             </button>
             <button
               onClick={handleUseQuery}
-              className="flex items-center gap-1 px-3 py-1.5 text-sm bg-sky-500 hover:bg-sky-600 text-white rounded transition-colors"
+              className="flex items-center gap-1 px-3 py-1.5 text-sm bg-amber-500 hover:bg-amber-600 text-white rounded transition-colors"
             >
               Use Query
               <ArrowRight className="w-4 h-4" />

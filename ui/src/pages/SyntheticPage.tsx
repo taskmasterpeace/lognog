@@ -262,7 +262,7 @@ export default function SyntheticPage() {
   if (testsLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+        <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
       </div>
     );
   }
@@ -283,7 +283,7 @@ export default function SyntheticPage() {
             setEditingTest(null);
             setShowCreateModal(true);
           }}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors"
         >
           <Plus className="w-4 h-4" />
           New Test
@@ -339,7 +339,7 @@ export default function SyntheticPage() {
           </p>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700"
           >
             Create Test
           </button>
@@ -413,7 +413,7 @@ export default function SyntheticPage() {
                       <button
                         onClick={() => runMutation.mutate(test.id)}
                         disabled={isRunning}
-                        className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-colors"
+                        className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors"
                         title="Run now"
                       >
                         {isRunning ? (
@@ -560,11 +560,11 @@ export default function SyntheticPage() {
                         onClick={() => setFormData({ ...formData, test_type: type.value })}
                         className={`p-3 rounded-lg border text-left transition-colors ${
                           formData.test_type === type.value
-                            ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
+                            ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/20'
                             : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
                         }`}
                       >
-                        <Icon className={`w-5 h-5 mb-1 ${formData.test_type === type.value ? 'text-blue-600' : 'text-slate-400'}`} />
+                        <Icon className={`w-5 h-5 mb-1 ${formData.test_type === type.value ? 'text-amber-600' : 'text-slate-400'}`} />
                         <div className="font-medium text-sm text-slate-900 dark:text-slate-100">{type.label}</div>
                         <div className="text-xs text-slate-500">{type.description}</div>
                       </button>
@@ -717,7 +717,7 @@ export default function SyntheticPage() {
               <button
                 onClick={handleSubmit}
                 disabled={createMutation.isPending || updateMutation.isPending || !formData.name}
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center gap-2"
+                className="px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50 flex items-center gap-2"
               >
                 {(createMutation.isPending || updateMutation.isPending) && (
                   <Loader2 className="w-4 h-4 animate-spin" />

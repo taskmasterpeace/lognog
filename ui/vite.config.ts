@@ -13,12 +13,13 @@ export default defineConfig({
     port: 3000,
     proxy: {
       '/api': {
-        target: 'http://localhost:4000',
+        // Port 4001 = local dev (npm run dev), Port 4000 = Docker
+        target: 'http://localhost:4001',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, ''),
       },
       '/ws': {
-        target: 'ws://localhost:4000',
+        target: 'ws://localhost:4001',
         ws: true,
       },
     },

@@ -19,6 +19,7 @@ import {
   Maximize2,
   Minimize2,
   Printer,
+  Filter,
 } from 'lucide-react';
 import {
   getScheduledReports,
@@ -28,6 +29,7 @@ import {
   generateReport,
   ScheduledReport,
 } from '../api/client';
+import AppScopeFilter from '../components/AppScopeFilter';
 
 const SCHEDULE_OPTIONS = [
   { label: 'Every hour', value: '0 * * * *', desc: 'Runs at the start of every hour' },
@@ -53,6 +55,7 @@ export default function ReportsPage() {
   const [reportQuery, setReportQuery] = useState('search * | stats count by hostname');
   const [reportSchedule, setReportSchedule] = useState('0 0 * * *');
   const [reportRecipients, setReportRecipients] = useState('');
+  const [appScope, setAppScope] = useState<string>('all');
 
   const [generateQuery, setGenerateQuery] = useState('search * | stats count by hostname');
   const [generateTitle, setGenerateTitle] = useState('Log Report');
@@ -87,12 +90,12 @@ export default function ReportsPage() {
   }, [searchParams, setSearchParams]);
 
   const { data: reports, isLoading, error } = useQuery({
-    queryKey: ['scheduledReports'],
-    queryFn: getScheduledReports,
+    queryKey: ['scheduledReports', appScope],
+    queryFn: () => getScheduledReports(appScope === 'all' ? undefined : appScope),
   });
 
   const createMutation = useMutation({
-    mutationFn: () => createScheduledReport(reportName, reportQuery, reportSchedule, reportRecipients),
+    mutationFn: () => createScheduledReport(reportName, reportQuery, reportSchedule, reportRecipients, 'html', appScope === 'all' ? 'default' : appScope),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['scheduledReports'] });
       setShowCreateModal(false);
@@ -183,7 +186,7 @@ export default function ReportsPage() {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-full">
-        <Loader2 className="w-10 h-10 text-sky-500 animate-spin mb-4" />
+        <Loader2 className="w-10 h-10 text-amber-500 animate-spin mb-4" />
         <p className="text-slate-600">Loading reports...</p>
       </div>
     );
@@ -211,6 +214,10 @@ export default function ReportsPage() {
               <p className="text-slate-500 dark:text-slate-400 text-sm mt-1 hidden sm:block">Generate and schedule log reports</p>
             </div>
             <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-slate-400" />
+                <AppScopeFilter value={appScope} onChange={setAppScope} />
+              </div>
               <button onClick={() => setShowGenerateModal(true)} className="btn-secondary flex-1 sm:flex-none justify-center">
                 <Download className="w-4 h-4" />
                 <span className="sm:inline">Export</span>
@@ -228,7 +235,7 @@ export default function ReportsPage() {
         {/* Quick Export Section */}
         <section className="card p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row items-start gap-3 sm:gap-4">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-sky-400 to-sky-600 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-amber-400 to-amber-600 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
               <FileCode className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </div>
             <div className="flex-1">
@@ -246,11 +253,11 @@ export default function ReportsPage() {
 
         {/* Last Generated Report */}
         {reportPreview && (
-          <section className="card p-4 sm:p-6 border-sky-200 bg-sky-50">
+          <section className="card p-4 sm:p-6 border-amber-200 bg-amber-50">
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 sm:w-10 sm:h-10 bg-sky-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-sky-600" />
+                <div className="w-9 h-9 sm:w-10 sm:h-10 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600" />
                 </div>
                 <div className="min-w-0">
                   <h3 className="font-semibold text-slate-900 text-sm sm:text-base">Last Generated Report</h3>
@@ -293,10 +300,10 @@ export default function ReportsPage() {
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-start gap-2 sm:gap-3 min-w-0 flex-1">
                       <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                        report.enabled ? 'bg-emerald-100' : 'bg-slate-100'
+                        report.enabled ? 'bg-amber-100' : 'bg-slate-100'
                       }`}>
                         <FileText className={`w-4 h-4 sm:w-5 sm:h-5 ${
-                          report.enabled ? 'text-emerald-600' : 'text-slate-400'
+                          report.enabled ? 'text-amber-600' : 'text-slate-400'
                         }`} />
                       </div>
                       <div className="min-w-0 flex-1">
@@ -327,7 +334,7 @@ export default function ReportsPage() {
                         onClick={() => toggleMutation.mutate({ id: report.id, enabled: !report.enabled })}
                         className={`p-1.5 sm:p-2 rounded-lg transition-colors ${
                           report.enabled
-                            ? 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100'
+                            ? 'text-amber-600 bg-amber-50 hover:bg-amber-100'
                             : 'text-slate-400 bg-slate-100 hover:bg-slate-200'
                         }`}
                         title={report.enabled ? 'Pause schedule' : 'Enable schedule'}
@@ -507,7 +514,7 @@ export default function ReportsPage() {
                       onClick={() => setGenerateTimeRange(preset.value)}
                       className={`px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm rounded-lg border transition-colors ${
                         generateTimeRange === preset.value
-                          ? 'border-sky-500 bg-sky-50 text-sky-700'
+                          ? 'border-amber-500 bg-amber-50 text-amber-700'
                           : 'border-slate-200 hover:border-slate-300 text-slate-600'
                       }`}
                     >

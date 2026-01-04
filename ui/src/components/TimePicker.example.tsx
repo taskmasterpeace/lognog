@@ -132,7 +132,7 @@ function MyComponent() {
             'Custom range',
           ].map(preset => (
             <div key={preset} className="flex items-center gap-2 text-slate-700">
-              <div className="w-1.5 h-1.5 bg-sky-500 rounded-full"></div>
+              <div className="w-1.5 h-1.5 bg-amber-500 rounded-full"></div>
               {preset}
             </div>
           ))}

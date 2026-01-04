@@ -1077,14 +1077,14 @@ export default function SearchPage() {
                 <Table2 className="w-8 h-8 text-slate-400" />
               )}
             </div>
-            <h3 className="text-lg font-semibold text-slate-900 mb-2">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">
               {searchMode === 'ai' ? 'Ask a Question' : 'Ready to Search'}
             </h3>
-            <p className="text-slate-500 text-center max-w-md mb-6">
+            <p className="text-slate-500 dark:text-slate-400 text-center max-w-md mb-6">
               {searchMode === 'ai' ? (
                 <>Type a question in plain English and AI will translate it to a query</>
               ) : (
-                <>Enter a query above and press Search or use <kbd className="code">Ctrl+Enter</kbd></>
+                <>Enter a query above and press Search or use <kbd className="code dark:bg-slate-700 dark:text-amber-400">Ctrl+Enter</kbd></>
               )}
             </p>
 
@@ -1098,13 +1098,13 @@ export default function SearchPage() {
                       setAiQuestion(suggestion.text);
                       aiSearchMutation.mutate(suggestion.text);
                     }}
-                    className="card-hover p-3 sm:p-4 text-left border-amber-200 hover:border-amber-300"
+                    className="card-hover p-3 sm:p-4 text-left border-amber-200 dark:border-amber-800 hover:border-amber-300 dark:hover:border-amber-700"
                   >
                     <div className="flex items-start gap-2">
                       <Wand2 className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
                       <div className="min-w-0">
-                        <p className="font-medium text-slate-900 text-sm sm:text-base truncate">{suggestion.text}</p>
-                        <p className="text-xs text-slate-500 mt-1 line-clamp-2">{suggestion.description}</p>
+                        <p className="font-medium text-slate-900 dark:text-slate-100 text-sm sm:text-base truncate">{suggestion.text}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">{suggestion.description}</p>
                       </div>
                     </div>
                   </button>
@@ -1121,9 +1121,9 @@ export default function SearchPage() {
                     }}
                     className="card-hover p-3 sm:p-4 text-left"
                   >
-                    <p className="font-medium text-slate-900 text-sm sm:text-base">{ex.name}</p>
-                    <p className="text-xs text-slate-500 mt-1">{ex.desc}</p>
-                    <code className="text-xs text-amber-600 mt-2 block truncate">{ex.query}</code>
+                    <p className="font-medium text-slate-900 dark:text-slate-100 text-sm sm:text-base">{ex.name}</p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{ex.desc}</p>
+                    <code className="text-xs text-amber-600 dark:text-amber-400 mt-2 block truncate">{ex.query}</code>
                   </button>
                 ))}
               </div>

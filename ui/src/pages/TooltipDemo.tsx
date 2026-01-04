@@ -180,22 +180,22 @@ search error | timechart span=1h count`}
             </p>
             <div className="flex gap-2">
               <Tooltip content="View query syntax" placement="bottom">
-                <button className="p-3 rounded-lg border-2 border-slate-200 dark:border-slate-700 hover:border-sky-500 transition-colors">
+                <button className="p-3 rounded-lg border-2 border-slate-200 dark:border-slate-700 hover:border-amber-500 transition-colors">
                   <Code className="w-5 h-5" />
                 </button>
               </Tooltip>
               <Tooltip content="Database settings" placement="bottom">
-                <button className="p-3 rounded-lg border-2 border-slate-200 dark:border-slate-700 hover:border-sky-500 transition-colors">
+                <button className="p-3 rounded-lg border-2 border-slate-200 dark:border-slate-700 hover:border-amber-500 transition-colors">
                   <Database className="w-5 h-5" />
                 </button>
               </Tooltip>
               <Tooltip content="Performance optimization" placement="bottom">
-                <button className="p-3 rounded-lg border-2 border-slate-200 dark:border-slate-700 hover:border-sky-500 transition-colors">
+                <button className="p-3 rounded-lg border-2 border-slate-200 dark:border-slate-700 hover:border-amber-500 transition-colors">
                   <Zap className="w-5 h-5" />
                 </button>
               </Tooltip>
               <Tooltip content="Configuration options" placement="bottom">
-                <button className="p-3 rounded-lg border-2 border-slate-200 dark:border-slate-700 hover:border-sky-500 transition-colors">
+                <button className="p-3 rounded-lg border-2 border-slate-200 dark:border-slate-700 hover:border-amber-500 transition-colors">
                   <Settings className="w-5 h-5" />
                 </button>
               </Tooltip>
@@ -242,11 +242,11 @@ search error | timechart span=1h count`}
         </section>
 
         {/* Usage Notes */}
-        <section className="bg-sky-50 dark:bg-sky-900/20 rounded-xl p-6 border border-sky-200 dark:border-sky-800">
-          <h3 className="font-semibold text-sky-900 dark:text-sky-100 mb-2">
+        <section className="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-6 border border-amber-200 dark:border-amber-800">
+          <h3 className="font-semibold text-amber-900 dark:text-amber-100 mb-2">
             Implementation Notes
           </h3>
-          <ul className="space-y-2 text-sm text-sky-800 dark:text-sky-200">
+          <ul className="space-y-2 text-sm text-amber-800 dark:text-amber-200">
             <li>✓ All tooltips use @floating-ui/react for smart positioning</li>
             <li>✓ Tooltips automatically flip/shift to stay in viewport</li>
             <li>✓ Smooth 200ms fade-in animation</li>

@@ -90,15 +90,15 @@ export default function FieldBrowserModal({
   const getTypeColor = (type: string): string => {
     switch (type) {
       case 'string':
-        return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400';
+        return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400';
       case 'number':
-        return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
+        return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400';
       case 'datetime':
-        return 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400';
+        return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400';
       case 'boolean':
         return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400';
       default:
-        return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400';
+        return 'bg-slate-100 text-slate-700 dark:bg-nog-800 dark:text-nog-400';
     }
   };
 
@@ -121,22 +121,22 @@ export default function FieldBrowserModal({
 
       {/* Modal */}
       <div className="flex min-h-full items-center justify-center p-4">
-        <div className="relative w-full max-w-2xl bg-white dark:bg-slate-800 rounded-xl shadow-2xl">
+        <div className="relative w-full max-w-2xl bg-white dark:bg-nog-800 rounded-xl shadow-2xl">
           {/* Header */}
-          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700">
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+          <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-nog-700">
+            <h2 className="text-lg font-semibold text-slate-900 dark:text-nog-100">
               Field Browser
             </h2>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+              className="p-2 hover:bg-slate-100 dark:hover:bg-nog-700 rounded-lg transition-colors"
             >
               <X className="w-5 h-5 text-slate-500" />
             </button>
           </div>
 
           {/* Search and Filters */}
-          <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 space-y-4">
+          <div className="px-6 py-4 border-b border-slate-200 dark:border-nog-700 space-y-4">
             {/* Search */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
@@ -145,7 +145,7 @@ export default function FieldBrowserModal({
                 placeholder="Search fields..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-100 dark:bg-slate-900 border-0 rounded-lg text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-sky-500"
+                className="w-full pl-10 pr-4 py-2.5 bg-slate-100 dark:bg-nog-900 border-0 rounded-lg text-sm text-slate-900 dark:text-nog-100 placeholder-slate-400 focus:ring-2 focus:ring-amber-500"
               />
             </div>
 
@@ -157,8 +157,8 @@ export default function FieldBrowserModal({
                   onClick={() => setFilter(f)}
                   className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
                     filter === f
-                      ? 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400'
-                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
+                      ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                      : 'text-slate-600 dark:text-nog-400 hover:bg-slate-100 dark:hover:bg-nog-700'
                   }`}
                 >
                   {f.charAt(0).toUpperCase() + f.slice(1)}
@@ -170,7 +170,7 @@ export default function FieldBrowserModal({
           {/* Field List */}
           <div className="max-h-[400px] overflow-y-auto">
             {filteredFields.length === 0 ? (
-              <div className="px-6 py-12 text-center text-slate-500 dark:text-slate-400">
+              <div className="px-6 py-12 text-center text-slate-500 dark:text-nog-400">
                 No fields match your search
               </div>
             ) : (
@@ -178,7 +178,7 @@ export default function FieldBrowserModal({
                 {filteredFields.map((field) => (
                   <div
                     key={field.name}
-                    className="flex items-center justify-between px-6 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                    className="flex items-center justify-between px-6 py-3 hover:bg-slate-50 dark:hover:bg-nog-700/50 transition-colors"
                   >
                     <div className="flex items-center gap-3">
                       {/* Pin indicator */}
@@ -190,7 +190,7 @@ export default function FieldBrowserModal({
                       <div className="flex-shrink-0">{getSourceIcon(field.source)}</div>
 
                       {/* Field name */}
-                      <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                      <span className="text-sm font-medium text-slate-900 dark:text-nog-100">
                         {field.name}
                       </span>
 
@@ -205,7 +205,7 @@ export default function FieldBrowserModal({
 
                       {/* Occurrences */}
                       {field.occurrences !== undefined && (
-                        <span className="text-xs text-slate-500 dark:text-slate-400">
+                        <span className="text-xs text-slate-500 dark:text-nog-400">
                           {field.occurrences.toLocaleString()} occurrences
                         </span>
                       )}
@@ -218,7 +218,7 @@ export default function FieldBrowserModal({
                         className={`px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
                           field.isPinned
                             ? 'bg-amber-100 text-amber-700 hover:bg-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:hover:bg-amber-900/50'
-                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600'
+                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-nog-700 dark:text-nog-300 dark:hover:bg-nog-600'
                         }`}
                       >
                         {field.isPinned ? 'Unpin' : 'Pin'}
@@ -231,13 +231,13 @@ export default function FieldBrowserModal({
           </div>
 
           {/* Footer */}
-          <div className="flex items-center justify-between px-6 py-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 rounded-b-xl">
-            <span className="text-sm text-slate-500 dark:text-slate-400">
+          <div className="flex items-center justify-between px-6 py-4 border-t border-slate-200 dark:border-nog-700 bg-slate-50 dark:bg-nog-900 rounded-b-xl">
+            <span className="text-sm text-slate-500 dark:text-nog-400">
               Showing {filteredFields.length} of {allFields.length} fields
             </span>
             <button
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-white bg-sky-600 hover:bg-sky-700 rounded-lg transition-colors"
+              className="px-4 py-2 text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 rounded-lg transition-colors"
             >
               Done
             </button>

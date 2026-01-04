@@ -24,7 +24,7 @@ interface LoginNotificationsModalProps {
 }
 
 const SEVERITY_CONFIG = {
-  info: { icon: Info, color: 'text-blue-500', bg: 'bg-blue-100 dark:bg-blue-900/30', border: 'border-blue-200 dark:border-blue-800' },
+  info: { icon: Info, color: 'text-amber-500', bg: 'bg-amber-100 dark:bg-amber-900/30', border: 'border-amber-200 dark:border-amber-800' },
   low: { icon: AlertCircle, color: 'text-slate-500', bg: 'bg-slate-100 dark:bg-slate-700', border: 'border-slate-200 dark:border-slate-700' },
   medium: { icon: AlertTriangle, color: 'text-yellow-500', bg: 'bg-yellow-100 dark:bg-yellow-900/30', border: 'border-yellow-200 dark:border-yellow-800' },
   high: { icon: AlertTriangle, color: 'text-orange-500', bg: 'bg-orange-100 dark:bg-orange-900/30', border: 'border-orange-200 dark:border-orange-800' },
@@ -104,8 +104,8 @@ export default function LoginNotificationsModal({
         {/* Header */}
         <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-              <Bell className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+            <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+              <Bell className="w-5 h-5 text-amber-600 dark:text-amber-400" />
             </div>
             <div>
               <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
@@ -167,7 +167,7 @@ export default function LoginNotificationsModal({
                       {notification.alert_id && (
                         <a
                           href={`/alerts?highlight=${notification.alert_id}`}
-                          className="flex items-center gap-1 text-sky-500 hover:text-sky-600"
+                          className="flex items-center gap-1 text-amber-500 hover:text-amber-600"
                           onClick={(e) => {
                             e.preventDefault();
                             // Navigate to alerts page with this alert highlighted

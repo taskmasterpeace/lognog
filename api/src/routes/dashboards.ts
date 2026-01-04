@@ -2,6 +2,12 @@ import { Router, Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcrypt';
 import {
+  generatePanel,
+  generateDefaultDashboard,
+  calculatePosition,
+  type PanelConfig,
+} from '../services/dashboard-generator.js';
+import {
   getDashboards,
   getDashboard,
   getDashboardPanels,
@@ -24,33 +30,41 @@ import {
   getDashboardTemplate,
   createDashboardTemplate,
   incrementTemplateDownloads,
+  getAppScopes,
+  getDashboardPages,
+  getDashboardPage,
+  createDashboardPage,
+  updateDashboardPage,
+  deleteDashboardPage,
+  reorderDashboardPages,
 } from '../db/sqlite.js';
 
 const router = Router();
 
-// Get all dashboards with their panels
-router.get('/', (_req: Request, res: Response) => {
+// Get all available app scopes
+router.get('/app-scopes', (_req: Request, res: Response) => {
   try {
-    const dashboards = getDashboards();
-    // Include panels for each dashboard so UI can show panel count
-    const dashboardsWithPanels = dashboards.map(dashboard => {
-      const panels = getDashboardPanels(dashboard.id);
-      return {
-        ...dashboard,
-        panels: panels.map(p => ({
-          ...p,
-          options: JSON.parse(p.options),
-        })),
-      };
-    });
-    return res.json(dashboardsWithPanels);
+    const scopes = getAppScopes();
+    return res.json(scopes);
+  } catch (error) {
+    console.error('Error fetching app scopes:', error);
+    return res.status(500).json({ error: 'Failed to fetch app scopes' });
+  }
+});
+
+// Get all dashboards (optionally filtered by app_scope)
+router.get('/', (req: Request, res: Response) => {
+  try {
+    const appScope = req.query.app_scope as string | undefined;
+    const dashboards = getDashboards(appScope);
+    return res.json(dashboards);
   } catch (error) {
     console.error('Error fetching dashboards:', error);
     return res.status(500).json({ error: 'Failed to fetch dashboards' });
   }
 });
 
-// Get a single dashboard with its panels
+// Get a single dashboard with its panels and pages
 router.get('/:id', (req: Request, res: Response) => {
   try {
     const dashboard = getDashboard(req.params.id);
@@ -59,6 +73,7 @@ router.get('/:id', (req: Request, res: Response) => {
     }
 
     const panels = getDashboardPanels(req.params.id);
+    const pages = getDashboardPages(req.params.id);
 
     return res.json({
       ...dashboard,
@@ -66,6 +81,7 @@ router.get('/:id', (req: Request, res: Response) => {
         ...p,
         options: JSON.parse(p.options),
       })),
+      pages,
     });
   } catch (error) {
     console.error('Error fetching dashboard:', error);
@@ -76,17 +92,120 @@ router.get('/:id', (req: Request, res: Response) => {
 // Create a new dashboard
 router.post('/', (req: Request, res: Response) => {
   try {
-    const { name, description } = req.body;
+    const { name, description, app_scope } = req.body;
 
     if (!name) {
       return res.status(400).json({ error: 'Name is required' });
     }
 
-    const dashboard = createDashboard(name, description);
+    const dashboard = createDashboard(name, description, app_scope);
     return res.status(201).json(dashboard);
   } catch (error) {
     console.error('Error creating dashboard:', error);
     return res.status(500).json({ error: 'Failed to create dashboard' });
+  }
+});
+
+// Create dashboard from wizard (index-based auto-generation)
+router.post('/from-wizard', (req: Request, res: Response) => {
+  try {
+    const { name, index, panels, useDefaults, app_scope } = req.body;
+
+    if (!name) {
+      return res.status(400).json({ error: 'Dashboard name is required' });
+    }
+
+    if (!index) {
+      return res.status(400).json({ error: 'Index name is required' });
+    }
+
+    // Create the dashboard - use app_scope if provided, otherwise use the index as the scope
+    const dashboard = createDashboard(name, `Auto-generated dashboard for index: ${index}`, app_scope || index);
+
+    let createdPanels: Array<{ id: string; title: string; vizType: string }> = [];
+
+    // If useDefaults is true and no panels specified, generate default dashboard
+    if (useDefaults && (!panels || panels.length === 0)) {
+      // Generate default panels based on common fields
+      const defaultFields = [
+        { name: 'timestamp', recommended_viz: ['line'] },
+        { name: 'severity', recommended_viz: ['pie', 'heatmap', 'bar'] },
+        { name: 'hostname', recommended_viz: ['bar', 'pie', 'table'] },
+        { name: 'app_name', recommended_viz: ['bar', 'pie', 'table'] },
+      ];
+
+      const defaultPanels = generateDefaultDashboard(index, defaultFields);
+
+      for (const panelConfig of defaultPanels) {
+        const panel = createDashboardPanel(
+          dashboard.id,
+          panelConfig.title,
+          panelConfig.query,
+          panelConfig.vizType,
+          {},
+          {
+            x: panelConfig.position.x,
+            y: panelConfig.position.y,
+            width: panelConfig.position.w,
+            height: panelConfig.position.h,
+          }
+        );
+        createdPanels.push({
+          id: panel.id,
+          title: panelConfig.title,
+          vizType: panelConfig.vizType,
+        });
+      }
+    } else if (panels && panels.length > 0) {
+      // Create panels from wizard selections
+      for (let i = 0; i < panels.length; i++) {
+        const panelSpec = panels[i];
+        const { field, vizType, position } = panelSpec;
+
+        // Generate panel config using the dashboard-generator service
+        const panelConfig = generatePanel({
+          field,
+          vizType,
+          index,
+          position: position || calculatePosition(i, panels.length),
+        });
+
+        const panel = createDashboardPanel(
+          dashboard.id,
+          panelConfig.title,
+          panelConfig.query,
+          panelConfig.vizType,
+          {},
+          {
+            x: panelConfig.position.x,
+            y: panelConfig.position.y,
+            width: panelConfig.position.w,
+            height: panelConfig.position.h,
+          }
+        );
+
+        createdPanels.push({
+          id: panel.id,
+          title: panelConfig.title,
+          vizType: panelConfig.vizType,
+        });
+      }
+    }
+
+    // Return the created dashboard with summary
+    const allPanels = getDashboardPanels(dashboard.id);
+    return res.status(201).json({
+      dashboard_id: dashboard.id,
+      name: dashboard.name,
+      panels_created: createdPanels.length,
+      panels: allPanels.map(p => ({
+        ...p,
+        options: JSON.parse(p.options),
+      })),
+    });
+  } catch (error) {
+    console.error('Error creating dashboard from wizard:', error);
+    return res.status(500).json({ error: 'Failed to create dashboard from wizard' });
   }
 });
 
@@ -464,6 +583,72 @@ router.delete('/:id/annotations/:annotationId', (req: Request, res: Response) =>
   } catch (error) {
     console.error('Error deleting annotation:', error);
     return res.status(500).json({ error: 'Failed to delete annotation' });
+  }
+});
+
+// Dashboard Pages (for multi-tab dashboards)
+router.get('/:id/pages', (req: Request, res: Response) => {
+  try {
+    const pages = getDashboardPages(req.params.id);
+    return res.json(pages);
+  } catch (error) {
+    console.error('Error fetching pages:', error);
+    return res.status(500).json({ error: 'Failed to fetch pages' });
+  }
+});
+
+router.post('/:id/pages', (req: Request, res: Response) => {
+  try {
+    const { name, icon, sort_order } = req.body;
+    if (!name) {
+      return res.status(400).json({ error: 'Name is required' });
+    }
+    const page = createDashboardPage(req.params.id, name, { icon, sort_order });
+    return res.status(201).json(page);
+  } catch (error) {
+    console.error('Error creating page:', error);
+    return res.status(500).json({ error: 'Failed to create page' });
+  }
+});
+
+router.put('/:id/pages/:pageId', (req: Request, res: Response) => {
+  try {
+    const { name, icon, sort_order } = req.body;
+    const page = updateDashboardPage(req.params.pageId, { name, icon, sort_order });
+    if (!page) {
+      return res.status(404).json({ error: 'Page not found' });
+    }
+    return res.json(page);
+  } catch (error) {
+    console.error('Error updating page:', error);
+    return res.status(500).json({ error: 'Failed to update page' });
+  }
+});
+
+router.delete('/:id/pages/:pageId', (req: Request, res: Response) => {
+  try {
+    const deleted = deleteDashboardPage(req.params.pageId);
+    if (!deleted) {
+      return res.status(404).json({ error: 'Page not found' });
+    }
+    return res.status(204).send();
+  } catch (error) {
+    console.error('Error deleting page:', error);
+    return res.status(500).json({ error: 'Failed to delete page' });
+  }
+});
+
+router.put('/:id/pages/reorder', (req: Request, res: Response) => {
+  try {
+    const { pageIds } = req.body;
+    if (!Array.isArray(pageIds)) {
+      return res.status(400).json({ error: 'pageIds array is required' });
+    }
+    reorderDashboardPages(req.params.id, pageIds);
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('Error reordering pages:', error);
+    return res.status(500).json({ error: 'Failed to reorder pages' });
   }
 });
 

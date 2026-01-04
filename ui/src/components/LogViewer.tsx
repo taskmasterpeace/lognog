@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   ChevronRight,
   ChevronDown,
@@ -9,6 +9,7 @@ import {
   Loader2,
   AlertCircle,
 } from 'lucide-react';
+import { AnnotatedValue, useSourceAnnotationsOptional } from './SourceAnnotations';
 
 // Types
 export interface LogEntry {
@@ -34,8 +35,8 @@ const SEVERITY_CONFIG = {
   2: { name: 'Critical', color: 'text-orange-700 bg-orange-100 ring-orange-600/30', bgColor: 'bg-orange-50/50' },
   3: { name: 'Error', color: 'text-red-700 bg-red-100 ring-red-600/30', bgColor: 'bg-red-50/50' },
   4: { name: 'Warning', color: 'text-amber-700 bg-amber-100 ring-amber-600/30', bgColor: 'bg-amber-50/50' },
-  5: { name: 'Notice', color: 'text-blue-700 bg-blue-100 ring-blue-600/30', bgColor: 'bg-blue-50/50' },
-  6: { name: 'Info', color: 'text-sky-700 bg-sky-100 ring-sky-600/30', bgColor: 'bg-sky-50/50' },
+  5: { name: 'Notice', color: 'text-amber-700 bg-amber-100 ring-amber-600/30', bgColor: 'bg-amber-50/50' },
+  6: { name: 'Info', color: 'text-amber-700 bg-amber-100 ring-amber-600/30', bgColor: 'bg-amber-50/50' },
   7: { name: 'Debug', color: 'text-slate-700 bg-slate-100 ring-slate-600/30', bgColor: 'bg-slate-50/50' },
 };
 
@@ -121,9 +122,13 @@ interface FieldValueProps {
   searchTerms?: string[];
 }
 
+// Fields that support annotations (tooltip/card context)
+const ANNOTATABLE_FIELDS = ['hostname', 'app_name', 'source', 'host', 'service', 'application'];
+
 const FieldValue: React.FC<FieldValueProps> = ({ field, value, onAddFilter, searchTerms }) => {
   const [showActions, setShowActions] = useState(false);
   const [copied, setCopied] = useState(false);
+  const annotationContext = useSourceAnnotationsOptional();
 
   const handleCopy = async () => {
     try {
@@ -136,6 +141,37 @@ const FieldValue: React.FC<FieldValueProps> = ({ field, value, onAddFilter, sear
   };
 
   const valueStr = String(value);
+  const isAnnotatable = ANNOTATABLE_FIELDS.includes(field);
+  const hasAnnotation = isAnnotatable && annotationContext?.getAnnotation(field, valueStr);
+
+  // Render the value content
+  const renderValue = () => {
+    if (field === 'severity' && typeof value === 'number') {
+      return (
+        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ring-1 ${SEVERITY_CONFIG[value as keyof typeof SEVERITY_CONFIG]?.color || 'text-slate-700 bg-slate-100 ring-slate-600/30'}`}>
+          {SEVERITY_CONFIG[value as keyof typeof SEVERITY_CONFIG]?.name || value}
+        </span>
+      );
+    }
+    if (field === 'timestamp') {
+      return (
+        <span className="text-slate-600 dark:text-slate-400 flex items-center gap-2">
+          <span>{formatTimestamp(valueStr)}</span>
+          <span className="text-xs text-slate-400">({getRelativeTime(valueStr)})</span>
+        </span>
+      );
+    }
+    return highlightText(valueStr, searchTerms);
+  };
+
+  // Wrap with AnnotatedValue if this field type supports annotations
+  const valueElement = isAnnotatable ? (
+    <AnnotatedValue field={field} value={valueStr}>
+      {renderValue()}
+    </AnnotatedValue>
+  ) : (
+    renderValue()
+  );
 
   return (
     <div
@@ -143,24 +179,13 @@ const FieldValue: React.FC<FieldValueProps> = ({ field, value, onAddFilter, sear
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => setShowActions(false)}
     >
-      <span className="font-mono text-sm">
-        {field === 'severity' && typeof value === 'number' ? (
-          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ring-1 ${SEVERITY_CONFIG[value as keyof typeof SEVERITY_CONFIG]?.color || 'text-slate-700 bg-slate-100 ring-slate-600/30'}`}>
-            {SEVERITY_CONFIG[value as keyof typeof SEVERITY_CONFIG]?.name || value}
-          </span>
-        ) : field === 'timestamp' ? (
-          <span className="text-slate-600 flex items-center gap-2">
-            <span>{formatTimestamp(valueStr)}</span>
-            <span className="text-xs text-slate-400">({getRelativeTime(valueStr)})</span>
-          </span>
-        ) : (
-          highlightText(valueStr, searchTerms)
-        )}
+      <span className={`font-mono text-sm ${hasAnnotation ? 'cursor-help' : ''}`}>
+        {valueElement}
       </span>
 
       {/* Quick Actions Popup */}
       {showActions && onAddFilter && field !== 'timestamp' && (
-        <div className="absolute left-0 top-full mt-1 z-10 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-lg p-1 flex gap-1 whitespace-nowrap animate-fade-in">
+        <div className="absolute left-0 top-full mt-1 z-10 bg-white dark:bg-nog-800 border border-slate-200 dark:border-nog-700 rounded-lg shadow-lg p-1 flex gap-1 whitespace-nowrap animate-fade-in">
           <button
             onClick={() => onAddFilter(field, valueStr, false)}
             className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 rounded transition-colors"
@@ -179,7 +204,7 @@ const FieldValue: React.FC<FieldValueProps> = ({ field, value, onAddFilter, sear
           </button>
           <button
             onClick={handleCopy}
-            className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 rounded transition-colors"
+            className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-slate-700 dark:text-nog-300 hover:bg-slate-50 dark:hover:bg-nog-700 rounded transition-colors"
             title="Copy value"
           >
             {copied ? (
@@ -251,21 +276,21 @@ const LogRow: React.FC<LogRowProps> = ({
   return (
     <div
       style={style}
-      className={`border-b border-slate-200 dark:border-slate-700 transition-colors ${
-        isExpanded ? severityConfig.bgColor : 'hover:bg-slate-50 dark:hover:bg-slate-800'
+      className={`border-b border-slate-200 dark:border-nog-700 transition-colors ${
+        isExpanded ? severityConfig.bgColor : 'hover:bg-slate-50 dark:hover:bg-nog-800'
       }`}
     >
       <div className="flex items-start gap-2 px-4 py-2">
         {/* Expand/Collapse Button */}
         <button
           onClick={() => onToggleExpand(index)}
-          className="mt-1 p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-colors flex-shrink-0"
+          className="mt-1 p-1 hover:bg-slate-200 dark:hover:bg-nog-700 rounded transition-colors flex-shrink-0"
           aria-label={isExpanded ? 'Collapse' : 'Expand'}
         >
           {isExpanded ? (
-            <ChevronDown className="w-4 h-4 text-slate-600 dark:text-slate-400" />
+            <ChevronDown className="w-4 h-4 text-slate-600 dark:text-nog-400" />
           ) : (
-            <ChevronRight className="w-4 h-4 text-slate-600 dark:text-slate-400" />
+            <ChevronRight className="w-4 h-4 text-slate-600 dark:text-nog-400" />
           )}
         </button>
 
@@ -274,7 +299,7 @@ const LogRow: React.FC<LogRowProps> = ({
           {/* Collapsed View - Single Line */}
           {!isExpanded && (
             <div className="flex items-start gap-3 text-sm">
-              <span className="text-slate-500 dark:text-slate-400 font-mono text-xs whitespace-nowrap flex-shrink-0 w-32">
+              <span className="text-slate-500 dark:text-nog-400 font-mono text-xs whitespace-nowrap flex-shrink-0 w-32">
                 {log.timestamp ? formatTimestamp(log.timestamp) : '—'}
               </span>
 
@@ -285,18 +310,18 @@ const LogRow: React.FC<LogRowProps> = ({
               )}
 
               {log.hostname && (
-                <span className="text-sky-600 font-mono text-xs flex-shrink-0">
+                <span className="text-green-600 dark:text-green-400 font-mono text-xs flex-shrink-0">
                   {log.hostname}
                 </span>
               )}
 
               {log.app_name && (
-                <span className="text-purple-600 font-mono text-xs flex-shrink-0">
+                <span className="text-amber-600 dark:text-amber-400 font-mono text-xs flex-shrink-0">
                   {log.app_name}
                 </span>
               )}
 
-              <span className="text-slate-700 font-mono text-xs truncate">
+              <span className="text-slate-700 dark:text-nog-200 font-mono text-xs truncate">
                 {log.message ? highlightText(log.message, searchTerms) : '—'}
               </span>
             </div>
@@ -330,15 +355,15 @@ const LogRow: React.FC<LogRowProps> = ({
               {/* Structured Data Fields (parsed from JSON) */}
               {structuredFields.length > 0 && (
                 <>
-                  <div className="border-t border-slate-200 dark:border-slate-700 pt-2 mt-2">
-                    <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase">
+                  <div className="border-t border-slate-200 dark:border-nog-700 pt-2 mt-2">
+                    <span className="text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase">
                       Custom Fields
                     </span>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {structuredFields.map((field) => (
-                      <div key={field} className="flex items-start gap-2 bg-emerald-50/50 dark:bg-emerald-900/20 rounded px-2 py-1">
-                        <span className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 min-w-[100px] flex-shrink-0 mt-0.5">
+                      <div key={field} className="flex items-start gap-2 bg-amber-50/50 dark:bg-amber-900/20 rounded px-2 py-1">
+                        <span className="text-xs font-semibold text-amber-700 dark:text-amber-400 min-w-[100px] flex-shrink-0 mt-0.5">
                           {field}:
                         </span>
                         <div className="flex-1 min-w-0">
@@ -358,15 +383,15 @@ const LogRow: React.FC<LogRowProps> = ({
               {/* Additional Fields */}
               {additionalFields.length > 0 && (
                 <>
-                  <div className="border-t border-slate-200 dark:border-slate-700 pt-2 mt-2">
-                    <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase">
+                  <div className="border-t border-slate-200 dark:border-nog-700 pt-2 mt-2">
+                    <span className="text-xs font-semibold text-slate-400 dark:text-nog-500 uppercase">
                       Additional Fields
                     </span>
                   </div>
                   <div className="grid grid-cols-1 gap-2">
                     {additionalFields.map((field) => (
                       <div key={field} className="flex items-start gap-2">
-                        <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 w-24 flex-shrink-0 mt-0.5">
+                        <span className="text-xs font-semibold text-slate-500 dark:text-nog-400 w-24 flex-shrink-0 mt-0.5">
                           {field}:
                         </span>
                         <div className="flex-1 min-w-0">
@@ -400,6 +425,35 @@ export default function LogViewer({
   const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
   const [visibleStart, setVisibleStart] = useState(0);
   const [visibleEnd, setVisibleEnd] = useState(50);
+  const annotationContext = useSourceAnnotationsOptional();
+
+  // Load annotations for visible logs
+  useEffect(() => {
+    if (!annotationContext || logs.length === 0) return;
+
+    // Collect unique field:value pairs from visible logs for annotatable fields
+    const items = new Set<string>();
+    const logsToCheck = logs.slice(0, Math.min(100, logs.length)); // Check first 100 logs
+
+    logsToCheck.forEach(log => {
+      ANNOTATABLE_FIELDS.forEach(field => {
+        const value = log[field];
+        if (value !== undefined && value !== null) {
+          items.add(`${field}:${String(value)}`);
+        }
+      });
+    });
+
+    // Convert to array of {field, value} objects
+    const itemsArray = Array.from(items).map(item => {
+      const [field, ...valueParts] = item.split(':');
+      return { field, value: valueParts.join(':') };
+    });
+
+    if (itemsArray.length > 0) {
+      annotationContext.loadAnnotations(itemsArray);
+    }
+  }, [logs, annotationContext]);
 
   const handleToggleExpand = useCallback((index: number) => {
     setExpandedRows((prev) => {
@@ -450,7 +504,7 @@ export default function LogViewer({
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
-        <Loader2 className="w-8 h-8 text-sky-500 animate-spin mb-4" />
+        <Loader2 className="w-8 h-8 text-amber-500 animate-spin mb-4" />
         <p className="text-slate-600">Loading logs...</p>
       </div>
     );
@@ -459,13 +513,13 @@ export default function LogViewer({
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
+      <div className="flex items-center justify-between px-4 py-3 bg-slate-50 dark:bg-nog-900 border-b border-slate-200 dark:border-nog-700">
         <div className="flex items-center gap-4">
-          <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+          <span className="text-sm font-semibold text-slate-700 dark:text-nog-300">
             {logs.length.toLocaleString()} {logs.length === 1 ? 'log' : 'logs'}
           </span>
           {expandedRows.size > 0 && (
-            <span className="text-xs text-slate-500 dark:text-slate-400">
+            <span className="text-xs text-slate-500 dark:text-nog-400">
               {expandedRows.size} expanded
             </span>
           )}
@@ -473,7 +527,7 @@ export default function LogViewer({
         {expandedRows.size > 0 && (
           <button
             onClick={() => setExpandedRows(new Set())}
-            className="text-xs text-sky-600 hover:text-sky-700 dark:text-sky-400 dark:hover:text-sky-300 font-medium"
+            className="text-xs text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 font-medium"
           >
             Collapse All
           </button>
@@ -481,7 +535,7 @@ export default function LogViewer({
       </div>
 
       {/* Log List with Simple Virtualization */}
-      <div className="flex-1 bg-white dark:bg-slate-800 overflow-auto scrollbar-thin" onScroll={handleScroll}>
+      <div className="flex-1 bg-white dark:bg-nog-800 overflow-auto scrollbar-thin" onScroll={handleScroll}>
         {/* Spacer for scrolling virtualization */}
         <div style={{ height: `${visibleStart * 60}px` }} />
 
@@ -507,7 +561,7 @@ export default function LogViewer({
       </div>
 
       {/* Footer */}
-      <div className="px-4 py-2 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 text-xs text-slate-500 dark:text-slate-400">
+      <div className="px-4 py-2 bg-slate-50 dark:bg-nog-900 border-t border-slate-200 dark:border-nog-700 text-xs text-slate-500 dark:text-nog-400">
         <span>Click any row to expand. Hover over field values for quick actions.</span>
       </div>
     </div>

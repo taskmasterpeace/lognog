@@ -92,7 +92,7 @@ export default function VariableHelper({ onInsert }: VariableHelperProps) {
       <button
         type="button"
         onClick={() => setShowHelper(!showHelper)}
-        className="flex items-center gap-2 px-3 py-2 text-sm text-sky-600 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-900/20 rounded-lg border border-sky-200 dark:border-sky-800"
+        className="flex items-center gap-2 px-3 py-2 text-sm text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800"
       >
         <HelpCircle className="w-4 h-4" />
         Variable Helper
@@ -145,12 +145,12 @@ export default function VariableHelper({ onInsert }: VariableHelperProps) {
                           <button
                             key={variable.name}
                             onClick={() => handleCopyVariable(variable.name)}
-                            className="w-full p-3 bg-slate-50 dark:bg-slate-700/50 hover:bg-sky-50 dark:hover:bg-sky-900/20 rounded-lg text-left border border-transparent hover:border-sky-200 dark:hover:border-sky-800 transition-colors group"
+                            className="w-full p-3 bg-slate-50 dark:bg-slate-700/50 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg text-left border border-transparent hover:border-amber-200 dark:hover:border-amber-800 transition-colors group"
                           >
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-1">
-                                  <code className="text-sm font-mono text-sky-600 dark:text-sky-400">
+                                  <code className="text-sm font-mono text-amber-600 dark:text-amber-400">
                                     {'{{' + variable.name + '}}'}
                                   </code>
                                   {isCopied ? (

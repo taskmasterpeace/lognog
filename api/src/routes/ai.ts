@@ -56,6 +56,13 @@ async function isOllamaAvailable(): Promise<boolean> {
   }
 }
 
+// Check if ANY AI provider is available (Ollama OR OpenRouter)
+async function isAnyAIAvailable(): Promise<boolean> {
+  const ollamaAvailable = await isOllamaAvailable();
+  if (ollamaAvailable) return true;
+  return !!OPENROUTER_API_KEY;
+}
+
 // Generate text with Ollama
 async function generateWithOllama(prompt: string, model?: string): Promise<string> {
   const response = await fetch(`${OLLAMA_URL}/api/generate`, {
@@ -273,11 +280,11 @@ router.post('/generate-query', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Prompt is required' });
     }
 
-    const available = await isOllamaAvailable();
+    const available = await isAnyAIAvailable();
     if (!available) {
       return res.status(503).json({
         error: 'AI service unavailable',
-        message: 'Ollama is not running. Start it with: ollama serve',
+        message: 'No AI provider available. Start Ollama or configure OPENROUTER_API_KEY.',
       });
     }
 
@@ -300,11 +307,12 @@ User request: ${prompt}
 
 Respond with ONLY the query, no explanation.`;
 
-    const query = await generateWithOllama(systemPrompt);
+    const { response: query, provider } = await generateText(systemPrompt, { endpoint: '/ai/generate-query' });
 
     return res.json({
       query: query.trim(),
       prompt,
+      provider,
     });
   } catch (error) {
     console.error('Error generating query:', error);
@@ -317,11 +325,11 @@ router.post('/insights', async (req: Request, res: Response) => {
   try {
     const { dashboardId, timeRange } = req.body;
 
-    const available = await isOllamaAvailable();
+    const available = await isAnyAIAvailable();
     if (!available) {
       return res.status(503).json({
         error: 'AI service unavailable',
-        message: 'Ollama is not running',
+        message: 'No AI provider available. Start Ollama or configure OPENROUTER_API_KEY.',
       });
     }
 
@@ -342,11 +350,11 @@ Respond in JSON format:
 
 Generate realistic insights for a homelab log monitoring dashboard viewing ${timeRange} of data.`;
 
-    const response = await generateWithOllama(systemPrompt);
+    const { response, provider } = await generateText(systemPrompt, { endpoint: '/ai/insights' });
 
     try {
       const parsed = JSON.parse(response);
-      return res.json(parsed);
+      return res.json({ ...parsed, provider });
     } catch {
       // If parsing fails, return mock insights
       return res.json({
@@ -364,6 +372,7 @@ Generate realistic insights for a homelab log monitoring dashboard viewing ${tim
             description: 'Set up alerts for high error rates to catch issues early.',
           },
         ],
+        provider,
       });
     }
   } catch (error) {
@@ -618,8 +627,8 @@ router.post('/interview/:id/respond', async (req: Request, res: Response) => {
       current_step: 2,
     });
 
-    // Check if Ollama is available for AI analysis
-    const available = await isOllamaAvailable();
+    // Check if any AI provider is available
+    const available = await isAnyAIAvailable();
 
     let followUpQuestions: string;
     let recommendedLogs: string;
@@ -641,7 +650,8 @@ ${responses}
 Generate follow-up questions in markdown format with clear numbering. Be specific to their tech stack and architecture.`;
 
       try {
-        followUpQuestions = await generateWithOllama(followUpPrompt);
+        const { response } = await generateText(followUpPrompt, { endpoint: '/ai/interview/respond' });
+        followUpQuestions = response;
       } catch {
         followUpQuestions = generateDefaultFollowUpQuestions(responses);
       }
@@ -664,7 +674,7 @@ Generate a JSON object with this structure:
 Only output the JSON, no other text.`;
 
       try {
-        const recommendationsRaw = await generateWithOllama(recommendationsPrompt);
+        const { response: recommendationsRaw } = await generateText(recommendationsPrompt, { endpoint: '/ai/interview/respond' });
         recommendedLogs = recommendationsRaw;
       } catch {
         recommendedLogs = JSON.stringify(generateDefaultRecommendations(responses), null, 2);
@@ -749,7 +759,7 @@ router.post('/interview/:id/generate', async (req: Request, res: Response) => {
 
     updateInterviewSession(session.id, { status: 'processing' });
 
-    const available = await isOllamaAvailable();
+    const available = await isAnyAIAvailable();
     let implementationGuide: string;
 
     if (available) {
@@ -887,7 +897,8 @@ Query: search event=* | stats count by user_id | sort desc count | limit 10
 BE SPECIFIC to their tech stack. If they use Next.js, show Next.js code. If they use Python/FastAPI, show Python code. Generate WORKING code they can copy-paste.`;
 
       try {
-        implementationGuide = await generateWithOllama(guidePrompt);
+        const { response } = await generateText(guidePrompt, { endpoint: '/ai/interview/generate' });
+        implementationGuide = response;
       } catch {
         implementationGuide = generateDefaultImplementationGuide(session.responses);
       }

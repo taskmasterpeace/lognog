@@ -84,25 +84,25 @@ export function AIInsightsPanel({
       case 'anomaly':
         return <AlertTriangle className={`w-4 h-4 ${
           severity === 'critical' ? 'text-red-500' :
-          severity === 'warning' ? 'text-amber-500' : 'text-blue-500'
+          severity === 'warning' ? 'text-amber-500' : 'text-amber-500'
         }`} />;
       case 'trend':
         return severity === 'warning'
           ? <TrendingDown className="w-4 h-4 text-amber-500" />
           : <TrendingUp className="w-4 h-4 text-green-500" />;
       case 'suggestion':
-        return <Lightbulb className="w-4 h-4 text-purple-500" />;
+        return <Lightbulb className="w-4 h-4 text-amber-500" />;
       default:
-        return <Sparkles className="w-4 h-4 text-sky-500" />;
+        return <Sparkles className="w-4 h-4 text-amber-500" />;
     }
   };
 
   return (
     <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-purple-50 to-sky-50 dark:from-purple-900/20 dark:to-sky-900/20">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-amber-50 to-amber-50 dark:from-amber-900/20 dark:to-amber-900/20">
         <div className="flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-purple-500" />
+          <Sparkles className="w-5 h-5 text-amber-500" />
           <h3 className="font-semibold text-slate-900 dark:text-slate-100">AI Insights</h3>
           {ollamaAvailable === false && (
             <span className="px-2 py-0.5 text-xs bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-full">
@@ -135,7 +135,7 @@ export function AIInsightsPanel({
       <div className="p-4">
         {loading && insights.length === 0 ? (
           <div className="flex items-center justify-center py-8">
-            <Loader2 className="w-6 h-6 text-purple-500 animate-spin" />
+            <Loader2 className="w-6 h-6 text-amber-500 animate-spin" />
           </div>
         ) : error ? (
           <div className="text-center py-4 text-red-600 dark:text-red-400">
@@ -179,7 +179,7 @@ export function AIInsightsPanel({
                             window.location.href = `/search?query=${encodeURIComponent(insight.action.query)}`;
                           }
                         }}
-                        className="mt-2 text-sm text-sky-600 dark:text-sky-400 hover:underline"
+                        className="mt-2 text-sm text-amber-600 dark:text-amber-400 hover:underline"
                       >
                         {insight.action.label} →
                       </button>

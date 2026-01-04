@@ -221,7 +221,7 @@ export default function NotificationChannelsSection() {
         </h2>
         <button
           onClick={openAddModal}
-          className="flex items-center gap-2 px-3 py-1.5 bg-sky-500 hover:bg-sky-600 text-white text-sm font-medium rounded-lg transition-colors"
+          className="flex items-center gap-2 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium rounded-lg transition-colors"
         >
           <Plus className="w-4 h-4" />
           Add Channel
@@ -334,7 +334,7 @@ export default function NotificationChannelsSection() {
                   <button
                     onClick={() => handleTest(channel.id)}
                     disabled={testingId === channel.id || !channel.enabled}
-                    className="p-2 text-slate-400 hover:text-sky-500 hover:bg-sky-50 dark:hover:bg-sky-900/20 rounded-lg transition-colors disabled:opacity-50"
+                    className="p-2 text-slate-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors disabled:opacity-50"
                     title="Send test notification"
                   >
                     {testingId === channel.id ? (
@@ -456,7 +456,7 @@ export default function NotificationChannelsSection() {
                       href={services.find(s => s.id === formService)?.docsUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="ml-2 text-sky-500 hover:text-sky-600 inline-flex items-center gap-1"
+                      className="ml-2 text-amber-500 hover:text-amber-600 inline-flex items-center gap-1"
                     >
                       Docs <ExternalLink className="w-3 h-3" />
                     </a>
@@ -519,7 +519,7 @@ export default function NotificationChannelsSection() {
                   <button
                     onClick={handleTestUrl}
                     disabled={testingId === 'form'}
-                    className="flex items-center gap-2 px-3 py-1.5 text-sm text-sky-600 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-900/20 rounded-lg transition-colors disabled:opacity-50"
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors disabled:opacity-50"
                   >
                     {testingId === 'form' ? (
                       <>
@@ -558,7 +558,7 @@ export default function NotificationChannelsSection() {
               <button
                 onClick={handleSave}
                 disabled={saving || !formName.trim() || !formUrl.trim()}
-                className="flex items-center gap-2 px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
               >
                 {saving ? (
                   <>

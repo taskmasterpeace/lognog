@@ -43,7 +43,7 @@ interface CitationsPanelProps {
 
 function RelevanceBadge({ category }: { category: 'high' | 'medium' | 'low' }) {
   const styles = {
-    high: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+    high: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
     medium: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
     low: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400',
   };
@@ -60,12 +60,12 @@ function MatchTypeBadge({ type }: { type: 'vector' | 'text' | 'hybrid' }) {
     vector: {
       icon: Sparkles,
       label: 'Semantic',
-      className: 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+      className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
     },
     text: {
       icon: Search,
       label: 'Keyword',
-      className: 'bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400',
+      className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
     },
     hybrid: {
       icon: Zap,
@@ -155,7 +155,7 @@ function SourceCard({
           {onClick && (
             <button
               onClick={onClick}
-              className="inline-flex items-center gap-1 text-xs text-sky-600 dark:text-sky-400 hover:underline"
+              className="inline-flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 hover:underline"
             >
               View full document
               <ExternalLink className="w-3 h-3" />
@@ -185,7 +185,7 @@ function StatsBar({ stats }: { stats: SearchStats }) {
         </span>
       )}
       {stats.reranked && (
-        <span className="text-emerald-600 dark:text-emerald-400">
+        <span className="text-amber-600 dark:text-amber-400">
           Re-ranked
         </span>
       )}

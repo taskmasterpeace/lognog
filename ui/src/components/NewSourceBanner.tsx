@@ -84,17 +84,17 @@ export default function NewSourceBanner() {
   const totalLogs = newSources.reduce((sum, s) => sum + s.count, 0);
 
   return (
-    <div className="mb-4 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-xl overflow-hidden">
+    <div className="mb-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl overflow-hidden">
       <div className="flex items-center justify-between p-4">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-emerald-100 dark:bg-emerald-800 rounded-lg">
-            <Database className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+          <div className="p-2 bg-amber-100 dark:bg-amber-800 rounded-lg">
+            <Database className="w-5 h-5 text-amber-600 dark:text-amber-400" />
           </div>
           <div>
-            <div className="font-medium text-emerald-900 dark:text-emerald-100">
+            <div className="font-medium text-amber-900 dark:text-amber-100">
               New logs detected!
             </div>
-            <div className="text-sm text-emerald-700 dark:text-emerald-300">
+            <div className="text-sm text-amber-700 dark:text-amber-300">
               {newSources.length === 1 ? (
                 <>
                   Index <strong>"{newSources[0].index_name}"</strong> has{' '}
@@ -112,14 +112,14 @@ export default function NewSourceBanner() {
         <div className="flex items-center gap-2">
           <Link
             to="/data-sources"
-            className="flex items-center gap-1 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition-colors"
+            className="flex items-center gap-1 px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm font-medium transition-colors"
           >
             View in Data Sources
             <ChevronRight className="w-4 h-4" />
           </Link>
           <button
             onClick={handleDismiss}
-            className="p-1.5 hover:bg-emerald-100 dark:hover:bg-emerald-800 rounded text-emerald-600 dark:text-emerald-400"
+            className="p-1.5 hover:bg-amber-100 dark:hover:bg-amber-800 rounded text-amber-600 dark:text-amber-400"
             title="Dismiss"
           >
             <X className="w-4 h-4" />
@@ -135,7 +135,7 @@ export default function NewSourceBanner() {
               <Link
                 key={source.index_name}
                 to={`/search?q=${encodeURIComponent(`search index=${source.index_name}`)}`}
-                className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-emerald-200 dark:border-emerald-700 rounded-lg text-sm hover:border-emerald-400 dark:hover:border-emerald-500 transition-colors flex items-center gap-2"
+                className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-amber-200 dark:border-amber-700 rounded-lg text-sm hover:border-amber-400 dark:hover:border-amber-500 transition-colors flex items-center gap-2"
               >
                 <span className="font-medium text-slate-900 dark:text-slate-100">
                   {source.index_name}
@@ -151,16 +151,16 @@ export default function NewSourceBanner() {
       )}
 
       {/* Footer with don't show again option */}
-      <div className="px-4 py-2 bg-emerald-100/50 dark:bg-emerald-900/30 border-t border-emerald-200 dark:border-emerald-800 flex items-center justify-between">
-        <p className="text-xs text-emerald-700 dark:text-emerald-300">
+      <div className="px-4 py-2 bg-amber-100/50 dark:bg-amber-900/30 border-t border-amber-200 dark:border-amber-800 flex items-center justify-between">
+        <p className="text-xs text-amber-700 dark:text-amber-300">
           Configure index routing and field normalization in{' '}
-          <Link to="/data-sources" className="underline hover:text-emerald-900 dark:hover:text-emerald-100">
+          <Link to="/data-sources" className="underline hover:text-amber-900 dark:hover:text-amber-100">
             Data Sources
           </Link>
         </p>
         <button
           onClick={handleDontShowAgain}
-          className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline"
+          className="text-xs text-amber-600 dark:text-amber-400 hover:underline"
         >
           Don't show for these indexes
         </button>

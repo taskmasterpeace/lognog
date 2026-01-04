@@ -20,6 +20,7 @@ import {
   Database,
 } from 'lucide-react';
 import { CitationsPanel, CitedSource, SearchStats } from './NogChat/CitationsPanel';
+import { api } from '../api/client';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -112,8 +113,7 @@ export function NogChat() {
 
   const checkAiStatus = async () => {
     try {
-      const response = await fetch('/api/ai/status');
-      const data = await response.json();
+      const data = await api.get<{ aiAvailable: boolean }>('/ai/status');
       setAiAvailable(data.aiAvailable);
     } catch {
       setAiAvailable(false);
@@ -153,21 +153,17 @@ export function NogChat() {
         messageText.toLowerCase().includes('top sources') ||
         messageText.toLowerCase().includes('patterns');
 
-      const response = await fetch('/api/ai/nogchat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: messageText,
-          requestInsights: isInsightRequest,
-          history: messages.slice(-6), // Last 6 messages for context
-        }),
+      const data = await api.post<{
+        response: string;
+        type?: 'text' | 'query' | 'insight';
+        executedQuery?: string;
+        citations?: CitedSource[];
+        searchStats?: SearchStats;
+      }>('/ai/nogchat', {
+        message: messageText,
+        requestInsights: isInsightRequest,
+        history: messages.slice(-6), // Last 6 messages for context
       });
-
-      if (!response.ok) {
-        throw new Error('Failed to get response');
-      }
-
-      const data = await response.json();
       setMessages((prev) => [
         ...prev,
         {
@@ -214,8 +210,8 @@ export function NogChat() {
         <div
           className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
             msg.role === 'user'
-              ? 'bg-sky-500'
-              : 'bg-gradient-to-br from-emerald-500 to-teal-600'
+              ? 'bg-amber-500'
+              : 'bg-gradient-to-br from-amber-500 to-orange-600'
           }`}
         >
           {msg.role === 'user' ? (
@@ -227,7 +223,7 @@ export function NogChat() {
         <div
           className={`flex-1 max-w-[85%] ${
             msg.role === 'user'
-              ? 'bg-sky-500 text-white rounded-2xl rounded-tr-sm p-3'
+              ? 'bg-amber-500 text-white rounded-2xl rounded-tr-sm p-3'
               : 'space-y-2'
           }`}
         >
@@ -275,7 +271,7 @@ export function NogChat() {
                       )}
                     </button>
                   </div>
-                  <pre className="p-3 text-sm text-emerald-400 font-mono overflow-x-auto">
+                  <pre className="p-3 text-sm text-amber-400 font-mono overflow-x-auto">
                     {code}
                   </pre>
                 </div>
@@ -284,7 +280,7 @@ export function NogChat() {
               {msg.query && (
                 <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
                   <Database className="w-3 h-3" />
-                  <span>Analyzed your data with: <code className="text-emerald-600 dark:text-emerald-400">{msg.query}</code></span>
+                  <span>Analyzed your data with: <code className="text-amber-600 dark:text-amber-400">{msg.query}</code></span>
                 </div>
               )}
               {/* Show citations panel for RAG-enhanced responses */}
@@ -305,36 +301,36 @@ export function NogChat() {
     return (
       <button
         onClick={() => setIsOpen(true)}
-        className="fixed bottom-6 right-6 z-50 group animate-scale-in"
+        className="fixed bottom-20 sm:bottom-6 right-4 sm:right-6 z-50 group animate-scale-in"
         title="NogChat - Your LogNog Assistant"
       >
         <div className="relative">
-          <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full blur-lg opacity-50 group-hover:opacity-75 transition-all duration-300" />
-          <div className="relative p-4 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 active:scale-95">
-            <MessageCircle className="w-6 h-6" />
+          <div className="absolute inset-0 bg-gradient-to-r from-amber-500 to-orange-500 rounded-full blur-lg opacity-50 group-hover:opacity-75 transition-all duration-300" />
+          <div className="relative p-3 sm:p-4 bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 active:scale-95">
+            <MessageCircle className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
-          <span className="absolute -top-1 -right-1 w-3 h-3 bg-emerald-400 rounded-full animate-pulse" />
+          <span className="absolute -top-1 -right-1 w-3 h-3 bg-amber-400 rounded-full animate-pulse" />
         </div>
       </button>
     );
   }
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 w-[420px] max-w-[calc(100vw-3rem)] bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col max-h-[650px] animate-scale-in">
+    <div className="fixed inset-2 sm:inset-auto sm:bottom-6 sm:right-6 z-50 sm:w-[420px] bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col max-h-[calc(100vh-1rem)] sm:max-h-[650px] animate-scale-in safe-area-inset">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-emerald-500/10 to-teal-500/10 rounded-t-2xl">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl shadow-lg">
-            <Bot className="w-5 h-5 text-white" />
+      <div className="flex items-center justify-between p-3 sm:p-4 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-amber-500/10 to-orange-500/10 rounded-t-2xl">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <div className="p-1.5 sm:p-2 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl shadow-lg">
+            <Bot className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
           </div>
           <div>
-            <h3 className="font-bold text-slate-900 dark:text-slate-100">NogChat</h3>
+            <h3 className="font-bold text-sm sm:text-base text-slate-900 dark:text-slate-100">NogChat</h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
               {aiAvailable === null ? (
                 'Connecting...'
               ) : aiAvailable ? (
                 <>
-                  <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+                  <span className="w-1.5 h-1.5 bg-amber-500 rounded-full" />
                   Ready to help
                 </>
               ) : (
@@ -348,9 +344,10 @@ export function NogChat() {
         </div>
         <button
           onClick={() => setIsOpen(false)}
-          className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+          className="p-2.5 sm:p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+          aria-label="Close chat"
         >
-          <X className="w-5 h-5" />
+          <X className="w-6 h-6 sm:w-5 sm:h-5" />
         </button>
       </div>
 
@@ -360,8 +357,8 @@ export function NogChat() {
           <div className="space-y-4">
             {/* Welcome */}
             <div className="text-center py-2">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-emerald-500/20 to-teal-500/20 rounded-2xl mb-3">
-                <Sparkles className="w-8 h-8 text-emerald-500" />
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-amber-500/20 to-orange-500/20 rounded-2xl mb-3">
+                <Sparkles className="w-8 h-8 text-amber-500" />
               </div>
               <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-1">
                 Welcome to NogChat
@@ -380,9 +377,9 @@ export function NogChat() {
                 {QUICK_ACTIONS.map((action, i) => {
                   const Icon = action.icon;
                   const categoryColors = {
-                    learn: 'from-blue-500/10 to-indigo-500/10 hover:from-blue-500/20 hover:to-indigo-500/20 text-blue-600 dark:text-blue-400',
-                    query: 'from-emerald-500/10 to-teal-500/10 hover:from-emerald-500/20 hover:to-teal-500/20 text-emerald-600 dark:text-emerald-400',
-                    insight: 'from-purple-500/10 to-pink-500/10 hover:from-purple-500/20 hover:to-pink-500/20 text-purple-600 dark:text-purple-400',
+                    learn: 'from-amber-500/10 to-orange-500/10 hover:from-amber-500/20 hover:to-orange-500/20 text-amber-600 dark:text-amber-400',
+                    query: 'from-amber-500/10 to-orange-500/10 hover:from-amber-500/20 hover:to-orange-500/20 text-amber-600 dark:text-amber-400',
+                    insight: 'from-amber-500/10 to-pink-500/10 hover:from-amber-500/20 hover:to-pink-500/20 text-amber-600 dark:text-amber-400',
                     splunk: 'from-orange-500/10 to-amber-500/10 hover:from-orange-500/20 hover:to-amber-500/20 text-orange-600 dark:text-orange-400',
                   };
                   const staggerClass = `animate-stagger-${Math.min(i + 1, 8)}`;
@@ -429,12 +426,12 @@ export function NogChat() {
         )}
         {loading && (
           <div className="flex gap-3">
-            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
               <Bot className="w-4 h-4 text-white" />
             </div>
             <div className="p-3 bg-slate-100 dark:bg-slate-700 rounded-2xl rounded-tl-sm">
               <div className="flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin text-emerald-500" />
+                <Loader2 className="w-4 h-4 animate-spin text-amber-500" />
                 <span className="text-sm text-slate-500">Thinking...</span>
               </div>
             </div>
@@ -461,13 +458,13 @@ export function NogChat() {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSubmit()}
             placeholder="Ask about queries, alerts, your data..."
-            className="flex-1 px-4 py-2.5 bg-slate-100 dark:bg-slate-700 border-none rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="flex-1 px-4 py-2.5 bg-slate-100 dark:bg-slate-700 border-none rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500"
             disabled={loading}
           />
           <button
             onClick={() => handleSubmit()}
             disabled={!input.trim() || loading}
-            className="p-2.5 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg transition-all"
+            className="p-2.5 bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg transition-all"
           >
             {loading ? (
               <Loader2 className="w-5 h-5 animate-spin" />
@@ -477,7 +474,7 @@ export function NogChat() {
           </button>
         </div>
         <div className="mt-2 flex items-center justify-center gap-2 text-xs text-slate-400">
-          <span className="font-medium text-emerald-500">NogChat</span>
+          <span className="font-medium text-amber-500">NogChat</span>
           <span>•</span>
           <span>Powered by Local AI</span>
         </div>

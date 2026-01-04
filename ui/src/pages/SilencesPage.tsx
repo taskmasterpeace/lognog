@@ -37,9 +37,9 @@ export default function SilencesPage() {
     queryFn: () => getSilences(true), // Active only
   });
 
-  const { data: alerts } = useQuery({
+  const { data: alerts } = useQuery<Alert[]>({
     queryKey: ['alerts'],
-    queryFn: getAlerts,
+    queryFn: () => getAlerts(),
   });
 
   const deleteMutation = useMutation({
@@ -71,9 +71,9 @@ export default function SilencesPage() {
   const getLevelIcon = (level: string) => {
     switch (level) {
       case 'global':
-        return <Globe className="h-5 w-5 text-purple-500" />;
+        return <Globe className="h-5 w-5 text-amber-500" />;
       case 'host':
-        return <Server className="h-5 w-5 text-blue-500" />;
+        return <Server className="h-5 w-5 text-amber-500" />;
       case 'alert':
         return <AlertCircle className="h-5 w-5 text-orange-500" />;
       default:
@@ -83,8 +83,8 @@ export default function SilencesPage() {
 
   const getLevelBadge = (level: string) => {
     const colors = {
-      global: 'bg-purple-100 text-purple-700',
-      host: 'bg-blue-100 text-blue-700',
+      global: 'bg-amber-100 text-amber-700',
+      host: 'bg-amber-100 text-amber-700',
       alert: 'bg-orange-100 text-orange-700',
     };
     return (
@@ -118,7 +118,7 @@ export default function SilencesPage() {
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+          className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700"
         >
           <Plus className="h-4 w-4" />
           Create Silence
@@ -127,7 +127,7 @@ export default function SilencesPage() {
 
       {isLoading && (
         <div className="flex items-center justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
+          <Loader2 className="h-8 w-8 animate-spin text-amber-600" />
         </div>
       )}
 
@@ -140,7 +140,7 @@ export default function SilencesPage() {
           </p>
           <button
             onClick={() => setShowCreateModal(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700"
           >
             <Plus className="h-4 w-4" />
             Create Silence
@@ -268,11 +268,11 @@ function CreateSilenceModal({ onClose, alerts }: CreateSilenceModalProps) {
                   }}
                   className={`p-4 border-2 rounded-lg text-center transition-all ${
                     level === 'global'
-                      ? 'border-purple-500 bg-purple-50'
+                      ? 'border-amber-500 bg-amber-50'
                       : 'border-slate-200 hover:border-slate-300'
                   }`}
                 >
-                  <Globe className={`h-6 w-6 mx-auto mb-2 ${level === 'global' ? 'text-purple-500' : 'text-slate-400'}`} />
+                  <Globe className={`h-6 w-6 mx-auto mb-2 ${level === 'global' ? 'text-amber-500' : 'text-slate-400'}`} />
                   <div className="font-medium">Global</div>
                   <div className="text-xs text-slate-500 mt-1">All alerts</div>
                 </button>
@@ -281,11 +281,11 @@ function CreateSilenceModal({ onClose, alerts }: CreateSilenceModalProps) {
                   onClick={() => setLevel('host')}
                   className={`p-4 border-2 rounded-lg text-center transition-all ${
                     level === 'host'
-                      ? 'border-blue-500 bg-blue-50'
+                      ? 'border-amber-500 bg-amber-50'
                       : 'border-slate-200 hover:border-slate-300'
                   }`}
                 >
-                  <Server className={`h-6 w-6 mx-auto mb-2 ${level === 'host' ? 'text-blue-500' : 'text-slate-400'}`} />
+                  <Server className={`h-6 w-6 mx-auto mb-2 ${level === 'host' ? 'text-amber-500' : 'text-slate-400'}`} />
                   <div className="font-medium">Host</div>
                   <div className="text-xs text-slate-500 mt-1">Specific host</div>
                 </button>
@@ -314,7 +314,7 @@ function CreateSilenceModal({ onClose, alerts }: CreateSilenceModalProps) {
                   type="text"
                   value={targetId}
                   onChange={(e) => setTargetId(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
                   placeholder="e.g., server1, 192.168.1.100"
                   required
                 />
@@ -329,7 +329,7 @@ function CreateSilenceModal({ onClose, alerts }: CreateSilenceModalProps) {
                 <select
                   value={targetId}
                   onChange={(e) => setTargetId(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
                   required
                 >
                   <option value="">Select an alert...</option>
@@ -349,7 +349,7 @@ function CreateSilenceModal({ onClose, alerts }: CreateSilenceModalProps) {
               <select
                 value={duration}
                 onChange={(e) => setDuration(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
               >
                 {DURATION_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -366,7 +366,7 @@ function CreateSilenceModal({ onClose, alerts }: CreateSilenceModalProps) {
               <textarea
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
                 rows={3}
                 placeholder="Why are you silencing these alerts?"
               />
@@ -380,7 +380,7 @@ function CreateSilenceModal({ onClose, alerts }: CreateSilenceModalProps) {
                 type="text"
                 value={createdBy}
                 onChange={(e) => setCreatedBy(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
                 placeholder="Your name or username"
               />
             </div>
@@ -397,7 +397,7 @@ function CreateSilenceModal({ onClose, alerts }: CreateSilenceModalProps) {
             <button
               type="submit"
               disabled={createMutation.isPending || (level !== 'global' && !targetId)}
-              className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {createMutation.isPending ? (
                 <span className="flex items-center justify-center gap-2">

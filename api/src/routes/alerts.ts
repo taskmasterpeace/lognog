@@ -25,10 +25,11 @@ import { ALERT_TEMPLATES } from '../data/alert-templates.js';
 
 const router = Router();
 
-// Get all alerts
-router.get('/', (_req: Request, res: Response) => {
+// Get all alerts (optionally filtered by app_scope)
+router.get('/', (req: Request, res: Response) => {
   try {
-    const alerts = getAlerts();
+    const appScope = req.query.app_scope as string | undefined;
+    const alerts = getAlerts(false, appScope);
     // Parse actions JSON for each alert
     const alertsWithParsedActions = alerts.map(alert => ({
       ...alert,
@@ -59,6 +60,8 @@ router.post('/from-template/:templateId', (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Template not found' });
     }
 
+    const { app_scope } = req.body;
+
     const alert = createAlert(template.name, template.search_query, {
       description: template.description,
       trigger_type: template.trigger_type,
@@ -72,6 +75,7 @@ router.post('/from-template/:templateId', (req: Request, res: Response) => {
       throttle_window_seconds: template.throttle_window_seconds,
       actions: [],
       enabled: true,
+      app_scope,
     });
 
     res.status(201).json({
@@ -119,6 +123,7 @@ router.post('/', (req: Request, res: Response) => {
       throttle_window_seconds,
       severity,
       enabled,
+      app_scope,
     } = req.body;
 
     if (!name || !search_query) {
@@ -138,6 +143,7 @@ router.post('/', (req: Request, res: Response) => {
       throttle_window_seconds,
       severity: severity as AlertSeverity,
       enabled,
+      app_scope,
     });
 
     res.status(201).json({
@@ -173,6 +179,7 @@ router.put('/:id', (req: Request, res: Response) => {
       throttle_window_seconds,
       severity,
       enabled,
+      app_scope,
     } = req.body;
 
     const alert = updateAlert(req.params.id, {
@@ -190,6 +197,7 @@ router.put('/:id', (req: Request, res: Response) => {
       throttle_window_seconds,
       severity: severity as AlertSeverity,
       enabled,
+      app_scope,
     });
 
     if (!alert) {

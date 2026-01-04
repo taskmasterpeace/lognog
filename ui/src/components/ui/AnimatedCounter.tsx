@@ -66,7 +66,7 @@ export default function AnimatedCounter({
   }, [value, duration, displayValue]);
 
   return (
-    <span className={`${className} ${isAnimating ? 'text-sky-600 dark:text-sky-400' : ''} transition-colors duration-200`}>
+    <span className={`${className} ${isAnimating ? 'text-amber-600 dark:text-amber-400' : ''} transition-colors duration-200`}>
       {format(displayValue)}
     </span>
   );

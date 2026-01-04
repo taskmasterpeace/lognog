@@ -107,7 +107,7 @@ const SEVERITY_CONFIG = {
   critical: { bg: 'bg-red-100', text: 'text-red-700', border: 'border-red-200', icon: AlertTriangle },
   high: { bg: 'bg-orange-100', text: 'text-orange-700', border: 'border-orange-200', icon: AlertTriangle },
   medium: { bg: 'bg-yellow-100', text: 'text-yellow-700', border: 'border-yellow-200', icon: Activity },
-  low: { bg: 'bg-blue-100', text: 'text-blue-700', border: 'border-blue-200', icon: Activity },
+  low: { bg: 'bg-amber-100', text: 'text-amber-700', border: 'border-amber-200', icon: Activity },
 };
 
 const ENTITY_ICONS = {
@@ -207,7 +207,7 @@ function AnomalyRow({
                 {anomaly.deviationScore > 0 ? (
                   <TrendingUp className="w-3 h-3 text-red-500" />
                 ) : (
-                  <TrendingDown className="w-3 h-3 text-blue-500" />
+                  <TrendingDown className="w-3 h-3 text-amber-500" />
                 )}
                 {Math.abs(anomaly.deviationScore).toFixed(1)}σ
               </span>
@@ -219,7 +219,7 @@ function AnomalyRow({
         <div className="flex items-center gap-2">
           <button
             onClick={() => onAnalyze(anomaly.id)}
-            className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors"
+            className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
             title="Analyze with AI"
           >
             <Brain className="w-4 h-4" />
@@ -295,7 +295,7 @@ export default function AnomalyPage() {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-full">
-        <Loader2 className="w-10 h-10 text-purple-500 animate-spin mb-4" />
+        <Loader2 className="w-10 h-10 text-amber-500 animate-spin mb-4" />
         <p className="text-slate-600 dark:text-slate-400">Loading anomaly detection...</p>
       </div>
     );
@@ -311,7 +311,7 @@ export default function AnomalyPage() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
               <div className="flex items-center gap-2">
-                <Brain className="w-6 h-6 text-purple-600" />
+                <Brain className="w-6 h-6 text-amber-600" />
                 <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100">
                   Anomaly Detection
                 </h1>
@@ -358,8 +358,8 @@ export default function AnomalyPage() {
             label="Total Anomalies"
             value={dashboard?.totalAnomalies || 0}
             subValue="Last 24 hours"
-            color="text-purple-600"
-            iconBg="bg-purple-50"
+            color="text-amber-600"
+            iconBg="bg-amber-50"
           />
           <StatCard
             icon={AlertTriangle}
@@ -382,8 +382,8 @@ export default function AnomalyPage() {
             label="Entities Affected"
             value={dashboard?.topEntities?.length || 0}
             subValue="Unique entities"
-            color="text-sky-600"
-            iconBg="bg-sky-50"
+            color="text-amber-600"
+            iconBg="bg-amber-50"
           />
         </div>
 

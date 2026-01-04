@@ -138,9 +138,11 @@ services:
   cloudflared:
     image: cloudflare/cloudflared:latest
     container_name: lognog-cloudflared
-    command: tunnel run
+    command: tunnel --no-autoupdate --protocol http2 run
     environment:
       - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN:-}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  # Linux compatibility
     restart: unless-stopped
     depends_on:
       - nginx

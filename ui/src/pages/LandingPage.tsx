@@ -145,7 +145,7 @@ export default function LandingPage() {
               </a>
               <Link
                 to="/login"
-                className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-medium rounded-lg transition-colors"
+                className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-medium rounded-lg transition-colors"
               >
                 Sign In
               </Link>
@@ -158,8 +158,8 @@ export default function LandingPage() {
       <section className="py-12 sm:py-20 relative overflow-hidden">
         {/* Background decoration */}
         <div className="absolute inset-0 overflow-hidden">
-          <div className="absolute -top-40 -right-40 w-96 h-96 bg-emerald-500/10 rounded-full blur-3xl" />
-          <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl" />
+          <div className="absolute -top-40 -right-40 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl" />
+          <div className="absolute -bottom-40 -left-40 w-96 h-96 bg-amber-500/10 rounded-full blur-3xl" />
         </div>
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center relative">
@@ -168,14 +168,14 @@ export default function LandingPage() {
             <img
               src="/lognoglogo.png"
               alt="LogNog"
-              className="w-32 h-32 sm:w-40 sm:h-40 mx-auto rounded-2xl shadow-2xl shadow-emerald-500/20 border-2 border-slate-700/50"
+              className="w-32 h-32 sm:w-40 sm:h-40 mx-auto rounded-2xl shadow-2xl shadow-amber-500/20 border-2 border-slate-700/50"
             />
           </div>
 
           {/* Main Tagline */}
           <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-white mb-6 tracking-tight">
             Your Logs.{' '}
-            <span className="bg-gradient-to-r from-emerald-400 via-cyan-400 to-emerald-400 bg-clip-text text-transparent">
+            <span className="bg-gradient-to-r from-amber-400 via-amber-400 to-amber-400 bg-clip-text text-transparent">
               Your Control.
             </span>
           </h1>
@@ -186,13 +186,13 @@ export default function LandingPage() {
 
           <p className="text-lg text-slate-500 max-w-2xl mx-auto mb-10">
             Self-hosted. Open source. Query language you already know.{' '}
-            <span className="text-emerald-400 font-medium">Free forever.</span>
+            <span className="text-amber-400 font-medium">Free forever.</span>
           </p>
 
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
             <Link
               to="/login"
-              className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white text-lg font-semibold rounded-xl shadow-lg shadow-emerald-500/25 transition-all transform hover:scale-105"
+              className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-amber-500 to-amber-500 hover:from-amber-600 hover:to-amber-600 text-white text-lg font-semibold rounded-xl shadow-lg shadow-amber-500/25 transition-all transform hover:scale-105"
             >
               Start Searching Logs
               <ArrowRight className="w-5 h-5" />
@@ -211,19 +211,19 @@ export default function LandingPage() {
           {/* Quick value props */}
           <div className="flex flex-wrap justify-center gap-6 sm:gap-10 text-sm sm:text-base">
             <div className="flex items-center gap-2 text-slate-300">
-              <Zap className="w-5 h-5 text-emerald-400" />
+              <Zap className="w-5 h-5 text-amber-400" />
               <span>10 minute setup</span>
             </div>
             <div className="flex items-center gap-2 text-slate-300">
-              <Database className="w-5 h-5 text-emerald-400" />
+              <Database className="w-5 h-5 text-amber-400" />
               <span>Millions of logs/day</span>
             </div>
             <div className="flex items-center gap-2 text-slate-300">
-              <DollarSign className="w-5 h-5 text-emerald-400" />
+              <DollarSign className="w-5 h-5 text-amber-400" />
               <span>$0/month</span>
             </div>
             <div className="flex items-center gap-2 text-slate-300">
-              <Lock className="w-5 h-5 text-emerald-400" />
+              <Lock className="w-5 h-5 text-amber-400" />
               <span>Your servers only</span>
             </div>
           </div>
@@ -244,8 +244,8 @@ export default function LandingPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="p-6 bg-slate-800/50 rounded-xl border border-slate-700/50 text-center">
-              <div className="w-14 h-14 bg-emerald-500/10 rounded-xl flex items-center justify-center mx-auto mb-4">
-                <Terminal className="w-7 h-7 text-emerald-400" />
+              <div className="w-14 h-14 bg-amber-500/10 rounded-xl flex items-center justify-center mx-auto mb-4">
+                <Terminal className="w-7 h-7 text-amber-400" />
               </div>
               <h3 className="text-xl font-semibold text-white mb-2">Startups & Indies</h3>
               <p className="text-slate-400 text-sm">
@@ -254,8 +254,8 @@ export default function LandingPage() {
             </div>
 
             <div className="p-6 bg-slate-800/50 rounded-xl border border-slate-700/50 text-center">
-              <div className="w-14 h-14 bg-emerald-500/10 rounded-xl flex items-center justify-center mx-auto mb-4">
-                <Building2 className="w-7 h-7 text-emerald-400" />
+              <div className="w-14 h-14 bg-amber-500/10 rounded-xl flex items-center justify-center mx-auto mb-4">
+                <Building2 className="w-7 h-7 text-amber-400" />
               </div>
               <h3 className="text-xl font-semibold text-white mb-2">SMBs & Agencies</h3>
               <p className="text-slate-400 text-sm">
@@ -264,8 +264,8 @@ export default function LandingPage() {
             </div>
 
             <div className="p-6 bg-slate-800/50 rounded-xl border border-slate-700/50 text-center">
-              <div className="w-14 h-14 bg-emerald-500/10 rounded-xl flex items-center justify-center mx-auto mb-4">
-                <Users className="w-7 h-7 text-emerald-400" />
+              <div className="w-14 h-14 bg-amber-500/10 rounded-xl flex items-center justify-center mx-auto mb-4">
+                <Users className="w-7 h-7 text-amber-400" />
               </div>
               <h3 className="text-xl font-semibold text-white mb-2">DevOps & Homelabs</h3>
               <p className="text-slate-400 text-sm">
@@ -304,11 +304,11 @@ export default function LandingPage() {
       </section>
 
       {/* Hosted Coming Soon Banner */}
-      <section className="py-6 bg-gradient-to-r from-purple-600/20 to-indigo-600/20 border-b border-purple-500/30">
+      <section className="py-6 bg-gradient-to-r from-amber-600/20 to-orange-600/20 border-b border-amber-500/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 text-center sm:text-left">
             <div className="flex items-center gap-3">
-              <Cloud className="w-6 h-6 text-purple-400" />
+              <Cloud className="w-6 h-6 text-amber-400" />
               <span className="text-lg font-semibold text-white">Hosted LogNog Coming Soon</span>
             </div>
             <span className="hidden sm:inline text-slate-400">•</span>
@@ -319,7 +319,7 @@ export default function LandingPage() {
               href="https://github.com/taskmasterpeace/lognog"
               target="_blank"
               rel="noopener noreferrer"
-              className="px-4 py-2 bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/50 text-purple-300 font-medium rounded-lg transition-colors text-sm"
+              className="px-4 py-2 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/50 text-amber-300 font-medium rounded-lg transition-colors text-sm"
             >
               Star for Updates
             </a>
@@ -340,7 +340,7 @@ export default function LandingPage() {
           </div>
 
           <div className="relative group">
-            <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 rounded-2xl blur-xl group-hover:blur-2xl transition-all" />
+            <div className="absolute -inset-1 bg-gradient-to-r from-amber-500/20 to-amber-500/20 rounded-2xl blur-xl group-hover:blur-2xl transition-all" />
             <div className="relative">
               <ImagePlaceholder
                 aspectRatio="16/9"
@@ -379,7 +379,7 @@ export default function LandingPage() {
                 </div>
                 <div className="flex-1 w-full">
                   <div className="relative group">
-                    <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 rounded-xl blur-lg group-hover:blur-xl transition-all" />
+                    <div className="absolute -inset-1 bg-gradient-to-r from-amber-500/20 to-amber-500/20 rounded-xl blur-lg group-hover:blur-xl transition-all" />
                     <div className="relative">
                       <ImagePlaceholder
                         aspectRatio={screenshot.aspectRatio}
@@ -416,18 +416,18 @@ export default function LandingPage() {
               <p className="text-slate-400 text-sm">3+ components, 8GB+ RAM</p>
             </div>
             <div className="p-6 bg-slate-800/50 rounded-xl border border-slate-700/50">
-              <p className="text-3xl mb-3 text-blue-400">GCP</p>
+              <p className="text-3xl mb-3 text-amber-400">GCP</p>
               <p className="text-lg font-medium text-white mb-2">Chronicle</p>
               <p className="text-slate-400 text-sm">Google Cloud lock-in only</p>
             </div>
             <div className="p-6 bg-slate-800/50 rounded-xl border border-slate-700/50">
-              <p className="text-3xl mb-3 text-purple-400">SaaS</p>
+              <p className="text-3xl mb-3 text-amber-400">SaaS</p>
               <p className="text-lg font-medium text-white mb-2">Datadog/etc</p>
               <p className="text-slate-400 text-sm">Your logs on their servers</p>
             </div>
           </div>
           <p className="text-xl text-slate-300 mt-10">
-            You just want to <span className="text-emerald-400 font-medium">search your logs</span> without selling a kidney.
+            You just want to <span className="text-amber-400 font-medium">search your logs</span> without selling a kidney.
           </p>
         </div>
       </section>
@@ -447,7 +447,7 @@ export default function LandingPage() {
           <div className="bg-slate-800/50 rounded-xl border border-slate-700/50 overflow-hidden">
             <div className="grid grid-cols-2 text-sm font-medium">
               <div className="p-4 bg-slate-700/50 text-slate-300 text-center border-b border-slate-700">Splunk SPL</div>
-              <div className="p-4 bg-emerald-900/30 text-emerald-300 text-center border-b border-slate-700">LogNog Query</div>
+              <div className="p-4 bg-amber-900/30 text-amber-300 text-center border-b border-slate-700">LogNog Query</div>
             </div>
             <div className="divide-y divide-slate-700/50">
               {[
@@ -459,7 +459,7 @@ export default function LandingPage() {
               ].map(([splunk, lognog], i) => (
                 <div key={i} className="grid grid-cols-2 text-sm">
                   <div className="p-4 font-mono text-slate-400 border-r border-slate-700/50">{splunk}</div>
-                  <div className="p-4 font-mono text-emerald-400">{lognog}</div>
+                  <div className="p-4 font-mono text-amber-400">{lognog}</div>
                 </div>
               ))}
             </div>
@@ -484,7 +484,7 @@ export default function LandingPage() {
               <thead>
                 <tr className="border-b border-slate-700">
                   <th className="px-6 py-4 text-left text-slate-400 font-medium">Feature</th>
-                  <th className="px-6 py-4 text-center text-emerald-400 font-semibold bg-emerald-900/20">LogNog</th>
+                  <th className="px-6 py-4 text-center text-amber-400 font-semibold bg-amber-900/20">LogNog</th>
                   <th className="px-6 py-4 text-center text-slate-400 font-medium">Splunk</th>
                   <th className="px-6 py-4 text-center text-slate-400 font-medium">ELK Stack</th>
                   <th className="px-6 py-4 text-center text-slate-400 font-medium">Loki</th>
@@ -494,7 +494,7 @@ export default function LandingPage() {
               <tbody className="divide-y divide-slate-700/50">
                 <tr>
                   <td className="px-6 py-4 text-slate-300">Cost (500MB/day)</td>
-                  <td className="px-6 py-4 text-center text-emerald-400 font-semibold bg-emerald-900/10">$0</td>
+                  <td className="px-6 py-4 text-center text-amber-400 font-semibold bg-amber-900/10">$0</td>
                   <td className="px-6 py-4 text-center text-slate-400">$1,800+/yr</td>
                   <td className="px-6 py-4 text-center text-slate-400">$0 (self-host)</td>
                   <td className="px-6 py-4 text-center text-slate-400">$0 (self-host)</td>
@@ -502,7 +502,7 @@ export default function LandingPage() {
                 </tr>
                 <tr>
                   <td className="px-6 py-4 text-slate-300">Setup Time</td>
-                  <td className="px-6 py-4 text-center bg-emerald-900/10"><Check className="w-5 h-5 text-emerald-400 mx-auto" /></td>
+                  <td className="px-6 py-4 text-center bg-amber-900/10"><Check className="w-5 h-5 text-amber-400 mx-auto" /></td>
                   <td className="px-6 py-4 text-center"><X className="w-5 h-5 text-red-400 mx-auto" /></td>
                   <td className="px-6 py-4 text-center"><X className="w-5 h-5 text-red-400 mx-auto" /></td>
                   <td className="px-6 py-4 text-center text-slate-400">30-60 min</td>
@@ -510,31 +510,31 @@ export default function LandingPage() {
                 </tr>
                 <tr>
                   <td className="px-6 py-4 text-slate-300">Splunk-like Query Language</td>
-                  <td className="px-6 py-4 text-center bg-emerald-900/10"><Check className="w-5 h-5 text-emerald-400 mx-auto" /></td>
-                  <td className="px-6 py-4 text-center"><Check className="w-5 h-5 text-emerald-400 mx-auto" /></td>
+                  <td className="px-6 py-4 text-center bg-amber-900/10"><Check className="w-5 h-5 text-amber-400 mx-auto" /></td>
+                  <td className="px-6 py-4 text-center"><Check className="w-5 h-5 text-amber-400 mx-auto" /></td>
                   <td className="px-6 py-4 text-center"><X className="w-5 h-5 text-red-400 mx-auto" /></td>
                   <td className="px-6 py-4 text-center"><X className="w-5 h-5 text-red-400 mx-auto" /></td>
                   <td className="px-6 py-4 text-center"><X className="w-5 h-5 text-red-400 mx-auto" /></td>
                 </tr>
                 <tr>
                   <td className="px-6 py-4 text-slate-300">Real-time Dashboards</td>
-                  <td className="px-6 py-4 text-center bg-emerald-900/10"><Check className="w-5 h-5 text-emerald-400 mx-auto" /></td>
-                  <td className="px-6 py-4 text-center"><Check className="w-5 h-5 text-emerald-400 mx-auto" /></td>
-                  <td className="px-6 py-4 text-center"><Check className="w-5 h-5 text-emerald-400 mx-auto" /></td>
+                  <td className="px-6 py-4 text-center bg-amber-900/10"><Check className="w-5 h-5 text-amber-400 mx-auto" /></td>
+                  <td className="px-6 py-4 text-center"><Check className="w-5 h-5 text-amber-400 mx-auto" /></td>
+                  <td className="px-6 py-4 text-center"><Check className="w-5 h-5 text-amber-400 mx-auto" /></td>
                   <td className="px-6 py-4 text-center text-slate-400">Via Grafana</td>
-                  <td className="px-6 py-4 text-center"><Check className="w-5 h-5 text-emerald-400 mx-auto" /></td>
+                  <td className="px-6 py-4 text-center"><Check className="w-5 h-5 text-amber-400 mx-auto" /></td>
                 </tr>
                 <tr>
                   <td className="px-6 py-4 text-slate-300">Alert Management</td>
-                  <td className="px-6 py-4 text-center bg-emerald-900/10"><Check className="w-5 h-5 text-emerald-400 mx-auto" /></td>
-                  <td className="px-6 py-4 text-center"><Check className="w-5 h-5 text-emerald-400 mx-auto" /></td>
+                  <td className="px-6 py-4 text-center bg-amber-900/10"><Check className="w-5 h-5 text-amber-400 mx-auto" /></td>
+                  <td className="px-6 py-4 text-center"><Check className="w-5 h-5 text-amber-400 mx-auto" /></td>
                   <td className="px-6 py-4 text-center text-slate-400">Via plugins</td>
                   <td className="px-6 py-4 text-center text-slate-400">Via Grafana</td>
-                  <td className="px-6 py-4 text-center"><Check className="w-5 h-5 text-emerald-400 mx-auto" /></td>
+                  <td className="px-6 py-4 text-center"><Check className="w-5 h-5 text-amber-400 mx-auto" /></td>
                 </tr>
                 <tr>
                   <td className="px-6 py-4 text-slate-300">Memory Required</td>
-                  <td className="px-6 py-4 text-center text-emerald-400 bg-emerald-900/10">2-4GB</td>
+                  <td className="px-6 py-4 text-center text-amber-400 bg-amber-900/10">2-4GB</td>
                   <td className="px-6 py-4 text-center text-slate-400">8GB+</td>
                   <td className="px-6 py-4 text-center text-slate-400">8GB+</td>
                   <td className="px-6 py-4 text-center text-slate-400">2GB+</td>
@@ -542,15 +542,15 @@ export default function LandingPage() {
                 </tr>
                 <tr>
                   <td className="px-6 py-4 text-slate-300">Self-Hosted</td>
-                  <td className="px-6 py-4 text-center bg-emerald-900/10"><Check className="w-5 h-5 text-emerald-400 mx-auto" /></td>
+                  <td className="px-6 py-4 text-center bg-amber-900/10"><Check className="w-5 h-5 text-amber-400 mx-auto" /></td>
                   <td className="px-6 py-4 text-center text-slate-400">Cloud-first</td>
-                  <td className="px-6 py-4 text-center"><Check className="w-5 h-5 text-emerald-400 mx-auto" /></td>
-                  <td className="px-6 py-4 text-center"><Check className="w-5 h-5 text-emerald-400 mx-auto" /></td>
+                  <td className="px-6 py-4 text-center"><Check className="w-5 h-5 text-amber-400 mx-auto" /></td>
+                  <td className="px-6 py-4 text-center"><Check className="w-5 h-5 text-amber-400 mx-auto" /></td>
                   <td className="px-6 py-4 text-center"><X className="w-5 h-5 text-red-400 mx-auto" /></td>
                 </tr>
                 <tr>
                   <td className="px-6 py-4 text-slate-300">Open Source</td>
-                  <td className="px-6 py-4 text-center text-emerald-400 bg-emerald-900/10">MIT</td>
+                  <td className="px-6 py-4 text-center text-amber-400 bg-amber-900/10">MIT</td>
                   <td className="px-6 py-4 text-center"><X className="w-5 h-5 text-red-400 mx-auto" /></td>
                   <td className="px-6 py-4 text-center text-slate-400">Mixed</td>
                   <td className="px-6 py-4 text-center text-slate-400">AGPL</td>
@@ -583,10 +583,10 @@ export default function LandingPage() {
             {features.map((feature) => (
               <div
                 key={feature.title}
-                className="p-6 bg-slate-800/50 rounded-xl border border-slate-700/50 hover:border-emerald-500/50 transition-colors group"
+                className="p-6 bg-slate-800/50 rounded-xl border border-slate-700/50 hover:border-amber-500/50 transition-colors group"
               >
-                <div className="w-12 h-12 bg-emerald-500/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-emerald-500/20 transition-colors">
-                  <feature.icon className="w-6 h-6 text-emerald-400" />
+                <div className="w-12 h-12 bg-amber-500/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-amber-500/20 transition-colors">
+                  <feature.icon className="w-6 h-6 text-amber-400" />
                 </div>
                 <h3 className="text-lg font-semibold text-white mb-2">
                   {feature.title}
@@ -615,9 +615,9 @@ export default function LandingPage() {
             {integrations.map((integration) => (
               <div
                 key={integration.name}
-                className="px-5 py-3 bg-slate-800 rounded-lg border border-slate-700 flex items-center gap-3 hover:border-emerald-500/50 transition-colors"
+                className="px-5 py-3 bg-slate-800 rounded-lg border border-slate-700 flex items-center gap-3 hover:border-amber-500/50 transition-colors"
               >
-                <Server className="w-5 h-5 text-emerald-400" />
+                <Server className="w-5 h-5 text-amber-400" />
                 <div>
                   <div className="text-white font-medium">{integration.name}</div>
                   <div className="text-xs text-slate-500">{integration.description}</div>
@@ -645,8 +645,8 @@ export default function LandingPage() {
               </p>
               <div className="text-xs text-slate-500">Perfect for file monitoring</div>
             </div>
-            <div className="p-6 bg-gradient-to-b from-emerald-900/50 to-slate-800/50 rounded-xl border border-emerald-500/50 text-center relative">
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-emerald-500 text-white text-xs font-medium rounded-full">
+            <div className="p-6 bg-gradient-to-b from-amber-900/50 to-slate-800/50 rounded-xl border border-amber-500/50 text-center relative">
+              <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-amber-500 text-white text-xs font-medium rounded-full">
                 Popular
               </div>
               <div className="text-4xl mb-4">🖥️</div>
@@ -682,13 +682,13 @@ export default function LandingPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
             <div className="relative">
-              <div className="absolute -left-4 top-0 w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg">
+              <div className="absolute -left-4 top-0 w-12 h-12 bg-amber-500 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg">
                 1
               </div>
               <div className="pl-12">
                 <h3 className="text-xl font-semibold text-white mb-3">Clone & Start</h3>
                 <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700/50 mb-3">
-                  <code className="text-sm text-emerald-400 font-mono">
+                  <code className="text-sm text-amber-400 font-mono">
                     git clone lognog.git<br />
                     docker-compose up -d
                   </code>
@@ -700,7 +700,7 @@ export default function LandingPage() {
             </div>
 
             <div className="relative">
-              <div className="absolute -left-4 top-0 w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg">
+              <div className="absolute -left-4 top-0 w-12 h-12 bg-amber-500 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg">
                 2
               </div>
               <div className="pl-12">
@@ -708,15 +708,15 @@ export default function LandingPage() {
                 <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700/50 mb-3">
                   <div className="text-sm text-slate-300 space-y-1">
                     <div className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-emerald-400" />
+                      <Check className="w-4 h-4 text-amber-400" />
                       <span>Point syslog to port 514</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-emerald-400" />
+                      <Check className="w-4 h-4 text-amber-400" />
                       <span>Add Supabase webhook</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-emerald-400" />
+                      <Check className="w-4 h-4 text-amber-400" />
                       <span>Deploy LogNog In agent</span>
                     </div>
                   </div>
@@ -728,13 +728,13 @@ export default function LandingPage() {
             </div>
 
             <div className="relative">
-              <div className="absolute -left-4 top-0 w-12 h-12 bg-emerald-500 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg">
+              <div className="absolute -left-4 top-0 w-12 h-12 bg-amber-500 rounded-full flex items-center justify-center text-white font-bold text-xl shadow-lg">
                 3
               </div>
               <div className="pl-12">
                 <h3 className="text-xl font-semibold text-white mb-3">Search & Alert</h3>
                 <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700/50 mb-3">
-                  <code className="text-sm text-cyan-400 font-mono">
+                  <code className="text-sm text-amber-400 font-mono">
                     search severity=error<br />
                     | stats count by hostname<br />
                     | sort desc
@@ -750,7 +750,7 @@ export default function LandingPage() {
           <div className="mt-12 text-center">
             <Link
               to="/login"
-              className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-600 hover:to-cyan-600 text-white text-lg font-semibold rounded-xl shadow-lg shadow-emerald-500/25 transition-all"
+              className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-amber-500 to-amber-500 hover:from-amber-600 hover:to-amber-600 text-white text-lg font-semibold rounded-xl shadow-lg shadow-amber-500/25 transition-all"
             >
               Start Now
               <ArrowRight className="w-5 h-5" />
@@ -771,10 +771,10 @@ export default function LandingPage() {
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="p-6 bg-slate-800/50 rounded-xl border border-slate-700/50 hover:border-emerald-500/50 transition-colors">
+            <div className="p-6 bg-slate-800/50 rounded-xl border border-slate-700/50 hover:border-amber-500/50 transition-colors">
               <div className="flex items-start gap-3 mb-4">
-                <div className="w-10 h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Terminal className="w-5 h-5 text-emerald-400" />
+                <div className="w-10 h-10 bg-amber-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Terminal className="w-5 h-5 text-amber-400" />
                 </div>
                 <div>
                   <p className="text-white font-semibold">Homelab Enthusiast</p>
@@ -784,16 +784,16 @@ export default function LandingPage() {
               <p className="text-slate-300 text-sm italic mb-3">
                 "Got LogNog running in 10 minutes. Same search syntax I know from work. Now I can actually troubleshoot my pfSense firewall rules without grep-ing through files."
               </p>
-              <div className="flex items-center gap-2 text-xs text-emerald-400">
+              <div className="flex items-center gap-2 text-xs text-amber-400">
                 <Check className="w-4 h-4" />
                 <span>Replaced: Splunk trial + manual grep</span>
               </div>
             </div>
 
-            <div className="p-6 bg-slate-800/50 rounded-xl border border-slate-700/50 hover:border-emerald-500/50 transition-colors">
+            <div className="p-6 bg-slate-800/50 rounded-xl border border-slate-700/50 hover:border-amber-500/50 transition-colors">
               <div className="flex items-start gap-3 mb-4">
-                <div className="w-10 h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Server className="w-5 h-5 text-emerald-400" />
+                <div className="w-10 h-10 bg-amber-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Server className="w-5 h-5 text-amber-400" />
                 </div>
                 <div>
                   <p className="text-white font-semibold">Game Server Operator</p>
@@ -803,16 +803,16 @@ export default function LandingPage() {
               <p className="text-slate-300 text-sm italic mb-3">
                 "50GB of logs per month across 8 game servers. Splunk wanted $2000/year. LogNog handles it all on a $20/month VPS. The live tail feature is perfect for watching player joins."
               </p>
-              <div className="flex items-center gap-2 text-xs text-emerald-400">
+              <div className="flex items-center gap-2 text-xs text-amber-400">
                 <Check className="w-4 h-4" />
                 <span>Saved: $2000/year</span>
               </div>
             </div>
 
-            <div className="p-6 bg-slate-800/50 rounded-xl border border-slate-700/50 hover:border-emerald-500/50 transition-colors">
+            <div className="p-6 bg-slate-800/50 rounded-xl border border-slate-700/50 hover:border-amber-500/50 transition-colors">
               <div className="flex items-start gap-3 mb-4">
-                <div className="w-10 h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Building2 className="w-5 h-5 text-emerald-400" />
+                <div className="w-10 h-10 bg-amber-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Building2 className="w-5 h-5 text-amber-400" />
                 </div>
                 <div>
                   <p className="text-white font-semibold">SaaS Startup (5 people)</p>
@@ -822,16 +822,16 @@ export default function LandingPage() {
               <p className="text-slate-300 text-sm italic mb-3">
                 "We ship the LogNog In agent with our desktop app. When users report issues, we ask them to enable log shipping. Game changer for support - we see exactly what happened."
               </p>
-              <div className="flex items-center gap-2 text-xs text-emerald-400">
+              <div className="flex items-center gap-2 text-xs text-amber-400">
                 <Check className="w-4 h-4" />
                 <span>Support ticket time: -60%</span>
               </div>
             </div>
 
-            <div className="p-6 bg-slate-800/50 rounded-xl border border-slate-700/50 hover:border-emerald-500/50 transition-colors">
+            <div className="p-6 bg-slate-800/50 rounded-xl border border-slate-700/50 hover:border-amber-500/50 transition-colors">
               <div className="flex items-start gap-3 mb-4">
-                <div className="w-10 h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Users className="w-5 h-5 text-emerald-400" />
+                <div className="w-10 h-10 bg-amber-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Users className="w-5 h-5 text-amber-400" />
                 </div>
                 <div>
                   <p className="text-white font-semibold">DevOps Engineer</p>
@@ -841,16 +841,16 @@ export default function LandingPage() {
               <p className="text-slate-300 text-sm italic mb-3">
                 "One docker-compose file. That's it. No Helm charts, no Kubernetes manifests, no Elasticsearch tuning. Junior devs can deploy it themselves. That never happened with ELK."
               </p>
-              <div className="flex items-center gap-2 text-xs text-emerald-400">
+              <div className="flex items-center gap-2 text-xs text-amber-400">
                 <Check className="w-4 h-4" />
                 <span>Setup time: 2 hours to 10 minutes</span>
               </div>
             </div>
 
-            <div className="p-6 bg-slate-800/50 rounded-xl border border-slate-700/50 hover:border-emerald-500/50 transition-colors">
+            <div className="p-6 bg-slate-800/50 rounded-xl border border-slate-700/50 hover:border-amber-500/50 transition-colors">
               <div className="flex items-start gap-3 mb-4">
-                <div className="w-10 h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Shield className="w-5 h-5 text-emerald-400" />
+                <div className="w-10 h-10 bg-amber-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Shield className="w-5 h-5 text-amber-400" />
                 </div>
                 <div>
                   <p className="text-white font-semibold">Security Consultant</p>
@@ -860,16 +860,16 @@ export default function LandingPage() {
               <p className="text-slate-300 text-sm italic mb-3">
                 "I deploy LogNog for every client. Built-in GeoIP, SSH brute-force detection alerts, and Windows Event Log ingestion. They get enterprise security monitoring at SMB prices."
               </p>
-              <div className="flex items-center gap-2 text-xs text-emerald-400">
+              <div className="flex items-center gap-2 text-xs text-amber-400">
                 <Check className="w-4 h-4" />
                 <span>Deployed: 23 client sites</span>
               </div>
             </div>
 
-            <div className="p-6 bg-slate-800/50 rounded-xl border border-slate-700/50 hover:border-emerald-500/50 transition-colors">
+            <div className="p-6 bg-slate-800/50 rounded-xl border border-slate-700/50 hover:border-amber-500/50 transition-colors">
               <div className="flex items-start gap-3 mb-4">
-                <div className="w-10 h-10 bg-emerald-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <Database className="w-5 h-5 text-emerald-400" />
+                <div className="w-10 h-10 bg-amber-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <Database className="w-5 h-5 text-amber-400" />
                 </div>
                 <div>
                   <p className="text-white font-semibold">E-commerce Platform</p>
@@ -879,7 +879,7 @@ export default function LandingPage() {
               <p className="text-slate-300 text-sm italic mb-3">
                 "We connect Supabase, Vercel, and our database logs all to LogNog. The unified search across everything saved us during Black Friday when we had a payment gateway issue."
               </p>
-              <div className="flex items-center gap-2 text-xs text-emerald-400">
+              <div className="flex items-center gap-2 text-xs text-amber-400">
                 <Check className="w-4 h-4" />
                 <span>MTTR: -75% (4 hours to 1 hour)</span>
               </div>
@@ -961,18 +961,18 @@ export default function LandingPage() {
       </section>
 
       {/* Final CTA */}
-      <section className="py-20 bg-gradient-to-r from-emerald-600 to-cyan-600">
+      <section className="py-20 bg-gradient-to-r from-amber-600 to-amber-600">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-4xl font-bold text-white mb-4">
             Ready to Take Control of Your Logs?
           </h2>
-          <p className="text-emerald-100 mb-10 max-w-2xl mx-auto text-lg">
+          <p className="text-amber-100 mb-10 max-w-2xl mx-auto text-lg">
             10 minute setup. Free forever. MIT licensed. No credit card required.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link
               to="/login"
-              className="inline-flex items-center justify-center gap-2 px-10 py-4 bg-white text-emerald-600 text-lg font-semibold rounded-xl shadow-lg hover:bg-emerald-50 transition-colors"
+              className="inline-flex items-center justify-center gap-2 px-10 py-4 bg-white text-amber-600 text-lg font-semibold rounded-xl shadow-lg hover:bg-amber-50 transition-colors"
             >
               Get Started Now
               <ChevronRight className="w-5 h-5" />
@@ -981,7 +981,7 @@ export default function LandingPage() {
               href="https://github.com/taskmasterpeace/lognog"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 px-10 py-4 bg-emerald-700/50 text-white text-lg font-semibold rounded-xl hover:bg-emerald-700 transition-colors border border-emerald-400/30"
+              className="inline-flex items-center justify-center gap-2 px-10 py-4 bg-amber-700/50 text-white text-lg font-semibold rounded-xl hover:bg-amber-700 transition-colors border border-amber-400/30"
             >
               <Github className="w-5 h-5" />
               Star on GitHub

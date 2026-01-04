@@ -151,3 +151,130 @@ describe('Dashboard Duplicate Feature', () => {
     }
   });
 });
+
+describe('Dashboard Builder Wizard', () => {
+  let app: Express;
+  let wizardDashboardId: string;
+
+  beforeAll(() => {
+    app = express();
+    app.use(express.json());
+    app.use('/dashboards', dashboardsRouter);
+  });
+
+  afterAll(() => {
+    closeDatabase();
+  });
+
+  it('should create a dashboard from wizard with panels', async () => {
+    const response = await request(app)
+      .post('/dashboards/from-wizard')
+      .send({
+        name: 'Wizard Test Dashboard',
+        index: 'test-index',
+        panels: [
+          { field: 'timestamp', vizType: 'line' },
+          { field: 'severity', vizType: 'pie' },
+          { field: 'hostname', vizType: 'bar' },
+        ],
+      });
+
+    expect(response.status).toBe(201);
+    expect(response.body.name).toBe('Wizard Test Dashboard');
+    expect(response.body.panels_created).toBe(3);
+    expect(response.body.dashboard_id).toBeDefined();
+    expect(response.body.panels).toHaveLength(3);
+
+    wizardDashboardId = response.body.dashboard_id;
+
+    // Verify panel queries are generated correctly
+    const timestampPanel = response.body.panels.find((p: { title: string }) => p.title === 'Logs Over Time');
+    expect(timestampPanel).toBeDefined();
+    expect(timestampPanel.query).toContain('timechart');
+
+    const severityPanel = response.body.panels.find((p: { title: string }) => p.title === 'Severity Distribution');
+    expect(severityPanel).toBeDefined();
+    expect(severityPanel.query).toContain('stats count by severity');
+
+    const hostnamePanel = response.body.panels.find((p: { title: string }) => p.title === 'Top Hosts');
+    expect(hostnamePanel).toBeDefined();
+    expect(hostnamePanel.query).toContain('top 10 hostname');
+  });
+
+  it('should create a dashboard with defaults when useDefaults is true', async () => {
+    const response = await request(app)
+      .post('/dashboards/from-wizard')
+      .send({
+        name: 'Default Dashboard',
+        index: 'default-index',
+        panels: [],
+        useDefaults: true,
+      });
+
+    expect(response.status).toBe(201);
+    expect(response.body.name).toBe('Default Dashboard');
+    expect(response.body.panels_created).toBeGreaterThan(0);
+  });
+
+  it('should return 400 if name is missing', async () => {
+    const response = await request(app)
+      .post('/dashboards/from-wizard')
+      .send({
+        index: 'test-index',
+        panels: [],
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe('Dashboard name is required');
+  });
+
+  it('should return 400 if index is missing', async () => {
+    const response = await request(app)
+      .post('/dashboards/from-wizard')
+      .send({
+        name: 'Test Dashboard',
+        panels: [],
+      });
+
+    expect(response.status).toBe(400);
+    expect(response.body.error).toBe('Index name is required');
+  });
+
+  it('should generate correct panel positions', async () => {
+    const response = await request(app)
+      .post('/dashboards/from-wizard')
+      .send({
+        name: 'Position Test Dashboard',
+        index: 'test-index',
+        panels: [
+          { field: 'timestamp', vizType: 'line' },
+          { field: 'severity', vizType: 'pie' },
+          { field: 'hostname', vizType: 'bar' },
+          { field: 'app_name', vizType: 'bar' },
+        ],
+      });
+
+    expect(response.status).toBe(201);
+    expect(response.body.panels).toHaveLength(4);
+
+    // First panel should be full width (w=12)
+    expect(response.body.panels[0].width).toBe(12);
+    expect(response.body.panels[0].position_x).toBe(0);
+    expect(response.body.panels[0].position_y).toBe(0);
+
+    // Subsequent panels should be half width (w=6)
+    expect(response.body.panels[1].width).toBe(6);
+  });
+
+  it('should cleanup wizard test dashboards', async () => {
+    const dashboards = await request(app).get('/dashboards');
+
+    for (const dashboard of dashboards.body) {
+      if (dashboard.name.includes('Wizard') ||
+          dashboard.name.includes('Default Dashboard') ||
+          dashboard.name.includes('Position Test')) {
+        await request(app).delete(`/dashboards/${dashboard.id}`);
+      }
+    }
+  });
+});

@@ -17,14 +17,22 @@ interface ScheduledReport {
   format: string;
   enabled: number;
   last_run: string | null;
+  app_scope?: string;
   created_at: string;
 }
 
-// Get all scheduled reports
-router.get('/', (_req: Request, res: Response) => {
+// Get all scheduled reports (optionally filtered by app_scope)
+router.get('/', (req: Request, res: Response) => {
   try {
     const db = getSQLiteDB();
-    const reports = db.prepare('SELECT * FROM scheduled_reports ORDER BY created_at DESC').all() as ScheduledReport[];
+    const appScope = req.query.app_scope as string | undefined;
+
+    let reports: ScheduledReport[];
+    if (appScope && appScope !== 'all') {
+      reports = db.prepare('SELECT * FROM scheduled_reports WHERE app_scope = ? ORDER BY created_at DESC').all(appScope) as ScheduledReport[];
+    } else {
+      reports = db.prepare('SELECT * FROM scheduled_reports ORDER BY created_at DESC').all() as ScheduledReport[];
+    }
     return res.json(reports);
   } catch (error) {
     console.error('Error fetching reports:', error);
@@ -35,7 +43,7 @@ router.get('/', (_req: Request, res: Response) => {
 // Create a scheduled report
 router.post('/', (req: Request, res: Response) => {
   try {
-    const { name, query, schedule, recipients, format = 'html' } = req.body;
+    const { name, query, schedule, recipients, format = 'html', app_scope = 'default' } = req.body;
 
     if (!name || !query || !schedule || !recipients) {
       return res.status(400).json({ error: 'Name, query, schedule, and recipients are required' });
@@ -44,8 +52,8 @@ router.post('/', (req: Request, res: Response) => {
     const db = getSQLiteDB();
     const id = uuidv4();
     db.prepare(
-      'INSERT INTO scheduled_reports (id, name, query, schedule, recipients, format) VALUES (?, ?, ?, ?, ?, ?)'
-    ).run(id, name, query, schedule, recipients, format);
+      'INSERT INTO scheduled_reports (id, name, query, schedule, recipients, format, app_scope) VALUES (?, ?, ?, ?, ?, ?, ?)'
+    ).run(id, name, query, schedule, recipients, format, app_scope);
 
     const report = db.prepare('SELECT * FROM scheduled_reports WHERE id = ?').get(id);
     return res.status(201).json(report);
@@ -58,7 +66,7 @@ router.post('/', (req: Request, res: Response) => {
 // Update a scheduled report
 router.put('/:id', (req: Request, res: Response) => {
   try {
-    const { name, query, schedule, recipients, format, enabled } = req.body;
+    const { name, query, schedule, recipients, format, enabled, app_scope } = req.body;
     const db = getSQLiteDB();
 
     const fields: string[] = [];
@@ -70,6 +78,7 @@ router.put('/:id', (req: Request, res: Response) => {
     if (recipients !== undefined) { fields.push('recipients = ?'); values.push(recipients); }
     if (format !== undefined) { fields.push('format = ?'); values.push(format); }
     if (enabled !== undefined) { fields.push('enabled = ?'); values.push(enabled ? 1 : 0); }
+    if (app_scope !== undefined) { fields.push('app_scope = ?'); values.push(app_scope); }
 
     if (fields.length === 0) {
       return res.status(400).json({ error: 'No fields to update' });

@@ -39,10 +39,10 @@ const CATEGORY_ICONS = {
 };
 
 const CATEGORY_COLORS = {
-  database: 'text-blue-500 bg-blue-100 dark:bg-blue-900/30',
+  database: 'text-amber-500 bg-amber-100 dark:bg-amber-900/30',
   security: 'text-red-500 bg-red-100 dark:bg-red-900/30',
   web: 'text-green-500 bg-green-100 dark:bg-green-900/30',
-  system: 'text-purple-500 bg-purple-100 dark:bg-purple-900/30',
+  system: 'text-amber-500 bg-amber-100 dark:bg-amber-900/30',
   application: 'text-orange-500 bg-orange-100 dark:bg-orange-900/30',
 };
 
@@ -145,7 +145,7 @@ export default function DataSourcesPage() {
     return (
       <div className="p-6 max-w-7xl mx-auto">
         <div className="flex items-center justify-center h-64">
-          <div className="w-8 h-8 border-4 border-sky-500 border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin" />
         </div>
       </div>
     );
@@ -174,7 +174,7 @@ export default function DataSourcesPage() {
           <div className="flex items-start justify-between">
             <div>
               <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                <Database className="w-7 h-7 text-sky-500" />
+                <Database className="w-7 h-7 text-amber-500" />
                 Data Sources
               </h1>
               <p className="text-slate-500 dark:text-slate-400 mt-1">
@@ -183,7 +183,7 @@ export default function DataSourcesPage() {
             </div>
             <button
               onClick={() => setShowWizard(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg font-medium shadow-sm transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-medium shadow-sm transition-colors"
             >
               <Plus className="w-5 h-5" />
               Add Data Source
@@ -196,7 +196,7 @@ export default function DataSourcesPage() {
               onClick={() => handleTabChange('active')}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-t-lg font-medium text-sm transition-colors border-b-2 ${
                 activeTab === 'active'
-                  ? 'bg-slate-50 dark:bg-slate-900 text-sky-600 dark:text-sky-400 border-sky-500'
+                  ? 'bg-slate-50 dark:bg-slate-900 text-amber-600 dark:text-amber-400 border-amber-500'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border-transparent hover:bg-slate-100 dark:hover:bg-slate-700'
               }`}
             >
@@ -205,7 +205,7 @@ export default function DataSourcesPage() {
               {activeSources && (
                 <span className={`px-1.5 py-0.5 text-xs rounded-full ${
                   activeTab === 'active'
-                    ? 'bg-sky-100 dark:bg-sky-900/50 text-sky-700 dark:text-sky-300'
+                    ? 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300'
                     : 'bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-300'
                 }`}>
                   {activeSources.sources.length}
@@ -216,7 +216,7 @@ export default function DataSourcesPage() {
               onClick={() => handleTabChange('templates')}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-t-lg font-medium text-sm transition-colors border-b-2 ${
                 activeTab === 'templates'
-                  ? 'bg-slate-50 dark:bg-slate-900 text-sky-600 dark:text-sky-400 border-sky-500'
+                  ? 'bg-slate-50 dark:bg-slate-900 text-amber-600 dark:text-amber-400 border-amber-500'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border-transparent hover:bg-slate-100 dark:hover:bg-slate-700'
               }`}
             >
@@ -225,7 +225,7 @@ export default function DataSourcesPage() {
               {stats && (
                 <span className={`px-1.5 py-0.5 text-xs rounded-full ${
                   activeTab === 'templates'
-                    ? 'bg-sky-100 dark:bg-sky-900/50 text-sky-700 dark:text-sky-300'
+                    ? 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300'
                     : 'bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-300'
                 }`}>
                   {stats.total}
@@ -236,7 +236,7 @@ export default function DataSourcesPage() {
               onClick={() => handleTabChange('config')}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-t-lg font-medium text-sm transition-colors border-b-2 ${
                 activeTab === 'config'
-                  ? 'bg-slate-50 dark:bg-slate-900 text-sky-600 dark:text-sky-400 border-sky-500'
+                  ? 'bg-slate-50 dark:bg-slate-900 text-amber-600 dark:text-amber-400 border-amber-500'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border-transparent hover:bg-slate-100 dark:hover:bg-slate-700'
               }`}
             >
@@ -254,20 +254,20 @@ export default function DataSourcesPage() {
           <div>
             {/* Index Management Tip Banner */}
             {showIndexTip && (
-              <div className="mb-6 bg-sky-50 dark:bg-sky-900/20 border border-sky-200 dark:border-sky-800 rounded-xl p-4">
+              <div className="mb-6 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
                 <div className="flex items-start gap-3">
-                  <div className="p-2 bg-sky-100 dark:bg-sky-800 rounded-lg">
-                    <Lightbulb className="w-5 h-5 text-sky-600 dark:text-sky-400" />
+                  <div className="p-2 bg-amber-100 dark:bg-amber-800 rounded-lg">
+                    <Lightbulb className="w-5 h-5 text-amber-600 dark:text-amber-400" />
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-semibold text-sky-900 dark:text-sky-100 mb-1">
+                    <h3 className="font-semibold text-amber-900 dark:text-amber-100 mb-1">
                       Organize your logs with indexes
                     </h3>
-                    <p className="text-sm text-sky-700 dark:text-sky-300 mb-3">
+                    <p className="text-sm text-amber-700 dark:text-amber-300 mb-3">
                       Logs are grouped into indexes (like folders). When sending logs via HTTP API, use the{' '}
-                      <code className="px-1.5 py-0.5 bg-sky-100 dark:bg-sky-800 rounded font-mono text-xs">X-Index</code>{' '}
+                      <code className="px-1.5 py-0.5 bg-amber-100 dark:bg-amber-800 rounded font-mono text-xs">X-Index</code>{' '}
                       header to specify a custom index name. You can also normalize field names across sources using{' '}
-                      <Link to="/data-models" className="underline hover:text-sky-900 dark:hover:text-sky-100">
+                      <Link to="/data-models" className="underline hover:text-amber-900 dark:hover:text-amber-100">
                         Data Models (CIM)
                       </Link>.
                     </p>
@@ -277,7 +277,7 @@ export default function DataSourcesPage() {
                       </code>
                       <Link
                         to="/docs"
-                        className="text-sm text-sky-600 dark:text-sky-400 hover:underline flex items-center gap-1"
+                        className="text-sm text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1"
                       >
                         Learn more <ExternalLink className="w-3 h-3" />
                       </Link>
@@ -286,14 +286,14 @@ export default function DataSourcesPage() {
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => dismissIndexTip(false)}
-                      className="p-1.5 hover:bg-sky-100 dark:hover:bg-sky-800 rounded text-sky-600 dark:text-sky-400"
+                      className="p-1.5 hover:bg-amber-100 dark:hover:bg-amber-800 rounded text-amber-600 dark:text-amber-400"
                       title="Dismiss for now"
                     >
                       <X className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => dismissIndexTip(true)}
-                      className="p-1.5 hover:bg-sky-100 dark:hover:bg-sky-800 rounded text-sky-600 dark:text-sky-400 text-xs"
+                      className="p-1.5 hover:bg-amber-100 dark:hover:bg-amber-800 rounded text-amber-600 dark:text-amber-400 text-xs"
                       title="Don't show again"
                     >
                       <span className="sr-only">Don't show again</span>
@@ -311,7 +311,7 @@ export default function DataSourcesPage() {
                   <button
                     key={idx.index_name}
                     onClick={() => navigate(`/search?q=${encodeURIComponent(`search index=${idx.index_name}`)}`)}
-                    className="px-4 py-2 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-sky-300 dark:hover:border-sky-600 transition-colors flex items-center gap-3"
+                    className="px-4 py-2 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-amber-300 dark:hover:border-amber-600 transition-colors flex items-center gap-3"
                   >
                     <div className="text-sm font-medium text-slate-900 dark:text-slate-100">
                       {idx.index_name || 'main'}
@@ -330,7 +330,7 @@ export default function DataSourcesPage() {
             {/* Active Sources Table */}
             {sourcesLoading ? (
               <div className="flex items-center justify-center h-64">
-                <Loader2 className="w-8 h-8 text-sky-500 animate-spin" />
+                <Loader2 className="w-8 h-8 text-amber-500 animate-spin" />
               </div>
             ) : activeSources && activeSources.sources.length > 0 ? (
               <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
@@ -427,7 +427,7 @@ export default function DataSourcesPage() {
                               className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-600 rounded transition-colors"
                               title="View logs"
                             >
-                              <ExternalLink className="w-4 h-4 text-slate-400 hover:text-sky-500" />
+                              <ExternalLink className="w-4 h-4 text-slate-400 hover:text-amber-500" />
                             </button>
                           </td>
                         </tr>
@@ -473,8 +473,8 @@ export default function DataSourcesPage() {
                   {/* Option 2: HTTP API */}
                   <div className="p-6">
                     <div className="flex items-center gap-2 mb-3">
-                      <div className="p-2 bg-sky-100 dark:bg-sky-900/30 rounded-lg">
-                        <Terminal className="w-5 h-5 text-sky-600 dark:text-sky-400" />
+                      <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+                        <Terminal className="w-5 h-5 text-amber-600 dark:text-amber-400" />
                       </div>
                       <h4 className="font-medium text-slate-900 dark:text-slate-100">HTTP API</h4>
                     </div>
@@ -494,8 +494,8 @@ export default function DataSourcesPage() {
                   {/* Option 3: Agent */}
                   <div className="p-6">
                     <div className="flex items-center gap-2 mb-3">
-                      <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-lg">
-                        <Layers className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                      <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+                        <Layers className="w-5 h-5 text-amber-600 dark:text-amber-400" />
                       </div>
                       <h4 className="font-medium text-slate-900 dark:text-slate-100">LogNog In Agent</h4>
                     </div>
@@ -515,15 +515,15 @@ export default function DataSourcesPage() {
                 <div className="p-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
                   <p className="text-sm text-slate-500 dark:text-slate-400">
                     Need help? Check out our{' '}
-                    <Link to="/docs" className="text-sky-600 dark:text-sky-400 hover:underline">
+                    <Link to="/docs" className="text-amber-600 dark:text-amber-400 hover:underline">
                       documentation
                     </Link>{' '}
                     or ask{' '}
-                    <span className="text-sky-600 dark:text-sky-400">NogChat</span> (bottom right).
+                    <span className="text-amber-600 dark:text-amber-400">NogChat</span> (bottom right).
                   </p>
                   <button
                     onClick={() => handleTabChange('templates')}
-                    className="px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg font-medium text-sm transition-colors"
+                    className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-medium text-sm transition-colors"
                   >
                     Browse Templates
                   </button>
@@ -545,11 +545,11 @@ export default function DataSourcesPage() {
                 </div>
                 <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
                   <div className="text-sm text-slate-500 dark:text-slate-400">Built-in</div>
-                  <div className="text-2xl font-bold text-sky-500 mt-1">{stats.built_in}</div>
+                  <div className="text-2xl font-bold text-amber-500 mt-1">{stats.built_in}</div>
                 </div>
                 <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
                   <div className="text-sm text-slate-500 dark:text-slate-400">Custom</div>
-                  <div className="text-2xl font-bold text-purple-500 mt-1">{stats.custom}</div>
+                  <div className="text-2xl font-bold text-amber-500 mt-1">{stats.custom}</div>
                 </div>
                 <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
                   <div className="text-sm text-slate-500 dark:text-slate-400">Categories</div>
@@ -566,7 +566,7 @@ export default function DataSourcesPage() {
                 onClick={() => setSelectedCategory('all')}
                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                   selectedCategory === 'all'
-                    ? 'bg-sky-500 text-white'
+                    ? 'bg-amber-500 text-white'
                     : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
                 }`}
               >
@@ -581,7 +581,7 @@ export default function DataSourcesPage() {
                     onClick={() => setSelectedCategory(category)}
                     className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
                       selectedCategory === category
-                        ? 'bg-sky-500 text-white'
+                        ? 'bg-amber-500 text-white'
                         : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
                     }`}
                   >
@@ -703,7 +703,7 @@ export default function DataSourcesPage() {
               {selectedTemplate.setup_instructions && (
                 <div className="space-y-3">
                   <div className="flex items-center gap-2 text-lg font-semibold text-slate-900 dark:text-slate-100">
-                    <Info className="w-5 h-5 text-sky-500" />
+                    <Info className="w-5 h-5 text-amber-500" />
                     Setup Instructions
                   </div>
                   <div className="prose dark:prose-invert max-w-none bg-slate-50 dark:bg-slate-900 rounded-lg p-4">
@@ -719,7 +719,7 @@ export default function DataSourcesPage() {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2 text-lg font-semibold text-slate-900 dark:text-slate-100">
-                      <FileCode className="w-5 h-5 text-purple-500" />
+                      <FileCode className="w-5 h-5 text-amber-500" />
                       LogNog In Agent Configuration
                     </div>
                     <button
@@ -780,7 +780,7 @@ export default function DataSourcesPage() {
               {selectedTemplate.field_extractions && selectedTemplate.field_extractions.length > 0 && (
                 <div className="space-y-3">
                   <div className="flex items-center gap-2 text-lg font-semibold text-slate-900 dark:text-slate-100">
-                    <Database className="w-5 h-5 text-blue-500" />
+                    <Database className="w-5 h-5 text-amber-500" />
                     Field Extractions ({selectedTemplate.field_extractions.length})
                   </div>
                   <div className="space-y-2">
@@ -835,11 +835,11 @@ export default function DataSourcesPage() {
               {selectedTemplate.sample_query && (
                 <div className="space-y-3">
                   <div className="flex items-center gap-2 text-lg font-semibold text-slate-900 dark:text-slate-100">
-                    <Search className="w-5 h-5 text-sky-500" />
+                    <Search className="w-5 h-5 text-amber-500" />
                     Example Query
                   </div>
-                  <div className="bg-sky-50 dark:bg-sky-900/20 rounded-lg p-4">
-                    <code className="text-sm font-mono text-sky-900 dark:text-sky-100">
+                  <div className="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-4">
+                    <code className="text-sm font-mono text-amber-900 dark:text-amber-100">
                       {selectedTemplate.sample_query}
                     </code>
                   </div>
@@ -867,7 +867,7 @@ export default function DataSourcesPage() {
                   setShowSetupModal(false);
                   setSelectedTemplate(null);
                 }}
-                className="px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg"
+                className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg"
               >
                 Close
               </button>

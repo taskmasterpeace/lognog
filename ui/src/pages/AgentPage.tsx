@@ -237,7 +237,7 @@ export function AgentPage() {
         <div className="p-4 border-b border-slate-200 dark:border-slate-700">
           <button
             onClick={startNewConversation}
-            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg transition-colors"
+            className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg transition-colors"
           >
             <Plus className="w-4 h-4" />
             New Chat
@@ -255,7 +255,7 @@ export function AgentPage() {
                 key={conv.id}
                 className={`group flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
                   currentConversation?.id === conv.id
-                    ? 'bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300'
+                    ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300'
                     : 'hover:bg-slate-100 dark:hover:bg-slate-700/50'
                 }`}
                 onClick={() => loadConversation(conv.id)}
@@ -286,7 +286,7 @@ export function AgentPage() {
               onClick={() => setShowPersonaDropdown(!showPersonaDropdown)}
               className="flex items-center gap-3 px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg transition-colors"
             >
-              <div className="p-1.5 bg-gradient-to-r from-purple-500 to-sky-500 rounded-lg">
+              <div className="p-1.5 bg-gradient-to-r from-amber-500 to-amber-500 rounded-lg">
                 <PersonaIcon className="w-4 h-4 text-white" />
               </div>
               <div className="text-left">
@@ -312,10 +312,10 @@ export function AgentPage() {
                         setShowPersonaDropdown(false);
                       }}
                       className={`w-full flex items-start gap-3 p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 first:rounded-t-xl last:rounded-b-xl transition-colors ${
-                        selectedPersona?.id === persona.id ? 'bg-sky-50 dark:bg-sky-900/20' : ''
+                        selectedPersona?.id === persona.id ? 'bg-amber-50 dark:bg-amber-900/20' : ''
                       }`}
                     >
-                      <div className="p-2 bg-gradient-to-r from-purple-500 to-sky-500 rounded-lg flex-shrink-0">
+                      <div className="p-2 bg-gradient-to-r from-amber-500 to-amber-500 rounded-lg flex-shrink-0">
                         <Icon className="w-5 h-5 text-white" />
                       </div>
                       <div className="text-left flex-1">
@@ -349,7 +349,7 @@ export function AgentPage() {
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {messages.length === 0 && selectedPersona ? (
             <div className="flex flex-col items-center justify-center h-full text-center">
-              <div className="p-4 bg-gradient-to-r from-purple-500 to-sky-500 rounded-2xl mb-4">
+              <div className="p-4 bg-gradient-to-r from-amber-500 to-amber-500 rounded-2xl mb-4">
                 <PersonaIcon className="w-12 h-12 text-white" />
               </div>
               <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100 mb-2">
@@ -374,7 +374,7 @@ export function AgentPage() {
               <div key={msg.id} className={`flex gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
                 <div
                   className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
-                    msg.role === 'user' ? 'bg-sky-500' : 'bg-gradient-to-r from-purple-500 to-sky-500'
+                    msg.role === 'user' ? 'bg-amber-500' : 'bg-gradient-to-r from-amber-500 to-amber-500'
                   }`}
                 >
                   {msg.role === 'user' ? (
@@ -388,7 +388,7 @@ export function AgentPage() {
                   <div
                     className={`inline-block p-4 rounded-2xl ${
                       msg.role === 'user'
-                        ? 'bg-sky-500 text-white rounded-tr-sm'
+                        ? 'bg-amber-500 text-white rounded-tr-sm'
                         : 'bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded-tl-sm'
                     }`}
                   >
@@ -443,12 +443,12 @@ export function AgentPage() {
 
           {loading && (
             <div className="flex gap-4">
-              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-sky-500 flex items-center justify-center">
+              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-r from-amber-500 to-amber-500 flex items-center justify-center">
                 <Bot className="w-5 h-5 text-white" />
               </div>
               <div className="p-4 bg-slate-100 dark:bg-slate-700 rounded-2xl rounded-tl-sm">
                 <div className="flex items-center gap-2">
-                  <Loader2 className="w-4 h-4 animate-spin text-purple-500" />
+                  <Loader2 className="w-4 h-4 animate-spin text-amber-500" />
                   <span className="text-sm text-slate-600 dark:text-slate-300">Thinking...</span>
                 </div>
               </div>
@@ -471,14 +471,14 @@ export function AgentPage() {
                 }
               }}
               placeholder={`Ask ${selectedPersona?.name || 'the agent'}...`}
-              className="flex-1 px-4 py-3 bg-slate-100 dark:bg-slate-700 border-none rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 resize-none min-h-[44px] max-h-[200px]"
+              className="flex-1 px-4 py-3 bg-slate-100 dark:bg-slate-700 border-none rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 resize-none min-h-[44px] max-h-[200px]"
               disabled={loading || !aiAvailable}
               rows={1}
             />
             <button
               onClick={handleSubmit}
               disabled={!input.trim() || loading || !aiAvailable}
-              className="p-3 bg-gradient-to-r from-purple-500 to-sky-500 text-white rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg transition-all"
+              className="p-3 bg-gradient-to-r from-amber-500 to-amber-500 text-white rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg transition-all"
             >
               {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
             </button>

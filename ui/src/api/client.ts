@@ -19,8 +19,78 @@ export interface SavedSearch {
   name: string;
   query: string;
   description?: string;
+  owner_id?: string;
+  is_shared: number;
+  time_range: string;
+  schedule?: string;
+  schedule_enabled: number;
+  cache_ttl_seconds: number;
+  cached_results?: string;
+  cached_at?: string;
+  cached_count?: number;
+  cached_sql?: string;
+  last_run?: string;
+  last_run_duration_ms?: number;
+  last_error?: string;
+  run_count: number;
+  tags: string[];
+  version: number;
+  previous_versions?: Array<{ version: number; query: string; time_range: string; changed_at: string }>;
+  is_cache_valid?: boolean;
+  cache_expires_at?: string;
   created_at: string;
   updated_at: string;
+}
+
+export interface SavedSearchFilters {
+  owner_id?: string;
+  owner?: 'mine' | 'shared' | 'all';
+  shared?: boolean;
+  scheduled?: boolean;
+  tags?: string[];
+  search?: string;
+}
+
+export interface SavedSearchCreateRequest {
+  name: string;
+  query: string;
+  description?: string;
+  time_range?: string;
+  schedule?: string;
+  schedule_enabled?: boolean;
+  cache_ttl_seconds?: number;
+  is_shared?: boolean;
+  tags?: string[];
+}
+
+export interface SavedSearchUpdateRequest {
+  name?: string;
+  query?: string;
+  description?: string;
+  time_range?: string;
+  schedule?: string;
+  schedule_enabled?: boolean;
+  cache_ttl_seconds?: number;
+  is_shared?: boolean;
+  tags?: string[];
+}
+
+export interface SavedSearchRunResult {
+  results: Record<string, unknown>[];
+  sql: string;
+  count: number;
+  cached: boolean;
+  cached_at?: string;
+  execution_time_ms: number;
+}
+
+export interface SavedSearchCachedResults {
+  results: Record<string, unknown>[];
+  sql: string;
+  count: number;
+  cached_at: string;
+  cache_valid: boolean;
+  expires_at: string;
 }
 
 export interface DashboardBranding {
@@ -35,12 +105,17 @@ export interface Dashboard {
   name: string;
   description?: string;
   panels: DashboardPanel[];
+  pages?: DashboardPage[];
+  panel_count?: number;
   created_at: string;
   updated_at: string;
   // Branding
   logo_url?: string;
   accent_color?: string;
   header_color?: string;
+  icon?: string;
+  // Organization
+  app_scope?: string;
   // Sharing
   is_public?: number;
   public_token?: string;
@@ -57,6 +132,17 @@ export interface DashboardPanel {
   position_y: number;
   width: number;
   height: number;
+  description?: string;
+  page_id?: string;
+}
+
+export interface DashboardPage {
+  id: string;
+  dashboard_id: string;
+  name: string;
+  icon?: string;
+  sort_order: number;
+  created_at?: string;
 }
 
 export interface Stats {
@@ -100,6 +186,20 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
 
   return response.json();
 }
+
+// Generic API client for ad-hoc requests
+export const api = {
+  get: <T>(endpoint: string) => request<T>(endpoint),
+  post: <T>(endpoint: string, data: unknown) => request<T>(endpoint, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+  put: <T>(endpoint: string, data: unknown) => request<T>(endpoint, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  }),
+  delete: <T>(endpoint: string) => request<T>(endpoint, { method: 'DELETE' }),
+};
 
 // Search API
 export async function executeSearch(query: string, earliest?: string, latest?: string): Promise<SearchResult> {
@@ -186,39 +286,160 @@ export async function reorderFields(fields: string[]): Promise<{ success: boolea
   });
 }
 
-// Saved Searches API
-export async function getSavedSearches(): Promise<SavedSearch[]> {
-  return request('/search/saved');
+// Saved Searches API (Enhanced)
+export async function getSavedSearches(filters?: SavedSearchFilters): Promise<{ searches: SavedSearch[]; total: number }> {
+  const params = new URLSearchParams();
+  if (filters?.owner) params.set('owner', filters.owner);
+  if (filters?.owner_id) params.set('owner_id', filters.owner_id);
+  if (filters?.shared) params.set('shared', 'true');
+  if (filters?.scheduled) params.set('scheduled', 'true');
+  if (filters?.tags?.length) params.set('tags', filters.tags.join(','));
+  if (filters?.search) params.set('search', filters.search);
+
+  const queryString = params.toString();
+  return request(`/saved-searches${queryString ? `?${queryString}` : ''}`);
 }
 
 export async function getSavedSearch(id: string): Promise<SavedSearch> {
-  return request(`/search/saved/${id}`);
+  return request(`/saved-searches/${id}`);
 }
 
-export async function createSavedSearch(name: string, query: string, description?: string): Promise<SavedSearch> {
-  return request('/search/saved', {
+export async function createSavedSearch(data: SavedSearchCreateRequest): Promise<SavedSearch> {
+  return request('/saved-searches', {
     method: 'POST',
-    body: JSON.stringify({ name, query, description }),
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateSavedSearch(id: string, data: SavedSearchUpdateRequest): Promise<SavedSearch> {
+  return request(`/saved-searches/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
   });
 }
 
 export async function deleteSavedSearch(id: string): Promise<void> {
-  await request(`/search/saved/${id}`, { method: 'DELETE' });
+  await request(`/saved-searches/${id}`, { method: 'DELETE' });
+}
+
+export async function runSavedSearch(id: string, forceRefresh = false): Promise<SavedSearchRunResult> {
+  return request(`/saved-searches/${id}/run`, {
+    method: 'POST',
+    body: JSON.stringify({ force_refresh: forceRefresh }),
+  });
+}
+
+export async function getSavedSearchResults(id: string): Promise<SavedSearchCachedResults> {
+  return request(`/saved-searches/${id}/results`);
+}
+
+export async function clearSavedSearchCache(id: string): Promise<void> {
+  await request(`/saved-searches/${id}/clear-cache`, { method: 'POST' });
+}
+
+export async function duplicateSavedSearch(id: string): Promise<SavedSearch> {
+  return request(`/saved-searches/${id}/duplicate`, { method: 'POST' });
+}
+
+export async function getSavedSearchTags(): Promise<{ tags: string[] }> {
+  return request('/saved-searches/tags');
+}
+
+export async function createAlertFromSavedSearch(
+  id: string,
+  config: {
+    trigger_type?: string;
+    trigger_condition?: string;
+    trigger_threshold?: number;
+    severity?: string;
+    cron_expression?: string;
+    actions?: Array<{ type: string; config: Record<string, unknown> }>;
+  }
+): Promise<{ alert_id: string; name: string; message: string }> {
+  return request(`/saved-searches/${id}/create-alert`, {
+    method: 'POST',
+    body: JSON.stringify(config),
+  });
+}
+
+export async function createPanelFromSavedSearch(
+  id: string,
+  config: {
+    dashboard_id: string;
+    visualization?: string;
+    title?: string;
+    position?: { x?: number; y?: number; width?: number; height?: number };
+  }
+): Promise<{ panel_id: string; dashboard_id: string; message: string }> {
+  return request(`/saved-searches/${id}/create-panel`, {
+    method: 'POST',
+    body: JSON.stringify(config),
+  });
+}
+
+export async function createReportFromSavedSearch(
+  id: string,
+  config: {
+    schedule: string;
+    recipients: string;
+    format?: 'html' | 'csv';
+  }
+): Promise<{ report_id: string; name: string; message: string }> {
+  return request(`/saved-searches/${id}/create-report`, {
+    method: 'POST',
+    body: JSON.stringify(config),
+  });
 }
 
 // Dashboards API
-export async function getDashboards(): Promise<Dashboard[]> {
-  return request('/dashboards');
+export async function getDashboards(appScope?: string): Promise<Dashboard[]> {
+  const params = appScope ? `?app_scope=${encodeURIComponent(appScope)}` : '';
+  return request(`/dashboards${params}`);
+}
+
+export async function getAppScopes(): Promise<string[]> {
+  return request('/dashboards/app-scopes');
 }
 
 export async function getDashboard(id: string): Promise<Dashboard> {
   return request(`/dashboards/${id}`);
 }
 
-export async function createDashboard(name: string, description?: string): Promise<Dashboard> {
+// Dashboard Pages (Tabs) API
+export async function getDashboardPages(dashboardId: string): Promise<DashboardPage[]> {
+  return request(`/dashboards/${dashboardId}/pages`);
+}
+
+export async function createDashboardPage(
+  dashboardId: string,
+  name: string,
+  options?: { icon?: string; sort_order?: number }
+): Promise<DashboardPage> {
+  return request(`/dashboards/${dashboardId}/pages`, {
+    method: 'POST',
+    body: JSON.stringify({ name, ...options }),
+  });
+}
+
+export async function updateDashboardPage(
+  dashboardId: string,
+  pageId: string,
+  updates: Partial<DashboardPage>
+): Promise<DashboardPage> {
+  return request(`/dashboards/${dashboardId}/pages/${pageId}`, {
+    method: 'PUT',
+    body: JSON.stringify(updates),
+  });
+}
+
+export async function deleteDashboardPage(dashboardId: string, pageId: string): Promise<void> {
+  await request(`/dashboards/${dashboardId}/pages/${pageId}`, { method: 'DELETE' });
+}
+
+export async function createDashboard(name: string, description?: string, app_scope?: string): Promise<Dashboard> {
   return request('/dashboards', {
     method: 'POST',
-    body: JSON.stringify({ name, description }),
+    body: JSON.stringify({ name, description, app_scope }),
   });
 }
 
@@ -310,11 +531,13 @@ export interface ScheduledReport {
   format: string;
   enabled: number;
   last_run: string | null;
+  app_scope?: string;
   created_at: string;
 }
 
-export async function getScheduledReports(): Promise<ScheduledReport[]> {
-  return request('/reports');
+export async function getScheduledReports(appScope?: string): Promise<ScheduledReport[]> {
+  const params = appScope ? `?app_scope=${encodeURIComponent(appScope)}` : '';
+  return request(`/reports${params}`);
 }
 
 export async function createScheduledReport(
@@ -322,11 +545,12 @@ export async function createScheduledReport(
   query: string,
   schedule: string,
   recipients: string,
-  format?: string
+  format?: string,
+  app_scope?: string
 ): Promise<ScheduledReport> {
   return request('/reports', {
     method: 'POST',
-    body: JSON.stringify({ name, query, schedule, recipients, format }),
+    body: JSON.stringify({ name, query, schedule, recipients, format, app_scope }),
   });
 }
 
@@ -666,6 +890,7 @@ export interface Alert {
   last_run?: string;
   last_triggered?: string;
   trigger_count: number;
+  app_scope?: string;
   created_at: string;
   updated_at: string;
 }
@@ -685,8 +910,9 @@ export interface AlertHistory {
   notes?: string;
 }
 
-export async function getAlerts(): Promise<Alert[]> {
-  return request('/alerts');
+export async function getAlerts(appScope?: string): Promise<Alert[]> {
+  const params = appScope ? `?app_scope=${encodeURIComponent(appScope)}` : '';
+  return request(`/alerts${params}`);
 }
 
 export async function getAlert(id: string): Promise<Alert> {
@@ -714,6 +940,7 @@ export async function createAlert(alert: {
   throttle_window_seconds?: number;
   severity?: string;
   enabled?: boolean;
+  app_scope?: string;
 }): Promise<Alert> {
   return request('/alerts', {
     method: 'POST',
@@ -1806,4 +2033,213 @@ export async function getSyntheticSchedulerStatus(): Promise<{ running: boolean;
 
 export async function refreshSyntheticScheduler(): Promise<{ success: boolean; running: boolean; scheduledCount: number }> {
   return request('/synthetic/scheduler/refresh', { method: 'POST' });
+}
+
+// ============================================================================
+// Dashboard Builder Wizard API
+// ============================================================================
+
+export interface IndexDetails {
+  name: string;
+  count: number;
+  size_bytes: number;
+  first_seen: string;
+  last_seen: string;
+  sparkline: number[];
+}
+
+export interface IndexField {
+  name: string;
+  type: 'string' | 'number' | 'timestamp';
+  cardinality: number;
+  sample_values: string[];
+  top_count: number;
+  recommended_viz: string[];
+}
+
+export interface WizardPanelSpec {
+  field: string;
+  vizType: string;
+  position?: { x: number; y: number; w: number; h: number };
+}
+
+export interface CreateDashboardFromWizardResult {
+  dashboard_id: string;
+  name: string;
+  panels_created: number;
+  panels: DashboardPanel[];
+}
+
+export async function getIndexDetails(): Promise<{ indexes: IndexDetails[] }> {
+  return request('/stats/indexes/details');
+}
+
+export async function getIndexFields(indexName: string): Promise<{ fields: IndexField[] }> {
+  return request(`/stats/indexes/${indexName}/fields`);
+}
+
+export async function createDashboardFromWizard(
+  name: string,
+  index: string,
+  panels: WizardPanelSpec[],
+  useDefaults?: boolean,
+  app_scope?: string
+): Promise<CreateDashboardFromWizardResult> {
+  return request('/dashboards/from-wizard', {
+    method: 'POST',
+    body: JSON.stringify({ name, index, panels, useDefaults, app_scope }),
+  });
+}
+
+// ============================================================================
+// SOURCE ANNOTATIONS
+// ============================================================================
+
+export interface SourceAnnotation {
+  id: string;
+  field_name: string;
+  field_value: string;
+  title?: string;
+  description?: string;
+  details?: string;
+  icon?: string;
+  color?: string;
+  lookup_id?: string;
+  tags: string[];
+  created_at: string;
+  updated_at: string;
+  lookupData?: Record<string, unknown>;
+}
+
+export async function getSourceAnnotations(fieldName?: string): Promise<SourceAnnotation[]> {
+  const params = fieldName ? `?field=${encodeURIComponent(fieldName)}` : '';
+  return request(`/source-annotations${params}`);
+}
+
+export async function getSourceAnnotationsBatch(
+  items: Array<{ field: string; value: string }>
+): Promise<Record<string, SourceAnnotation>> {
+  const params = `?items=${encodeURIComponent(JSON.stringify(items))}`;
+  return request(`/source-annotations/batch${params}`);
+}
+
+export async function getSourceAnnotation(
+  fieldName: string,
+  fieldValue: string
+): Promise<SourceAnnotation> {
+  return request(`/source-annotations/${encodeURIComponent(fieldName)}/${encodeURIComponent(fieldValue)}`);
+}
+
+export async function getSourceAnnotationById(id: string): Promise<SourceAnnotation> {
+  return request(`/source-annotations/by-id/${id}`);
+}
+
+export async function createSourceAnnotation(data: {
+  field_name: string;
+  field_value: string;
+  title?: string;
+  description?: string;
+  details?: string;
+  icon?: string;
+  color?: string;
+  lookup_id?: string;
+  tags?: string[];
+}): Promise<SourceAnnotation> {
+  return request('/source-annotations', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateSourceAnnotation(
+  id: string,
+  updates: {
+    title?: string;
+    description?: string;
+    details?: string;
+    icon?: string;
+    color?: string;
+    lookup_id?: string | null;
+    tags?: string[];
+  }
+): Promise<SourceAnnotation> {
+  return request(`/source-annotations/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(updates),
+  });
+}
+
+export async function deleteSourceAnnotation(id: string): Promise<void> {
+  return request(`/source-annotations/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+// ============================================================================
+// Storage & Retention API
+// ============================================================================
+
+export interface IndexStorageStats {
+  index_name: string;
+  row_count: number;
+  size_bytes: number;
+  retention_days: number;
+  days_until_expiry: number;
+  growth_rate_daily: number;
+  oldest_timestamp: string;
+  newest_timestamp: string;
+}
+
+export interface StorageStats {
+  total_disk_bytes: number;
+  total_rows: number;
+  indexes: IndexStorageStats[];
+  growth_rate: {
+    daily: number;
+    weekly_bytes: number;
+  };
+  oldest_data: string | null;
+  daily_counts: Array<{ day: string; count: number; bytes: number }>;
+}
+
+export interface RetentionSetting {
+  id: string;
+  index_name: string;
+  retention_days: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export async function getStorageStats(): Promise<StorageStats> {
+  return request('/stats/storage');
+}
+
+export async function getRetentionSettings(): Promise<RetentionSetting[]> {
+  return request('/retention');
+}
+
+export async function getRetentionSetting(indexName: string): Promise<RetentionSetting | null> {
+  return request(`/retention/${encodeURIComponent(indexName)}`);
+}
+
+export async function updateRetentionSetting(
+  indexName: string,
+  retentionDays: number
+): Promise<RetentionSetting> {
+  return request(`/retention/${encodeURIComponent(indexName)}`, {
+    method: 'PUT',
+    body: JSON.stringify({ retention_days: retentionDays }),
+  });
+}
+
+export async function deleteRetentionSetting(indexName: string): Promise<void> {
+  return request(`/retention/${encodeURIComponent(indexName)}`, {
+    method: 'DELETE',
+  });
+}
+
+export async function triggerRetentionCleanup(): Promise<{ message: string; deleted: number }> {
+  return request('/retention/cleanup', {
+    method: 'POST',
+  });
 }

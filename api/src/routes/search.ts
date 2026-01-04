@@ -387,7 +387,7 @@ router.put('/saved/:id', (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Name and query are required' });
     }
 
-    const search = updateSavedSearch(req.params.id, name, query, description);
+    const search = updateSavedSearch(req.params.id, { name, query, description });
     if (!search) {
       return res.status(404).json({ error: 'Saved search not found' });
     }

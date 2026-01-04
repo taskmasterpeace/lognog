@@ -2,6 +2,24 @@
 @tailwind components;
 @tailwind utilities;
 
+@layer utilities {
+  /* Safe area insets for mobile browsers (notches, rounded corners, browser chrome) */
+  .safe-area-inset {
+    padding-top: env(safe-area-inset-top);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+  }
+
+  .safe-area-inset-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .safe-area-inset-top {
+    padding-top: env(safe-area-inset-top);
+  }
+}
+
 @layer base {
   :root {
     --color-primary: 14 165 233;
@@ -11,7 +29,7 @@
 
   body {
     @apply bg-slate-50 text-slate-900 antialiased;
-    @apply dark:bg-slate-900 dark:text-slate-100;
+    @apply dark:bg-nog-900 dark:text-nog-100;
   }
 
   /* Smooth transitions for theme changes */
@@ -25,11 +43,11 @@
   }
 
   ::-webkit-scrollbar-track {
-    @apply bg-slate-100 dark:bg-slate-800;
+    @apply bg-slate-100 dark:bg-nog-800;
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-slate-300 dark:bg-slate-600 rounded-full hover:bg-slate-400 dark:hover:bg-slate-500;
+    @apply bg-slate-300 dark:bg-nog-600 rounded-full hover:bg-slate-400 dark:hover:bg-nog-500;
   }
 }
 
@@ -41,18 +59,18 @@
   }
 
   .btn-primary {
-    @apply btn bg-gradient-to-r from-sky-500 to-sky-600 text-white hover:from-sky-600 hover:to-sky-700 focus:ring-sky-500 shadow-sm hover:shadow-md;
-    @apply dark:from-sky-600 dark:to-sky-700 dark:hover:from-sky-700 dark:hover:to-sky-800;
+    @apply btn bg-gradient-to-r from-amber-500 to-amber-600 text-white hover:from-amber-600 hover:to-amber-700 focus:ring-amber-500 shadow-sm hover:shadow-md;
+    @apply dark:from-amber-600 dark:to-amber-700 dark:hover:from-amber-700 dark:hover:to-amber-800;
   }
 
   .btn-secondary {
     @apply btn bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300 focus:ring-slate-500;
-    @apply dark:bg-slate-800 dark:text-slate-200 dark:border-slate-700 dark:hover:bg-slate-700 dark:hover:border-slate-600;
+    @apply dark:bg-nog-800 dark:text-nog-200 dark:border-nog-700 dark:hover:bg-nog-700 dark:hover:border-nog-600;
   }
 
   .btn-ghost {
     @apply btn text-slate-600 hover:bg-slate-100 hover:text-slate-900;
-    @apply dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-100;
+    @apply dark:text-nog-400 dark:hover:bg-nog-800 dark:hover:text-nog-100;
   }
 
   .btn-danger {
@@ -63,23 +81,23 @@
   /* Cards */
   .card {
     @apply bg-white rounded-xl border border-slate-200 shadow-sm;
-    @apply dark:bg-slate-800 dark:border-slate-700;
+    @apply dark:bg-nog-800 dark:border-nog-700;
   }
 
   .card-hover {
     @apply card transition-all duration-200 hover:shadow-lg hover:border-slate-300 hover:-translate-y-0.5;
-    @apply dark:hover:border-slate-600;
+    @apply dark:hover:border-nog-600;
   }
 
   /* Form inputs */
   .input {
-    @apply w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent;
-    @apply dark:bg-slate-800 dark:border-slate-700 dark:text-slate-100 dark:placeholder-slate-500;
+    @apply w-full px-4 py-2.5 bg-white border border-slate-200 rounded-lg text-slate-900 placeholder-slate-400 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent;
+    @apply dark:bg-nog-800 dark:border-nog-700 dark:text-nog-100 dark:placeholder-nog-500;
   }
 
   .input-search {
     @apply input pl-11 font-mono text-sm bg-slate-50 focus:bg-white;
-    @apply dark:bg-slate-900 dark:focus:bg-slate-800;
+    @apply dark:bg-nog-900 dark:focus:bg-nog-800;
   }
 
   /* Badges */
@@ -103,8 +121,8 @@
   }
 
   .badge-info {
-    @apply badge bg-sky-50 text-sky-700 ring-1 ring-sky-600/20;
-    @apply dark:bg-sky-900/30 dark:text-sky-400 dark:ring-sky-500/30;
+    @apply badge bg-amber-50 text-amber-700 ring-1 ring-amber-600/20;
+    @apply dark:bg-amber-900/30 dark:text-amber-400 dark:ring-amber-500/30;
   }
 
   /* Severity badges */
@@ -115,12 +133,12 @@
   .severity-4 { @apply bg-lime-100 text-lime-800 ring-1 ring-lime-600/30 dark:bg-lime-900/30 dark:text-lime-400 dark:ring-lime-500/30; }
   .severity-5 { @apply bg-green-100 text-green-800 ring-1 ring-green-600/30 dark:bg-green-900/30 dark:text-green-400 dark:ring-green-500/30; }
   .severity-6 { @apply bg-emerald-100 text-emerald-800 ring-1 ring-emerald-600/30 dark:bg-emerald-900/30 dark:text-emerald-400 dark:ring-emerald-500/30; }
-  .severity-7 { @apply bg-cyan-100 text-cyan-800 ring-1 ring-cyan-600/30 dark:bg-cyan-900/30 dark:text-cyan-400 dark:ring-cyan-500/30; }
+  .severity-7 { @apply bg-slate-100 text-slate-800 ring-1 ring-slate-600/30 dark:bg-slate-900/30 dark:text-slate-400 dark:ring-slate-500/30; }
 
   /* Table */
   .table-container {
     @apply overflow-x-auto rounded-lg border border-slate-200;
-    @apply dark:border-slate-700;
+    @apply dark:border-nog-700;
   }
 
   .table {
@@ -129,28 +147,28 @@
 
   .table thead {
     @apply bg-slate-50 border-b border-slate-200;
-    @apply dark:bg-slate-800 dark:border-slate-700;
+    @apply dark:bg-nog-800 dark:border-nog-700;
   }
 
   .table th {
     @apply px-4 py-3 text-left font-semibold text-slate-700 whitespace-nowrap;
-    @apply dark:text-slate-300;
+    @apply dark:text-nog-300;
   }
 
   .table td {
     @apply px-4 py-3 border-b border-slate-100;
-    @apply dark:border-slate-700;
+    @apply dark:border-nog-700;
   }
 
   .table tbody tr {
     @apply hover:bg-slate-50 transition-all duration-150 hover:shadow-sm;
-    @apply dark:hover:bg-slate-800;
+    @apply dark:hover:bg-nog-800;
   }
 
   /* Code/Query */
   .code {
     @apply font-mono text-sm bg-slate-100 px-2 py-0.5 rounded;
-    @apply dark:bg-slate-800 dark:text-slate-300;
+    @apply dark:bg-nog-800 dark:text-nog-300;
   }
 
   .query-editor {
@@ -160,31 +178,31 @@
   /* Dropdown */
   .dropdown {
     @apply absolute z-50 mt-1 bg-white rounded-lg border border-slate-200 shadow-lg overflow-hidden;
-    @apply dark:bg-slate-800 dark:border-slate-700;
+    @apply dark:bg-nog-800 dark:border-nog-700;
     animation: dropdownEnter 0.15s ease-out;
   }
 
   .dropdown-item {
     @apply w-full px-4 py-2.5 text-left text-sm hover:bg-slate-50 transition-colors;
-    @apply dark:hover:bg-slate-700 dark:text-slate-200;
+    @apply dark:hover:bg-nog-700 dark:text-nog-200;
   }
 
   /* Modal */
   .modal-overlay {
     @apply fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50;
-    @apply dark:bg-slate-950/70;
+    @apply dark:bg-nog-950/70;
     animation: modalOverlayEnter 0.2s ease-out;
   }
 
   .modal {
     @apply bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 overflow-hidden;
-    @apply dark:bg-slate-800 dark:shadow-slate-900/50;
+    @apply dark:bg-nog-800 dark:shadow-nog-900/50;
     animation: modalEnter 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   .modal-header {
     @apply px-6 py-4 border-b border-slate-100;
-    @apply dark:border-slate-700;
+    @apply dark:border-nog-700;
   }
 
   .modal-body {
@@ -193,7 +211,7 @@
 
   .modal-footer {
     @apply px-6 py-4 bg-slate-50 flex justify-end gap-3;
-    @apply dark:bg-slate-900;
+    @apply dark:bg-nog-900;
   }
 }
 
@@ -345,9 +363,9 @@
   .dark .animate-shimmer {
     background: linear-gradient(
       90deg,
-      #1e293b 0%,
-      #334155 50%,
-      #1e293b 100%
+      #1E150E 0%,
+      #3D2A18 50%,
+      #1E150E 100%
     );
     background-size: 200% 100%;
   }
@@ -426,13 +444,13 @@
 
   /* Text utilities */
   .text-gradient {
-    @apply bg-gradient-to-r from-sky-500 to-cyan-500 bg-clip-text text-transparent;
+    @apply bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent;
   }
 
   /* Glassmorphism */
   .glass {
     @apply bg-white/80 backdrop-blur-lg;
-    @apply dark:bg-slate-900/80;
+    @apply dark:bg-nog-900/80;
   }
 
   /* Custom scrollbar for thin variant */
@@ -446,7 +464,7 @@
 
   .scrollbar-thin::-webkit-scrollbar-thumb {
     @apply bg-slate-300 rounded-full hover:bg-slate-400;
-    @apply dark:bg-slate-600 dark:hover:bg-slate-500;
+    @apply dark:bg-nog-600 dark:hover:bg-nog-500;
   }
 
   /* Hide scrollbar but keep scroll functionality */

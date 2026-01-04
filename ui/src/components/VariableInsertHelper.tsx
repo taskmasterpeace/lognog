@@ -130,7 +130,7 @@ export default function VariableInsertHelper({ onInsert, compact = false }: Vari
             <button
               key={v.name}
               onClick={() => handleInsertClick(v.name)}
-              className="px-2 py-1 text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded hover:bg-sky-100 dark:hover:bg-sky-900/30 hover:text-sky-700 dark:hover:text-sky-300 font-mono transition-colors"
+              className="px-2 py-1 text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded hover:bg-amber-100 dark:hover:bg-amber-900/30 hover:text-amber-700 dark:hover:text-amber-300 font-mono transition-colors"
               title={v.description}
             >
               {v.name.replace(/\{\{|\}\}/g, '')}
@@ -139,7 +139,7 @@ export default function VariableInsertHelper({ onInsert, compact = false }: Vari
         )}
         <button
           onClick={() => setExpandedCategory(expandedCategory ? null : 'all')}
-          className="px-2 py-1 text-xs text-sky-600 dark:text-sky-400 hover:text-sky-700 dark:hover:text-sky-300"
+          className="px-2 py-1 text-xs text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300"
         >
           More...
         </button>
@@ -183,11 +183,11 @@ export default function VariableInsertHelper({ onInsert, compact = false }: Vari
                 {category.variables.map((variable) => (
                   <div
                     key={variable.name}
-                    className="flex items-start justify-between gap-2 p-2 rounded bg-slate-50 dark:bg-slate-800/50 hover:bg-sky-50 dark:hover:bg-sky-900/20 group cursor-pointer"
+                    className="flex items-start justify-between gap-2 p-2 rounded bg-slate-50 dark:bg-slate-800/50 hover:bg-amber-50 dark:hover:bg-amber-900/20 group cursor-pointer"
                     onClick={() => handleInsertClick(variable.name)}
                   >
                     <div className="flex-1 min-w-0">
-                      <code className="text-xs font-mono text-sky-600 dark:text-sky-400 break-all">
+                      <code className="text-xs font-mono text-amber-600 dark:text-amber-400 break-all">
                         {variable.name}
                       </code>
                       <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
@@ -241,7 +241,7 @@ export default function VariableInsertHelper({ onInsert, compact = false }: Vari
                 {FILTERS.map((filter) => (
                   <div
                     key={filter.name}
-                    className="p-1.5 rounded bg-slate-50 dark:bg-slate-800/50 hover:bg-sky-50 dark:hover:bg-sky-900/20 cursor-pointer"
+                    className="p-1.5 rounded bg-slate-50 dark:bg-slate-800/50 hover:bg-amber-50 dark:hover:bg-amber-900/20 cursor-pointer"
                     onClick={() => handleCopy(`:${filter.name.replace(':N', ':')}`)}
                     title={filter.example}
                   >

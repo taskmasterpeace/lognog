@@ -127,7 +127,7 @@ export default function LogViewerExample() {
             {filters.map((filter, idx) => (
               <span
                 key={idx}
-                className="inline-flex items-center gap-1 px-2 py-1 bg-sky-100 text-sky-700 rounded text-xs font-mono"
+                className="inline-flex items-center gap-1 px-2 py-1 bg-amber-100 text-amber-700 rounded text-xs font-mono"
               >
                 {filter}
               </span>

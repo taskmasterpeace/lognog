@@ -30,6 +30,9 @@ import assetsRouter from './routes/assets.js';
 import identitiesRouter from './routes/identities.js';
 import cimRouter from './routes/cim.js';
 import syntheticRouter from './routes/synthetic.js';
+import savedSearchesRouter from './routes/saved-searches.js';
+import sourceAnnotationsRouter from './routes/source-annotations.js';
+import retentionRouter from './routes/retention.js';
 import { healthCheck as clickhouseHealth, executeQuery, closeConnection } from './db/clickhouse.js';
 import { closeDatabase } from './db/sqlite.js';
 import { startScheduler } from './services/scheduler.js';
@@ -102,6 +105,9 @@ app.use('/assets', assetsRouter);
 app.use('/identities', identitiesRouter);
 app.use('/cim', cimRouter);
 app.use('/synthetic', syntheticRouter);
+app.use('/saved-searches', savedSearchesRouter);
+app.use('/source-annotations', sourceAnnotationsRouter);
+app.use('/retention', retentionRouter);
 
 // WebSocket endpoint for live tail
 const liveTailClients: Set<WebSocket> = new Set();

@@ -1,0 +1,6 @@
+{
+  "siteUrl": "https://logs.machinekinglabs.com",
+  "ingestUrl": "http://localhost:4000/ingest/http",
+  "apiKey": "lnog_3fc88610b89c4b7c94439274c34b1cf9_40c7a856d87d4368ab5ee99c3569c11e2d4b41ec5af941e48882cea995dbe409",
+  "checkIntervalMinutes": 15
+}

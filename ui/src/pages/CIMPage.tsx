@@ -43,18 +43,18 @@ const categoryIcons: Record<string, React.ElementType> = {
 
 const categoryColors: Record<string, string> = {
   authentication: 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-900/30',
-  network: 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/30',
-  endpoint: 'text-purple-600 bg-purple-50 dark:text-purple-400 dark:bg-purple-900/30',
-  web: 'text-emerald-600 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-900/30',
+  network: 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-900/30',
+  endpoint: 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-900/30',
+  web: 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-900/30',
   custom: 'text-slate-600 bg-slate-100 dark:text-slate-400 dark:bg-slate-700',
 };
 
 const fieldTypeColors: Record<string, string> = {
   string: 'text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-900/30',
-  number: 'text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-900/30',
-  boolean: 'text-purple-600 bg-purple-50 dark:text-purple-400 dark:bg-purple-900/30',
+  number: 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-900/30',
+  boolean: 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-900/30',
   timestamp: 'text-orange-600 bg-orange-50 dark:text-orange-400 dark:bg-orange-900/30',
-  ip: 'text-cyan-600 bg-cyan-50 dark:text-cyan-400 dark:bg-cyan-900/30',
+  ip: 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-900/30',
   array: 'text-pink-600 bg-pink-50 dark:text-pink-400 dark:bg-pink-900/30',
 };
 
@@ -138,7 +138,7 @@ export default function CIMPage() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
             <div className="flex items-center gap-2">
-              <Database className="w-5 h-5 text-sky-500" />
+              <Database className="w-5 h-5 text-amber-500" />
               <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">
                 {stats.total_models}
               </div>
@@ -147,7 +147,7 @@ export default function CIMPage() {
           </div>
           <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
             <div className="flex items-center gap-2">
-              <ArrowRightLeft className="w-5 h-5 text-emerald-500" />
+              <ArrowRightLeft className="w-5 h-5 text-amber-500" />
               <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">
                 {stats.total_mappings}
               </div>
@@ -161,7 +161,7 @@ export default function CIMPage() {
             <div className="text-sm text-slate-500 dark:text-slate-400">Auth Models</div>
           </div>
           <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-            <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+            <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
               {Object.keys(stats.mappings_by_source || {}).length}
             </div>
             <div className="text-sm text-slate-500 dark:text-slate-400">Source Types</div>
@@ -176,7 +176,7 @@ export default function CIMPage() {
             onClick={() => setActiveTab('models')}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'models'
-                ? 'border-sky-500 text-sky-600 dark:text-sky-400'
+                ? 'border-amber-500 text-amber-600 dark:text-amber-400'
                 : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
             }`}
           >
@@ -187,7 +187,7 @@ export default function CIMPage() {
             onClick={() => setActiveTab('mappings')}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'mappings'
-                ? 'border-sky-500 text-sky-600 dark:text-sky-400'
+                ? 'border-amber-500 text-amber-600 dark:text-amber-400'
                 : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
             }`}
           >
@@ -209,14 +209,14 @@ export default function CIMPage() {
                 placeholder="Search models..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                className="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
               />
             </div>
             <div className="relative">
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
-                className="appearance-none pl-4 pr-10 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                className="appearance-none pl-4 pr-10 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
               >
                 <option value="">All Categories</option>
                 <option value="authentication">Authentication</option>
@@ -229,7 +229,7 @@ export default function CIMPage() {
             </div>
             <button
               onClick={() => { setEditingModel(null); setShowModelForm(true); }}
-              className="flex items-center gap-2 px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg text-sm font-medium transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-medium transition-colors"
             >
               <Plus className="w-4 h-4" />
               Add Model
@@ -372,14 +372,14 @@ export default function CIMPage() {
                 placeholder="Search mappings..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                className="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
               />
             </div>
             <div className="relative">
               <select
                 value={sourceFilter}
                 onChange={(e) => setSourceFilter(e.target.value)}
-                className="appearance-none pl-4 pr-10 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                className="appearance-none pl-4 pr-10 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
               >
                 <option value="">All Sources</option>
                 {uniqueSources.map(src => (
@@ -392,7 +392,7 @@ export default function CIMPage() {
               <select
                 value={modelFilter}
                 onChange={(e) => setModelFilter(e.target.value)}
-                className="appearance-none pl-4 pr-10 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                className="appearance-none pl-4 pr-10 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
               >
                 <option value="">All Models</option>
                 {models.map(m => (
@@ -403,7 +403,7 @@ export default function CIMPage() {
             </div>
             <button
               onClick={() => { setEditingMapping(null); setShowMappingForm(true); }}
-              className="flex items-center gap-2 px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg text-sm font-medium transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-medium transition-colors"
             >
               <Plus className="w-4 h-4" />
               Add Mapping
@@ -456,7 +456,7 @@ export default function CIMPage() {
                           <ArrowRightLeft className="w-4 h-4 text-slate-400 mx-auto" />
                         </td>
                         <td className="px-4 py-3">
-                          <span className="font-mono text-sm text-sky-600 dark:text-sky-400">
+                          <span className="font-mono text-sm text-amber-600 dark:text-amber-400">
                             {mapping.cim_field}
                           </span>
                         </td>
@@ -467,7 +467,7 @@ export default function CIMPage() {
                         </td>
                         <td className="px-4 py-3">
                           {mapping.transform ? (
-                            <span className="font-mono text-xs text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/30 px-2 py-1 rounded">
+                            <span className="font-mono text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-2 py-1 rounded">
                               {mapping.transform}
                             </span>
                           ) : (
@@ -476,7 +476,7 @@ export default function CIMPage() {
                         </td>
                         <td className="px-4 py-3">
                           {mapping.enabled ? (
-                            <CheckCircle className="w-4 h-4 text-emerald-500" />
+                            <CheckCircle className="w-4 h-4 text-amber-500" />
                           ) : (
                             <XCircle className="w-4 h-4 text-slate-400" />
                           )}
@@ -659,7 +659,7 @@ function DataModelFormModal({
               <button
                 type="button"
                 onClick={handleAddField}
-                className="text-sm text-sky-500 hover:text-sky-600"
+                className="text-sm text-amber-500 hover:text-amber-600"
               >
                 + Add Field
               </button>
@@ -719,7 +719,7 @@ function DataModelFormModal({
             <button
               type="submit"
               disabled={mutation.isPending}
-              className="px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg text-sm font-medium disabled:opacity-50"
+              className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-medium disabled:opacity-50"
             >
               {mutation.isPending ? 'Saving...' : model ? 'Update' : 'Create'}
             </button>
@@ -873,7 +873,7 @@ function FieldMappingFormModal({
                   type="checkbox"
                   checked={formData.enabled}
                   onChange={(e) => setFormData({ ...formData, enabled: e.target.checked })}
-                  className="w-4 h-4 text-sky-500 rounded border-slate-300 focus:ring-sky-500"
+                  className="w-4 h-4 text-amber-500 rounded border-slate-300 focus:ring-amber-500"
                 />
                 <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
                   Enabled
@@ -892,7 +892,7 @@ function FieldMappingFormModal({
             <button
               type="submit"
               disabled={mutation.isPending}
-              className="px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg text-sm font-medium disabled:opacity-50"
+              className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-medium disabled:opacity-50"
             >
               {mutation.isPending ? 'Saving...' : mapping ? 'Update' : 'Create'}
             </button>

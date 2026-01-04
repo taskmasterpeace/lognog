@@ -143,9 +143,20 @@ export function logApiCall(data: {
                    data.status >= 400 ? SEVERITY.WARNING :
                    SEVERITY.INFO;
 
+  // Create human-readable description
+  const statusText = data.status >= 500 ? 'Server error' :
+                     data.status >= 400 ? 'Client error' :
+                     data.status >= 300 ? 'Redirect' :
+                     'OK';
+
+  const slowWarning = data.duration_ms >= 1000 ? ' (SLOW)' : '';
+
   logInternalEvent({
     type: 'api_call',
-    data,
+    data: {
+      ...data,
+      description: `${data.method} ${data.path} -> ${data.status} ${statusText}${slowWarning}`,
+    },
     severity,
   }).catch(() => {}); // Fire and forget
 }
@@ -162,9 +173,22 @@ export function logQueryExecution(data: {
 }): void {
   const severity = data.error ? SEVERITY.ERROR : SEVERITY.INFO;
 
+  // Truncate long queries for readability
+  const shortQuery = data.dsl_query.length > 80
+    ? data.dsl_query.substring(0, 77) + '...'
+    : data.dsl_query;
+
+  const slowWarning = data.execution_time_ms >= 1000 ? ' (SLOW)' : '';
+  const resultInfo = data.error
+    ? `Error: ${data.error}`
+    : `${data.row_count} rows in ${data.execution_time_ms}ms${slowWarning}`;
+
   logInternalEvent({
     type: 'query',
-    data,
+    data: {
+      ...data,
+      description: `Query: ${shortQuery} -> ${resultInfo}`,
+    },
     severity,
   }).catch(() => {});
 }
@@ -195,10 +219,18 @@ export function logIngestionStats(data: {
   batch_size?: number;
   duration_ms: number;
   user_id?: string;
+  index_name?: string;
+  app_name?: string;
 }): void {
+  const indexInfo = data.index_name ? ` to index=${data.index_name}` : '';
+  const appInfo = data.app_name ? ` from app=${data.app_name}` : '';
+
   logInternalEvent({
     type: 'ingest',
-    data,
+    data: {
+      ...data,
+      description: `Ingested ${data.event_count} events via ${data.source_type}${indexInfo}${appInfo} (${data.duration_ms}ms)`,
+    },
     severity: SEVERITY.INFO,
   }).catch(() => {});
 }

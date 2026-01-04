@@ -702,18 +702,18 @@ export default function SettingsPage() {
                   disabled={prefsSaving}
                   className={`flex-1 flex flex-col items-center gap-2 p-4 rounded-lg border-2 transition-all ${
                     preferences.theme === value
-                      ? 'border-sky-500 bg-sky-50 dark:bg-sky-900/20'
+                      ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/20'
                       : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
                   }`}
                 >
                   <Icon className={`w-6 h-6 ${
                     preferences.theme === value
-                      ? 'text-sky-500'
+                      ? 'text-amber-500'
                       : 'text-slate-400'
                   }`} />
                   <span className={`text-sm font-medium ${
                     preferences.theme === value
-                      ? 'text-sky-700 dark:text-sky-300'
+                      ? 'text-amber-700 dark:text-amber-300'
                       : 'text-slate-600 dark:text-slate-400'
                   }`}>
                     {label}
@@ -763,7 +763,7 @@ export default function SettingsPage() {
                   disabled={prefsSaving}
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     preferences.default_view_mode === value
-                      ? 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300'
+                      ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
                       : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600'
                   }`}
                 >
@@ -788,7 +788,7 @@ export default function SettingsPage() {
               disabled={prefsSaving}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                 preferences.sidebar_open
-                  ? 'bg-sky-500'
+                  ? 'bg-amber-500'
                   : 'bg-slate-300 dark:bg-slate-600'
               }`}
             >
@@ -935,7 +935,7 @@ export default function SettingsPage() {
           <button
             type="submit"
             disabled={passwordChanging || !currentPassword || !newPassword || !confirmPassword}
-            className="flex items-center gap-2 px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
           >
             {passwordChanging ? (
               <>
@@ -958,7 +958,7 @@ export default function SettingsPage() {
           </h2>
           <button
             onClick={() => setShowNewKeyForm(true)}
-            className="flex items-center justify-center gap-2 px-3 py-1.5 bg-sky-500 hover:bg-sky-600 text-white text-sm font-medium rounded-lg transition-colors w-full sm:w-auto"
+            className="flex items-center justify-center gap-2 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium rounded-lg transition-colors w-full sm:w-auto"
           >
             <Plus className="w-4 h-4" />
             New Key
@@ -1053,7 +1053,7 @@ export default function SettingsPage() {
                       onClick={() => togglePermission(perm)}
                       className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                         newKeyPermissions.includes(perm)
-                          ? 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300'
+                          ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
                           : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'
                       }`}
                     >
@@ -1085,7 +1085,7 @@ export default function SettingsPage() {
                 <button
                   onClick={handleCreateKey}
                   disabled={creatingKey || !newKeyName.trim()}
-                  className="flex items-center gap-2 px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+                  className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
                 >
                   {creatingKey ? (
                     <>
@@ -1215,7 +1215,7 @@ export default function SettingsPage() {
         </div>
       )}
       {clearDataResult && (
-        <div className="mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800 flex items-center gap-2 text-blue-700 dark:text-blue-300 text-sm">
+        <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800 flex items-center gap-2 text-amber-700 dark:text-amber-300 text-sm">
           <Check className="w-4 h-4" />
           {clearDataResult}
         </div>
@@ -1307,7 +1307,7 @@ export default function SettingsPage() {
                   onClick={() => toggleDemoType(type)}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                     demoDataTypes.includes(type)
-                      ? 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300'
+                      ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
                       : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'
                   }`}
                 >
@@ -1320,7 +1320,7 @@ export default function SettingsPage() {
           <button
             onClick={handleGenerateDemoData}
             disabled={generatingData || demoDataTypes.length === 0}
-            className="flex items-center gap-2 px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
           >
             {generatingData ? (
               <>
@@ -1461,7 +1461,7 @@ export default function SettingsPage() {
               <button
                 onClick={handleGeoipTest}
                 disabled={geoipTesting || !geoipTestIp}
-                className="flex items-center gap-2 px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
               >
                 {geoipTesting ? (
                   <>
@@ -1578,7 +1578,7 @@ export default function SettingsPage() {
         case 'admin':
           return 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400';
         case 'user':
-          return 'bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-400';
+          return 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400';
         case 'readonly':
           return 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400';
         default:
@@ -1604,7 +1604,7 @@ export default function SettingsPage() {
             </button>
             <button
               onClick={() => setShowCreateUser(true)}
-              className="flex items-center gap-2 px-3 py-1.5 bg-sky-500 hover:bg-sky-600 text-white text-sm font-medium rounded-lg transition-colors"
+              className="flex items-center gap-2 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium rounded-lg transition-colors"
             >
               <UserPlus className="w-4 h-4" />
               Add User
@@ -1703,7 +1703,7 @@ export default function SettingsPage() {
                 <button
                   type="submit"
                   disabled={creatingUser}
-                  className="flex items-center gap-2 px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+                  className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
                 >
                   {creatingUser ? (
                     <>
@@ -2022,7 +2022,7 @@ export default function SettingsPage() {
                 <button
                   onClick={handleSaveOllama}
                   disabled={aiSaving}
-                  className="flex items-center gap-2 px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+                  className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
                 >
                   {aiSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                   Save Ollama Settings
@@ -2112,14 +2112,14 @@ export default function SettingsPage() {
                 className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
               />
               <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                See <a href="https://openrouter.ai/models" target="_blank" rel="noopener noreferrer" className="text-sky-500 hover:underline">openrouter.ai/models</a> for available models
+                See <a href="https://openrouter.ai/models" target="_blank" rel="noopener noreferrer" className="text-amber-500 hover:underline">openrouter.ai/models</a> for available models
               </p>
             </div>
 
             <button
               onClick={handleSaveOpenrouter}
               disabled={aiSaving}
-              className="flex items-center gap-2 px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
             >
               {aiSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
               Save OpenRouter Settings
@@ -2150,7 +2150,7 @@ export default function SettingsPage() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                   isActive
-                    ? 'border-sky-500 text-sky-600 dark:text-sky-400'
+                    ? 'border-amber-500 text-amber-600 dark:text-amber-400'
                     : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600'
                 }`}
               >

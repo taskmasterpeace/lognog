@@ -1,8 +1,9 @@
 import nodemailer from 'nodemailer';
-import { getSQLiteDB, getAlerts, Alert } from '../db/sqlite.js';
+import { getSQLiteDB, getAlerts, Alert, getScheduledSavedSearches, updateSavedSearchCache, updateSavedSearchError, cleanupExpiredSearchCache, SavedSearch } from '../db/sqlite.js';
 import { executeQuery } from '../db/clickhouse.js';
 import { parseAndCompile } from '../dsl/index.js';
 import { evaluateAlert } from './alerts.js';
+import { executeDSLQuery } from '../db/backend.js';
 
 interface ScheduledReport {
   id: string;
@@ -258,7 +259,73 @@ async function checkAlerts(): Promise<void> {
   }
 }
 
-// Check for reports and alerts to run every minute
+// Parse time range to milliseconds
+function parseTimeRange(timeRange: string): number {
+  const match = timeRange.match(/^-?(\d+)(s|m|h|d)$/);
+  if (!match) return 24 * 60 * 60 * 1000; // Default 24h
+
+  const value = parseInt(match[1], 10);
+  const unit = match[2];
+
+  switch (unit) {
+    case 's': return value * 1000;
+    case 'm': return value * 60 * 1000;
+    case 'h': return value * 60 * 60 * 1000;
+    case 'd': return value * 24 * 60 * 60 * 1000;
+    default: return 24 * 60 * 60 * 1000;
+  }
+}
+
+// Check scheduled saved searches and precompute results
+async function checkScheduledSavedSearches(): Promise<void> {
+  try {
+    const searches = getScheduledSavedSearches();
+
+    for (const search of searches) {
+      if (!search.schedule) continue;
+
+      if (shouldRunNow(search.schedule, search.last_run || null)) {
+        console.log(`Running scheduled saved search: ${search.name}`);
+
+        try {
+          // Calculate time range
+          const timeRangeMs = parseTimeRange(search.time_range);
+          const earliest = new Date(Date.now() - timeRangeMs).toISOString();
+          const latest = new Date().toISOString();
+
+          // Execute the query
+          const startTime = performance.now();
+          const { sql, results } = await executeDSLQuery(search.query, { earliest, latest });
+          const executionTimeMs = Math.round(performance.now() - startTime);
+
+          // Update cache
+          updateSavedSearchCache(search.id, results, sql, executionTimeMs);
+
+          console.log(`Saved search "${search.name}" completed: ${results.length} results in ${executionTimeMs}ms`);
+        } catch (error) {
+          console.error(`Error running saved search "${search.name}":`, error);
+          updateSavedSearchError(search.id, String(error));
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error checking scheduled saved searches:', error);
+  }
+}
+
+// Cleanup expired caches
+async function runCacheCleanup(): Promise<void> {
+  try {
+    const cleaned = cleanupExpiredSearchCache();
+    if (cleaned > 0) {
+      console.log(`Cleaned up ${cleaned} expired saved search caches`);
+    }
+  } catch (error) {
+    console.error('Error cleaning up expired caches:', error);
+  }
+}
+
+// Check for reports, alerts, and saved searches to run every minute
 export function startScheduler(): void {
   console.log('Report and alert scheduler started');
 
@@ -278,6 +345,15 @@ export function startScheduler(): void {
 
       // Check alerts
       await checkAlerts();
+
+      // Check scheduled saved searches
+      await checkScheduledSavedSearches();
+
+      // Cleanup expired caches (run less frequently - every 5 minutes)
+      const now = new Date();
+      if (now.getMinutes() % 5 === 0) {
+        await runCacheCleanup();
+      }
     } catch (error) {
       console.error('Scheduler error:', error);
     }

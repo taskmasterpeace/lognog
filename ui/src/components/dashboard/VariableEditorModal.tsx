@@ -87,7 +87,7 @@ export function VariableEditorModal({
         <div className="modal-header">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Variable className="w-5 h-5 text-sky-500" />
+              <Variable className="w-5 h-5 text-amber-500" />
               <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                 {variable ? 'Edit Variable' : 'Add Variable'}
               </h3>
@@ -145,7 +145,7 @@ export function VariableEditorModal({
                   onClick={() => setType(t.value as typeof type)}
                   className={`py-2 px-3 rounded-lg border-2 text-sm font-medium transition-colors ${
                     type === t.value
-                      ? 'border-sky-500 bg-sky-50 text-sky-700 dark:bg-sky-900/20 dark:text-sky-400'
+                      ? 'border-amber-500 bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400'
                       : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:border-slate-300'
                   }`}
                 >
@@ -265,7 +265,7 @@ export function VariableEditorModal({
                 type="checkbox"
                 checked={multiSelect}
                 onChange={(e) => setMultiSelect(e.target.checked)}
-                className="w-4 h-4 rounded border-slate-300 text-sky-500 focus:ring-sky-500"
+                className="w-4 h-4 rounded border-slate-300 text-amber-500 focus:ring-amber-500"
               />
               <span className="text-sm text-slate-700 dark:text-slate-300">Allow multi-select</span>
             </label>
@@ -275,7 +275,7 @@ export function VariableEditorModal({
                 type="checkbox"
                 checked={includeAll}
                 onChange={(e) => setIncludeAll(e.target.checked)}
-                className="w-4 h-4 rounded border-slate-300 text-sky-500 focus:ring-sky-500"
+                className="w-4 h-4 rounded border-slate-300 text-amber-500 focus:ring-amber-500"
               />
               <span className="text-sm text-slate-700 dark:text-slate-300">Include "All" option</span>
             </label>

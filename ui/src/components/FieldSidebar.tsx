@@ -35,6 +35,9 @@ export default function FieldSidebar({
   const [showBrowser, setShowBrowser] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
+  // Pending filter selections (batched mode)
+  const [pendingFilters, setPendingFilters] = useState<Record<string, string[]>>({});
+
   // Fetch discovered fields and preferences
   useEffect(() => {
     const fetchData = async () => {
@@ -113,6 +116,48 @@ export default function FieldSidebar({
     return { pinnedFacets: pinned, discoveredFacets: discovered };
   }, [pinnedFields, discoveredFields, calculateFacetValues]);
 
+  // Sync pendingFilters with selectedFilters when selectedFilters changes
+  useEffect(() => {
+    setPendingFilters(selectedFilters);
+  }, [selectedFilters]);
+
+  // Calculate if there are pending changes
+  const hasPendingChanges = useMemo(() => {
+    const pendingKeys = Object.keys(pendingFilters);
+    const selectedKeys = Object.keys(selectedFilters);
+
+    // Check if keys are different
+    if (pendingKeys.length !== selectedKeys.length) return true;
+    if (!pendingKeys.every((k) => selectedKeys.includes(k))) return true;
+
+    // Check if values are different
+    for (const key of pendingKeys) {
+      const pending = pendingFilters[key] || [];
+      const selected = selectedFilters[key] || [];
+      if (pending.length !== selected.length) return true;
+      if (!pending.every((v) => selected.includes(v))) return true;
+    }
+    return false;
+  }, [pendingFilters, selectedFilters]);
+
+  // Count total pending changes
+  const pendingChangeCount = useMemo(() => {
+    let count = 0;
+    const allKeys = new Set([...Object.keys(pendingFilters), ...Object.keys(selectedFilters)]);
+    for (const key of allKeys) {
+      const pending = pendingFilters[key] || [];
+      const selected = selectedFilters[key] || [];
+      // Count values that differ
+      pending.forEach((v) => {
+        if (!selected.includes(v)) count++;
+      });
+      selected.forEach((v) => {
+        if (!pending.includes(v)) count++;
+      });
+    }
+    return count;
+  }, [pendingFilters, selectedFilters]);
+
   const togglePanel = (field: string) => {
     setCollapsedPanels((prev) => {
       const next = new Set(prev);
@@ -125,12 +170,40 @@ export default function FieldSidebar({
     });
   };
 
+  // Toggle value in pending filters (batched mode)
   const toggleValue = (field: string, value: string) => {
-    const current = selectedFilters[field] || [];
-    const next = current.includes(value)
-      ? current.filter((v) => v !== value)
-      : [...current, value];
-    onFilterChange(field, next);
+    setPendingFilters((prev) => {
+      const current = prev[field] || [];
+      const next = current.includes(value)
+        ? current.filter((v) => v !== value)
+        : [...current, value];
+
+      // Clean up empty arrays
+      if (next.length === 0) {
+        const { [field]: _, ...rest } = prev;
+        return rest;
+      }
+      return { ...prev, [field]: next };
+    });
+  };
+
+  // Apply all pending changes
+  const applyFilters = () => {
+    // Apply all pending filters
+    Object.keys(pendingFilters).forEach((field) => {
+      onFilterChange(field, pendingFilters[field] || []);
+    });
+    // Also clear any fields that were deselected entirely
+    Object.keys(selectedFilters).forEach((field) => {
+      if (!pendingFilters[field]) {
+        onFilterChange(field, []);
+      }
+    });
+  };
+
+  // Reset pending changes
+  const resetPending = () => {
+    setPendingFilters(selectedFilters);
   };
 
   const handlePinToggle = async (field: string, shouldPin: boolean) => {
@@ -175,57 +248,63 @@ export default function FieldSidebar({
       'text-yellow-700 bg-yellow-50 border-yellow-200 dark:text-yellow-400 dark:bg-yellow-950 dark:border-yellow-800',
       'text-lime-700 bg-lime-50 border-lime-200 dark:text-lime-400 dark:bg-lime-950 dark:border-lime-800',
       'text-green-700 bg-green-50 border-green-200 dark:text-green-400 dark:bg-green-950 dark:border-green-800',
-      'text-emerald-700 bg-emerald-50 border-emerald-200 dark:text-emerald-400 dark:bg-emerald-950 dark:border-emerald-800',
-      'text-cyan-700 bg-cyan-50 border-cyan-200 dark:text-cyan-400 dark:bg-cyan-950 dark:border-cyan-800',
+      'text-amber-700 bg-amber-50 border-amber-200 dark:text-amber-400 dark:bg-amber-950 dark:border-amber-800',
+      'text-amber-700 bg-amber-50 border-amber-200 dark:text-amber-400 dark:bg-amber-950 dark:border-amber-800',
     ];
     return !isNaN(num) && num >= 0 && num <= 7
       ? colors[num]
-      : 'text-slate-700 bg-slate-50 border-slate-200 dark:text-slate-300 dark:bg-slate-800 dark:border-slate-700';
+      : 'text-slate-700 bg-slate-50 border-slate-200 dark:text-nog-300 dark:bg-nog-800 dark:border-nog-700';
   };
 
   const renderFacet = (facet: Facet, showPinButton: boolean = false) => {
     const isCollapsed = collapsedPanels.has(facet.field);
-    const selectedValues = selectedFilters[facet.field] || [];
-    const selectedCount = selectedValues.length;
+    const pendingValues = pendingFilters[facet.field] || [];
+    const appliedValues = selectedFilters[facet.field] || [];
+    const pendingCount = pendingValues.length;
+    const hasFieldChanges = JSON.stringify(pendingValues.sort()) !== JSON.stringify(appliedValues.sort());
 
     // Calculate total count for percentage display
     const fieldTotal = facet.values.reduce((sum, v) => sum + v.count, 0);
 
     return (
-      <div key={facet.field} className="border-b border-slate-200 dark:border-slate-700">
+      <div key={facet.field} className="border-b border-slate-200 dark:border-nog-700">
         {/* Panel Header */}
         <div className="flex items-center">
           <button
             onClick={() => togglePanel(facet.field)}
-            className="flex-1 px-4 py-2.5 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-700 transition-all duration-150 group"
+            className="flex-1 px-4 py-2.5 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-nog-700 transition-all duration-150 group"
           >
             <div className="flex items-center gap-2">
               {isCollapsed ? (
-                <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-all duration-200" />
+                <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-nog-300 transition-all duration-200" />
               ) : (
-                <ChevronDown className="w-4 h-4 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-all duration-200" />
+                <ChevronDown className="w-4 h-4 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-nog-300 transition-all duration-200" />
               )}
-              <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">
+              <span className="text-sm font-semibold text-slate-700 dark:text-nog-300">
                 {getFieldLabel(facet.field)}
               </span>
             </div>
-            {selectedCount > 0 && (
-              <span className="px-2 py-0.5 bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400 text-xs font-medium rounded-full">
-                {selectedCount}
+            {(pendingCount > 0 || hasFieldChanges) && (
+              <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                hasFieldChanges
+                  ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
+                  : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
+              }`}>
+                {pendingCount}{hasFieldChanges ? '*' : ''}
               </span>
             )}
           </button>
           {showPinButton && isAuthenticated && (
             <button
               onClick={() => handlePinToggle(facet.field, !facet.isPinned)}
-              className="px-2 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
+              className="px-2 py-2 hover:bg-slate-100 dark:hover:bg-nog-700 transition-colors"
               title={facet.isPinned ? 'Unpin field' : 'Pin field'}
             >
               <Pin
                 className={`w-4 h-4 ${
                   facet.isPinned
                     ? 'text-amber-500 fill-amber-500'
-                    : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300'
+                    : 'text-slate-400 hover:text-slate-600 dark:hover:text-nog-300'
                 }`}
               />
             </button>
@@ -234,13 +313,15 @@ export default function FieldSidebar({
 
         {/* Panel Content */}
         {!isCollapsed && (
-          <div className="px-4 py-2 bg-slate-50/50 dark:bg-slate-900/30">
+          <div className="px-4 py-2 bg-slate-50/50 dark:bg-nog-900/30">
             {facet.values.length === 0 ? (
               <p className="text-xs text-slate-500 py-2">No values</p>
             ) : (
               <div className="space-y-1">
                 {facet.values.map((item) => {
-                  const isSelected = selectedValues.includes(item.value);
+                  const isPending = pendingValues.includes(item.value);
+                  const wasApplied = appliedValues.includes(item.value);
+                  const isChanged = isPending !== wasApplied;
                   const displayValue =
                     facet.field === 'severity' ? getSeverityLabel(item.value) : item.value;
 
@@ -256,27 +337,35 @@ export default function FieldSidebar({
                     <label
                       key={item.value}
                       className={`relative flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-all duration-150 hover:scale-[1.02] overflow-hidden ${
-                        isSelected
-                          ? 'bg-sky-100 dark:bg-sky-900/20 hover:bg-sky-200 dark:hover:bg-sky-900/30'
-                          : 'hover:bg-slate-100 dark:hover:bg-slate-700'
+                        isPending
+                          ? isChanged
+                            ? 'bg-blue-100 dark:bg-blue-900/20 hover:bg-blue-200 dark:hover:bg-blue-900/30 ring-1 ring-blue-300 dark:ring-blue-700'
+                            : 'bg-amber-100 dark:bg-amber-900/20 hover:bg-amber-200 dark:hover:bg-amber-900/30'
+                          : isChanged
+                            ? 'bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/20 ring-1 ring-red-200 dark:ring-red-800'
+                            : 'hover:bg-slate-100 dark:hover:bg-nog-700'
                       }`}
                     >
                       {/* Percentage bar background */}
                       {percent > 0 && (
                         <div
                           className={`absolute left-0 top-0 bottom-0 transition-all duration-300 ${
-                            isSelected
-                              ? 'bg-sky-200/60 dark:bg-sky-800/30'
-                              : 'bg-sky-100/50 dark:bg-sky-900/20'
+                            isPending
+                              ? isChanged
+                                ? 'bg-blue-200/60 dark:bg-blue-800/30'
+                                : 'bg-amber-200/60 dark:bg-amber-800/30'
+                              : 'bg-amber-100/50 dark:bg-amber-900/20'
                           }`}
                           style={{ width: `${percent}%` }}
                         />
                       )}
                       <input
                         type="checkbox"
-                        checked={isSelected}
+                        checked={isPending}
                         onChange={() => toggleValue(facet.field, item.value)}
-                        className="relative z-10 w-4 h-4 text-sky-600 border-slate-300 rounded focus:ring-sky-500 focus:ring-offset-0 cursor-pointer"
+                        className={`relative z-10 w-4 h-4 border-slate-300 rounded focus:ring-offset-0 cursor-pointer ${
+                          isChanged ? 'text-blue-600 focus:ring-blue-500' : 'text-amber-600 focus:ring-amber-500'
+                        }`}
                       />
                       <div className="relative z-10 flex-1 min-w-0 flex items-center justify-between gap-2">
                         {facet.field === 'severity' ? (
@@ -289,7 +378,7 @@ export default function FieldSidebar({
                           </span>
                         ) : (
                           <span
-                            className="text-sm text-slate-700 dark:text-slate-300 truncate"
+                            className="text-sm text-slate-700 dark:text-nog-300 truncate"
                             title={displayValue}
                           >
                             {displayValue}
@@ -298,7 +387,7 @@ export default function FieldSidebar({
                         <span className="text-xs text-slate-500 font-medium tabular-nums flex-shrink-0 whitespace-nowrap">
                           {item.count.toLocaleString()}
                           {percentDisplay && (
-                            <span className="text-slate-400 dark:text-slate-500 ml-1">
+                            <span className="text-slate-400 dark:text-nog-500 ml-1">
                               ({percentDisplay})
                             </span>
                           )}
@@ -321,17 +410,17 @@ export default function FieldSidebar({
   );
 
   return (
-    <div className="h-full flex flex-col bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700">
+    <div className="h-full flex flex-col bg-white dark:bg-nog-800 border-r border-slate-200 dark:border-nog-700">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900">
+      <div className="px-4 py-3 border-b border-slate-200 dark:border-nog-700 bg-slate-50 dark:bg-nog-900">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300 uppercase tracking-wide">
+          <h3 className="text-sm font-semibold text-slate-700 dark:text-nog-300 uppercase tracking-wide">
             Fields
           </h3>
           {isLoading && <Loader2 className="w-4 h-4 animate-spin text-slate-400" />}
         </div>
         {totalSelected > 0 && (
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+          <p className="text-xs text-slate-500 dark:text-nog-400 mt-1">
             {totalSelected} filter{totalSelected !== 1 ? 's' : ''} active
           </p>
         )}
@@ -342,10 +431,10 @@ export default function FieldSidebar({
         {/* Pinned Fields Section */}
         {pinnedFacets.length > 0 && (
           <div>
-            <div className="px-4 py-2 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+            <div className="px-4 py-2 bg-slate-100 dark:bg-nog-800 border-b border-slate-200 dark:border-nog-700">
               <div className="flex items-center gap-2">
-                <Pin className="w-3 h-3 text-sky-500" />
-                <span className="text-xs font-semibold text-sky-600 dark:text-sky-400 uppercase tracking-wide">
+                <Pin className="w-3 h-3 text-amber-500" />
+                <span className="text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wide">
                   Pinned Fields
                 </span>
               </div>
@@ -357,10 +446,10 @@ export default function FieldSidebar({
         {/* Discovered Fields Section */}
         {discoveredFacets.length > 0 && (
           <div>
-            <div className="px-4 py-2 bg-slate-100 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
+            <div className="px-4 py-2 bg-slate-100 dark:bg-nog-800 border-b border-slate-200 dark:border-nog-700">
               <div className="flex items-center gap-2">
                 <Search className="w-3 h-3 text-slate-400" />
-                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                <span className="text-xs font-semibold text-slate-500 dark:text-nog-400 uppercase tracking-wide">
                   Discovered Fields
                 </span>
               </div>
@@ -371,17 +460,37 @@ export default function FieldSidebar({
 
         {/* No Fields Message */}
         {pinnedFacets.length === 0 && discoveredFacets.length === 0 && !isLoading && (
-          <div className="px-4 py-6 text-center text-sm text-slate-500 dark:text-slate-400">
+          <div className="px-4 py-6 text-center text-sm text-slate-500 dark:text-nog-400">
             Run a search to see fields
           </div>
         )}
       </div>
 
+      {/* Apply/Reset Buttons (sticky footer when there are pending changes) */}
+      {hasPendingChanges && (
+        <div className="px-4 py-3 border-t border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20">
+          <div className="flex gap-2">
+            <button
+              onClick={resetPending}
+              className="flex-1 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md transition-colors"
+            >
+              Reset
+            </button>
+            <button
+              onClick={applyFilters}
+              className="flex-1 px-3 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
+            >
+              Apply ({pendingChangeCount})
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Footer */}
-      <div className="px-4 py-3 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900">
+      <div className="px-4 py-3 border-t border-slate-200 dark:border-nog-700 bg-slate-50 dark:bg-nog-900">
         <button
           onClick={() => setShowBrowser(true)}
-          className="w-full px-3 py-2 text-sm font-medium text-sky-600 dark:text-sky-400 hover:bg-sky-50 dark:hover:bg-sky-900/20 rounded-md transition-colors"
+          className="w-full px-3 py-2 text-sm font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-md transition-colors"
         >
           Browse All Fields...
         </button>

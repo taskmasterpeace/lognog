@@ -14,6 +14,9 @@ import {
   FileText,
   Check,
   XCircle,
+  MessageSquare,
+  Info,
+  ExternalLink,
 } from 'lucide-react';
 import {
   getFieldExtractions,
@@ -36,24 +39,30 @@ import {
   createWorkflowAction,
   updateWorkflowAction,
   deleteWorkflowAction,
+  getSourceAnnotations,
+  createSourceAnnotation,
+  updateSourceAnnotation,
+  deleteSourceAnnotation,
   FieldExtraction,
   EventType,
   Lookup,
   WorkflowAction,
   TestExtractionResult,
+  SourceAnnotation,
 } from '../api/client';
 
-type Tab = 'extractions' | 'events' | 'tags' | 'lookups' | 'workflows';
+type Tab = 'extractions' | 'events' | 'tags' | 'lookups' | 'workflows' | 'annotations';
 
 export default function KnowledgePage() {
   const [activeTab, setActiveTab] = useState<Tab>('extractions');
 
   const tabs = [
-    { id: 'extractions' as Tab, label: 'Field Extractions', icon: Filter, color: 'sky' },
-    { id: 'events' as Tab, label: 'Event Types', icon: FileText, color: 'purple' },
-    { id: 'tags' as Tab, label: 'Tags', icon: Tag, color: 'emerald' },
+    { id: 'extractions' as Tab, label: 'Field Extractions', icon: Filter, color: 'amber' },
+    { id: 'events' as Tab, label: 'Event Types', icon: FileText, color: 'orange' },
+    { id: 'tags' as Tab, label: 'Tags', icon: Tag, color: 'amber' },
     { id: 'lookups' as Tab, label: 'Lookups', icon: Database, color: 'amber' },
-    { id: 'workflows' as Tab, label: 'Workflow Actions', icon: Zap, color: 'rose' },
+    { id: 'workflows' as Tab, label: 'Workflow Actions', icon: Zap, color: 'orange' },
+    { id: 'annotations' as Tab, label: 'Source Annotations', icon: MessageSquare, color: 'blue' },
   ];
 
   return (
@@ -69,7 +78,7 @@ export default function KnowledgePage() {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <BookOpen className="w-8 h-8 text-sky-500" />
+              <BookOpen className="w-8 h-8 text-amber-500" />
             </div>
           </div>
         </div>
@@ -104,6 +113,7 @@ export default function KnowledgePage() {
         {activeTab === 'tags' && <TagsTab />}
         {activeTab === 'lookups' && <LookupsTab />}
         {activeTab === 'workflows' && <WorkflowActionsTab />}
+        {activeTab === 'annotations' && <SourceAnnotationsTab />}
       </div>
     </div>
   );
@@ -163,7 +173,7 @@ function FieldExtractionsTab() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-8 h-8 text-sky-500 animate-spin" />
+        <Loader2 className="w-8 h-8 text-amber-500 animate-spin" />
       </div>
     );
   }
@@ -226,7 +236,7 @@ function FieldExtractionsTab() {
                     <div className="flex items-center justify-end gap-2">
                       <button
                         onClick={() => handleTest(extraction.pattern)}
-                        className="p-2 text-sky-600 hover:bg-sky-50 rounded-lg transition-colors"
+                        className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
                         title="Test Pattern"
                       >
                         <Play className="w-4 h-4" />
@@ -254,8 +264,8 @@ function FieldExtractionsTab() {
         </div>
       ) : (
         <div className="card p-12 text-center">
-          <div className="w-16 h-16 bg-sky-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Filter className="w-8 h-8 text-sky-600" />
+          <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Filter className="w-8 h-8 text-amber-600" />
           </div>
           <h3 className="font-semibold text-slate-900 mb-2">No field extractions</h3>
           <p className="text-sm text-slate-500 mb-4">
@@ -395,7 +405,7 @@ function FieldExtractionModal({
               id="enabled"
               checked={enabled}
               onChange={(e) => setEnabled(e.target.checked)}
-              className="w-4 h-4 text-sky-600 rounded border-slate-300 focus:ring-sky-500"
+              className="w-4 h-4 text-amber-600 rounded border-slate-300 focus:ring-amber-500"
             />
             <label htmlFor="enabled" className="text-sm font-medium text-slate-700">
               Enable this extraction
@@ -463,14 +473,14 @@ function TestPatternModal({
           </div>
 
           {result && (
-            <div className={`p-4 rounded-lg border ${result.success ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
+            <div className={`p-4 rounded-lg border ${result.success ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'}`}>
               <div className="flex items-start gap-2 mb-2">
                 {result.success ? (
                   <>
-                    <Check className="w-5 h-5 text-emerald-600 flex-shrink-0 mt-0.5" />
+                    <Check className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
                     <div>
-                      <h4 className="font-semibold text-emerald-900">Match Found</h4>
-                      <p className="text-sm text-emerald-700 mt-1">
+                      <h4 className="font-semibold text-amber-900">Match Found</h4>
+                      <p className="text-sm text-amber-700 mt-1">
                         {result.matches.length} field(s) extracted
                       </p>
                     </div>
@@ -489,9 +499,9 @@ function TestPatternModal({
               {result.success && result.matches.length > 0 && (
                 <div className="mt-3 space-y-2">
                   {result.matches.map((match, idx) => (
-                    <div key={idx} className="bg-white p-2 rounded border border-emerald-200">
+                    <div key={idx} className="bg-white p-2 rounded border border-amber-200">
                       <code className="text-xs">
-                        <span className="text-emerald-700 font-semibold">{match.field}:</span>{' '}
+                        <span className="text-amber-700 font-semibold">{match.field}:</span>{' '}
                         <span className="text-slate-700">{match.value}</span>
                       </code>
                     </div>
@@ -547,7 +557,7 @@ function EventTypesTab() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-8 h-8 text-purple-500 animate-spin" />
+        <Loader2 className="w-8 h-8 text-amber-500 animate-spin" />
       </div>
     );
   }
@@ -609,8 +619,8 @@ function EventTypesTab() {
         </div>
       ) : (
         <div className="card p-12 text-center">
-          <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <FileText className="w-8 h-8 text-purple-600" />
+          <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <FileText className="w-8 h-8 text-amber-600" />
           </div>
           <h3 className="font-semibold text-slate-900 mb-2">No event types</h3>
           <p className="text-sm text-slate-500 mb-4">
@@ -728,7 +738,7 @@ function EventTypeModal({
               id="event-enabled"
               checked={enabled}
               onChange={(e) => setEnabled(e.target.checked)}
-              className="w-4 h-4 text-sky-600 rounded border-slate-300 focus:ring-sky-500"
+              className="w-4 h-4 text-amber-600 rounded border-slate-300 focus:ring-amber-500"
             />
             <label htmlFor="event-enabled" className="text-sm font-medium text-slate-700">
               Enable this event type
@@ -787,7 +797,7 @@ function TagsTab() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
+        <Loader2 className="w-8 h-8 text-amber-500 animate-spin" />
       </div>
     );
   }
@@ -897,8 +907,8 @@ function TagsTab() {
         </div>
       ) : (
         <div className="card p-12 text-center">
-          <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Tag className="w-8 h-8 text-emerald-600" />
+          <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Tag className="w-8 h-8 text-amber-600" />
           </div>
           <h3 className="font-semibold text-slate-900 mb-2">No tags</h3>
           <p className="text-sm text-slate-500">
@@ -977,7 +987,7 @@ function LookupsTab() {
                   </div>
                   {lookup.lookup_data && (
                     <details className="mt-2">
-                      <summary className="text-xs text-sky-600 cursor-pointer hover:text-sky-700">
+                      <summary className="text-xs text-amber-600 cursor-pointer hover:text-amber-700">
                         View data
                       </summary>
                       <pre className="mt-2 p-3 bg-slate-50 rounded border border-slate-200 text-xs overflow-auto max-h-40">
@@ -1395,6 +1405,416 @@ function WorkflowActionModal({
           >
             {mutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
             {action ? 'Update' : 'Create'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ========== Source Annotations Tab ==========
+function SourceAnnotationsTab() {
+  const [showModal, setShowModal] = useState(false);
+  const [editingAnnotation, setEditingAnnotation] = useState<SourceAnnotation | null>(null);
+  const [filterField, setFilterField] = useState<string>('');
+
+  const queryClient = useQueryClient();
+
+  const { data: annotations, isLoading } = useQuery({
+    queryKey: ['sourceAnnotations', filterField],
+    queryFn: () => getSourceAnnotations(filterField || undefined),
+  });
+
+  const { data: lookups } = useQuery({
+    queryKey: ['lookups'],
+    queryFn: getLookups,
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: deleteSourceAnnotation,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sourceAnnotations'] });
+    },
+  });
+
+  const handleEdit = (annotation: SourceAnnotation) => {
+    setEditingAnnotation(annotation);
+    setShowModal(true);
+  };
+
+  const uniqueFields = [...new Set(annotations?.map(a => a.field_name) || [])];
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-4">
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+            Source Annotations
+          </h2>
+          <span className="text-sm text-slate-500">
+            {annotations?.length || 0} annotations
+          </span>
+        </div>
+        <div className="flex items-center gap-3">
+          <select
+            value={filterField}
+            onChange={(e) => setFilterField(e.target.value)}
+            className="input text-sm py-1.5 px-3 min-w-[150px]"
+          >
+            <option value="">All Fields</option>
+            {uniqueFields.map(field => (
+              <option key={field} value={field}>{field}</option>
+            ))}
+          </select>
+          <button
+            onClick={() => {
+              setEditingAnnotation(null);
+              setShowModal(true);
+            }}
+            className="btn-primary flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Add Annotation
+          </button>
+        </div>
+      </div>
+
+      {/* Description */}
+      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+        <div className="flex items-start gap-3">
+          <Info className="w-5 h-5 text-blue-500 mt-0.5" />
+          <div>
+            <h3 className="font-medium text-blue-900 dark:text-blue-100">
+              Add context to your log sources
+            </h3>
+            <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+              Annotations appear as tooltips when hovering over field values (hostname, app_name, source) in log results.
+              Add descriptions, link to lookup tables, and include detailed documentation.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Annotations Grid */}
+      {annotations && annotations.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {annotations.map((annotation) => (
+            <div
+              key={annotation.id}
+              className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden hover:shadow-md transition-shadow"
+            >
+              <div className="p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      {annotation.icon && (
+                        <span className="text-xl">{annotation.icon}</span>
+                      )}
+                      <h3 className="font-semibold text-slate-900 dark:text-slate-100 truncate">
+                        {annotation.title || annotation.field_value}
+                      </h3>
+                    </div>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                      {annotation.field_name}: <span className="font-mono">{annotation.field_value}</span>
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={() => handleEdit(annotation)}
+                      className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded transition-colors"
+                      title="Edit"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (confirm('Delete this annotation?')) {
+                          deleteMutation.mutate(annotation.id);
+                        }
+                      }}
+                      className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
+                      title="Delete"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {annotation.description && (
+                  <p className="text-sm text-slate-600 dark:text-slate-300 mt-3 line-clamp-2">
+                    {annotation.description}
+                  </p>
+                )}
+
+                <div className="flex items-center gap-2 mt-3 flex-wrap">
+                  {annotation.lookup_id && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded text-xs">
+                      <ExternalLink className="w-3 h-3" />
+                      Linked Lookup
+                    </span>
+                  )}
+                  {annotation.details && (
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded text-xs">
+                      <FileText className="w-3 h-3" />
+                      Has Details
+                    </span>
+                  )}
+                  {annotation.tags && annotation.tags.length > 0 && (
+                    annotation.tags.slice(0, 2).map(tag => (
+                      <span key={tag} className="px-2 py-0.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded text-xs">
+                        {tag}
+                      </span>
+                    ))
+                  )}
+                  {annotation.tags && annotation.tags.length > 2 && (
+                    <span className="text-xs text-slate-400">
+                      +{annotation.tags.length - 2} more
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-center py-12 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+          <MessageSquare className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100 mb-2">
+            No Annotations Yet
+          </h3>
+          <p className="text-slate-500 dark:text-slate-400 mb-4">
+            Add annotations to provide context for your log sources.
+          </p>
+          <button
+            onClick={() => {
+              setEditingAnnotation(null);
+              setShowModal(true);
+            }}
+            className="btn-primary"
+          >
+            Create First Annotation
+          </button>
+        </div>
+      )}
+
+      {/* Modal */}
+      {showModal && (
+        <SourceAnnotationModal
+          annotation={editingAnnotation}
+          lookups={lookups || []}
+          onClose={() => {
+            setShowModal(false);
+            setEditingAnnotation(null);
+          }}
+          onSuccess={() => {
+            setShowModal(false);
+            setEditingAnnotation(null);
+            queryClient.invalidateQueries({ queryKey: ['sourceAnnotations'] });
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// ========== Source Annotation Modal ==========
+function SourceAnnotationModal({
+  annotation,
+  lookups,
+  onClose,
+  onSuccess,
+}: {
+  annotation: SourceAnnotation | null;
+  lookups: Lookup[];
+  onClose: () => void;
+  onSuccess: () => void;
+}) {
+  const [fieldName, setFieldName] = useState(annotation?.field_name || 'hostname');
+  const [fieldValue, setFieldValue] = useState(annotation?.field_value || '');
+  const [title, setTitle] = useState(annotation?.title || '');
+  const [description, setDescription] = useState(annotation?.description || '');
+  const [details, setDetails] = useState(annotation?.details || '');
+  const [icon, setIcon] = useState(annotation?.icon || '');
+  const [color, setColor] = useState(annotation?.color || '');
+  const [lookupId, setLookupId] = useState(annotation?.lookup_id || '');
+  const [tagsInput, setTagsInput] = useState(annotation?.tags?.join(', ') || '');
+
+  const commonFields = ['hostname', 'app_name', 'source', 'host', 'service', 'application'];
+
+  const mutation = useMutation({
+    mutationFn: async () => {
+      const tags = tagsInput.split(',').map(t => t.trim()).filter(t => t);
+      const data = {
+        field_name: fieldName,
+        field_value: fieldValue,
+        title: title || undefined,
+        description: description || undefined,
+        details: details || undefined,
+        icon: icon || undefined,
+        color: color || undefined,
+        lookup_id: lookupId || undefined,
+        tags,
+      };
+
+      if (annotation) {
+        return updateSourceAnnotation(annotation.id, data);
+      } else {
+        return createSourceAnnotation(data);
+      }
+    },
+    onSuccess: () => {
+      onSuccess();
+    },
+  });
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal-content max-w-lg" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h3 className="modal-title">
+            {annotation ? 'Edit Annotation' : 'Create Annotation'}
+          </h3>
+          <button onClick={onClose} className="modal-close">&times;</button>
+        </div>
+
+        <div className="modal-body space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="label">Field Name</label>
+              <select
+                value={fieldName}
+                onChange={(e) => setFieldName(e.target.value)}
+                className="input"
+                disabled={!!annotation}
+              >
+                {commonFields.map(f => (
+                  <option key={f} value={f}>{f}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="label">Field Value</label>
+              <input
+                type="text"
+                value={fieldValue}
+                onChange={(e) => setFieldValue(e.target.value)}
+                className="input"
+                placeholder="e.g., my-server"
+                disabled={!!annotation}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="label">Icon (Emoji)</label>
+              <input
+                type="text"
+                value={icon}
+                onChange={(e) => setIcon(e.target.value)}
+                className="input"
+                placeholder="e.g., 💻"
+              />
+            </div>
+            <div>
+              <label className="label">Title</label>
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="input"
+                placeholder="Short label"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="label">Description (Tooltip)</label>
+            <textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              className="input resize-none"
+              rows={2}
+              placeholder="Brief description shown in tooltip..."
+            />
+          </div>
+
+          <div>
+            <label className="label">Details (Card View)</label>
+            <textarea
+              value={details}
+              onChange={(e) => setDetails(e.target.value)}
+              className="input resize-none font-mono text-sm"
+              rows={4}
+              placeholder="Extended details shown when clicking. Supports plain text..."
+            />
+            <p className="text-xs text-slate-500 mt-1">
+              Detailed information displayed when the user clicks on the annotation.
+            </p>
+          </div>
+
+          <div>
+            <label className="label">Link to Lookup Table</label>
+            <select
+              value={lookupId}
+              onChange={(e) => setLookupId(e.target.value)}
+              className="input"
+            >
+              <option value="">No linked lookup</option>
+              {lookups.map(lookup => (
+                <option key={lookup.id} value={lookup.id}>
+                  {lookup.name} (key: {lookup.key_field})
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-slate-500 mt-1">
+              Link to a lookup table to enrich the tooltip with additional data.
+            </p>
+          </div>
+
+          <div>
+            <label className="label">Tags (comma-separated)</label>
+            <input
+              type="text"
+              value={tagsInput}
+              onChange={(e) => setTagsInput(e.target.value)}
+              className="input"
+              placeholder="e.g., production, critical, database"
+            />
+          </div>
+
+          <div>
+            <label className="label">Highlight Color (optional)</label>
+            <input
+              type="text"
+              value={color}
+              onChange={(e) => setColor(e.target.value)}
+              className="input"
+              placeholder="e.g., #3B82F6 or blue"
+            />
+          </div>
+        </div>
+
+        <div className="modal-footer">
+          <button onClick={onClose} className="btn-secondary">
+            Cancel
+          </button>
+          <button
+            onClick={() => mutation.mutate()}
+            disabled={!fieldName || !fieldValue || mutation.isPending}
+            className="btn-primary"
+          >
+            {mutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
+            {annotation ? 'Update' : 'Create'}
           </button>
         </div>
       </div>

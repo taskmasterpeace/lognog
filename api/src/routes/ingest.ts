@@ -158,6 +158,8 @@ router.post(
         batch_size: events.length,
         duration_ms: ingestDuration,
         user_id: req.user?.id,
+        index_name: 'agent',
+        app_name: events[0]?.source,
       });
 
       // Log the auth event
@@ -440,6 +442,7 @@ router.post('/otlp/v1/logs', authenticateIngestion, async (req, res) => {
       batch_size: logs.length,
       duration_ms: ingestDuration,
       user_id: req.user?.id,
+      index_name: 'otel',
     });
 
     console.log(`OTLP: Ingested ${logs.length} log records`);
@@ -787,6 +790,8 @@ router.post('/http', authenticateIngestion, async (req, res) => {
       batch_size: logs.length,
       duration_ms: ingestDuration,
       user_id: req.user?.id,
+      index_name: customIndex,
+      app_name: customAppName || undefined,
     });
 
     console.log(`HTTP: Ingested ${logs.length} log events to index '${customIndex}'`);

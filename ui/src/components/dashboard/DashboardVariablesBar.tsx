@@ -72,7 +72,7 @@ export function DashboardVariablesBar({
       {editMode && onAddVariable && (
         <button
           onClick={onAddVariable}
-          className="flex items-center gap-1 px-3 py-1.5 text-sm text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-900/20 rounded-lg transition-colors"
+          className="flex items-center gap-1 px-3 py-1.5 text-sm text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors"
         >
           <Plus className="w-4 h-4" />
           Add Variable
@@ -213,7 +213,7 @@ function VariableDropdown({
                       className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-slate-50 dark:hover:bg-slate-700"
                     >
                       {(Array.isArray(value) ? value.includes('*') : value === '*') && (
-                        <Check className="w-4 h-4 text-sky-500" />
+                        <Check className="w-4 h-4 text-amber-500" />
                       )}
                       <span className="font-medium">All</span>
                     </button>
@@ -232,14 +232,14 @@ function VariableDropdown({
                           <div
                             className={`w-4 h-4 rounded border ${
                               isSelected
-                                ? 'bg-sky-500 border-sky-500'
+                                ? 'bg-amber-500 border-amber-500'
                                 : 'border-slate-300 dark:border-slate-500'
                             } flex items-center justify-center`}
                           >
                             {isSelected && <Check className="w-3 h-3 text-white" />}
                           </div>
                         ) : isSelected ? (
-                          <Check className="w-4 h-4 text-sky-500" />
+                          <Check className="w-4 h-4 text-amber-500" />
                         ) : (
                           <span className="w-4" />
                         )}
@@ -255,7 +255,7 @@ function VariableDropdown({
               <div className="p-2 border-t border-slate-100 dark:border-slate-700 flex justify-end">
                 <button
                   onClick={() => setIsOpen(false)}
-                  className="px-3 py-1 text-sm text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-900/20 rounded"
+                  className="px-3 py-1 text-sm text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded"
                 >
                   Done
                 </button>

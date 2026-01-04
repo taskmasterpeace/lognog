@@ -45,7 +45,7 @@ const assetTypeLabels: Record<string, string> = {
 };
 
 const statusColors: Record<string, string> = {
-  active: 'text-emerald-600 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-900/30',
+  active: 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-900/30',
   inactive: 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-900/30',
   decommissioned: 'text-slate-600 bg-slate-100 dark:text-slate-400 dark:bg-slate-700',
 };
@@ -126,7 +126,7 @@ export default function AssetsPage() {
           </button>
           <button
             onClick={() => { setEditingAsset(null); setShowForm(true); }}
-            className="flex items-center gap-2 px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg text-sm font-medium transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-medium transition-colors"
           >
             <Plus className="w-4 h-4" />
             Add Asset
@@ -142,19 +142,19 @@ export default function AssetsPage() {
             <div className="text-sm text-slate-500 dark:text-slate-400">Total Assets</div>
           </div>
           <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-            <div className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+            <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
               {stats.by_status?.active || 0}
             </div>
             <div className="text-sm text-slate-500 dark:text-slate-400">Active</div>
           </div>
           <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-            <div className="text-2xl font-bold text-sky-600 dark:text-sky-400">
+            <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
               {stats.by_type?.server || 0}
             </div>
             <div className="text-sm text-slate-500 dark:text-slate-400">Servers</div>
           </div>
           <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-            <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+            <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
               {stats.by_type?.container || 0}
             </div>
             <div className="text-sm text-slate-500 dark:text-slate-400">Containers</div>
@@ -171,14 +171,14 @@ export default function AssetsPage() {
             placeholder="Search assets..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+            className="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
           />
         </div>
         <div className="relative">
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
-            className="appearance-none pl-4 pr-10 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+            className="appearance-none pl-4 pr-10 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
           >
             <option value="">All Types</option>
             <option value="server">Server</option>
@@ -193,7 +193,7 @@ export default function AssetsPage() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="appearance-none pl-4 pr-10 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+            className="appearance-none pl-4 pr-10 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
           >
             <option value="">All Status</option>
             <option value="active">Active</option>
@@ -282,7 +282,7 @@ export default function AssetsPage() {
                       <td className="px-4 py-3">
                         <span className={`text-xs px-2 py-0.5 rounded ${
                           asset.source === 'auto'
-                            ? 'bg-blue-50 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
+                            ? 'bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'
                             : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
                         }`}>
                           {asset.source}
@@ -512,7 +512,7 @@ function AssetFormModal({
             <button
               type="submit"
               disabled={mutation.isPending}
-              className="px-4 py-2 bg-sky-500 hover:bg-sky-600 text-white rounded-lg text-sm font-medium disabled:opacity-50"
+              className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-medium disabled:opacity-50"
             >
               {mutation.isPending ? 'Saving...' : asset ? 'Update' : 'Create'}
             </button>
