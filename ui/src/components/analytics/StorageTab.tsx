@@ -27,6 +27,7 @@ import { getStorageStats, updateRetentionSetting, triggerRetentionCleanup } from
 import RetentionConfigModal from './RetentionConfigModal';
 
 function formatBytes(bytes: number): string {
+  if (bytes == null || isNaN(bytes)) return '0 B';
   if (bytes === 0) return '0 B';
   const k = 1024;
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
