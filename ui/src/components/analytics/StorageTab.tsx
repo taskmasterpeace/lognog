@@ -203,8 +203,8 @@ export default function StorageTab() {
           label="Total Logs"
           value={formatNumber(storage.total_rows)}
           subValue="All indexes"
-          color="text-blue-600"
-          iconBg="bg-blue-50 dark:bg-blue-900/30"
+          color="text-amber-600"
+          iconBg="bg-amber-50 dark:bg-amber-900/30"
         />
         <StatCard
           icon={TrendingUp}
@@ -377,7 +377,7 @@ export default function StorageTab() {
                     {formatNumber(idx.row_count)}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
+                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
                       <Clock className="w-3 h-3" />
                       {idx.retention_days} days
                     </span>

@@ -94,8 +94,8 @@ export default function KnowledgePage() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-all whitespace-nowrap ${
                   isActive
-                    ? `border-${tab.color}-500 text-${tab.color}-600 bg-${tab.color}-50/50`
-                    : 'border-transparent text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                    ? `border-${tab.color}-500 text-${tab.color}-600 bg-${tab.color}-50/50 dark:bg-${tab.color}-900/20`
+                    : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800'
                 }`}
               >
                 <Icon className="w-4 h-4" />
@@ -182,7 +182,7 @@ function FieldExtractionsTab() {
     <>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">Field Extractions</h2>
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Field Extractions</h2>
           <p className="text-sm text-slate-500 mt-1">
             Extract custom fields from log messages using regex or grok patterns
           </p>
@@ -210,7 +210,7 @@ function FieldExtractionsTab() {
             <tbody>
               {extractions.map((extraction) => (
                 <tr key={extraction.id}>
-                  <td className="font-medium text-slate-900">{extraction.name}</td>
+                  <td className="font-medium text-slate-900 dark:text-slate-100">{extraction.name}</td>
                   <td>
                     <span className="badge badge-info">{extraction.source_type}</span>
                   </td>
@@ -267,7 +267,7 @@ function FieldExtractionsTab() {
           <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <Filter className="w-8 h-8 text-amber-600" />
           </div>
-          <h3 className="font-semibold text-slate-900 mb-2">No field extractions</h3>
+          <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">No field extractions</h3>
           <p className="text-sm text-slate-500 mb-4">
             Create your first field extraction to parse custom fields from logs
           </p>
@@ -334,7 +334,7 @@ function FieldExtractionModal({
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal animate-slide-up max-w-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3 className="text-lg font-semibold text-slate-900">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
             {extraction ? 'Edit Field Extraction' : 'Add Field Extraction'}
           </h3>
         </div>
@@ -342,7 +342,7 @@ function FieldExtractionModal({
         <div className="modal-body space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Name</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Name</label>
               <input
                 type="text"
                 value={name}
@@ -352,7 +352,7 @@ function FieldExtractionModal({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Source Type</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Source Type</label>
               <input
                 type="text"
                 value={sourceType}
@@ -365,7 +365,7 @@ function FieldExtractionModal({
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Field Name</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Field Name</label>
               <input
                 type="text"
                 value={fieldName}
@@ -375,7 +375,7 @@ function FieldExtractionModal({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Pattern Type</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Pattern Type</label>
               <select value={patternType} onChange={(e) => setPatternType(e.target.value as 'regex' | 'grok')} className="input">
                 <option value="regex">Regex</option>
                 <option value="grok">Grok</option>
@@ -384,7 +384,7 @@ function FieldExtractionModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Pattern</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Pattern</label>
             <textarea
               value={pattern}
               onChange={(e) => setPattern(e.target.value)}
@@ -407,7 +407,7 @@ function FieldExtractionModal({
               onChange={(e) => setEnabled(e.target.checked)}
               className="w-4 h-4 text-amber-600 rounded border-slate-300 focus:ring-amber-500"
             />
-            <label htmlFor="enabled" className="text-sm font-medium text-slate-700">
+            <label htmlFor="enabled" className="text-sm font-medium text-slate-700 dark:text-slate-300">
               Enable this extraction
             </label>
           </div>
@@ -452,17 +452,17 @@ function TestPatternModal({
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal animate-slide-up max-w-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3 className="text-lg font-semibold text-slate-900">Test Pattern</h3>
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Test Pattern</h3>
         </div>
 
         <div className="modal-body space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Pattern</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Pattern</label>
             <code className="code block p-3 text-xs">{pattern}</code>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Sample Log</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Sample Log</label>
             <textarea
               value={sample}
               onChange={(e) => setSample(e.target.value)}
@@ -566,7 +566,7 @@ function EventTypesTab() {
     <>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">Event Types</h2>
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Event Types</h2>
           <p className="text-sm text-slate-500 mt-1">
             Define event types to categorize log events based on search criteria
           </p>
@@ -584,7 +584,7 @@ function EventTypesTab() {
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
-                    <h3 className="font-semibold text-slate-900">{eventType.name}</h3>
+                    <h3 className="font-semibold text-slate-900 dark:text-slate-100">{eventType.name}</h3>
                     {eventType.enabled ? (
                       <span className="badge badge-success">Enabled</span>
                     ) : (
@@ -622,7 +622,7 @@ function EventTypesTab() {
           <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <FileText className="w-8 h-8 text-amber-600" />
           </div>
-          <h3 className="font-semibold text-slate-900 mb-2">No event types</h3>
+          <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">No event types</h3>
           <p className="text-sm text-slate-500 mb-4">
             Create event types to categorize and identify specific types of events
           </p>
@@ -676,14 +676,14 @@ function EventTypeModal({
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal animate-slide-up max-w-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3 className="text-lg font-semibold text-slate-900">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
             {eventType ? 'Edit Event Type' : 'Add Event Type'}
           </h3>
         </div>
 
         <div className="modal-body space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Name</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Name</label>
             <input
               type="text"
               value={name}
@@ -694,7 +694,7 @@ function EventTypeModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Search String (DSL)</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Search String (DSL)</label>
             <textarea
               value={searchString}
               onChange={(e) => setSearchString(e.target.value)}
@@ -708,7 +708,7 @@ function EventTypeModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Description</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Description</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -719,7 +719,7 @@ function EventTypeModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
               Priority (1-10, higher = evaluated first)
             </label>
             <input
@@ -740,7 +740,7 @@ function EventTypeModal({
               onChange={(e) => setEnabled(e.target.checked)}
               className="w-4 h-4 text-amber-600 rounded border-slate-300 focus:ring-amber-500"
             />
-            <label htmlFor="event-enabled" className="text-sm font-medium text-slate-700">
+            <label htmlFor="event-enabled" className="text-sm font-medium text-slate-700 dark:text-slate-300">
               Enable this event type
             </label>
           </div>
@@ -805,7 +805,7 @@ function TagsTab() {
   return (
     <>
       <div className="mb-6">
-        <h2 className="text-lg font-semibold text-slate-900">Tags</h2>
+        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Tags</h2>
         <p className="text-sm text-slate-500 mt-1">
           Add descriptive tags to events based on field values
         </p>
@@ -813,10 +813,10 @@ function TagsTab() {
 
       {/* Add Tag Form */}
       <div className="card p-5 mb-6">
-        <h3 className="font-semibold text-slate-900 mb-4">Add New Tag</h3>
+        <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-4">Add New Tag</h3>
         <div className="grid grid-cols-3 gap-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Tag Name</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Tag Name</label>
             <input
               type="text"
               value={tagName}
@@ -826,7 +826,7 @@ function TagsTab() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Field</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Field</label>
             <input
               type="text"
               value={tagField}
@@ -836,7 +836,7 @@ function TagsTab() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Value Pattern</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Value Pattern</label>
             <input
               type="text"
               value={tagValue}
@@ -910,7 +910,7 @@ function TagsTab() {
           <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <Tag className="w-8 h-8 text-amber-600" />
           </div>
-          <h3 className="font-semibold text-slate-900 mb-2">No tags</h3>
+          <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">No tags</h3>
           <p className="text-sm text-slate-500">
             Add tags to categorize and enrich your log events
           </p>
@@ -956,7 +956,7 @@ function LookupsTab() {
     <>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">Lookups</h2>
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Lookups</h2>
           <p className="text-sm text-slate-500 mt-1">
             Define lookup tables to enrich log data with additional context
           </p>
@@ -974,7 +974,7 @@ function LookupsTab() {
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
-                    <h3 className="font-semibold text-slate-900">{lookup.name}</h3>
+                    <h3 className="font-semibold text-slate-900 dark:text-slate-100">{lookup.name}</h3>
                     <span className="badge badge-info">{lookup.lookup_type}</span>
                   </div>
                   <div className="flex items-center gap-4 text-sm text-slate-600 mb-2">
@@ -1021,7 +1021,7 @@ function LookupsTab() {
           <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <Database className="w-8 h-8 text-amber-600" />
           </div>
-          <h3 className="font-semibold text-slate-900 mb-2">No lookups</h3>
+          <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">No lookups</h3>
           <p className="text-sm text-slate-500 mb-4">
             Create lookup tables to enrich your logs with additional data
           </p>
@@ -1083,7 +1083,7 @@ function LookupModal({
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal animate-slide-up max-w-3xl" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3 className="text-lg font-semibold text-slate-900">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
             {lookup ? 'Edit Lookup' : 'Add Lookup'}
           </h3>
         </div>
@@ -1091,7 +1091,7 @@ function LookupModal({
         <div className="modal-body space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Name</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Name</label>
               <input
                 type="text"
                 value={name}
@@ -1101,7 +1101,7 @@ function LookupModal({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Type</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Type</label>
               <select
                 value={lookupType}
                 onChange={(e) => setLookupType(e.target.value as 'CSV' | 'Manual')}
@@ -1115,7 +1115,7 @@ function LookupModal({
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Key Field</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Key Field</label>
               <input
                 type="text"
                 value={keyField}
@@ -1125,7 +1125,7 @@ function LookupModal({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                 Output Fields (comma-separated)
               </label>
               <input
@@ -1139,7 +1139,7 @@ function LookupModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
               Lookup Data (JSON)
             </label>
             <textarea
@@ -1208,7 +1208,7 @@ function WorkflowActionsTab() {
     <>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900">Workflow Actions</h2>
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Workflow Actions</h2>
           <p className="text-sm text-slate-500 mt-1">
             Define actions that can be triggered from log events
           </p>
@@ -1226,7 +1226,7 @@ function WorkflowActionsTab() {
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
-                    <h3 className="font-semibold text-slate-900">{action.name}</h3>
+                    <h3 className="font-semibold text-slate-900 dark:text-slate-100">{action.name}</h3>
                     <span className="badge badge-info">{action.action_type}</span>
                   </div>
                   <div className="text-sm text-slate-600 space-y-1">
@@ -1266,7 +1266,7 @@ function WorkflowActionsTab() {
           <div className="w-16 h-16 bg-rose-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <Zap className="w-8 h-8 text-rose-600" />
           </div>
-          <h3 className="font-semibold text-slate-900 mb-2">No workflow actions</h3>
+          <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">No workflow actions</h3>
           <p className="text-sm text-slate-500 mb-4">
             Create workflow actions to enable quick actions from log events
           </p>
@@ -1320,7 +1320,7 @@ function WorkflowActionModal({
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal animate-slide-up max-w-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3 className="text-lg font-semibold text-slate-900">
+          <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
             {action ? 'Edit Workflow Action' : 'Add Workflow Action'}
           </h3>
         </div>
@@ -1328,7 +1328,7 @@ function WorkflowActionModal({
         <div className="modal-body space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Name</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Name</label>
               <input
                 type="text"
                 value={name}
@@ -1338,7 +1338,7 @@ function WorkflowActionModal({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Label</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Label</label>
               <input
                 type="text"
                 value={label}
@@ -1351,7 +1351,7 @@ function WorkflowActionModal({
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Field Name</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Field Name</label>
               <input
                 type="text"
                 value={fieldName}
@@ -1361,7 +1361,7 @@ function WorkflowActionModal({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1.5">Action Type</label>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Action Type</label>
               <select
                 value={actionType}
                 onChange={(e) => setActionType(e.target.value as 'url' | 'search')}
@@ -1374,7 +1374,7 @@ function WorkflowActionModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1.5">Action Value</label>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Action Value</label>
             <textarea
               value={actionValue}
               onChange={(e) => setActionValue(e.target.value)}
@@ -1447,7 +1447,7 @@ function SourceAnnotationsTab() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+        <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
       </div>
     );
   }
@@ -1489,14 +1489,14 @@ function SourceAnnotationsTab() {
       </div>
 
       {/* Description */}
-      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+      <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4">
         <div className="flex items-start gap-3">
-          <Info className="w-5 h-5 text-blue-500 mt-0.5" />
+          <Info className="w-5 h-5 text-amber-500 mt-0.5" />
           <div>
-            <h3 className="font-medium text-blue-900 dark:text-blue-100">
+            <h3 className="font-medium text-amber-900 dark:text-amber-100">
               Add context to your log sources
             </h3>
-            <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+            <p className="text-sm text-amber-700 dark:text-amber-300 mt-1">
               Annotations appear as tooltips when hovering over field values (hostname, app_name, source) in log results.
               Add descriptions, link to lookup tables, and include detailed documentation.
             </p>

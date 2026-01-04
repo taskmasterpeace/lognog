@@ -99,7 +99,7 @@ export default function DashboardsPage() {
     return (
       <div className="flex flex-col items-center justify-center h-full">
         <Loader2 className="w-10 h-10 text-amber-500 animate-spin mb-4" />
-        <p className="text-slate-600">Loading dashboards...</p>
+        <p className="text-slate-600 dark:text-slate-400">Loading dashboards...</p>
       </div>
     );
   }
@@ -227,8 +227,8 @@ export default function DashboardsPage() {
             <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <LayoutDashboard className="w-8 h-8 text-slate-400" />
             </div>
-            <h3 className="text-lg font-semibold text-slate-900 mb-2">No dashboards yet</h3>
-            <p className="text-slate-500 mb-6">Create your first dashboard to start visualizing logs</p>
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">No dashboards yet</h3>
+            <p className="text-slate-500 dark:text-slate-400 mb-6">Create your first dashboard to start visualizing logs</p>
             <button onClick={() => setShowCreateModal(true)} className="btn-primary">
               <Plus className="w-5 h-5" />
               Create Dashboard
@@ -296,10 +296,10 @@ export default function DashboardsPage() {
             <div className="modal-header">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-semibold text-slate-900">
+                  <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                     {selectedTemplate ? `Create ${selectedTemplate}` : 'New Dashboard'}
                   </h3>
-                  <p className="text-sm text-slate-500 mt-0.5">
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
                     Configure your dashboard settings
                   </p>
                 </div>
@@ -311,7 +311,7 @@ export default function DashboardsPage() {
 
             <div className="modal-body space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
                   Dashboard Name
                 </label>
                 <input
@@ -325,8 +325,8 @@ export default function DashboardsPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1.5">
-                  Description <span className="text-slate-400 font-normal">(optional)</span>
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                  Description <span className="text-slate-400 dark:text-slate-500 font-normal">(optional)</span>
                 </label>
                 <textarea
                   value={newDashboardDescription}

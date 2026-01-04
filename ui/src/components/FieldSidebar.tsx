@@ -287,7 +287,7 @@ export default function FieldSidebar({
             {(pendingCount > 0 || hasFieldChanges) && (
               <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
                 hasFieldChanges
-                  ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400'
+                  ? 'bg-amber-200 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300'
                   : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
               }`}>
                 {pendingCount}{hasFieldChanges ? '*' : ''}
@@ -339,7 +339,7 @@ export default function FieldSidebar({
                       className={`relative flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-all duration-150 hover:scale-[1.02] overflow-hidden ${
                         isPending
                           ? isChanged
-                            ? 'bg-blue-100 dark:bg-blue-900/20 hover:bg-blue-200 dark:hover:bg-blue-900/30 ring-1 ring-blue-300 dark:ring-blue-700'
+                            ? 'bg-amber-200 dark:bg-amber-900/30 hover:bg-amber-300 dark:hover:bg-amber-900/40 ring-1 ring-amber-400 dark:ring-amber-700'
                             : 'bg-amber-100 dark:bg-amber-900/20 hover:bg-amber-200 dark:hover:bg-amber-900/30'
                           : isChanged
                             ? 'bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/20 ring-1 ring-red-200 dark:ring-red-800'
@@ -352,7 +352,7 @@ export default function FieldSidebar({
                           className={`absolute left-0 top-0 bottom-0 transition-all duration-300 ${
                             isPending
                               ? isChanged
-                                ? 'bg-blue-200/60 dark:bg-blue-800/30'
+                                ? 'bg-amber-300/60 dark:bg-amber-800/40'
                                 : 'bg-amber-200/60 dark:bg-amber-800/30'
                               : 'bg-amber-100/50 dark:bg-amber-900/20'
                           }`}
@@ -364,7 +364,7 @@ export default function FieldSidebar({
                         checked={isPending}
                         onChange={() => toggleValue(facet.field, item.value)}
                         className={`relative z-10 w-4 h-4 border-slate-300 rounded focus:ring-offset-0 cursor-pointer ${
-                          isChanged ? 'text-blue-600 focus:ring-blue-500' : 'text-amber-600 focus:ring-amber-500'
+                          isChanged ? 'text-amber-700 focus:ring-amber-600' : 'text-amber-600 focus:ring-amber-500'
                         }`}
                       />
                       <div className="relative z-10 flex-1 min-w-0 flex items-center justify-between gap-2">
@@ -426,6 +426,26 @@ export default function FieldSidebar({
         )}
       </div>
 
+      {/* Apply/Reset Buttons (sticky top when there are pending changes) */}
+      {hasPendingChanges && (
+        <div className="px-4 py-3 border-b border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20">
+          <div className="flex gap-2">
+            <button
+              onClick={resetPending}
+              className="flex-1 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md transition-colors"
+            >
+              Reset
+            </button>
+            <button
+              onClick={applyFilters}
+              className="flex-1 px-3 py-2 text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 rounded-md transition-colors"
+            >
+              Apply ({pendingChangeCount})
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Field Panels */}
       <div className="flex-1 overflow-y-auto">
         {/* Pinned Fields Section */}
@@ -468,7 +488,7 @@ export default function FieldSidebar({
 
       {/* Apply/Reset Buttons (sticky footer when there are pending changes) */}
       {hasPendingChanges && (
-        <div className="px-4 py-3 border-t border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20">
+        <div className="px-4 py-3 border-t border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20">
           <div className="flex gap-2">
             <button
               onClick={resetPending}
@@ -478,7 +498,7 @@ export default function FieldSidebar({
             </button>
             <button
               onClick={applyFilters}
-              className="flex-1 px-3 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
+              className="flex-1 px-3 py-2 text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 rounded-md transition-colors"
             >
               Apply ({pendingChangeCount})
             </button>

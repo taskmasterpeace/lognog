@@ -222,8 +222,8 @@ export default function StatsPage() {
                 <AreaChart data={timeSeries || []}>
                   <defs>
                     <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
                     </linearGradient>
                     <linearGradient id="colorErrors" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3}/>
@@ -250,7 +250,7 @@ export default function StatsPage() {
                   <Area
                     type="monotone"
                     dataKey="count"
-                    stroke="#0ea5e9"
+                    stroke="#f59e0b"
                     strokeWidth={2}
                     fill="url(#colorCount)"
                     name="Total"
@@ -348,7 +348,7 @@ export default function StatsPage() {
                   />
                   <Bar
                     dataKey="count"
-                    fill="#0ea5e9"
+                    fill="#f59e0b"
                     radius={[0, 6, 6, 0]}
                     cursor="pointer"
                     onClick={(data) => handleDrilldown('hostname', data.hostname)}

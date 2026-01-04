@@ -438,7 +438,7 @@ export default function SavedSearchesPage() {
                       {search.name}
                     </h3>
                     {search.schedule_enabled === 1 && (
-                      <span className="px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300">
+                      <span className="px-2 py-0.5 rounded-full text-xs bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
                         <Clock className="w-3 h-3 inline mr-1" />
                         {getScheduleLabel(search.schedule || '')}
                       </span>

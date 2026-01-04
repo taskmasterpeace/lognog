@@ -139,7 +139,7 @@ export function AnnotationTooltipContent({ annotation, onClick }: AnnotationTool
       {annotation.details && onClick && (
         <button
           onClick={onClick}
-          className="text-xs text-blue-400 hover:text-blue-300 mt-2 flex items-center gap-1"
+          className="text-xs text-amber-400 hover:text-amber-300 mt-2 flex items-center gap-1"
         >
           <ExternalLink className="w-3 h-3" />
           Click for more details
@@ -345,7 +345,7 @@ export function AnnotationDetailCard({ annotation, onClose, onEdit }: Annotation
                 {annotation.tags.map((tag) => (
                   <span
                     key={tag}
-                    className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300"
+                    className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300"
                   >
                     {tag}
                   </span>

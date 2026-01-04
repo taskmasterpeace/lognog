@@ -179,7 +179,7 @@ function PanelVisualization({
                 fontSize: '12px',
               }}
             />
-            <Bar dataKey={valueKey} fill="#0ea5e9" radius={[0, 4, 4, 0]} cursor="pointer" />
+            <Bar dataKey={valueKey} fill="#f59e0b" radius={[0, 4, 4, 0]} cursor="pointer" />
           </BarChart>
         </ResponsiveContainer>
       );
@@ -239,8 +239,8 @@ function PanelVisualization({
           <AreaChart data={results} onClick={(e) => e?.activePayload?.[0]?.payload && handleChartClick(e.activePayload[0].payload)}>
             <defs>
               <linearGradient id={`color-${panel.id}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0} />
+                <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
+                <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
               </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -267,7 +267,7 @@ function PanelVisualization({
             <Area
               type="monotone"
               dataKey={valueKey}
-              stroke="#0ea5e9"
+              stroke="#f59e0b"
               strokeWidth={2}
               fill={`url(#color-${panel.id})`}
               cursor="pointer"
@@ -280,7 +280,7 @@ function PanelVisualization({
       const statValue = results[0] ? Object.values(results[0])[0] : 0;
       return (
         <div className="flex flex-col items-center justify-center h-full">
-          <p className="text-4xl font-bold text-slate-900">
+          <p className="text-4xl font-bold text-slate-900 dark:text-slate-100">
             {typeof statValue === 'number' ? statValue.toLocaleString() : String(statValue)}
           </p>
         </div>
@@ -506,7 +506,7 @@ function PanelEditor({ panel, onSave, onCancel, saving }: PanelEditorProps) {
       <div className="modal animate-slide-up max-w-xl" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-slate-900">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
               {panel ? 'Edit Panel' : 'Add Panel'}
             </h3>
             <button onClick={onCancel} className="btn-ghost p-1">
@@ -517,7 +517,7 @@ function PanelEditor({ panel, onSave, onCancel, saving }: PanelEditorProps) {
 
         <div className="modal-body space-y-4">
           <div>
-            <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-1.5">
+            <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
               Title
               <InfoTip
                 content="Display name for this panel shown in the dashboard"
@@ -552,7 +552,7 @@ function PanelEditor({ panel, onSave, onCancel, saving }: PanelEditorProps) {
           </div>
 
           <div>
-            <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-1.5">
+            <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
               Query
               <InfoTip
                 content={
@@ -579,7 +579,7 @@ search error | timechart span=1h count"
           </div>
 
           <div>
-            <label className="flex items-center gap-2 text-sm font-medium text-slate-700 mb-1.5">
+            <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
               Visualization
               <InfoTip
                 content={
@@ -610,8 +610,8 @@ search error | timechart span=1h count"
                       onClick={() => setVisualization(option.value)}
                       className={`flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-all ${
                         visualization === option.value
-                          ? 'border-amber-500 bg-amber-50 text-amber-700'
-                          : 'border-slate-200 hover:border-slate-300 text-slate-600'
+                          ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300'
+                          : 'border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500 text-slate-600 dark:text-slate-400'
                       }`}
                     >
                       <Icon className="w-5 h-5" />
@@ -1184,11 +1184,11 @@ export default function DashboardViewPage() {
       <div className="flex-1 p-4 overflow-auto">
         {dashboard.panels.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full py-20">
-            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
+            <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4">
               <BarChart3 className="w-8 h-8 text-slate-400" />
             </div>
-            <h3 className="text-lg font-semibold text-slate-900 mb-2">No panels yet</h3>
-            <p className="text-slate-500 text-center max-w-md mb-6">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">No panels yet</h3>
+            <p className="text-slate-500 dark:text-slate-400 text-center max-w-md mb-6">
               Add panels to visualize your log data with charts, tables, and stats
             </p>
             <button

@@ -10,7 +10,7 @@ interface SuggestionItemProps {
 }
 
 const CATEGORY_STYLES: Record<SuggestionCategory, { bg: string; text: string; label: string }> = {
-  command: { bg: 'bg-blue-500/20', text: 'text-blue-400', label: 'Cmd' },
+  command: { bg: 'bg-amber-500/20', text: 'text-amber-400', label: 'Cmd' },
   aggregation: { bg: 'bg-purple-500/20', text: 'text-purple-400', label: 'Agg' },
   'eval-function': { bg: 'bg-green-500/20', text: 'text-green-400', label: 'Func' },
   field: { bg: 'bg-yellow-500/20', text: 'text-yellow-400', label: 'Field' },

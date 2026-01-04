@@ -22,8 +22,8 @@
 
 @layer base {
   :root {
-    --color-primary: 14 165 233;
-    --color-primary-dark: 3 105 161;
+    --color-primary: 245 158 11;
+    --color-primary-dark: 180 83 9;
     font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   }
 

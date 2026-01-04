@@ -185,11 +185,11 @@ export default function FacetFilters({ facets, selectedFilters, onFilterChange }
                                     {displayValue}
                                   </span>
                                 ) : (
-                                  <span className="text-sm text-slate-700 truncate" title={displayValue}>
+                                  <span className="text-sm text-slate-700 dark:text-nog-300 truncate" title={displayValue}>
                                     {displayValue}
                                   </span>
                                 )}
-                                <span className="text-xs text-slate-500 font-medium tabular-nums flex-shrink-0">
+                                <span className="text-xs text-slate-500 dark:text-slate-400 font-medium tabular-nums flex-shrink-0">
                                   {item.count.toLocaleString()}
                                 </span>
                               </div>
@@ -208,8 +208,8 @@ export default function FacetFilters({ facets, selectedFilters, onFilterChange }
 
       {/* Footer Info */}
       {facets.length > 0 && (
-        <div className="px-4 py-3 border-t border-slate-200 bg-slate-50">
-          <p className="text-xs text-slate-500">
+        <div className="px-4 py-3 border-t border-slate-200 dark:border-nog-700 bg-slate-50 dark:bg-nog-900">
+          <p className="text-xs text-slate-500 dark:text-slate-400">
             Showing top {facets.reduce((max, f) => Math.max(max, f.values.length), 0)} values per field
           </p>
         </div>

@@ -38,7 +38,7 @@ const SEVERITY_CONFIG = {
   4: { name: 'Warning', color: 'text-amber-700 bg-amber-100 ring-amber-600/30', bgColor: 'bg-amber-50/50' },
   5: { name: 'Notice', color: 'text-amber-700 bg-amber-100 ring-amber-600/30', bgColor: 'bg-amber-50/50' },
   6: { name: 'Info', color: 'text-amber-700 bg-amber-100 ring-amber-600/30', bgColor: 'bg-amber-50/50' },
-  7: { name: 'Debug', color: 'text-slate-700 bg-slate-100 ring-slate-600/30', bgColor: 'bg-slate-50/50' },
+  7: { name: 'Debug', color: 'text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 ring-slate-600/30', bgColor: 'bg-slate-50/50 dark:bg-slate-800/50' },
 };
 
 // Helper function to get relative time
@@ -80,7 +80,7 @@ const highlightText = (text: string, searchTerms?: string[]): JSX.Element => {
         parts.forEach((p, i) => {
           if (p.toLowerCase() === term.toLowerCase()) {
             newResult.push(
-              <mark key={`${term}-${i}`} className="bg-yellow-200 text-slate-900 px-0.5 rounded">
+              <mark key={`${term}-${i}`} className="bg-yellow-200 dark:bg-yellow-500/30 text-slate-900 dark:text-yellow-200 px-0.5 rounded">
                 {p}
               </mark>
             );
@@ -134,7 +134,7 @@ const FieldValue: React.FC<FieldValueProps> = ({ field, value, onAddFilter, sear
   const renderValue = () => {
     if (field === 'severity' && typeof value === 'number') {
       return (
-        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ring-1 ${SEVERITY_CONFIG[value as keyof typeof SEVERITY_CONFIG]?.color || 'text-slate-700 bg-slate-100 ring-slate-600/30'}`}>
+        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ring-1 ${SEVERITY_CONFIG[value as keyof typeof SEVERITY_CONFIG]?.color || 'text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 ring-slate-600/30'}`}>
           {SEVERITY_CONFIG[value as keyof typeof SEVERITY_CONFIG]?.name || value}
         </span>
       );
@@ -323,7 +323,7 @@ const LogRow: React.FC<LogRowProps> = ({
                   if (log[field] === undefined) return null;
                   return (
                     <div key={field} className="flex items-start gap-2">
-                      <span className="text-xs font-semibold text-slate-500 uppercase w-24 flex-shrink-0 mt-0.5">
+                      <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase w-24 flex-shrink-0 mt-0.5">
                         {field}:
                       </span>
                       <div className="flex-1 min-w-0">
@@ -476,11 +476,11 @@ export default function LogViewer({
   if (!isLoading && logs.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
-        <div className="w-16 h-16 rounded-full bg-slate-100 flex items-center justify-center mb-4">
+        <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4">
           <AlertCircle className="w-8 h-8 text-slate-400" />
         </div>
-        <h3 className="text-lg font-semibold text-slate-900 mb-2">No Logs Found</h3>
-        <p className="text-slate-500 max-w-md">
+        <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">No Logs Found</h3>
+        <p className="text-slate-500 dark:text-slate-400 max-w-md">
           No log entries match your search criteria. Try adjusting your filters or time range.
         </p>
       </div>
@@ -492,7 +492,7 @@ export default function LogViewer({
     return (
       <div className="flex flex-col items-center justify-center py-20">
         <Loader2 className="w-8 h-8 text-amber-500 animate-spin mb-4" />
-        <p className="text-slate-600">Loading logs...</p>
+        <p className="text-slate-600 dark:text-slate-400">Loading logs...</p>
       </div>
     );
   }

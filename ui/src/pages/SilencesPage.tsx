@@ -83,12 +83,12 @@ export default function SilencesPage() {
 
   const getLevelBadge = (level: string) => {
     const colors = {
-      global: 'bg-amber-100 text-amber-700',
-      host: 'bg-amber-100 text-amber-700',
-      alert: 'bg-orange-100 text-orange-700',
+      global: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+      host: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+      alert: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300',
     };
     return (
-      <span className={`px-2 py-1 text-xs font-medium rounded ${colors[level as keyof typeof colors] || 'bg-gray-100 text-gray-700'}`}>
+      <span className={`px-2 py-1 text-xs font-medium rounded ${colors[level as keyof typeof colors] || 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'}`}>
         {level.charAt(0).toUpperCase() + level.slice(1)}
       </span>
     );
@@ -108,11 +108,11 @@ export default function SilencesPage() {
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
             <BellOff className="h-7 w-7" />
             Alert Silences
           </h1>
-          <p className="text-slate-600 mt-1">
+          <p className="text-slate-600 dark:text-slate-400 mt-1">
             Manage alert silencing at global, host, or alert level
           </p>
         </div>
@@ -132,10 +132,10 @@ export default function SilencesPage() {
       )}
 
       {!isLoading && silences && silences.length === 0 && (
-        <div className="bg-white rounded-lg shadow p-12 text-center">
-          <BellOff className="h-16 w-16 text-slate-300 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-slate-900 mb-2">No active silences</h3>
-          <p className="text-slate-600 mb-4">
+        <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-12 text-center">
+          <BellOff className="h-16 w-16 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100 mb-2">No active silences</h3>
+          <p className="text-slate-600 dark:text-slate-400 mb-4">
             Create a silence to temporarily disable alerts
           </p>
           <button
@@ -153,7 +153,7 @@ export default function SilencesPage() {
           {silences.map((silence) => (
             <div
               key={silence.id}
-              className="bg-white rounded-lg shadow hover:shadow-md transition-shadow p-6"
+              className="bg-white dark:bg-slate-800 rounded-lg shadow hover:shadow-md transition-shadow p-6"
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-4 flex-1">
@@ -161,14 +161,14 @@ export default function SilencesPage() {
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
                       {getLevelBadge(silence.level)}
-                      <span className="text-lg font-medium text-slate-900">
+                      <span className="text-lg font-medium text-slate-900 dark:text-slate-100">
                         {getTargetDisplay(silence)}
                       </span>
                     </div>
                     {silence.reason && (
-                      <p className="text-slate-600 text-sm mb-3">{silence.reason}</p>
+                      <p className="text-slate-600 dark:text-slate-400 text-sm mb-3">{silence.reason}</p>
                     )}
-                    <div className="flex items-center gap-4 text-sm text-slate-500">
+                    <div className="flex items-center gap-4 text-sm text-slate-500 dark:text-slate-400">
                       <div className="flex items-center gap-1">
                         <Clock className="h-4 w-4" />
                         {formatDuration(silence.ends_at)}
@@ -184,7 +184,7 @@ export default function SilencesPage() {
                 </div>
                 <button
                   onClick={() => handleDelete(silence.id)}
-                  className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                  className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                   title="Remove silence"
                 >
                   <Trash2 className="h-4 w-4" />
@@ -240,13 +240,13 @@ function CreateSilenceModal({ onClose, alerts }: CreateSilenceModalProps) {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="p-6 border-b border-slate-200">
+      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+        <div className="p-6 border-b border-slate-200 dark:border-slate-700">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-slate-900">Create Silence</h2>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">Create Silence</h2>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
             >
               <X className="h-5 w-5" />
             </button>
@@ -256,7 +256,7 @@ function CreateSilenceModal({ onClose, alerts }: CreateSilenceModalProps) {
         <form onSubmit={handleSubmit} className="p-6">
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                 Silence Level
               </label>
               <div className="grid grid-cols-3 gap-3">
@@ -268,53 +268,53 @@ function CreateSilenceModal({ onClose, alerts }: CreateSilenceModalProps) {
                   }}
                   className={`p-4 border-2 rounded-lg text-center transition-all ${
                     level === 'global'
-                      ? 'border-amber-500 bg-amber-50'
-                      : 'border-slate-200 hover:border-slate-300'
+                      ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/20'
+                      : 'border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500'
                   }`}
                 >
                   <Globe className={`h-6 w-6 mx-auto mb-2 ${level === 'global' ? 'text-amber-500' : 'text-slate-400'}`} />
-                  <div className="font-medium">Global</div>
-                  <div className="text-xs text-slate-500 mt-1">All alerts</div>
+                  <div className="font-medium text-slate-900 dark:text-slate-100">Global</div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">All alerts</div>
                 </button>
                 <button
                   type="button"
                   onClick={() => setLevel('host')}
                   className={`p-4 border-2 rounded-lg text-center transition-all ${
                     level === 'host'
-                      ? 'border-amber-500 bg-amber-50'
-                      : 'border-slate-200 hover:border-slate-300'
+                      ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/20'
+                      : 'border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500'
                   }`}
                 >
                   <Server className={`h-6 w-6 mx-auto mb-2 ${level === 'host' ? 'text-amber-500' : 'text-slate-400'}`} />
-                  <div className="font-medium">Host</div>
-                  <div className="text-xs text-slate-500 mt-1">Specific host</div>
+                  <div className="font-medium text-slate-900 dark:text-slate-100">Host</div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">Specific host</div>
                 </button>
                 <button
                   type="button"
                   onClick={() => setLevel('alert')}
                   className={`p-4 border-2 rounded-lg text-center transition-all ${
                     level === 'alert'
-                      ? 'border-orange-500 bg-orange-50'
-                      : 'border-slate-200 hover:border-slate-300'
+                      ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/20'
+                      : 'border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500'
                   }`}
                 >
                   <AlertCircle className={`h-6 w-6 mx-auto mb-2 ${level === 'alert' ? 'text-orange-500' : 'text-slate-400'}`} />
-                  <div className="font-medium">Alert</div>
-                  <div className="text-xs text-slate-500 mt-1">Specific alert</div>
+                  <div className="font-medium text-slate-900 dark:text-slate-100">Alert</div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">Specific alert</div>
                 </button>
               </div>
             </div>
 
             {level === 'host' && (
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                   Hostname
                 </label>
                 <input
                   type="text"
                   value={targetId}
                   onChange={(e) => setTargetId(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
                   placeholder="e.g., server1, 192.168.1.100"
                   required
                 />
@@ -323,13 +323,13 @@ function CreateSilenceModal({ onClose, alerts }: CreateSilenceModalProps) {
 
             {level === 'alert' && (
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
+                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                   Alert
                 </label>
                 <select
                   value={targetId}
                   onChange={(e) => setTargetId(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
                   required
                 >
                   <option value="">Select an alert...</option>
@@ -343,13 +343,13 @@ function CreateSilenceModal({ onClose, alerts }: CreateSilenceModalProps) {
             )}
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                 Duration
               </label>
               <select
                 value={duration}
                 onChange={(e) => setDuration(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
               >
                 {DURATION_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -360,37 +360,37 @@ function CreateSilenceModal({ onClose, alerts }: CreateSilenceModalProps) {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                 Reason (optional)
               </label>
               <textarea
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
                 rows={3}
                 placeholder="Why are you silencing these alerts?"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
                 Created By (optional)
               </label>
               <input
                 type="text"
                 value={createdBy}
                 onChange={(e) => setCreatedBy(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
                 placeholder="Your name or username"
               />
             </div>
           </div>
 
-          <div className="flex gap-3 mt-6 pt-6 border-t border-slate-200">
+          <div className="flex gap-3 mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 border border-slate-300 text-slate-700 rounded-lg hover:bg-slate-50"
+              className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700"
             >
               Cancel
             </button>
