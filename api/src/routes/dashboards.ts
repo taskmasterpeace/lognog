@@ -441,6 +441,51 @@ router.delete('/:id/share', (req: Request, res: Response) => {
   }
 });
 
+// Get public dashboard by token (no auth required)
+router.get('/public/:token', async (req: Request, res: Response) => {
+  try {
+    const { token } = req.params;
+    const { password } = req.query;
+
+    const dashboard = getDashboardByToken(token);
+    if (!dashboard) {
+      return res.status(404).json({ error: 'Dashboard not found or link expired' });
+    }
+
+    // Check password if required
+    if (dashboard.public_password) {
+      if (!password) {
+        return res.status(401).json({ error: 'Password required', needs_password: true });
+      }
+      const passwordMatch = await bcrypt.compare(String(password), dashboard.public_password);
+      if (!passwordMatch) {
+        return res.status(401).json({ error: 'Invalid password', needs_password: true });
+      }
+    }
+
+    // Get panels for the dashboard
+    const panels = getDashboardPanels(dashboard.id);
+    const pages = getDashboardPages(dashboard.id);
+    const variables = getDashboardVariables(dashboard.id);
+
+    return res.json({
+      id: dashboard.id,
+      name: dashboard.name,
+      description: dashboard.description,
+      layout: dashboard.layout,
+      logo_url: dashboard.logo_url,
+      accent_color: dashboard.accent_color,
+      header_color: dashboard.header_color,
+      panels,
+      pages,
+      variables,
+    });
+  } catch (error) {
+    console.error('Error fetching public dashboard:', error);
+    return res.status(500).json({ error: 'Failed to fetch dashboard' });
+  }
+});
+
 // Get dashboard variables
 router.get('/:id/variables', (req: Request, res: Response) => {
   try {

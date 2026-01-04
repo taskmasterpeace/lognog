@@ -967,6 +967,15 @@ export default function DashboardViewPage() {
               <span className="hidden sm:inline">Refresh</span>
             </button>
 
+            {/* Share button - prominent */}
+            <button
+              onClick={() => setShowShareModal(true)}
+              className="btn-secondary text-amber-600 border-amber-200 hover:bg-amber-50 dark:text-amber-400 dark:border-amber-800 dark:hover:bg-amber-900/30"
+            >
+              <Share2 className="w-4 h-4" />
+              <span className="hidden sm:inline">Share</span>
+            </button>
+
             {/* Actions dropdown */}
             <div className="relative">
               <button

@@ -55,6 +55,7 @@ import AgentPage from './pages/AgentPage';
 import SyntheticPage from './pages/SyntheticPage';
 import OnboardingPage from './pages/OnboardingPage';
 import SavedSearchesPage from './pages/SavedSearchesPage';
+import PublicDashboardPage from './pages/PublicDashboardPage';
 import LoginNotificationsModal from './components/LoginNotificationsModal';
 
 interface NavLinkProps {
@@ -401,6 +402,9 @@ function AppRoutes() {
           )
         }
       />
+
+      {/* Public dashboard route - no auth required */}
+      <Route path="/public/dashboard/:token" element={<PublicDashboardPage />} />
 
       {/* Protected routes */}
       <Route

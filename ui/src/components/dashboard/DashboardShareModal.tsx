@@ -160,12 +160,50 @@ export function DashboardShareModal({
                     Expiration Date (optional)
                   </div>
                 </label>
+                {/* Quick presets */}
+                <div className="flex gap-2 mb-2">
+                  {[
+                    { label: '1 day', days: 1 },
+                    { label: '7 days', days: 7 },
+                    { label: '30 days', days: 30 },
+                    { label: 'Never', days: 0 },
+                  ].map(({ label, days }) => (
+                    <button
+                      key={label}
+                      type="button"
+                      onClick={() => {
+                        if (days === 0) {
+                          setExpiresAt('');
+                        } else {
+                          const date = new Date();
+                          date.setDate(date.getDate() + days);
+                          setExpiresAt(date.toISOString().slice(0, 16));
+                        }
+                      }}
+                      className="px-2 py-1 text-xs rounded bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300"
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
                 <input
                   type="datetime-local"
                   value={expiresAt}
                   onChange={(e) => setExpiresAt(e.target.value)}
                   className="input"
                 />
+                {expiresAt && (
+                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                    Expires {new Date(expiresAt).toLocaleDateString('en-US', {
+                      weekday: 'short',
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric',
+                      hour: 'numeric',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                )}
               </div>
 
               {/* Warning */}
