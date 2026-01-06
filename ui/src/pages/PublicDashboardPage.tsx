@@ -118,7 +118,7 @@ export default function PublicDashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
+      <div className="min-h-screen bg-nog-50 dark:bg-nog-900 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-12 h-12 text-amber-500 animate-spin mx-auto mb-4" />
           <p className="text-slate-600 dark:text-slate-400">Loading dashboard...</p>
@@ -129,7 +129,7 @@ export default function PublicDashboardPage() {
 
   if (needsPassword) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-nog-50 dark:bg-nog-900 flex items-center justify-center p-4">
         <div className="card max-w-md w-full p-8">
           <div className="text-center mb-6">
             <Lock className="w-12 h-12 text-amber-500 mx-auto mb-4" />
@@ -163,7 +163,7 @@ export default function PublicDashboardPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center p-4">
+      <div className="min-h-screen bg-nog-50 dark:bg-nog-900 flex items-center justify-center p-4">
         <div className="card max-w-md w-full p-8 text-center">
           <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-2">
@@ -182,7 +182,7 @@ export default function PublicDashboardPage() {
   const accentColor = dashboard.accent_color || '#f59e0b';
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+    <div className="min-h-screen bg-nog-50 dark:bg-nog-900">
       {/* Header */}
       <header
         className="border-b border-slate-200 dark:border-slate-700 px-6 py-4"

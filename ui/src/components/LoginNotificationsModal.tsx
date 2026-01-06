@@ -25,7 +25,7 @@ interface LoginNotificationsModalProps {
 
 const SEVERITY_CONFIG = {
   info: { icon: Info, color: 'text-amber-500', bg: 'bg-amber-100 dark:bg-amber-900/30', border: 'border-amber-200 dark:border-amber-800' },
-  low: { icon: AlertCircle, color: 'text-slate-500', bg: 'bg-slate-100 dark:bg-slate-700', border: 'border-slate-200 dark:border-slate-700' },
+  low: { icon: AlertCircle, color: 'text-slate-500', bg: 'bg-nog-100 dark:bg-nog-700', border: 'border-slate-200 dark:border-slate-700' },
   medium: { icon: AlertTriangle, color: 'text-yellow-500', bg: 'bg-yellow-100 dark:bg-yellow-900/30', border: 'border-yellow-200 dark:border-yellow-800' },
   high: { icon: AlertTriangle, color: 'text-orange-500', bg: 'bg-orange-100 dark:bg-orange-900/30', border: 'border-orange-200 dark:border-orange-800' },
   critical: { icon: Zap, color: 'text-red-500', bg: 'bg-red-100 dark:bg-red-900/30', border: 'border-red-200 dark:border-red-800' },
@@ -100,7 +100,7 @@ export default function LoginNotificationsModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-lg max-h-[80vh] overflow-hidden flex flex-col">
+      <div className="bg-white dark:bg-nog-800 rounded-xl shadow-xl w-full max-w-lg max-h-[80vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -118,7 +118,7 @@ export default function LoginNotificationsModal({
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+            className="p-2 hover:bg-nog-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -139,7 +139,7 @@ export default function LoginNotificationsModal({
                 }`}
               >
                 <div className="flex items-start gap-3">
-                  <div className={`p-1.5 rounded-lg bg-white dark:bg-slate-800`}>
+                  <div className={`p-1.5 rounded-lg bg-white dark:bg-nog-800`}>
                     <SeverityIcon className={`w-4 h-4 ${severityConfig.color}`} />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -189,7 +189,7 @@ export default function LoginNotificationsModal({
         <div className="p-4 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+            className="px-4 py-2 text-slate-700 dark:text-slate-200 hover:bg-nog-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
           >
             Close
           </button>
@@ -197,7 +197,7 @@ export default function LoginNotificationsModal({
             <button
               onClick={() => dismissAllMutation.mutate()}
               disabled={dismissAllMutation.isPending}
-              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50"
+              className="px-4 py-2 bg-nog-100 hover:bg-slate-200 dark:bg-nog-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50"
             >
               <CheckCircle className="w-4 h-4" />
               Dismiss All

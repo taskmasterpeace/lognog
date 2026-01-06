@@ -42,7 +42,7 @@ import { shutdown as shutdownInternalLogger, logError } from './services/interna
 import { startScheduler as startSyntheticScheduler } from './services/synthetic/index.js';
 import { executeDSLQuery } from './db/backend.js';
 import { seedBuiltinTemplates } from './data/builtin-templates.js';
-import { seedDashboardTemplates } from './data/seed-templates.js';
+import { seedDashboardTemplates, seedSavedSearches } from './data/seed-templates.js';
 import { seedBuiltinCIMModels } from './data/builtin-cim-models.js';
 
 const PORT = process.env.PORT || 4000;
@@ -387,6 +387,7 @@ app.listen(PORT, () => {
   try {
     seedBuiltinTemplates();
     seedDashboardTemplates();
+    seedSavedSearches();
     seedBuiltinCIMModels();
   } catch (error) {
     console.error('Failed to seed templates:', error);

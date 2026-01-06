@@ -379,7 +379,7 @@ export const YAxisScaleModeSelector: React.FC<{
         onChange={(e) => onChange(e.target.value as YAxisScaleMode)}
         className={`text-xs px-2 py-1 rounded border ${
           darkMode
-            ? 'bg-slate-800 border-slate-600 text-slate-300'
+            ? 'bg-nog-800 border-slate-600 text-slate-300'
             : 'bg-white border-slate-300 text-slate-700'
         }`}
       >

@@ -393,10 +393,10 @@ function PanelCard({
           </div>
         </div>
         <div className={`flex items-center gap-1 ${editMode ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}>
-          <button onClick={onRefresh} className="p-1.5 text-slate-400 dark:text-nog-400 hover:text-slate-600 dark:hover:text-nog-200 hover:bg-slate-100 dark:hover:bg-nog-700 rounded">
+          <button onClick={onRefresh} className="p-1.5 text-slate-400 dark:text-nog-400 hover:text-slate-600 dark:hover:text-nog-200 hover:bg-nog-100 dark:hover:bg-nog-700 rounded">
             <RefreshCw className="w-3.5 h-3.5" />
           </button>
-          <button onClick={onEdit} className="p-1.5 text-slate-400 dark:text-nog-400 hover:text-slate-600 dark:hover:text-nog-200 hover:bg-slate-100 dark:hover:bg-nog-700 rounded">
+          <button onClick={onEdit} className="p-1.5 text-slate-400 dark:text-nog-400 hover:text-slate-600 dark:hover:text-nog-200 hover:bg-nog-100 dark:hover:bg-nog-700 rounded">
             <Edit3 className="w-3.5 h-3.5" />
           </button>
           <button onClick={onDelete} className="p-1.5 text-slate-400 dark:text-nog-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded">
@@ -922,7 +922,7 @@ export default function DashboardViewPage() {
   // selectedPreset moved to TimePickerEnhanced component
 
   return (
-    <div className="min-h-full bg-slate-50 dark:bg-nog-900 flex flex-col">
+    <div className="min-h-full bg-nog-50 dark:bg-nog-900 flex flex-col">
       {/* Header */}
       <DashboardHeader
         name={dashboard.name}
@@ -1184,7 +1184,7 @@ export default function DashboardViewPage() {
       <div className="flex-1 p-4 overflow-auto">
         {dashboard.panels.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full py-20">
-            <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4">
+            <div className="w-16 h-16 bg-nog-100 dark:bg-nog-800 rounded-full flex items-center justify-center mb-4">
               <BarChart3 className="w-8 h-8 text-slate-400" />
             </div>
             <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">No panels yet</h3>

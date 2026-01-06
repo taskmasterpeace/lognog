@@ -47,14 +47,14 @@ const assetTypeLabels: Record<string, string> = {
 const statusColors: Record<string, string> = {
   active: 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-900/30',
   inactive: 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-900/30',
-  decommissioned: 'text-slate-600 bg-slate-100 dark:text-slate-400 dark:bg-slate-700',
+  decommissioned: 'text-slate-600 bg-nog-100 dark:text-slate-400 dark:bg-nog-700',
 };
 
 function CriticalityBadge({ value }: { value: number }) {
   const color = value >= 80 ? 'text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-900/30'
     : value >= 60 ? 'text-orange-600 bg-orange-50 dark:text-orange-400 dark:bg-orange-900/30'
     : value >= 40 ? 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-900/30'
-    : 'text-slate-600 bg-slate-100 dark:text-slate-400 dark:bg-slate-700';
+    : 'text-slate-600 bg-nog-100 dark:text-slate-400 dark:bg-nog-700';
 
   return (
     <span className={`px-2 py-0.5 rounded text-xs font-medium ${color}`}>
@@ -119,7 +119,7 @@ export default function AssetsPage() {
           <button
             onClick={() => discoverMutation.mutate()}
             disabled={discoverMutation.isPending}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 rounded-lg text-sm font-medium transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-nog-100 hover:bg-slate-200 dark:bg-nog-700 dark:hover:bg-slate-600 rounded-lg text-sm font-medium transition-colors"
           >
             <RefreshCw className={`w-4 h-4 ${discoverMutation.isPending ? 'animate-spin' : ''}`} />
             Discover
@@ -137,23 +137,23 @@ export default function AssetsPage() {
       {/* Stats Cards */}
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
+          <div className="bg-white dark:bg-nog-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
             <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">{stats.total}</div>
             <div className="text-sm text-slate-500 dark:text-slate-400">Total Assets</div>
           </div>
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
+          <div className="bg-white dark:bg-nog-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
             <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
               {stats.by_status?.active || 0}
             </div>
             <div className="text-sm text-slate-500 dark:text-slate-400">Active</div>
           </div>
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
+          <div className="bg-white dark:bg-nog-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
             <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
               {stats.by_type?.server || 0}
             </div>
             <div className="text-sm text-slate-500 dark:text-slate-400">Servers</div>
           </div>
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
+          <div className="bg-white dark:bg-nog-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
             <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
               {stats.by_type?.container || 0}
             </div>
@@ -171,14 +171,14 @@ export default function AssetsPage() {
             placeholder="Search assets..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+            className="w-full pl-10 pr-4 py-2 bg-white dark:bg-nog-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
           />
         </div>
         <div className="relative">
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
-            className="appearance-none pl-4 pr-10 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+            className="appearance-none pl-4 pr-10 py-2 bg-white dark:bg-nog-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
           >
             <option value="">All Types</option>
             <option value="server">Server</option>
@@ -193,7 +193,7 @@ export default function AssetsPage() {
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="appearance-none pl-4 pr-10 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+            className="appearance-none pl-4 pr-10 py-2 bg-white dark:bg-nog-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
           >
             <option value="">All Status</option>
             <option value="active">Active</option>
@@ -205,10 +205,10 @@ export default function AssetsPage() {
       </div>
 
       {/* Assets Table */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+      <div className="bg-white dark:bg-nog-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
+            <thead className="bg-nog-50 dark:bg-nog-900/50 border-b border-slate-200 dark:border-slate-700">
               <tr>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Asset</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Type</th>
@@ -237,10 +237,10 @@ export default function AssetsPage() {
                 assets.map((asset) => {
                   const Icon = assetTypeIcons[asset.asset_type] || Server;
                   return (
-                    <tr key={asset.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                    <tr key={asset.id} className="hover:bg-nog-50 dark:hover:bg-slate-700/50">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
+                          <div className="w-8 h-8 rounded-lg bg-nog-100 dark:bg-nog-700 flex items-center justify-center">
                             <Icon className="w-4 h-4 text-slate-600 dark:text-slate-300" />
                           </div>
                           <div>
@@ -283,7 +283,7 @@ export default function AssetsPage() {
                         <span className={`text-xs px-2 py-0.5 rounded ${
                           asset.source === 'auto'
                             ? 'bg-amber-50 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'
-                            : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300'
+                            : 'bg-nog-100 text-slate-600 dark:bg-nog-700 dark:text-slate-300'
                         }`}>
                           {asset.source}
                         </span>
@@ -292,7 +292,7 @@ export default function AssetsPage() {
                         <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => { setEditingAsset(asset); setShowForm(true); }}
-                            className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                            className="p-1.5 hover:bg-nog-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                           >
                             <Edit2 className="w-4 h-4 text-slate-500" />
                           </button>
@@ -372,7 +372,7 @@ function AssetFormModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-lg mx-4">
+      <div className="bg-white dark:bg-nog-800 rounded-xl shadow-xl w-full max-w-lg mx-4">
         <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
             {asset ? 'Edit Asset' : 'Add Asset'}
@@ -390,7 +390,7 @@ function AssetFormModal({
               <select
                 value={formData.asset_type}
                 onChange={(e) => setFormData({ ...formData, asset_type: e.target.value })}
-                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
+                className="w-full px-3 py-2 bg-white dark:bg-nog-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
               >
                 <option value="server">Server</option>
                 <option value="workstation">Workstation</option>
@@ -407,7 +407,7 @@ function AssetFormModal({
               <select
                 value={formData.status}
                 onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
+                className="w-full px-3 py-2 bg-white dark:bg-nog-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
               >
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
@@ -425,7 +425,7 @@ function AssetFormModal({
               value={formData.identifier}
               onChange={(e) => setFormData({ ...formData, identifier: e.target.value })}
               placeholder="Hostname, IP, or unique ID"
-              className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
+              className="w-full px-3 py-2 bg-white dark:bg-nog-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
             />
           </div>
           <div>
@@ -437,7 +437,7 @@ function AssetFormModal({
               value={formData.display_name}
               onChange={(e) => setFormData({ ...formData, display_name: e.target.value })}
               placeholder="Friendly name"
-              className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
+              className="w-full px-3 py-2 bg-white dark:bg-nog-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
             />
           </div>
           <div>
@@ -448,7 +448,7 @@ function AssetFormModal({
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               rows={2}
-              className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
+              className="w-full px-3 py-2 bg-white dark:bg-nog-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
             />
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -462,7 +462,7 @@ function AssetFormModal({
                 max="100"
                 value={formData.criticality}
                 onChange={(e) => setFormData({ ...formData, criticality: Number(e.target.value) })}
-                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
+                className="w-full px-3 py-2 bg-white dark:bg-nog-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
               />
             </div>
             <div>
@@ -473,7 +473,7 @@ function AssetFormModal({
                 type="text"
                 value={formData.owner}
                 onChange={(e) => setFormData({ ...formData, owner: e.target.value })}
-                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
+                className="w-full px-3 py-2 bg-white dark:bg-nog-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
               />
             </div>
           </div>
@@ -486,7 +486,7 @@ function AssetFormModal({
                 type="text"
                 value={formData.department}
                 onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
+                className="w-full px-3 py-2 bg-white dark:bg-nog-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
               />
             </div>
             <div>
@@ -497,7 +497,7 @@ function AssetFormModal({
                 type="text"
                 value={formData.location}
                 onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
+                className="w-full px-3 py-2 bg-white dark:bg-nog-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
               />
             </div>
           </div>

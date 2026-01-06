@@ -257,7 +257,7 @@ function CopyButton({ text, label }: { text: string; label?: string }) {
 
 export default function OnboardingPage() {
   return (
-    <div className="min-h-full bg-slate-50 dark:bg-nog-900">
+    <div className="min-h-full bg-nog-50 dark:bg-nog-900">
       {/* Header */}
       <div className="bg-white dark:bg-nog-800 border-b border-slate-200 dark:border-nog-700 shadow-sm">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
@@ -331,7 +331,7 @@ export default function OnboardingPage() {
 
         {/* Preview */}
         <div className="bg-white dark:bg-nog-800 border border-slate-200 dark:border-nog-700 rounded-xl overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 bg-slate-50 dark:bg-nog-900 border-b border-slate-200 dark:border-nog-700">
+          <div className="flex items-center justify-between px-4 py-3 bg-nog-50 dark:bg-nog-900 border-b border-slate-200 dark:border-nog-700">
             <span className="text-sm font-medium text-slate-700 dark:text-nog-300">
               AI Integration Prompt
             </span>
@@ -411,7 +411,7 @@ export default function OnboardingPage() {
                 <tr className="border-b border-slate-100 dark:border-nog-700/50">
                   <td className="py-2 px-3 text-slate-900 dark:text-nog-100">Hey You're Hired</td>
                   <td className="py-2 px-3">
-                    <code className="text-xs bg-slate-100 dark:bg-nog-900 px-2 py-0.5 rounded">
+                    <code className="text-xs bg-nog-100 dark:bg-nog-900 px-2 py-0.5 rounded">
                       hey-youre-hired
                     </code>
                   </td>
@@ -424,7 +424,7 @@ export default function OnboardingPage() {
                 <tr className="border-b border-slate-100 dark:border-nog-700/50">
                   <td className="py-2 px-3 text-slate-900 dark:text-nog-100">Directors Palette</td>
                   <td className="py-2 px-3">
-                    <code className="text-xs bg-slate-100 dark:bg-nog-900 px-2 py-0.5 rounded">
+                    <code className="text-xs bg-nog-100 dark:bg-nog-900 px-2 py-0.5 rounded">
                       directors-palette
                     </code>
                   </td>

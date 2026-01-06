@@ -47,12 +47,12 @@ function CodeBlock({ code }: { code: string }) {
 
   return (
     <div className="relative group">
-      <pre className="bg-slate-900 dark:bg-slate-950 text-slate-100 p-3 sm:p-4 rounded-lg overflow-x-auto text-xs sm:text-sm font-mono">
+      <pre className="bg-nog-900 dark:bg-nog-950 text-slate-100 p-3 sm:p-4 rounded-lg overflow-x-auto text-xs sm:text-sm font-mono">
         <code>{code}</code>
       </pre>
       <button
         onClick={handleCopy}
-        className="absolute top-1.5 sm:top-2 right-1.5 sm:right-2 p-1.5 sm:p-2 bg-slate-800 rounded-md opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity hover:bg-slate-700"
+        className="absolute top-1.5 sm:top-2 right-1.5 sm:right-2 p-1.5 sm:p-2 bg-nog-800 rounded-md opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity hover:bg-slate-700"
       >
         {copied ? (
           <Check className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-400" />
@@ -85,7 +85,7 @@ function SectionNav({ active, onChange }: { active: DocSection; onChange: (s: Do
           className={`flex items-center gap-1 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg text-sm sm:text-base font-medium transition-all whitespace-nowrap flex-shrink-0 ${
             active === s.id
               ? 'bg-amber-500 text-white shadow-md shadow-amber-500/25'
-              : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700'
+              : 'bg-white dark:bg-nog-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-nog-50 dark:hover:bg-slate-700'
           }`}
         >
           <s.icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -117,7 +117,7 @@ function QuerySubNav({ active, onChange }: { active: QuerySubsection; onChange: 
           className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-xs sm:text-sm font-medium transition-all whitespace-nowrap flex-shrink-0 ${
             active === s.id
               ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+              : 'text-slate-600 dark:text-slate-400 hover:bg-nog-100 dark:hover:bg-nog-800'
           }`}
         >
           <s.icon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
@@ -140,21 +140,21 @@ function GettingStartedSection() {
         </p>
 
         <div className="space-y-4">
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">1. Clone and Start</h3>
             <CodeBlock code={`git clone https://github.com/machinekinglabs/lognog.git
 cd lognog
 docker-compose up -d`} />
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">2. Access the UI</h3>
             <p className="text-slate-600 dark:text-slate-400 mb-2">
               Open <code className="code">http://localhost</code> in your browser.
             </p>
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">3. Send Test Logs</h3>
             <CodeBlock code={`# Send a test syslog message
 echo "<14>$(date) myhost myapp[1234]: Test log message" | nc -u localhost 514`} />
@@ -164,7 +164,7 @@ echo "<14>$(date) myhost myapp[1234]: Test log message" | nc -u localhost 514`} 
 
       <section>
         <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">Architecture</h2>
-        <div className="card p-6 bg-slate-50 dark:bg-slate-800/50">
+        <div className="card p-6 bg-nog-50 dark:bg-nog-800/50">
           <pre className="text-sm text-slate-600 dark:text-slate-300 overflow-x-auto">{`
 ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
 │   Syslog     │────▶│   Vector     │────▶│  ClickHouse  │
@@ -186,7 +186,7 @@ echo "<14>$(date) myhost myapp[1234]: Test log message" | nc -u localhost 514`} 
       <section>
         <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">Ports Reference</h2>
         <div className="overflow-x-auto">
-          <table className="table card dark:bg-slate-800">
+          <table className="table card dark:bg-nog-800">
             <thead>
               <tr>
                 <th>Service</th>
@@ -221,7 +221,7 @@ function QueryLanguageIntro() {
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Key Features</h3>
             <ul className="space-y-2 text-sm">
               <li className="flex items-start gap-2">
@@ -243,7 +243,7 @@ function QueryLanguageIntro() {
             </ul>
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Your First Query</h3>
             <CodeBlock code={`# Search all logs
 search *
@@ -260,7 +260,7 @@ search host=router severity>=warning`} />
       <section>
         <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-4">Standard Log Fields</h2>
         <div className="overflow-x-auto">
-          <table className="table card dark:bg-slate-800">
+          <table className="table card dark:bg-nog-800">
             <thead>
               <tr>
                 <th>Field</th>
@@ -335,14 +335,14 @@ search host=*              # Match all (any value)`} />
       <section>
         <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">Comparison Operators</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Numeric Comparison</h3>
             <CodeBlock code={`search severity<4
 search severity<=3
 search severity>4
 search severity>=warning`} />
           </div>
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Equality</h3>
             <CodeBlock code={`search severity=3
 search severity!=6
@@ -371,7 +371,7 @@ search app_name~"web"                     # Contains "web"`} />
         <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">Multiple Conditions</h2>
 
         <div className="space-y-4">
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Implicit AND</h3>
             <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
               Space-separated conditions are ANDed together:
@@ -380,19 +380,19 @@ search app_name~"web"                     # Contains "web"`} />
 # Returns logs from router with severity warning or higher`} />
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">OR Logic</h3>
             <CodeBlock code={`search severity=0 OR severity=1 OR severity=2
 search host=web01 OR host=web02`} />
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">NOT Logic</h3>
             <CodeBlock code={`search NOT severity=7                    # Exclude debug logs
 search host=router NOT message~"keepalive"`} />
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Complex Logic with Parentheses</h3>
             <CodeBlock code={`search (host=router OR host=firewall) AND severity<=3
 search app_name=nginx AND (severity<=3 OR message~"timeout")`} />
@@ -407,7 +407,7 @@ function FilteringTransforming() {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="card p-4 dark:bg-slate-800">
+        <div className="card p-4 dark:bg-nog-800">
           <h3 className="font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2 mb-2">
             <Terminal className="w-4 h-4 text-amber-500" />
             filter / where
@@ -417,7 +417,7 @@ function FilteringTransforming() {
 search * | where severity<=3`} />
         </div>
 
-        <div className="card p-4 dark:bg-slate-800">
+        <div className="card p-4 dark:bg-nog-800">
           <h3 className="font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2 mb-2">
             <Terminal className="w-4 h-4 text-amber-500" />
             table
@@ -427,7 +427,7 @@ search * | where severity<=3`} />
 search * | table timestamp severity app_name`} />
         </div>
 
-        <div className="card p-4 dark:bg-slate-800">
+        <div className="card p-4 dark:bg-nog-800">
           <h3 className="font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2 mb-2">
             <Terminal className="w-4 h-4 text-amber-500" />
             fields
@@ -440,7 +440,7 @@ search * | fields timestamp hostname message
 search * | fields - raw structured_data`} />
         </div>
 
-        <div className="card p-4 dark:bg-slate-800">
+        <div className="card p-4 dark:bg-nog-800">
           <h3 className="font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2 mb-2">
             <Terminal className="w-4 h-4 text-amber-500" />
             rename
@@ -450,7 +450,7 @@ search * | fields - raw structured_data`} />
 search * | rename hostname as host, app_name as app`} />
         </div>
 
-        <div className="card p-4 dark:bg-slate-800">
+        <div className="card p-4 dark:bg-nog-800">
           <h3 className="font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2 mb-2">
             <Terminal className="w-4 h-4 text-amber-500" />
             dedup
@@ -460,7 +460,7 @@ search * | rename hostname as host, app_name as app`} />
 search * | dedup hostname app_name`} />
         </div>
 
-        <div className="card p-4 dark:bg-slate-800">
+        <div className="card p-4 dark:bg-nog-800">
           <h3 className="font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2 mb-2">
             <Terminal className="w-4 h-4 text-amber-500" />
             sort
@@ -470,7 +470,7 @@ search * | dedup hostname app_name`} />
 search * | sort asc severity, desc hostname`} />
         </div>
 
-        <div className="card p-4 dark:bg-slate-800">
+        <div className="card p-4 dark:bg-nog-800">
           <h3 className="font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2 mb-2">
             <Terminal className="w-4 h-4 text-amber-500" />
             limit / head / tail
@@ -492,7 +492,7 @@ function AggregationsStats() {
         <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">Basic Aggregations</h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">count</h3>
             <CodeBlock code={`# Count all logs
 search * | stats count
@@ -504,14 +504,14 @@ search * | stats count by hostname
 search * | stats count as total`} />
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">sum / avg / min / max</h3>
             <CodeBlock code={`search * | stats sum(bytes)
 search * | stats avg(response_time)
 search * | stats min(timestamp), max(timestamp)`} />
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">dc (distinct count)</h3>
             <CodeBlock code={`# Number of unique hosts
 search * | stats dc(hostname)
@@ -520,7 +520,7 @@ search * | stats dc(hostname)
 search * | stats dc(source_ip) by hostname`} />
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">values / list</h3>
             <CodeBlock code={`# Array of unique values
 search * | stats values(hostname)
@@ -535,25 +535,25 @@ search * | stats list(message) by hostname`} />
         <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">Advanced Aggregations</h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">earliest / latest</h3>
             <CodeBlock code={`search * | stats earliest(message)
 search * | stats latest(message)`} />
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">median / mode</h3>
             <CodeBlock code={`search * | stats median(response_time)
 search * | stats mode(severity)`} />
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">stddev / variance</h3>
             <CodeBlock code={`search * | stats stddev(response_time)
 search * | stats variance(bytes)`} />
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">range</h3>
             <CodeBlock code={`# Calculate max - min
 search * | stats range(temperature)
@@ -568,7 +568,7 @@ search * | stats range(bytes) by hostname`} />
           Calculate percentile values for SLA monitoring and performance analysis:
         </p>
 
-        <div className="card p-4 dark:bg-slate-800">
+        <div className="card p-4 dark:bg-nog-800">
           <CodeBlock code={`search app_name=api
   | stats p50(response_time) as median,
           p90(response_time) as p90,
@@ -579,7 +579,7 @@ search * | stats range(bytes) by hostname`} />
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
           {['p50', 'p90', 'p95', 'p99'].map((p) => (
-            <div key={p} className="card p-3 dark:bg-slate-800 text-center">
+            <div key={p} className="card p-3 dark:bg-nog-800 text-center">
               <code className="code text-amber-600 dark:text-amber-400">{p}(field)</code>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{p.substring(1)}th percentile</p>
             </div>
@@ -611,7 +611,7 @@ function EvalFunctions() {
       <section>
         <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">Math Functions</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Basic Math</h3>
             <CodeBlock code={`eval abs_value=abs(-5)
 eval rounded=round(3.14159, 2)
@@ -619,7 +619,7 @@ eval floored=floor(3.9)
 eval ceiled=ceil(3.1)`} />
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Advanced Math</h3>
             <CodeBlock code={`eval distance=sqrt(pow(x,2) + pow(y,2))
 eval ln_value=log(value)
@@ -632,7 +632,7 @@ eval exp_value=exp(value)`} />
       <section>
         <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">String Functions</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Basic String Operations</h3>
             <CodeBlock code={`eval msg_length=len(message)
 eval lowercase=lower(message)
@@ -640,7 +640,7 @@ eval uppercase=upper(hostname)
 eval trimmed=trim(message)`} />
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Advanced String Operations</h3>
             <CodeBlock code={`eval first_10=substr(message, 0, 10)
 eval replaced=replace(message, "ERROR", "WARN")
@@ -653,21 +653,21 @@ eval full_name=concat(first, " ", last)`} />
       <section>
         <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">Conditional Functions</h2>
         <div className="space-y-4">
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">if</h3>
             <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">Conditional expression with true/false branches</p>
             <CodeBlock code={`eval level=if(severity <= 3, "high", "low")
 eval status=if(code >= 200 AND code < 300, "success", "failure")`} />
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">coalesce</h3>
             <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">Return first non-null value</p>
             <CodeBlock code={`eval host=coalesce(hostname, source, "unknown")
 eval app=coalesce(app_name, program, "default")`} />
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">case</h3>
             <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">Multi-way conditional</p>
             <CodeBlock code={`eval category=case(
@@ -686,7 +686,7 @@ eval app=coalesce(app_name, program, "default")`} />
       <section>
         <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">Practical Examples</h2>
         <div className="space-y-4">
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Calculate Response Time Category</h3>
             <CodeBlock code={`search app_name=api
   | eval category=if(response_time < 100, "fast",
@@ -694,14 +694,14 @@ eval app=coalesce(app_name, program, "default")`} />
   | stats count by category`} />
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Extract Domain from Email</h3>
             <CodeBlock code={`search message~"@"
   | eval domain=split(email, "@", 1)
   | stats count by domain`} />
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Calculate Error Rate</h3>
             <CodeBlock code={`search app_name=nginx
   | eval is_error=if(status >= 400, 1, 0)
@@ -718,7 +718,7 @@ function AdvancedCommands() {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="card p-4 dark:bg-slate-800">
+        <div className="card p-4 dark:bg-nog-800">
           <h3 className="font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2 mb-2">
             <Terminal className="w-4 h-4 text-amber-500" />
             top
@@ -732,7 +732,7 @@ search * | top 20 source_ip`} />
           </p>
         </div>
 
-        <div className="card p-4 dark:bg-slate-800">
+        <div className="card p-4 dark:bg-nog-800">
           <h3 className="font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2 mb-2">
             <Terminal className="w-4 h-4 text-amber-500" />
             rare
@@ -745,7 +745,7 @@ search * | rare 5 app_name`} />
           </p>
         </div>
 
-        <div className="card p-4 dark:bg-slate-800">
+        <div className="card p-4 dark:bg-nog-800">
           <h3 className="font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2 mb-2">
             <Terminal className="w-4 h-4 text-amber-500" />
             bin
@@ -764,7 +764,7 @@ search * | bin span=100 bytes`} />
           </p>
         </div>
 
-        <div className="card p-4 dark:bg-slate-800">
+        <div className="card p-4 dark:bg-nog-800">
           <h3 className="font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2 mb-2">
             <Terminal className="w-4 h-4 text-amber-500" />
             timechart
@@ -780,7 +780,7 @@ search * | timechart span=5m count, avg(response_time)
 search * | timechart span=1h count by hostname`} />
         </div>
 
-        <div className="card p-4 dark:bg-slate-800 md:col-span-2">
+        <div className="card p-4 dark:bg-nog-800 md:col-span-2">
           <h3 className="font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2 mb-2">
             <Terminal className="w-4 h-4 text-amber-500" />
             rex
@@ -809,7 +809,7 @@ function UseCaseExamples() {
       <section>
         <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">Security Monitoring</h2>
         <div className="space-y-4">
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Failed Login Attempts</h3>
             <CodeBlock code={`search app_name=sshd message~"Failed"
   | stats count by source_ip, user
@@ -817,7 +817,7 @@ function UseCaseExamples() {
   | limit 20`} />
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Brute Force Detection</h3>
             <CodeBlock code={`search app_name=sshd message~"Failed"
   | bin span=5m timestamp
@@ -826,7 +826,7 @@ function UseCaseExamples() {
   | sort desc count`} />
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Privilege Escalation</h3>
             <CodeBlock code={`search message~"sudo" OR message~"su "
   | table timestamp hostname user message
@@ -838,7 +838,7 @@ function UseCaseExamples() {
       <section>
         <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">Performance Analysis</h2>
         <div className="space-y-4">
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Slow API Endpoints</h3>
             <CodeBlock code={`search app_name=api
   | stats p50(response_time) as median,
@@ -849,7 +849,7 @@ function UseCaseExamples() {
   | sort desc p95`} />
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Response Time Distribution</h3>
             <CodeBlock code={`search app_name=api
   | eval bucket=case(
@@ -867,7 +867,7 @@ function UseCaseExamples() {
       <section>
         <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">Error Tracking</h2>
         <div className="space-y-4">
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Error Rate by Application</h3>
             <CodeBlock code={`search *
   | eval is_error=if(severity <= 3, 1, 0)
@@ -878,7 +878,7 @@ function UseCaseExamples() {
   | sort desc error_rate`} />
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Unique Error Messages</h3>
             <CodeBlock code={`search severity<=3
   | stats dc(message) as unique_errors,
@@ -892,7 +892,7 @@ function UseCaseExamples() {
       <section>
         <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">Infrastructure Monitoring</h2>
         <div className="space-y-4">
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Network Traffic Analysis</h3>
             <CodeBlock code={`search protocol=* source_ip=*
   | stats count as connections,
@@ -902,7 +902,7 @@ function UseCaseExamples() {
   | limit 50`} />
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Active Users</h3>
             <CodeBlock code={`search message~"login"
   | rex field=message "user=(?P<username>\\w+)"
@@ -962,14 +962,14 @@ function MCPSection() {
       <section>
         <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">Quick Start</h2>
         <div className="space-y-4">
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">1. Generate an API Key</h3>
             <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
               Go to <strong>Settings → API Keys</strong> and create a new key for Claude Desktop.
             </p>
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">2. Configure Claude Desktop</h3>
             <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
               Add this to your <code className="code">claude_desktop_config.json</code>:
@@ -992,14 +992,14 @@ function MCPSection() {
             </p>
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">3. Restart Claude Desktop</h3>
             <p className="text-sm text-slate-600 dark:text-slate-400">
               Close and reopen Claude Desktop. You should see LogNog in the MCP servers list.
             </p>
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">4. Start Chatting!</h3>
             <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">Try these example prompts:</p>
             <ul className="text-sm text-slate-600 dark:text-slate-400 space-y-1">
@@ -1019,7 +1019,7 @@ function MCPSection() {
         </p>
 
         <div className="overflow-x-auto">
-          <table className="table card dark:bg-slate-800">
+          <table className="table card dark:bg-nog-800">
             <thead>
               <tr>
                 <th>Tool</th>
@@ -1071,7 +1071,7 @@ function MCPSection() {
         </p>
 
         <div className="overflow-x-auto">
-          <table className="table card dark:bg-slate-800">
+          <table className="table card dark:bg-nog-800">
             <thead>
               <tr>
                 <th>Resource URI</th>
@@ -1115,7 +1115,7 @@ function MCPSection() {
       <section>
         <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">Example Conversations</h2>
         <div className="space-y-4">
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Investigating an Issue</h3>
             <div className="space-y-2 text-sm">
               <p className="text-slate-600 dark:text-slate-400">
@@ -1133,7 +1133,7 @@ function MCPSection() {
             </div>
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Setting Up Alerting</h3>
             <div className="space-y-2 text-sm">
               <p className="text-slate-600 dark:text-slate-400">
@@ -1150,7 +1150,7 @@ function MCPSection() {
       <section>
         <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">API Endpoints</h2>
         <div className="overflow-x-auto">
-          <table className="table card dark:bg-slate-800">
+          <table className="table card dark:bg-nog-800">
             <thead>
               <tr>
                 <th>Endpoint</th>
@@ -1214,7 +1214,7 @@ function SyslogFormatSection() {
         <p className="text-slate-600 dark:text-slate-400 mb-4">
           Both syslog formats begin with a priority value enclosed in angle brackets. The priority is calculated as:
         </p>
-        <div className="card p-4 dark:bg-slate-800 mb-4">
+        <div className="card p-4 dark:bg-nog-800 mb-4">
           <div className="text-center">
             <code className="text-lg font-mono text-amber-600 dark:text-amber-400">
               Priority = (Facility x 8) + Severity
@@ -1239,7 +1239,7 @@ Priority: (16 x 8) + 4 = 132
           Syslog defines 8 severity levels, from most severe (0) to least severe (7):
         </p>
         <div className="overflow-x-auto">
-          <table className="table card dark:bg-slate-800">
+          <table className="table card dark:bg-nog-800">
             <thead>
               <tr>
                 <th>Code</th>
@@ -1291,7 +1291,7 @@ Priority: (16 x 8) + 4 = 132
                 <td>Informational messages</td>
                 <td>User login, request processed</td>
               </tr>
-              <tr className="bg-slate-50 dark:bg-slate-800">
+              <tr className="bg-nog-50 dark:bg-nog-800">
                 <td><code className="code">7</code></td>
                 <td><strong>Debug</strong></td>
                 <td>Debug-level messages</td>
@@ -1314,7 +1314,7 @@ Priority: (16 x 8) + 4 = 132
           Facility codes indicate the type of program or system that generated the message:
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-3">System Facilities (0-11)</h3>
             <div className="space-y-1 text-sm">
               <div className="flex justify-between"><span>0 - kernel</span><span className="text-slate-500">Kernel messages</span></div>
@@ -1331,7 +1331,7 @@ Priority: (16 x 8) + 4 = 132
               <div className="flex justify-between"><span>11 - ftp</span><span className="text-slate-500">FTP daemon</span></div>
             </div>
           </div>
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-3">Local Facilities (16-23)</h3>
             <div className="space-y-1 text-sm">
               <div className="flex justify-between"><span>16 - local0</span><span className="text-slate-500">Custom use</span></div>
@@ -1356,7 +1356,7 @@ Priority: (16 x 8) + 4 = 132
           RFC 3164 is the traditional BSD syslog format, widely used by Unix/Linux systems and network devices.
           It is simple but has limitations like no timezone support and ambiguous parsing.
         </p>
-        <div className="card p-4 dark:bg-slate-800 mb-4">
+        <div className="card p-4 dark:bg-nog-800 mb-4">
           <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Format Structure</h3>
           <CodeBlock code={`<PRI>TIMESTAMP HOSTNAME TAG: MESSAGE
 
@@ -1367,7 +1367,7 @@ Components:
   TAG       = Program name, often with PID: "program[pid]"
   MESSAGE   = The actual log message`} />
         </div>
-        <div className="card p-4 dark:bg-slate-800">
+        <div className="card p-4 dark:bg-nog-800">
           <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Example Messages</h3>
           <CodeBlock code={`# Basic message from sshd
 <38>Jan 15 10:30:45 server01 sshd[12345]: Accepted password for user from 192.168.1.100 port 52413
@@ -1396,7 +1396,7 @@ Components:
           RFC 5424 is the modern syslog standard with improved structure, ISO 8601 timestamps with timezone,
           structured data support, and better parsing reliability.
         </p>
-        <div className="card p-4 dark:bg-slate-800 mb-4">
+        <div className="card p-4 dark:bg-nog-800 mb-4">
           <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Format Structure</h3>
           <CodeBlock code={`<PRI>VERSION TIMESTAMP HOSTNAME APP-NAME PROCID MSGID STRUCTURED-DATA MSG
 
@@ -1411,7 +1411,7 @@ Components:
   STRUCTURED-DATA = Key-value pairs in brackets, or "-"
   MSG             = UTF-8 message content (optional BOM)`} />
         </div>
-        <div className="card p-4 dark:bg-slate-800">
+        <div className="card p-4 dark:bg-nog-800">
           <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Example Messages</h3>
           <CodeBlock code={`# Basic RFC 5424 message
 <34>1 2024-01-15T10:30:45.123Z server01.example.com sshd 12345 AUTH_SUCCESS - User admin logged in
@@ -1444,7 +1444,7 @@ Components:
           RFC 5424 supports structured data elements - key-value pairs that can be parsed automatically.
           LogNog extracts these into queryable fields.
         </p>
-        <div className="card p-4 dark:bg-slate-800 mb-4">
+        <div className="card p-4 dark:bg-nog-800 mb-4">
           <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">SD-ELEMENT Format</h3>
           <CodeBlock code={`[SD-ID PARAM-NAME="PARAM-VALUE" ...]
 
@@ -1474,7 +1474,7 @@ Examples:
           LogNog uses Vector for syslog ingestion and automatically parses incoming messages into structured fields:
         </p>
         <div className="overflow-x-auto">
-          <table className="table card dark:bg-slate-800">
+          <table className="table card dark:bg-nog-800">
             <thead>
               <tr>
                 <th>Syslog Component</th>
@@ -1549,7 +1549,7 @@ Examples:
           Use these commands to send test syslog messages to LogNog:
         </p>
         <div className="space-y-4">
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Using netcat (nc)</h3>
             <CodeBlock code={`# RFC 3164 format (UDP)
 echo "<14>$(date +'%b %d %H:%M:%S') $(hostname) myapp[$$]: Test message from LogNog" | nc -u localhost 514
@@ -1560,7 +1560,7 @@ echo "<14>$(date +'%b %d %H:%M:%S') $(hostname) myapp[$$]: Test message from Log
 # RFC 5424 format
 echo "<14>1 $(date -u +'%Y-%m-%dT%H:%M:%SZ') $(hostname) myapp $$ TEST - Test message RFC 5424" | nc -u localhost 514`} />
           </div>
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Using logger (Linux/macOS)</h3>
             <CodeBlock code={`# Local syslog (forwarded to LogNog if configured)
 logger -p local0.info "Test message from logger"
@@ -1571,7 +1571,7 @@ logger -n localhost -P 514 -p user.notice "Direct test to LogNog"
 # With tag/program name
 logger -t myapp -p local0.warning "Warning from myapp"`} />
           </div>
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">PowerShell (Windows)</h3>
             <CodeBlock code={`# Send UDP syslog message
 $message = "<14>Jan 15 10:30:00 $(hostname) myapp[1234]: Test from PowerShell"
@@ -1589,24 +1589,24 @@ $udpClient.Close()`} />
           Many network devices and applications have their own syslog message formats. Here are some common examples:
         </p>
         <div className="space-y-4">
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Cisco IOS</h3>
             <CodeBlock code={`<189>Jan 15 10:30:45 router01 %SYS-5-CONFIG_I: Configured from console by admin
 <190>Jan 15 10:30:46 router01 %LINEPROTO-5-UPDOWN: Line protocol on Interface GigabitEthernet0/1, changed state to up
 <187>Jan 15 10:30:47 router01 %SEC-6-IPACCESSLOGP: list 101 denied tcp 10.0.0.1(12345) -> 192.168.1.1(80), 1 packet`} />
           </div>
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Linux sshd</h3>
             <CodeBlock code={`<38>Jan 15 10:30:45 server sshd[12345]: Accepted publickey for admin from 10.0.0.50 port 52413 ssh2: RSA SHA256:abc123...
 <38>Jan 15 10:30:46 server sshd[12346]: Failed password for invalid user test from 192.168.1.100 port 54321 ssh2
 <86>Jan 15 10:30:47 server sshd[12345]: pam_unix(sshd:session): session opened for user admin by (uid=0)`} />
           </div>
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">nginx</h3>
             <CodeBlock code={`<134>Jan 15 10:30:45 webserver nginx: 192.168.1.100 - - [15/Jan/2024:10:30:45 +0000] "GET /api/users HTTP/1.1" 200 1234 "-" "Mozilla/5.0"
 <131>Jan 15 10:30:46 webserver nginx: 2024/01/15 10:30:46 [error] 1234#0: *5678 connect() failed (111: Connection refused)`} />
           </div>
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">pfSense/OPNsense Firewall</h3>
             <CodeBlock code={`<134>Jan 15 10:30:45 firewall filterlog[12345]: 5,,,1000000103,em0,match,block,in,4,0x0,,64,12345,0,DF,6,tcp,60,192.168.1.100,10.0.0.1,54321,22,0,S,1234567890,,65535,,`} />
           </div>
@@ -1616,7 +1616,7 @@ $udpClient.Close()`} />
       <section>
         <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">Troubleshooting</h2>
         <div className="space-y-4">
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Logs Not Appearing?</h3>
             <ul className="space-y-2 text-sm text-slate-600 dark:text-slate-400">
               <li className="flex items-start gap-2">
@@ -1637,7 +1637,7 @@ $udpClient.Close()`} />
               </li>
             </ul>
           </div>
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Parsing Issues?</h3>
             <ul className="space-y-2 text-sm text-slate-600 dark:text-slate-400">
               <li className="flex items-start gap-2">
@@ -1687,12 +1687,12 @@ function APIReferenceSection() {
           LogNog uses JWT tokens for user authentication and API keys for programmatic access.
         </p>
         <div className="space-y-4">
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">JWT Token Authentication</h3>
             <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">For UI/interactive sessions</p>
             <CodeBlock code={`Authorization: Bearer <jwt_token>`} />
           </div>
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">API Key Authentication</h3>
             <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">For agents and integrations</p>
             <CodeBlock code={`X-API-Key: <your_api_key>
@@ -1701,7 +1701,7 @@ Authorization: Bearer <your_api_key>`} />
           </div>
         </div>
         <div className="overflow-x-auto mt-4">
-          <table className="table card dark:bg-slate-800">
+          <table className="table card dark:bg-nog-800">
             <thead><tr><th>Endpoint</th><th>Method</th><th>Description</th></tr></thead>
             <tbody>
               <tr><td><code className="code">/auth/setup-required</code></td><td>GET</td><td>Check if initial setup is needed</td></tr>
@@ -1717,7 +1717,7 @@ Authorization: Bearer <your_api_key>`} />
             </tbody>
           </table>
         </div>
-        <div className="card p-4 dark:bg-slate-800 mt-4">
+        <div className="card p-4 dark:bg-nog-800 mt-4">
           <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Login Example</h3>
           <CodeBlock code={`curl -X POST http://localhost/api/auth/login \\
   -H "Content-Type: application/json" \\
@@ -1737,7 +1737,7 @@ Authorization: Bearer <your_api_key>`} />
         <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-4">Search API</h2>
         <p className="text-slate-600 dark:text-slate-400 mb-4">Execute DSL queries and manage saved searches.</p>
         <div className="overflow-x-auto">
-          <table className="table card dark:bg-slate-800">
+          <table className="table card dark:bg-nog-800">
             <thead><tr><th>Endpoint</th><th>Method</th><th>Description</th></tr></thead>
             <tbody>
               <tr><td><code className="code">/search/query</code></td><td>POST</td><td>Execute a DSL query</td></tr>
@@ -1752,7 +1752,7 @@ Authorization: Bearer <your_api_key>`} />
             </tbody>
           </table>
         </div>
-        <div className="card p-4 dark:bg-slate-800 mt-4">
+        <div className="card p-4 dark:bg-nog-800 mt-4">
           <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Query Example</h3>
           <CodeBlock code={`curl -X POST http://localhost/api/search/query \\
   -H "Content-Type: application/json" \\
@@ -1766,7 +1766,7 @@ Authorization: Bearer <your_api_key>`} />
         <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-4">Ingestion API</h2>
         <p className="text-slate-600 dark:text-slate-400 mb-4">Send logs to LogNog via HTTP. Requires API key.</p>
         <div className="overflow-x-auto">
-          <table className="table card dark:bg-slate-800">
+          <table className="table card dark:bg-nog-800">
             <thead><tr><th>Endpoint</th><th>Method</th><th>Description</th></tr></thead>
             <tbody>
               <tr><td><code className="code">/ingest/agent</code></td><td>POST</td><td>LogNog In agent events</td></tr>
@@ -1788,7 +1788,7 @@ Authorization: Bearer <your_api_key>`} />
         <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-4">Dashboards API</h2>
         <p className="text-slate-600 dark:text-slate-400 mb-4">Manage dashboards, panels, variables, and annotations.</p>
         <div className="overflow-x-auto">
-          <table className="table card dark:bg-slate-800">
+          <table className="table card dark:bg-nog-800">
             <thead><tr><th>Endpoint</th><th>Method</th><th>Description</th></tr></thead>
             <tbody>
               <tr><td><code className="code">/dashboards</code></td><td>GET/POST</td><td>List/create dashboards</td></tr>
@@ -1810,7 +1810,7 @@ Authorization: Bearer <your_api_key>`} />
         <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-4">Alerts API</h2>
         <p className="text-slate-600 dark:text-slate-400 mb-4">Create and manage alert rules with various trigger conditions.</p>
         <div className="overflow-x-auto">
-          <table className="table card dark:bg-slate-800">
+          <table className="table card dark:bg-nog-800">
             <thead><tr><th>Endpoint</th><th>Method</th><th>Description</th></tr></thead>
             <tbody>
               <tr><td><code className="code">/alerts</code></td><td>GET/POST</td><td>List/create alerts</td></tr>
@@ -1831,7 +1831,7 @@ Authorization: Bearer <your_api_key>`} />
         <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-4">Silences API</h2>
         <p className="text-slate-600 dark:text-slate-400 mb-4">Temporarily silence alerts at global, host, or alert level.</p>
         <div className="overflow-x-auto">
-          <table className="table card dark:bg-slate-800">
+          <table className="table card dark:bg-nog-800">
             <thead><tr><th>Endpoint</th><th>Method</th><th>Description</th></tr></thead>
             <tbody>
               <tr><td><code className="code">/silences</code></td><td>GET/POST</td><td>List/create silences</td></tr>
@@ -1841,7 +1841,7 @@ Authorization: Bearer <your_api_key>`} />
             </tbody>
           </table>
         </div>
-        <div className="card p-4 dark:bg-slate-800 mt-4">
+        <div className="card p-4 dark:bg-nog-800 mt-4">
           <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Silence Levels</h3>
           <ul className="text-sm text-slate-600 dark:text-slate-400 space-y-1">
             <li><strong>global</strong> - Silence all alerts</li>
@@ -1857,7 +1857,7 @@ Authorization: Bearer <your_api_key>`} />
         <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-4">GeoIP & IP Utilities</h2>
         <p className="text-slate-600 dark:text-slate-400 mb-4">IP geolocation and classification endpoints.</p>
         <div className="overflow-x-auto">
-          <table className="table card dark:bg-slate-800">
+          <table className="table card dark:bg-nog-800">
             <thead><tr><th>Endpoint</th><th>Method</th><th>Description</th></tr></thead>
             <tbody>
               <tr><td><code className="code">/geoip/status</code></td><td>GET</td><td>GeoIP service status</td></tr>
@@ -1870,7 +1870,7 @@ Authorization: Bearer <your_api_key>`} />
             </tbody>
           </table>
         </div>
-        <div className="card p-4 dark:bg-slate-800 mt-4">
+        <div className="card p-4 dark:bg-nog-800 mt-4">
           <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">IP Classification Types</h3>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
             <code className="code">private</code>
@@ -1889,7 +1889,7 @@ Authorization: Bearer <your_api_key>`} />
       <section>
         <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-4">Statistics API</h2>
         <div className="overflow-x-auto">
-          <table className="table card dark:bg-slate-800">
+          <table className="table card dark:bg-nog-800">
             <thead><tr><th>Endpoint</th><th>Method</th><th>Description</th></tr></thead>
             <tbody>
               <tr><td><code className="code">/stats/overview</code></td><td>GET</td><td>Log counts, top hosts/apps</td></tr>
@@ -1906,7 +1906,7 @@ Authorization: Bearer <your_api_key>`} />
       <section>
         <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-4">Settings API</h2>
         <div className="overflow-x-auto">
-          <table className="table card dark:bg-slate-800">
+          <table className="table card dark:bg-nog-800">
             <thead><tr><th>Endpoint</th><th>Method</th><th>Description</th></tr></thead>
             <tbody>
               <tr><td><code className="code">/settings/preferences</code></td><td>GET/PUT</td><td>User preferences</td></tr>
@@ -1924,7 +1924,7 @@ Authorization: Bearer <your_api_key>`} />
         <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-4">AI API</h2>
         <p className="text-slate-600 dark:text-slate-400 mb-4">AI-powered features via Ollama or OpenRouter.</p>
         <div className="overflow-x-auto">
-          <table className="table card dark:bg-slate-800">
+          <table className="table card dark:bg-nog-800">
             <thead><tr><th>Endpoint</th><th>Method</th><th>Description</th></tr></thead>
             <tbody>
               <tr><td><code className="code">/ai/status</code></td><td>GET</td><td>AI provider availability</td></tr>
@@ -1942,7 +1942,7 @@ Authorization: Bearer <your_api_key>`} />
       <section>
         <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-4">Error Codes</h2>
         <div className="overflow-x-auto">
-          <table className="table card dark:bg-slate-800">
+          <table className="table card dark:bg-nog-800">
             <thead><tr><th>Code</th><th>Description</th></tr></thead>
             <tbody>
               <tr><td><code className="code">200</code></td><td>Success</td></tr>
@@ -1957,7 +1957,7 @@ Authorization: Bearer <your_api_key>`} />
             </tbody>
           </table>
         </div>
-        <div className="card p-4 dark:bg-slate-800 mt-4">
+        <div className="card p-4 dark:bg-nog-800 mt-4">
           <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Error Response Format</h3>
           <CodeBlock code={`{
   "error": "Short error description",
@@ -1970,7 +1970,7 @@ Authorization: Bearer <your_api_key>`} />
       <section>
         <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-4">Rate Limiting</h2>
         <div className="overflow-x-auto">
-          <table className="table card dark:bg-slate-800">
+          <table className="table card dark:bg-nog-800">
             <thead><tr><th>Endpoint</th><th>Limit</th></tr></thead>
             <tbody>
               <tr><td><code className="code">/auth/login</code></td><td>10 requests/minute</td></tr>
@@ -2003,7 +2003,7 @@ function LogIngestionSection() {
         </p>
 
         <div className="overflow-x-auto mb-6">
-          <table className="table card dark:bg-slate-800">
+          <table className="table card dark:bg-nog-800">
             <thead>
               <tr>
                 <th>Method</th>
@@ -2034,7 +2034,7 @@ function LogIngestionSection() {
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">UDP Syslog (Recommended)</h3>
             <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
               Fast, fire-and-forget delivery. Best for high-volume logging where occasional message loss is acceptable.
@@ -2046,7 +2046,7 @@ echo "<14>Test message from LogNog" | nc -u localhost 514
 echo "<14>$(date +"%b %d %H:%M:%S") myhost myapp[1234]: Test log" | nc -u localhost 514`} />
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">TCP Syslog</h3>
             <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
               Reliable delivery with connection-oriented protocol. Use when you need guaranteed delivery.
@@ -2059,7 +2059,7 @@ logger -n localhost -P 514 -T "Test message from logger"`} />
           </div>
         </div>
 
-        <div className="card p-4 dark:bg-slate-800 mb-4">
+        <div className="card p-4 dark:bg-nog-800 mb-4">
           <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Configure rsyslog to Forward Logs</h3>
           <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
             Add this to your <code className="code">/etc/rsyslog.conf</code> or <code className="code">/etc/rsyslog.d/lognog.conf</code>:
@@ -2074,7 +2074,7 @@ logger -n localhost -P 514 -T "Test message from logger"`} />
 auth,authpriv.* @lognog-server:514`} />
         </div>
 
-        <div className="card p-4 dark:bg-slate-800">
+        <div className="card p-4 dark:bg-nog-800">
           <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Configure syslog-ng to Forward Logs</h3>
           <CodeBlock code={`# Add to syslog-ng.conf
 destination d_lognog {
@@ -2101,7 +2101,7 @@ log {
         </div>
 
         <div className="space-y-4">
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Generic HTTP Endpoint</h3>
             <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
               <code className="code">POST /api/ingest/http</code> - Accept JSON array of log entries
@@ -2127,7 +2127,7 @@ log {
   ]'`} />
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Log Entry Fields</h3>
             <div className="overflow-x-auto">
               <table className="table w-full">
@@ -2161,7 +2161,7 @@ log {
           collectors and instrumented applications.
         </p>
 
-        <div className="card p-4 dark:bg-slate-800 mb-4">
+        <div className="card p-4 dark:bg-nog-800 mb-4">
           <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">OTLP HTTP Endpoint</h3>
           <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
             <code className="code">POST /api/ingest/otlp/v1/logs</code>
@@ -2187,7 +2187,7 @@ log {
   }'`} />
         </div>
 
-        <div className="card p-4 dark:bg-slate-800">
+        <div className="card p-4 dark:bg-nog-800">
           <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">OpenTelemetry Collector Configuration</h3>
           <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
             Configure your OTEL Collector to export logs to LogNog:
@@ -2214,7 +2214,7 @@ service:
         </p>
 
         <div className="space-y-4">
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Setup Instructions</h3>
             <ol className="text-sm text-slate-600 dark:text-slate-400 space-y-2 list-decimal list-inside">
               <li>Go to your Supabase Dashboard &rarr; Settings &rarr; Log Drains</li>
@@ -2225,7 +2225,7 @@ service:
             </ol>
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Endpoint Details</h3>
             <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
               <code className="code">POST /api/ingest/supabase</code>
@@ -2263,7 +2263,7 @@ curl -X POST http://localhost/api/ingest/supabase \\
         </p>
 
         <div className="space-y-4">
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Setup Instructions</h3>
             <ol className="text-sm text-slate-600 dark:text-slate-400 space-y-2 list-decimal list-inside">
               <li>Go to Vercel Dashboard &rarr; Project Settings &rarr; Integrations</li>
@@ -2274,7 +2274,7 @@ curl -X POST http://localhost/api/ingest/supabase \\
             </ol>
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Endpoint Details</h3>
             <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
               <code className="code">POST /api/ingest/vercel</code> - Accepts NDJSON format
@@ -2302,7 +2302,7 @@ curl -X POST http://localhost/api/ingest/supabase \\
         </p>
 
         <div className="space-y-4">
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Setup Instructions</h3>
             <ol className="text-sm text-slate-600 dark:text-slate-400 space-y-2 list-decimal list-inside">
               <li>Create a SmartApp in SmartThings Developer Workspace</li>
@@ -2312,7 +2312,7 @@ curl -X POST http://localhost/api/ingest/supabase \\
             </ol>
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Event Types Captured</h3>
             <ul className="text-sm text-slate-600 dark:text-slate-400 space-y-1 list-disc list-inside">
               <li><strong>Device events:</strong> capability.attribute = value (e.g., switch.on, temperature.72)</li>
@@ -2332,7 +2332,7 @@ curl -X POST http://localhost/api/ingest/supabase \\
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Features</h3>
             <ul className="text-sm text-slate-600 dark:text-slate-400 space-y-1 list-disc list-inside">
               <li>Watch directories for new log files</li>
@@ -2344,7 +2344,7 @@ curl -X POST http://localhost/api/ingest/supabase \\
             </ul>
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Installation</h3>
             <CodeBlock code={`# Install from source
 cd agent
@@ -2358,7 +2358,7 @@ python build.py`} />
           </div>
         </div>
 
-        <div className="card p-4 dark:bg-slate-800">
+        <div className="card p-4 dark:bg-nog-800">
           <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Agent Configuration</h3>
           <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
             Configure the agent with a <code className="code">config.yaml</code> file:
@@ -2389,7 +2389,7 @@ collectors:
       - C:\\Windows\\System32\\config`} />
         </div>
 
-        <div className="card p-4 dark:bg-slate-800">
+        <div className="card p-4 dark:bg-nog-800">
           <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Agent API Endpoint</h3>
           <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
             <code className="code">POST /api/ingest</code> - Used by the LogNog In agent
@@ -2418,7 +2418,7 @@ collectors:
         </p>
 
         <div className="space-y-4">
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Creating an API Key</h3>
             <ol className="text-sm text-slate-600 dark:text-slate-400 space-y-2 list-decimal list-inside">
               <li>Navigate to <strong>Settings &rarr; API Keys</strong></li>
@@ -2428,7 +2428,7 @@ collectors:
             </ol>
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Using API Keys</h3>
             <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
               Include the API key in the <code className="code">X-API-Key</code> header:
@@ -2455,7 +2455,7 @@ curl -X POST http://localhost/api/ingest/http \\
       <section>
         <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">Quick Reference: curl Examples</h2>
         <div className="space-y-4">
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Send a Single Log</h3>
             <CodeBlock code={`curl -X POST http://localhost/api/ingest/http \\
   -H "Content-Type: application/json" \\
@@ -2463,7 +2463,7 @@ curl -X POST http://localhost/api/ingest/http \\
   -d '[{"message": "Application started", "severity": 6, "app_name": "myapp"}]'`} />
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Send Error Log</h3>
             <CodeBlock code={`curl -X POST http://localhost/api/ingest/http \\
   -H "Content-Type: application/json" \\
@@ -2476,7 +2476,7 @@ curl -X POST http://localhost/api/ingest/http \\
   }]'`} />
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Send Batch of Logs</h3>
             <CodeBlock code={`curl -X POST http://localhost/api/ingest/http \\
   -H "Content-Type: application/json" \\
@@ -2488,7 +2488,7 @@ curl -X POST http://localhost/api/ingest/http \\
   ]'`} />
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Test Syslog via netcat</h3>
             <CodeBlock code={`# UDP
 echo "<14>Jan 15 10:30:00 myhost myapp: Test message" | nc -u localhost 514
@@ -2523,7 +2523,7 @@ function DashboardsSection() {
       <section>
         <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">Creating a Dashboard</h2>
         <div className="space-y-4">
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">1. Create New Dashboard</h3>
             <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
               Navigate to <strong>Dashboards</strong> in the sidebar and click <strong>New Dashboard</strong>.
@@ -2531,14 +2531,14 @@ function DashboardsSection() {
             </p>
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">2. Add Panels</h3>
             <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
               Click <strong>Add Panel</strong> to create visualizations. Each panel needs a title, query, and visualization type.
             </p>
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">3. Arrange Layout</h3>
             <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
               Use <strong>Edit Layout</strong> mode to drag and resize panels. The dashboard uses a 12-column grid.
@@ -2554,7 +2554,7 @@ function DashboardsSection() {
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2 mb-2">
               <span className="w-2 h-2 bg-amber-500 rounded-full"></span>
               Table
@@ -2568,7 +2568,7 @@ function DashboardsSection() {
   | limit 50`} />
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2 mb-2">
               <span className="w-2 h-2 bg-amber-500 rounded-full"></span>
               Bar Chart
@@ -2582,7 +2582,7 @@ function DashboardsSection() {
   | limit 10`} />
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2 mb-2">
               <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
               Pie Chart
@@ -2594,7 +2594,7 @@ function DashboardsSection() {
   | stats count by severity`} />
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2 mb-2">
               <span className="w-2 h-2 bg-green-500 rounded-full"></span>
               Area Chart (Line)
@@ -2606,7 +2606,7 @@ function DashboardsSection() {
   | timechart span=1h count`} />
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2 mb-2">
               <span className="w-2 h-2 bg-red-500 rounded-full"></span>
               Single Stat
@@ -2617,7 +2617,7 @@ function DashboardsSection() {
             <CodeBlock code={`search severity<=3 | stats count`} />
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2 mb-2">
               <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
               Gauge
@@ -2628,7 +2628,7 @@ function DashboardsSection() {
             <CodeBlock code={`search * | stats count`} />
           </div>
 
-          <div className="card p-4 dark:bg-slate-800 md:col-span-2">
+          <div className="card p-4 dark:bg-nog-800 md:col-span-2">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2 mb-2">
               <span className="w-2 h-2 bg-orange-500 rounded-full"></span>
               Heatmap
@@ -2648,7 +2648,7 @@ function DashboardsSection() {
         </p>
 
         <div className="overflow-x-auto">
-          <table className="table card dark:bg-slate-800">
+          <table className="table card dark:bg-nog-800">
             <thead>
               <tr>
                 <th>Preset</th>
@@ -2681,7 +2681,7 @@ function DashboardsSection() {
         </p>
 
         <div className="space-y-4">
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Variable Types</h3>
             <div className="overflow-x-auto">
               <table className="table w-full">
@@ -2702,7 +2702,7 @@ function DashboardsSection() {
             </div>
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Using Variables in Queries</h3>
             <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
               Reference variables with <code className="code">$variable$</code> syntax:
@@ -2718,7 +2718,7 @@ search hostname=$host$ severity>=$severity$
 search * | timechart span=$interval$ count`} />
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Query-Based Variables</h3>
             <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
               For Query-type variables, use searches that return distinct values:
@@ -2742,7 +2742,7 @@ search * | stats count by severity | table severity`} />
         </p>
 
         <div className="space-y-4">
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Entering Edit Mode</h3>
             <ol className="text-sm text-slate-600 dark:text-slate-400 space-y-1 list-decimal list-inside">
               <li>Open a dashboard</li>
@@ -2752,7 +2752,7 @@ search * | stats count by severity | table severity`} />
             </ol>
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Layout Grid</h3>
             <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
               The dashboard uses a 12-column grid:
@@ -2781,7 +2781,7 @@ search * | stats count by severity | table severity`} />
         <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">Sharing and Exporting</h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Public Sharing</h3>
             <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
               Share dashboards publicly without requiring login:
@@ -2797,7 +2797,7 @@ search * | stats count by severity | table severity`} />
             </p>
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Export Dashboard</h3>
             <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
               Export dashboards as JSON for backup or sharing:
@@ -2812,7 +2812,7 @@ search * | stats count by severity | table severity`} />
             </p>
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Branding</h3>
             <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
               Customize dashboards with your own branding:
@@ -2825,7 +2825,7 @@ search * | stats count by severity | table severity`} />
             </ul>
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Duplicate Dashboard</h3>
             <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
               Create a copy of any dashboard:
@@ -2846,7 +2846,7 @@ search * | stats count by severity | table severity`} />
         </p>
 
         <div className="overflow-x-auto">
-          <table className="table card dark:bg-slate-800">
+          <table className="table card dark:bg-nog-800">
             <thead>
               <tr>
                 <th>Chart Type</th>
@@ -2869,7 +2869,7 @@ search * | stats count by severity | table severity`} />
           Enable AI-powered insights for your dashboards using a local Ollama instance:
         </p>
 
-        <div className="card p-4 dark:bg-slate-800">
+        <div className="card p-4 dark:bg-nog-800">
           <ol className="text-sm text-slate-600 dark:text-slate-400 space-y-2 list-decimal list-inside">
             <li>Ensure Ollama is running (<code className="code">ollama serve</code>)</li>
             <li>Open Settings dropdown on any dashboard</li>
@@ -2889,7 +2889,7 @@ search * | stats count by severity | table severity`} />
         <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">Best Practices</h2>
 
         <div className="space-y-4">
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Layout Guidelines</h3>
             <ul className="text-sm text-slate-600 dark:text-slate-400 space-y-2">
               <li className="flex items-start gap-2">
@@ -2911,7 +2911,7 @@ search * | stats count by severity | table severity`} />
             </ul>
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Query Optimization</h3>
             <ul className="text-sm text-slate-600 dark:text-slate-400 space-y-2">
               <li className="flex items-start gap-2">
@@ -2933,7 +2933,7 @@ search * | stats count by severity | table severity`} />
             </ul>
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Color Guidelines</h3>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
               <div className="flex items-center gap-2 text-sm">
@@ -2967,7 +2967,7 @@ search * | stats count by severity | table severity`} />
 
       <section>
         <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">Example Dashboard Layout</h2>
-        <div className="card p-4 bg-slate-50 dark:bg-slate-800/50">
+        <div className="card p-4 bg-nog-50 dark:bg-nog-800/50">
           <pre className="text-sm text-slate-600 dark:text-slate-300 overflow-x-auto">{`
 +-------------+-------------+-------------+-------------+
 |  CRITICAL   |  AUTH       |  FIREWALL   |  UNIQUE     |
@@ -2993,7 +2993,7 @@ search * | stats count by severity | table severity`} />
         <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">Quick Reference Queries</h2>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Gauge Panels</h3>
             <CodeBlock code={`# Error count
 search severity<=3 | stats count
@@ -3005,7 +3005,7 @@ search * | stats dc(hostname)
 search action=accept | stats count`} />
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Bar Charts</h3>
             <CodeBlock code={`# Top hosts by volume
 search *
@@ -3014,7 +3014,7 @@ search *
   | limit 10`} />
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Time Series</h3>
             <CodeBlock code={`# Log volume over time
 search *
@@ -3025,7 +3025,7 @@ search *
   | timechart span=1h count by hostname`} />
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Tables</h3>
             <CodeBlock code={`# Recent errors
 search severity<=3
@@ -3058,37 +3058,37 @@ function KnowledgeSection() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Lookups</h3>
             <p className="text-sm text-slate-600 dark:text-slate-400">
               Enrich events with external data (IP to location, user to department, etc.)
             </p>
           </div>
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Field Extractions</h3>
             <p className="text-sm text-slate-600 dark:text-slate-400">
               Extract structured fields from unstructured log messages using patterns
             </p>
           </div>
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Event Types</h3>
             <p className="text-sm text-slate-600 dark:text-slate-400">
               Categorize events based on search criteria for easier classification
             </p>
           </div>
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Tags</h3>
             <p className="text-sm text-slate-600 dark:text-slate-400">
               Label field values for quick categorization and filtering
             </p>
           </div>
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Saved Searches</h3>
             <p className="text-sm text-slate-600 dark:text-slate-400">
               Store frequently used queries for quick access and reuse
             </p>
           </div>
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Workflow Actions</h3>
             <p className="text-sm text-slate-600 dark:text-slate-400">
               Define custom actions triggered from search results (links, scripts)
@@ -3105,7 +3105,7 @@ function KnowledgeSection() {
         </p>
 
         <div className="space-y-4">
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Lookup Types</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -3123,7 +3123,7 @@ function KnowledgeSection() {
             </div>
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Creating a Lookup</h3>
             <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
               Create a manual lookup to map IP addresses to their locations:
@@ -3151,7 +3151,7 @@ function KnowledgeSection() {
 }`} />
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Searching a Lookup</h3>
             <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
               Query the lookup to retrieve enrichment data:
@@ -3188,7 +3188,7 @@ Response:
         </p>
 
         <div className="space-y-4">
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Pattern Types</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
@@ -3208,7 +3208,7 @@ Response:
             </div>
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Creating a Field Extraction</h3>
             <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
               Extract fields from Apache access logs:
@@ -3225,7 +3225,7 @@ Response:
 }`} />
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Testing Extractions</h3>
             <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
               Test your pattern against a sample log line before deploying:
@@ -3249,7 +3249,7 @@ Response:
 }`} />
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Common Grok Patterns</h3>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -3295,7 +3295,7 @@ Response:
         </p>
 
         <div className="space-y-4">
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Creating an Event Type</h3>
             <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
               Define an event type to identify failed SSH login attempts:
@@ -3310,7 +3310,7 @@ Response:
 }`} />
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Priority System</h3>
             <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
               Event types are evaluated in priority order (lower number = higher priority).
@@ -3349,7 +3349,7 @@ Response:
         </p>
 
         <div className="space-y-4">
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Creating Tags</h3>
             <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
               Tag the sshd application as a security-related service:
@@ -3370,7 +3370,7 @@ POST /api/knowledge/tags
 }`} />
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Querying Tags</h3>
             <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
               Find all tags applied to a specific field value:
@@ -3399,7 +3399,7 @@ Response:
         </p>
 
         <div className="space-y-4">
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Creating a Saved Search</h3>
             <CodeBlock code={`POST /api/search/saved
 {
@@ -3409,7 +3409,7 @@ Response:
 }`} />
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Managing Saved Searches</h3>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -3451,7 +3451,7 @@ Response:
         </p>
 
         <div className="space-y-4">
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Action Types</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
@@ -3475,7 +3475,7 @@ Response:
             </div>
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Creating a Link Action</h3>
             <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
               Check an IP address on VirusTotal:
@@ -3491,7 +3491,7 @@ Response:
 }`} />
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Creating a Search Action</h3>
             <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
               Find related events by username:
@@ -3507,7 +3507,7 @@ Response:
 }`} />
           </div>
 
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Variable Substitution</h3>
             <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
               Use <code className="code">$field_name$</code> syntax to insert field values:
@@ -3547,7 +3547,7 @@ Response:
         </p>
 
         <div className="overflow-x-auto">
-          <table className="table card dark:bg-slate-800">
+          <table className="table card dark:bg-nog-800">
             <thead>
               <tr>
                 <th>Category</th>
@@ -3594,7 +3594,7 @@ Response:
       <section>
         <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">Best Practices</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Naming Conventions</h3>
             <ul className="text-sm text-slate-600 dark:text-slate-400 space-y-1">
               <li>- Use descriptive, action-oriented names</li>
@@ -3602,7 +3602,7 @@ Response:
               <li>- Use consistent prefixes for related objects</li>
             </ul>
           </div>
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Organization</h3>
             <ul className="text-sm text-slate-600 dark:text-slate-400 space-y-1">
               <li>- Group related knowledge objects together</li>
@@ -3610,7 +3610,7 @@ Response:
               <li>- Document the purpose of each object</li>
             </ul>
           </div>
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Testing</h3>
             <ul className="text-sm text-slate-600 dark:text-slate-400 space-y-1">
               <li>- Always test field extractions before enabling</li>
@@ -3618,7 +3618,7 @@ Response:
               <li>- Test workflow actions with sample data</li>
             </ul>
           </div>
-          <div className="card p-4 dark:bg-slate-800">
+          <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Performance</h3>
             <ul className="text-sm text-slate-600 dark:text-slate-400 space-y-1">
               <li>- Keep lookup tables reasonably sized</li>
@@ -3636,9 +3636,9 @@ export default function DocsPage() {
   const [activeSection, setActiveSection] = useState<DocSection>('query');
 
   return (
-    <div className="min-h-full bg-slate-50 dark:bg-slate-900">
+    <div className="min-h-full bg-nog-50 dark:bg-nog-900">
       {/* Header */}
-      <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 shadow-sm">
+      <div className="bg-white dark:bg-nog-800 border-b border-slate-200 dark:border-slate-700 shadow-sm">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
           <div className="flex items-center gap-2 sm:gap-3 mb-2">
             <div className="p-1.5 sm:p-2 bg-amber-50 dark:bg-amber-900/30 rounded-lg">

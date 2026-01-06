@@ -116,6 +116,7 @@ export interface Dashboard {
   icon?: string;
   // Organization
   app_scope?: string;
+  category?: string;
   // Sharing
   is_public?: number;
   public_token?: string;

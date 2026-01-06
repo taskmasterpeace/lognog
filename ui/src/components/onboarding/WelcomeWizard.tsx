@@ -208,7 +208,7 @@ export default function WelcomeWizard({ onComplete, onSkip }: WelcomeWizardProps
       case 'high': return 'text-orange-500 bg-orange-50 dark:bg-orange-900/20';
       case 'medium': return 'text-amber-500 bg-amber-50 dark:bg-amber-900/20';
       case 'low': return 'text-amber-500 bg-amber-50 dark:bg-amber-900/20';
-      default: return 'text-slate-500 bg-slate-50 dark:bg-nog-700';
+      default: return 'text-slate-500 bg-nog-50 dark:bg-nog-700';
     }
   };
 
@@ -234,7 +234,7 @@ export default function WelcomeWizard({ onComplete, onSkip }: WelcomeWizardProps
           </div>
           <button
             onClick={onSkip}
-            className="p-2 hover:bg-slate-100 dark:hover:bg-nog-700 rounded-lg transition-colors"
+            className="p-2 hover:bg-nog-100 dark:hover:bg-nog-700 rounded-lg transition-colors"
             title="Skip setup"
           >
             <X className="w-5 h-5 text-slate-500" />
@@ -252,7 +252,7 @@ export default function WelcomeWizard({ onComplete, onSkip }: WelcomeWizardProps
                       ? 'bg-amber-500 text-white'
                       : i < getCurrentStepIndex()
                       ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'
-                      : 'bg-slate-100 text-slate-400 dark:bg-nog-700 dark:text-slate-500'
+                      : 'bg-nog-100 text-slate-400 dark:bg-nog-700 dark:text-slate-500'
                   }`}
                 >
                   {i < getCurrentStepIndex() ? <Check className="w-3 h-3 sm:w-4 sm:h-4" /> : i + 1}
@@ -287,19 +287,19 @@ export default function WelcomeWizard({ onComplete, onSkip }: WelcomeWizardProps
                 LogNog is your self-hosted log management platform. This quick setup will help you:
               </p>
               <div className="space-y-2 sm:space-y-4 max-w-sm mx-auto text-left">
-                <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-slate-50 dark:bg-nog-700/50 rounded-lg">
+                <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-nog-50 dark:bg-nog-700/50 rounded-lg">
                   <div className="w-7 h-7 sm:w-8 sm:h-8 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center flex-shrink-0">
                     <Database className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-600 dark:text-amber-400" />
                   </div>
                   <span className="text-sm sm:text-base text-slate-700 dark:text-slate-300">Get sample data to explore</span>
                 </div>
-                <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-slate-50 dark:bg-nog-700/50 rounded-lg">
+                <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-nog-50 dark:bg-nog-700/50 rounded-lg">
                   <div className="w-7 h-7 sm:w-8 sm:h-8 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center flex-shrink-0">
                     <LayoutDashboard className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-600 dark:text-amber-400" />
                   </div>
                   <span className="text-sm sm:text-base text-slate-700 dark:text-slate-300">Create your first dashboard</span>
                 </div>
-                <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-slate-50 dark:bg-nog-700/50 rounded-lg">
+                <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-nog-50 dark:bg-nog-700/50 rounded-lg">
                   <div className="w-7 h-7 sm:w-8 sm:h-8 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center flex-shrink-0">
                     <Bell className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-600 dark:text-amber-400" />
                   </div>
@@ -378,7 +378,7 @@ export default function WelcomeWizard({ onComplete, onSkip }: WelcomeWizardProps
               </div>
 
               {dataSourceChoice === 'real' && (
-                <div className="mt-6 p-4 bg-slate-50 dark:bg-nog-700/50 rounded-lg">
+                <div className="mt-6 p-4 bg-nog-50 dark:bg-nog-700/50 rounded-lg">
                   <h5 className="font-medium text-slate-700 dark:text-slate-300 mb-2">
                     Quick Setup Options:
                   </h5>
@@ -563,7 +563,7 @@ export default function WelcomeWizard({ onComplete, onSkip }: WelcomeWizardProps
         </div>
 
         {/* Footer */}
-        <div className="p-3 sm:p-6 border-t border-slate-200 dark:border-nog-700 flex items-center justify-between bg-slate-50 dark:bg-nog-900 gap-2">
+        <div className="p-3 sm:p-6 border-t border-slate-200 dark:border-nog-700 flex items-center justify-between bg-nog-50 dark:bg-nog-900 gap-2">
           <div className="flex-shrink-0">
             {currentStep !== 'welcome' && (
               <button

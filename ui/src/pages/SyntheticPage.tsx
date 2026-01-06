@@ -293,14 +293,14 @@ export default function SyntheticPage() {
       {/* Dashboard Stats */}
       {dashboard && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
+          <div className="bg-white dark:bg-nog-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
             <div className="text-sm text-slate-500 dark:text-slate-400">Total Tests</div>
             <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">{dashboard.total_tests}</div>
             <div className="text-xs text-slate-400 mt-1">
               {dashboard.enabled_tests} enabled, {dashboard.disabled_tests} disabled
             </div>
           </div>
-          <div className="bg-white dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
+          <div className="bg-white dark:bg-nog-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
             <div className="text-sm text-slate-500 dark:text-slate-400">Healthy</div>
             <div className="text-2xl font-bold text-green-600 dark:text-green-400">
               {dashboard.by_status?.success || 0}
@@ -309,13 +309,13 @@ export default function SyntheticPage() {
               {dashboard.tests_with_failures} with failures
             </div>
           </div>
-          <div className="bg-white dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
+          <div className="bg-white dark:bg-nog-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
             <div className="text-sm text-slate-500 dark:text-slate-400">Avg Response</div>
             <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">
               {formatResponseTime(dashboard.avg_response_time_ms)}
             </div>
           </div>
-          <div className="bg-white dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
+          <div className="bg-white dark:bg-nog-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
             <div className="text-sm text-slate-500 dark:text-slate-400">By Type</div>
             <div className="text-xs space-y-1 mt-2">
               {Object.entries(dashboard.by_type || {}).map(([type, count]) => (
@@ -331,7 +331,7 @@ export default function SyntheticPage() {
 
       {/* Tests List */}
       {tests.length === 0 ? (
-        <div className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-8 text-center">
+        <div className="bg-white dark:bg-nog-800 rounded-lg border border-slate-200 dark:border-slate-700 p-8 text-center">
           <Activity className="w-12 h-12 mx-auto text-slate-400 mb-4" />
           <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100 mb-2">No synthetic tests yet</h3>
           <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
@@ -357,7 +357,7 @@ export default function SyntheticPage() {
             return (
               <div
                 key={test.id}
-                className="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden"
+                className="bg-white dark:bg-nog-800 rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden"
               >
                 {/* Test Header */}
                 <div className="p-4">
@@ -371,7 +371,7 @@ export default function SyntheticPage() {
                     </button>
 
                     {/* Type Icon */}
-                    <div className="p-2 rounded-lg bg-slate-100 dark:bg-slate-700">
+                    <div className="p-2 rounded-lg bg-nog-100 dark:bg-nog-700">
                       <TypeIcon className="w-5 h-5 text-slate-600 dark:text-slate-300" />
                     </div>
 
@@ -380,7 +380,7 @@ export default function SyntheticPage() {
                       <div className="flex items-center gap-2">
                         <h3 className="font-medium text-slate-900 dark:text-slate-100 truncate">{test.name}</h3>
                         {!test.enabled && (
-                          <span className="px-2 py-0.5 text-xs rounded bg-slate-100 dark:bg-slate-700 text-slate-500">
+                          <span className="px-2 py-0.5 text-xs rounded bg-nog-100 dark:bg-nog-700 text-slate-500">
                             Disabled
                           </span>
                         )}
@@ -431,7 +431,7 @@ export default function SyntheticPage() {
                       </button>
                       <button
                         onClick={() => openEditModal(test)}
-                        className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                        className="p-2 text-slate-400 hover:text-slate-600 hover:bg-nog-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                         title="Edit"
                       >
                         <Settings className="w-4 h-4" />
@@ -441,7 +441,7 @@ export default function SyntheticPage() {
                           setSelectedTestId(test.id);
                           setShowResultsModal(true);
                         }}
-                        className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                        className="p-2 text-slate-400 hover:text-slate-600 hover:bg-nog-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                         title="View results"
                       >
                         <BarChart3 className="w-4 h-4" />
@@ -463,7 +463,7 @@ export default function SyntheticPage() {
 
                 {/* Expanded Details */}
                 {isExpanded && (
-                  <div className="border-t border-slate-200 dark:border-slate-700 px-4 py-3 bg-slate-50 dark:bg-slate-800/50">
+                  <div className="border-t border-slate-200 dark:border-slate-700 px-4 py-3 bg-nog-50 dark:bg-nog-800/50">
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                       <div>
                         <div className="text-slate-500 dark:text-slate-400">Schedule</div>
@@ -500,7 +500,7 @@ export default function SyntheticPage() {
       {/* Create/Edit Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-nog-800 rounded-xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
               <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                 {editingTest ? 'Edit Test' : 'Create Test'}
@@ -528,7 +528,7 @@ export default function SyntheticPage() {
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100"
                     placeholder="e.g., API Health Check"
                   />
                 </div>
@@ -539,7 +539,7 @@ export default function SyntheticPage() {
                   <textarea
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100"
                     rows={2}
                     placeholder="Optional description..."
                   />
@@ -561,7 +561,7 @@ export default function SyntheticPage() {
                         className={`p-3 rounded-lg border text-left transition-colors ${
                           formData.test_type === type.value
                             ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/20'
-                            : 'border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
+                            : 'border-slate-200 dark:border-slate-700 hover:bg-nog-50 dark:hover:bg-slate-700'
                         }`}
                       >
                         <Icon className={`w-5 h-5 mb-1 ${formData.test_type === type.value ? 'text-amber-600' : 'text-slate-400'}`} />
@@ -589,7 +589,7 @@ export default function SyntheticPage() {
                             config: { ...formData.config, method: e.target.value },
                           })
                         }
-                        className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                        className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100"
                       >
                         {HTTP_METHODS.map((m) => (
                           <option key={m} value={m}>{m}</option>
@@ -609,7 +609,7 @@ export default function SyntheticPage() {
                             config: { ...formData.config, url: e.target.value },
                           })
                         }
-                        className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                        className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100"
                         placeholder="https://api.example.com/health"
                       />
                     </div>
@@ -633,7 +633,7 @@ export default function SyntheticPage() {
                           config: { ...formData.config, host: e.target.value },
                         })
                       }
-                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100"
                       placeholder="database.example.com"
                     />
                   </div>
@@ -650,7 +650,7 @@ export default function SyntheticPage() {
                           config: { ...formData.config, port: parseInt(e.target.value) || 80 },
                         })
                       }
-                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100"
                       placeholder="5432"
                     />
                   </div>
@@ -666,7 +666,7 @@ export default function SyntheticPage() {
                   <select
                     value={formData.schedule}
                     onChange={(e) => setFormData({ ...formData, schedule: e.target.value })}
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100"
                   >
                     {SCHEDULE_OPTIONS.map((opt) => (
                       <option key={opt.value} value={opt.value}>{opt.label}</option>
@@ -681,7 +681,7 @@ export default function SyntheticPage() {
                     type="number"
                     value={formData.timeout_ms}
                     onChange={(e) => setFormData({ ...formData, timeout_ms: parseInt(e.target.value) || 30000 })}
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100"
                   />
                 </div>
               </div>
@@ -697,7 +697,7 @@ export default function SyntheticPage() {
                   max={10}
                   value={formData.alert_after_failures}
                   onChange={(e) => setFormData({ ...formData, alert_after_failures: parseInt(e.target.value) || 3 })}
-                  className="w-32 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                  className="w-32 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100"
                 />
               </div>
             </div>
@@ -710,7 +710,7 @@ export default function SyntheticPage() {
                   setEditingTest(null);
                   resetForm();
                 }}
-                className="px-4 py-2 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
+                className="px-4 py-2 text-slate-700 dark:text-slate-300 hover:bg-nog-100 dark:hover:bg-slate-700 rounded-lg"
               >
                 Cancel
               </button>
@@ -732,7 +732,7 @@ export default function SyntheticPage() {
       {/* Results Modal */}
       {showResultsModal && selectedTestId && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
+          <div className="bg-white dark:bg-nog-800 rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
             <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
               <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
                 Test Results
@@ -750,7 +750,7 @@ export default function SyntheticPage() {
 
             <div className="overflow-auto max-h-[70vh]">
               <table className="w-full">
-                <thead className="bg-slate-50 dark:bg-slate-700/50 sticky top-0">
+                <thead className="bg-nog-50 dark:bg-nog-700/50 sticky top-0">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Timestamp</th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase">Status</th>
@@ -765,7 +765,7 @@ export default function SyntheticPage() {
                     const statusInfo = STATUS_COLORS[result.status];
                     const StatusIcon = statusInfo.icon;
                     return (
-                      <tr key={result.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/30">
+                      <tr key={result.id} className="hover:bg-nog-50 dark:hover:bg-slate-700/30">
                         <td className="px-4 py-3 text-sm text-slate-900 dark:text-slate-100">
                           {formatTimestamp(result.timestamp)}
                         </td>

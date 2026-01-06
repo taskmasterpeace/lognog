@@ -678,7 +678,7 @@ export default function SettingsPage() {
   // ========== TAB CONTENT COMPONENTS ==========
 
   const PreferencesTab = () => (
-    <section className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-4 sm:p-6">
+    <section className="bg-white dark:bg-nog-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-4 sm:p-6">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
           <Palette className="w-5 h-5" />
@@ -745,7 +745,7 @@ export default function SettingsPage() {
               value={preferences.default_time_range}
               onChange={(e) => savePreferences({ default_time_range: e.target.value })}
               disabled={prefsSaving}
-              className="w-full max-w-xs px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+              className="w-full max-w-xs px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-800 text-slate-900 dark:text-slate-100"
             >
               <option value="-15m">Last 15 minutes</option>
               <option value="-1h">Last hour</option>
@@ -768,7 +768,7 @@ export default function SettingsPage() {
               value={preferences.date_format}
               onChange={(e) => savePreferences({ date_format: e.target.value as UserPreferences['date_format'] })}
               disabled={prefsSaving}
-              className="w-full max-w-xs px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+              className="w-full max-w-xs px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-800 text-slate-900 dark:text-slate-100"
             >
               <option value="12-hour">12-hour (Dec 28, 2025 2:30 PM)</option>
               <option value="24-hour">24-hour (Dec 28, 2025 14:30)</option>
@@ -799,7 +799,7 @@ export default function SettingsPage() {
                   className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                     preferences.default_view_mode === value
                       ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
-                      : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600'
+                      : 'bg-nog-100 text-slate-600 dark:bg-nog-700 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600'
                   }`}
                 >
                   {label}
@@ -824,7 +824,7 @@ export default function SettingsPage() {
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                 preferences.sidebar_open
                   ? 'bg-amber-500'
-                  : 'bg-slate-300 dark:bg-slate-600'
+                  : 'bg-slate-300 dark:bg-nog-600'
               }`}
             >
               <span
@@ -851,7 +851,7 @@ export default function SettingsPage() {
               }}
               min="1"
               max="100"
-              className="w-24 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+              className="w-24 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-800 text-slate-900 dark:text-slate-100"
             />
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
               Number of recent queries to remember (1-100)
@@ -865,7 +865,7 @@ export default function SettingsPage() {
   const AccountTab = () => (
     <>
       {/* User Profile Section */}
-      <section className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-4 sm:p-6 mb-6">
+      <section className="bg-white dark:bg-nog-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-4 sm:p-6 mb-6">
         <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2 mb-4">
           <User className="w-5 h-5" />
           Profile
@@ -906,7 +906,7 @@ export default function SettingsPage() {
       </section>
 
       {/* Password Change Section */}
-      <section className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-4 sm:p-6 mb-6">
+      <section className="bg-white dark:bg-nog-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-4 sm:p-6 mb-6">
         <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2 mb-4">
           <Lock className="w-5 h-5" />
           Change Password
@@ -936,7 +936,7 @@ export default function SettingsPage() {
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
               required
-              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-800 text-slate-900 dark:text-slate-100"
             />
           </div>
           <div>
@@ -949,7 +949,7 @@ export default function SettingsPage() {
               onChange={(e) => setNewPassword(e.target.value)}
               required
               minLength={8}
-              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-800 text-slate-900 dark:text-slate-100"
             />
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
               Minimum 8 characters
@@ -964,7 +964,7 @@ export default function SettingsPage() {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
-              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-800 text-slate-900 dark:text-slate-100"
             />
           </div>
           <button
@@ -985,7 +985,7 @@ export default function SettingsPage() {
       </section>
 
       {/* API Keys Section */}
-      <section className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-4 sm:p-6">
+      <section className="bg-white dark:bg-nog-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
             <Key className="w-5 h-5" />
@@ -1022,7 +1022,7 @@ export default function SettingsPage() {
               This is the only time you'll see this key. Store it securely.
             </p>
             <div className="flex items-center gap-2">
-              <code className="flex-1 p-3 bg-white dark:bg-slate-900 rounded border border-amber-300 dark:border-amber-700 text-sm font-mono break-all">
+              <code className="flex-1 p-3 bg-white dark:bg-nog-900 rounded border border-amber-300 dark:border-amber-700 text-sm font-mono break-all">
                 {newlyCreatedKey}
               </code>
               <button
@@ -1043,7 +1043,7 @@ export default function SettingsPage() {
 
         {/* New key form */}
         {showNewKeyForm && (
-          <div className="mb-6 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700">
+          <div className="mb-6 p-4 bg-nog-50 dark:bg-nog-900/50 rounded-lg border border-slate-200 dark:border-slate-700">
             <h3 className="font-medium text-slate-900 dark:text-slate-100 mb-4">
               Create New API Key
             </h3>
@@ -1062,7 +1062,7 @@ export default function SettingsPage() {
                   value={newKeyName}
                   onChange={(e) => setNewKeyName(e.target.value)}
                   placeholder="e.g., LogNog In Agent - Server 1"
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-800 text-slate-900 dark:text-slate-100"
                 />
               </div>
 
@@ -1089,7 +1089,7 @@ export default function SettingsPage() {
                       className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                         newKeyPermissions.includes(perm)
                           ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
-                          : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'
+                          : 'bg-nog-100 text-slate-600 dark:bg-nog-700 dark:text-slate-400'
                       }`}
                     >
                       {perm}
@@ -1112,7 +1112,7 @@ export default function SettingsPage() {
                   onChange={(e) => setNewKeyExpiry(e.target.value)}
                   placeholder="Leave empty for no expiry"
                   min="1"
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-800 text-slate-900 dark:text-slate-100"
                 />
               </div>
 
@@ -1158,8 +1158,8 @@ export default function SettingsPage() {
                 key={key.id}
                 className={`p-3 sm:p-4 rounded-lg border ${
                   key.is_active
-                    ? 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700'
-                    : 'bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700 opacity-60'
+                    ? 'bg-white dark:bg-nog-900 border-slate-200 dark:border-slate-700'
+                    : 'bg-nog-50 dark:bg-nog-900/50 border-slate-200 dark:border-slate-700 opacity-60'
                 }`}
               >
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
@@ -1181,7 +1181,7 @@ export default function SettingsPage() {
                       </code>
                       <button
                         onClick={() => copyPrefixToClipboard(key.key_prefix)}
-                        className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded transition-colors"
+                        className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-nog-100 dark:hover:bg-slate-700 rounded transition-colors"
                         title="Copy prefix"
                       >
                         {copiedPrefix === key.key_prefix ? (
@@ -1232,7 +1232,7 @@ export default function SettingsPage() {
   );
 
   const DataTab = () => (
-    <section className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+    <section className="bg-white dark:bg-nog-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
       <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2 mb-4">
         <Database className="w-5 h-5" />
         Data Management
@@ -1258,7 +1258,7 @@ export default function SettingsPage() {
 
       {/* Current Stats */}
       {demoStats && (
-        <div className="mb-6 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700">
+        <div className="mb-6 p-4 bg-nog-50 dark:bg-nog-900/50 rounded-lg border border-slate-200 dark:border-slate-700">
           <div className="flex items-center justify-between mb-3">
             <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
               Current Database Stats
@@ -1309,7 +1309,7 @@ export default function SettingsPage() {
                 onChange={(e) => setDemoDataCount(e.target.value)}
                 min="10"
                 max="10000"
-                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-800 text-slate-900 dark:text-slate-100"
               />
             </div>
             <div>
@@ -1319,7 +1319,7 @@ export default function SettingsPage() {
               <select
                 value={demoDataTimeRange}
                 onChange={(e) => setDemoDataTimeRange(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-800 text-slate-900 dark:text-slate-100"
               >
                 <option value="-1h">Last Hour</option>
                 <option value="-6h">Last 6 Hours</option>
@@ -1343,7 +1343,7 @@ export default function SettingsPage() {
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                     demoDataTypes.includes(type)
                       ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
-                      : 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400'
+                      : 'bg-nog-100 text-slate-600 dark:bg-nog-700 dark:text-slate-400'
                   }`}
                 >
                   {type}
@@ -1429,7 +1429,7 @@ export default function SettingsPage() {
   );
 
   const GeoIPTab = () => (
-    <section className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+    <section className="bg-white dark:bg-nog-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
       <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2 mb-4">
         <Globe className="w-5 h-5" />
         GeoIP Lookup
@@ -1490,7 +1490,7 @@ export default function SettingsPage() {
                   value={geoipTestIp}
                   onChange={(e) => setGeoipTestIp(e.target.value)}
                   placeholder="8.8.8.8"
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-mono"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-800 text-slate-900 dark:text-slate-100 font-mono"
                 />
               </div>
               <button
@@ -1514,7 +1514,7 @@ export default function SettingsPage() {
 
             {/* Test Result */}
             {geoipTestResult && (
-              <div className="mt-4 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700">
+              <div className="mt-4 p-4 bg-nog-50 dark:bg-nog-900/50 rounded-lg border border-slate-200 dark:border-slate-700">
                 {geoipTestResult.error ? (
                   <div className="text-red-600 dark:text-red-400 text-sm">
                     {geoipTestResult.error}
@@ -1568,7 +1568,7 @@ export default function SettingsPage() {
           </div>
         </div>
       ) : (
-        <div className="p-6 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700">
+        <div className="p-6 bg-nog-50 dark:bg-nog-900/50 rounded-lg border border-slate-200 dark:border-slate-700">
           <div className="flex items-start gap-3 mb-4">
             <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
             <div>
@@ -1581,25 +1581,25 @@ export default function SettingsPage() {
             </div>
           </div>
 
-          <div className="bg-white dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
+          <div className="bg-white dark:bg-nog-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
             <h4 className="font-medium text-slate-900 dark:text-slate-100 mb-2 text-sm">
               Quick Setup (Docker)
             </h4>
             <ol className="space-y-2 text-sm text-slate-600 dark:text-slate-400">
-              <li>1. Register for a free MaxMind account at <code className="text-xs bg-slate-100 dark:bg-slate-700 px-1 rounded">maxmind.com/geolite2/signup</code></li>
+              <li>1. Register for a free MaxMind account at <code className="text-xs bg-nog-100 dark:bg-nog-700 px-1 rounded">maxmind.com/geolite2/signup</code></li>
               <li>2. Generate a license key in your account dashboard</li>
               <li>3. Run the download script:
-                <pre className="mt-2 p-3 bg-slate-100 dark:bg-slate-900 rounded text-xs font-mono overflow-x-auto">
+                <pre className="mt-2 p-3 bg-nog-100 dark:bg-nog-900 rounded text-xs font-mono overflow-x-auto">
                   docker exec -it lognog-api /bin/sh{'\n'}
                   MAXMIND_ACCOUNT_ID=your_id \{'\n'}
                   MAXMIND_LICENSE_KEY=your_key \{'\n'}
                   /app/scripts/download-geoip.sh
                 </pre>
               </li>
-              <li>4. Restart the API: <code className="text-xs bg-slate-100 dark:bg-slate-700 px-1 rounded">docker-compose restart api</code></li>
+              <li>4. Restart the API: <code className="text-xs bg-nog-100 dark:bg-nog-700 px-1 rounded">docker-compose restart api</code></li>
             </ol>
             <p className="mt-3 text-xs text-slate-500 dark:text-slate-500">
-              See <code className="bg-slate-100 dark:bg-slate-700 px-1 rounded">api/scripts/GEOIP-SETUP.md</code> for detailed instructions.
+              See <code className="bg-nog-100 dark:bg-nog-700 px-1 rounded">api/scripts/GEOIP-SETUP.md</code> for detailed instructions.
             </p>
           </div>
         </div>
@@ -1615,14 +1615,14 @@ export default function SettingsPage() {
         case 'user':
           return 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400';
         case 'readonly':
-          return 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400';
+          return 'bg-nog-100 text-slate-600 dark:bg-nog-700 dark:text-slate-400';
         default:
-          return 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400';
+          return 'bg-nog-100 text-slate-600 dark:bg-nog-700 dark:text-slate-400';
       }
     };
 
     return (
-      <section className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+      <section className="bg-white dark:bg-nog-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
             <Users className="w-5 h-5" />
@@ -1632,7 +1632,7 @@ export default function SettingsPage() {
             <button
               onClick={loadUsers}
               disabled={usersLoading}
-              className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+              className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-nog-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
               title="Refresh users"
             >
               <RefreshCw className={`w-4 h-4 ${usersLoading ? 'animate-spin' : ''}`} />
@@ -1669,7 +1669,7 @@ export default function SettingsPage() {
 
         {/* Create user form */}
         {showCreateUser && (
-          <div className="mb-6 p-4 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-700">
+          <div className="mb-6 p-4 bg-nog-50 dark:bg-nog-900/50 rounded-lg border border-slate-200 dark:border-slate-700">
             <h3 className="font-medium text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
               <UserPlus className="w-4 h-4" />
               Create New User
@@ -1686,7 +1686,7 @@ export default function SettingsPage() {
                     onChange={(e) => setNewUsername(e.target.value)}
                     required
                     pattern="[a-zA-Z0-9_-]+"
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-800 text-slate-900 dark:text-slate-100"
                     placeholder="johndoe"
                   />
                 </div>
@@ -1699,7 +1699,7 @@ export default function SettingsPage() {
                     value={newEmail}
                     onChange={(e) => setNewEmail(e.target.value)}
                     required
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-800 text-slate-900 dark:text-slate-100"
                     placeholder="john@example.com"
                   />
                 </div>
@@ -1715,7 +1715,7 @@ export default function SettingsPage() {
                     onChange={(e) => setNewUserPassword(e.target.value)}
                     required
                     minLength={8}
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-800 text-slate-900 dark:text-slate-100"
                     placeholder="Min 8 characters"
                   />
                 </div>
@@ -1726,7 +1726,7 @@ export default function SettingsPage() {
                   <select
                     value={newUserRole}
                     onChange={(e) => setNewUserRole(e.target.value)}
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-800 text-slate-900 dark:text-slate-100"
                   >
                     <option value="user">User</option>
                     <option value="readonly">Read Only</option>
@@ -1779,8 +1779,8 @@ export default function SettingsPage() {
                   key={u.id}
                   className={`p-4 rounded-lg border ${
                     u.is_active
-                      ? 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700'
-                      : 'bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700 opacity-60'
+                      ? 'bg-white dark:bg-nog-900 border-slate-200 dark:border-slate-700'
+                      : 'bg-nog-50 dark:bg-nog-900/50 border-slate-200 dark:border-slate-700 opacity-60'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-4">
@@ -1821,7 +1821,7 @@ export default function SettingsPage() {
                         <select
                           value={u.role}
                           onChange={(e) => handleRoleChange(u.id, e.target.value)}
-                          className="px-2 py-1 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300"
+                          className="px-2 py-1 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-nog-800 text-slate-700 dark:text-slate-300"
                         >
                           <option value="user">User</option>
                           <option value="readonly">Read Only</option>
@@ -1864,7 +1864,7 @@ export default function SettingsPage() {
   };
 
   const SystemTab = () => (
-    <section className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+    <section className="bg-white dark:bg-nog-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
           <Cpu className="w-5 h-5" />
@@ -1873,7 +1873,7 @@ export default function SettingsPage() {
         <button
           onClick={loadSystemStats}
           disabled={systemLoading}
-          className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+          className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-nog-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
           title="Refresh stats"
         >
           <RefreshCw className={`w-4 h-4 ${systemLoading ? 'animate-spin' : ''}`} />
@@ -1888,25 +1888,25 @@ export default function SettingsPage() {
         <div className="space-y-6">
           {/* System Stats */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-lg">
+            <div className="p-4 bg-nog-50 dark:bg-nog-900/50 rounded-lg">
               <span className="text-sm text-slate-500 dark:text-slate-400">API Version</span>
               <div className="font-semibold text-slate-900 dark:text-slate-100 font-mono">
                 {systemStats.api_version}
               </div>
             </div>
-            <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-lg">
+            <div className="p-4 bg-nog-50 dark:bg-nog-900/50 rounded-lg">
               <span className="text-sm text-slate-500 dark:text-slate-400">Node.js Version</span>
               <div className="font-semibold text-slate-900 dark:text-slate-100 font-mono">
                 {systemStats.node_version}
               </div>
             </div>
-            <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-lg">
+            <div className="p-4 bg-nog-50 dark:bg-nog-900/50 rounded-lg">
               <span className="text-sm text-slate-500 dark:text-slate-400">Uptime</span>
               <div className="font-semibold text-slate-900 dark:text-slate-100">
                 {Math.floor(systemStats.uptime_seconds / 3600)}h {Math.floor((systemStats.uptime_seconds % 3600) / 60)}m
               </div>
             </div>
-            <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-lg">
+            <div className="p-4 bg-nog-50 dark:bg-nog-900/50 rounded-lg">
               <span className="text-sm text-slate-500 dark:text-slate-400">Memory Usage</span>
               <div className="font-semibold text-slate-900 dark:text-slate-100">
                 {systemStats.memory_usage_mb} MB
@@ -1984,7 +1984,7 @@ export default function SettingsPage() {
     return (
       <div className="space-y-6">
         {/* Ollama Configuration */}
-        <section className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+        <section className="bg-white dark:bg-nog-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2 mb-4">
             <Bot className="w-5 h-5" />
             Ollama Configuration
@@ -2009,7 +2009,7 @@ export default function SettingsPage() {
                   value={localOllamaUrl}
                   onChange={(e) => setLocalOllamaUrl(e.target.value)}
                   placeholder="http://localhost:11434"
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 font-mono text-sm"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-800 text-slate-900 dark:text-slate-100 font-mono text-sm"
                 />
               </div>
 
@@ -2023,7 +2023,7 @@ export default function SettingsPage() {
                     value={localOllamaModel}
                     onChange={(e) => setLocalOllamaModel(e.target.value)}
                     placeholder="llama3.2"
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-800 text-slate-900 dark:text-slate-100"
                   />
                 </div>
                 <div>
@@ -2035,7 +2035,7 @@ export default function SettingsPage() {
                     value={localReasoningModel}
                     onChange={(e) => setLocalReasoningModel(e.target.value)}
                     placeholder="deepseek-r1"
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-800 text-slate-900 dark:text-slate-100"
                   />
                 </div>
               </div>
@@ -2049,7 +2049,7 @@ export default function SettingsPage() {
                   value={localEmbedModel}
                   onChange={(e) => setLocalEmbedModel(e.target.value)}
                   placeholder="nomic-embed-text"
-                  className="w-full max-w-xs px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                  className="w-full max-w-xs px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-800 text-slate-900 dark:text-slate-100"
                 />
               </div>
 
@@ -2065,7 +2065,7 @@ export default function SettingsPage() {
                 <button
                   onClick={testAiConnection}
                   disabled={aiTesting}
-                  className="flex items-center gap-2 px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 font-medium rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
+                  className="flex items-center gap-2 px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 font-medium rounded-lg hover:bg-nog-50 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
                 >
                   {aiTesting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                   Test Connection
@@ -2104,7 +2104,7 @@ export default function SettingsPage() {
         </section>
 
         {/* OpenRouter Configuration */}
-        <section className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+        <section className="bg-white dark:bg-nog-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2 mb-4">
             <Zap className="w-5 h-5" />
             OpenRouter Configuration
@@ -2125,7 +2125,7 @@ export default function SettingsPage() {
                   value={localOpenrouterKey}
                   onChange={(e) => setLocalOpenrouterKey(e.target.value)}
                   placeholder={aiConfig?.openrouter?.api_key_set ? '••••••••' : 'Enter API key'}
-                  className="flex-1 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                  className="flex-1 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-800 text-slate-900 dark:text-slate-100"
                 />
                 {aiConfig?.openrouter?.api_key_set && (
                   <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs rounded">
@@ -2144,7 +2144,7 @@ export default function SettingsPage() {
                 value={localOpenrouterModel}
                 onChange={(e) => setLocalOpenrouterModel(e.target.value)}
                 placeholder="anthropic/claude-3.5-sonnet"
-                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-800 text-slate-900 dark:text-slate-100"
               />
               <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                 See <a href="https://openrouter.ai/models" target="_blank" rel="noopener noreferrer" className="text-amber-500 hover:underline">openrouter.ai/models</a> for available models

@@ -177,7 +177,7 @@ function AnomalyRow({
   const EntityIcon = ENTITY_ICONS[anomaly.entityType] || Server;
 
   return (
-    <div className={`p-4 border-l-4 ${config.border} hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors`}>
+    <div className={`p-4 border-l-4 ${config.border} hover:bg-nog-50 dark:hover:bg-nog-800 transition-colors`}>
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-start gap-3 min-w-0 flex-1">
           <div className={`p-2 rounded-lg ${config.bg}`}>
@@ -304,9 +304,9 @@ export default function AnomalyPage() {
   const anomalies = anomaliesData?.anomalies || [];
 
   return (
-    <div className="min-h-full bg-slate-50 dark:bg-slate-900">
+    <div className="min-h-full bg-nog-50 dark:bg-nog-900">
       {/* Header */}
-      <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 shadow-sm">
+      <div className="bg-white dark:bg-nog-800 border-b border-slate-200 dark:border-slate-700 shadow-sm">
         <div className="p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
@@ -494,7 +494,7 @@ export default function AnomalyPage() {
                 <select
                   value={selectedSeverity || ''}
                   onChange={(e) => setSelectedSeverity(e.target.value || undefined)}
-                  className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg bg-white dark:bg-slate-800 dark:border-slate-600"
+                  className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg bg-white dark:bg-nog-800 dark:border-slate-600"
                 >
                   <option value="">All Severities</option>
                   <option value="critical">Critical</option>

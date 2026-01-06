@@ -132,7 +132,7 @@ export function DashboardBrandingModal({
               /* Logo Preview */
               <div className="border-2 border-dashed border-slate-200 dark:border-slate-600 rounded-lg p-4">
                 <div className="flex items-center gap-4">
-                  <div className="flex-shrink-0 w-20 h-20 bg-slate-100 dark:bg-slate-700 rounded-lg flex items-center justify-center overflow-hidden">
+                  <div className="flex-shrink-0 w-20 h-20 bg-nog-100 dark:bg-nog-700 rounded-lg flex items-center justify-center overflow-hidden">
                     <img
                       src={logoUrl}
                       alt="Logo preview"
@@ -188,7 +188,7 @@ export function DashboardBrandingModal({
                     </>
                   ) : (
                     <>
-                      <div className="w-12 h-12 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center group-hover:bg-amber-100 dark:group-hover:bg-amber-900/30 transition-colors">
+                      <div className="w-12 h-12 bg-nog-100 dark:bg-nog-700 rounded-full flex items-center justify-center group-hover:bg-amber-100 dark:group-hover:bg-amber-900/30 transition-colors">
                         <Image className="w-6 h-6 text-slate-400 group-hover:text-amber-500 transition-colors" />
                       </div>
                       <div className="text-center">

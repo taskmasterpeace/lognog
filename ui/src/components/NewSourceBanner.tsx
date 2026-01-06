@@ -135,7 +135,7 @@ export default function NewSourceBanner() {
               <Link
                 key={source.index_name}
                 to={`/search?q=${encodeURIComponent(`search index=${source.index_name}`)}`}
-                className="px-3 py-1.5 bg-white dark:bg-slate-800 border border-amber-200 dark:border-amber-700 rounded-lg text-sm hover:border-amber-400 dark:hover:border-amber-500 transition-colors flex items-center gap-2"
+                className="px-3 py-1.5 bg-white dark:bg-nog-800 border border-amber-200 dark:border-amber-700 rounded-lg text-sm hover:border-amber-400 dark:hover:border-amber-500 transition-colors flex items-center gap-2"
               >
                 <span className="font-medium text-slate-900 dark:text-slate-100">
                   {source.index_name}

@@ -66,9 +66,9 @@ export default function KnowledgePage() {
   ];
 
   return (
-    <div className="min-h-full bg-slate-50 dark:bg-slate-900">
+    <div className="min-h-full bg-nog-50 dark:bg-nog-900">
       {/* Header */}
-      <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 shadow-sm">
+      <div className="bg-white dark:bg-nog-800 border-b border-slate-200 dark:border-slate-700 shadow-sm">
         <div className="p-6">
           <div className="flex items-center justify-between">
             <div>
@@ -95,7 +95,7 @@ export default function KnowledgePage() {
                 className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-all whitespace-nowrap ${
                   isActive
                     ? `border-${tab.color}-500 text-${tab.color}-600 bg-${tab.color}-50/50 dark:bg-${tab.color}-900/20`
-                    : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-50 dark:hover:bg-slate-800'
+                    : 'border-transparent text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-nog-50 dark:hover:bg-nog-800'
                 }`}
               >
                 <Icon className="w-4 h-4" />
@@ -229,7 +229,7 @@ function FieldExtractionsTab() {
                     {extraction.enabled ? (
                       <span className="badge badge-success">Enabled</span>
                     ) : (
-                      <span className="badge bg-slate-100 text-slate-600">Disabled</span>
+                      <span className="badge bg-nog-100 text-slate-600">Disabled</span>
                     )}
                   </td>
                   <td>
@@ -243,7 +243,7 @@ function FieldExtractionsTab() {
                       </button>
                       <button
                         onClick={() => handleEdit(extraction)}
-                        className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                        className="p-2 text-slate-600 hover:bg-nog-100 rounded-lg transition-colors"
                         title="Edit"
                       >
                         <Edit2 className="w-4 h-4" />
@@ -588,7 +588,7 @@ function EventTypesTab() {
                     {eventType.enabled ? (
                       <span className="badge badge-success">Enabled</span>
                     ) : (
-                      <span className="badge bg-slate-100 text-slate-600">Disabled</span>
+                      <span className="badge bg-nog-100 text-slate-600">Disabled</span>
                     )}
                     <span className="text-xs text-slate-500">Priority: {eventType.priority}</span>
                   </div>
@@ -600,7 +600,7 @@ function EventTypesTab() {
                 <div className="flex items-center gap-2 ml-4">
                   <button
                     onClick={() => handleEdit(eventType)}
-                    className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                    className="p-2 text-slate-600 hover:bg-nog-100 rounded-lg transition-colors"
                     title="Edit"
                   >
                     <Edit2 className="w-4 h-4" />
@@ -990,7 +990,7 @@ function LookupsTab() {
                       <summary className="text-xs text-amber-600 cursor-pointer hover:text-amber-700">
                         View data
                       </summary>
-                      <pre className="mt-2 p-3 bg-slate-50 rounded border border-slate-200 text-xs overflow-auto max-h-40">
+                      <pre className="mt-2 p-3 bg-nog-50 rounded border border-slate-200 text-xs overflow-auto max-h-40">
                         {JSON.stringify(JSON.parse(lookup.lookup_data), null, 2)}
                       </pre>
                     </details>
@@ -999,7 +999,7 @@ function LookupsTab() {
                 <div className="flex items-center gap-2 ml-4">
                   <button
                     onClick={() => handleEdit(lookup)}
-                    className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                    className="p-2 text-slate-600 hover:bg-nog-100 rounded-lg transition-colors"
                     title="Edit"
                   >
                     <Edit2 className="w-4 h-4" />
@@ -1244,7 +1244,7 @@ function WorkflowActionsTab() {
                 <div className="flex items-center gap-2 ml-4">
                   <button
                     onClick={() => handleEdit(action)}
-                    className="p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                    className="p-2 text-slate-600 hover:bg-nog-100 rounded-lg transition-colors"
                     title="Edit"
                   >
                     <Edit2 className="w-4 h-4" />
@@ -1510,7 +1510,7 @@ function SourceAnnotationsTab() {
           {annotations.map((annotation) => (
             <div
               key={annotation.id}
-              className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden hover:shadow-md transition-shadow"
+              className="bg-white dark:bg-nog-800 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden hover:shadow-md transition-shadow"
             >
               <div className="p-4">
                 <div className="flex items-start justify-between gap-3">
@@ -1530,7 +1530,7 @@ function SourceAnnotationsTab() {
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => handleEdit(annotation)}
-                      className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded transition-colors"
+                      className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-nog-100 dark:hover:bg-slate-700 rounded transition-colors"
                       title="Edit"
                     >
                       <Edit2 className="w-4 h-4" />
@@ -1570,7 +1570,7 @@ function SourceAnnotationsTab() {
                   )}
                   {annotation.tags && annotation.tags.length > 0 && (
                     annotation.tags.slice(0, 2).map(tag => (
-                      <span key={tag} className="px-2 py-0.5 bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded text-xs">
+                      <span key={tag} className="px-2 py-0.5 bg-nog-100 dark:bg-nog-700 text-slate-600 dark:text-slate-300 rounded text-xs">
                         {tag}
                       </span>
                     ))
@@ -1586,7 +1586,7 @@ function SourceAnnotationsTab() {
           ))}
         </div>
       ) : (
-        <div className="text-center py-12 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+        <div className="text-center py-12 bg-white dark:bg-nog-800 rounded-lg border border-slate-200 dark:border-slate-700">
           <MessageSquare className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100 mb-2">
             No Annotations Yet

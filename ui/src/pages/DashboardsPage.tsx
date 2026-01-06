@@ -116,9 +116,9 @@ export default function DashboardsPage() {
   }
 
   return (
-    <div className="min-h-full bg-slate-50 dark:bg-slate-900">
+    <div className="min-h-full bg-nog-50 dark:bg-nog-900">
       {/* Header */}
-      <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 shadow-sm">
+      <div className="bg-white dark:bg-nog-800 border-b border-slate-200 dark:border-slate-700 shadow-sm">
         <div className="p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
@@ -224,7 +224,7 @@ export default function DashboardsPage() {
         {/* Empty State */}
         {(!dashboards || dashboards.length === 0) && (
           <div className="text-center py-12">
-            <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 bg-nog-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <LayoutDashboard className="w-8 h-8 text-slate-400" />
             </div>
             <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">No dashboards yet</h3>

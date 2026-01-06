@@ -25,6 +25,7 @@ import {
   dismissAllLoginNotifications,
 } from '../db/sqlite.js';
 import { authenticate, requireAdmin, requireRole, rateLimit } from '../auth/middleware.js';
+import { logAuthLogin, logAuthLoginFailed, logAuthLogout, logAuthSetup } from '../services/internal-logger.js';
 
 const router = Router();
 
@@ -75,6 +76,7 @@ router.post('/setup', rateLimit(5, 60000), async (req, res) => {
     const user = await createUser(data.username, data.email, data.password, 'admin');
 
     logAuthEvent(user.id, 'initial_setup', req.ip, req.get('user-agent'));
+    logAuthSetup({ user_id: user.id, username: data.username });
 
     res.status(201).json({
       message: 'Admin account created successfully',
@@ -100,11 +102,23 @@ router.post('/login', rateLimit(10, 60000), async (req, res) => {
       logAuthEvent(null, 'login_failed', req.ip, req.get('user-agent'), {
         username: data.username,
       });
+      logAuthLoginFailed({
+        username: data.username,
+        reason: 'Invalid credentials',
+        ip: req.ip,
+        user_agent: req.get('user-agent'),
+      });
       res.status(401).json({ error: 'Invalid credentials' });
       return;
     }
 
     logAuthEvent(result.user.id, 'login_success', req.ip, req.get('user-agent'));
+    logAuthLogin({
+      user_id: result.user.id,
+      username: result.user.username,
+      ip: req.ip,
+      user_agent: req.get('user-agent'),
+    });
 
     // Get pending login notifications for this user
     const notifications = getLoginNotifications(result.user.id);
@@ -153,6 +167,7 @@ router.post('/logout', authenticate, (req, res) => {
   try {
     revokeRefreshTokens(req.user!.id);
     logAuthEvent(req.user!.id, 'logout', req.ip, req.get('user-agent'));
+    logAuthLogout({ user_id: req.user!.id, username: req.user!.username });
     res.json({ message: 'Logged out successfully' });
   } catch (error) {
     console.error('Logout error:', error);

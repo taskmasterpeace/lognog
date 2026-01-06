@@ -46,7 +46,7 @@ const categoryColors: Record<string, string> = {
   network: 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-900/30',
   endpoint: 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-900/30',
   web: 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-900/30',
-  custom: 'text-slate-600 bg-slate-100 dark:text-slate-400 dark:bg-slate-700',
+  custom: 'text-slate-600 bg-nog-100 dark:text-slate-400 dark:bg-nog-700',
 };
 
 const fieldTypeColors: Record<string, string> = {
@@ -136,7 +136,7 @@ export default function CIMPage() {
       {/* Stats Cards */}
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
+          <div className="bg-white dark:bg-nog-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
             <div className="flex items-center gap-2">
               <Database className="w-5 h-5 text-amber-500" />
               <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">
@@ -145,7 +145,7 @@ export default function CIMPage() {
             </div>
             <div className="text-sm text-slate-500 dark:text-slate-400">Data Models</div>
           </div>
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
+          <div className="bg-white dark:bg-nog-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
             <div className="flex items-center gap-2">
               <ArrowRightLeft className="w-5 h-5 text-amber-500" />
               <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">
@@ -154,13 +154,13 @@ export default function CIMPage() {
             </div>
             <div className="text-sm text-slate-500 dark:text-slate-400">Field Mappings</div>
           </div>
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
+          <div className="bg-white dark:bg-nog-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
             <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
               {stats.by_category?.authentication || 0}
             </div>
             <div className="text-sm text-slate-500 dark:text-slate-400">Auth Models</div>
           </div>
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
+          <div className="bg-white dark:bg-nog-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
             <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
               {Object.keys(stats.mappings_by_source || {}).length}
             </div>
@@ -209,14 +209,14 @@ export default function CIMPage() {
                 placeholder="Search models..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className="w-full pl-10 pr-4 py-2 bg-white dark:bg-nog-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
               />
             </div>
             <div className="relative">
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
-                className="appearance-none pl-4 pr-10 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className="appearance-none pl-4 pr-10 py-2 bg-white dark:bg-nog-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
               >
                 <option value="">All Categories</option>
                 <option value="authentication">Authentication</option>
@@ -250,10 +250,10 @@ export default function CIMPage() {
                 return (
                   <div
                     key={model.id}
-                    className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden"
+                    className="bg-white dark:bg-nog-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden"
                   >
                     <div
-                      className="flex items-center justify-between p-4 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50"
+                      className="flex items-center justify-between p-4 cursor-pointer hover:bg-nog-50 dark:hover:bg-slate-700/50"
                       onClick={() => setExpandedModel(isExpanded ? null : model.name)}
                     >
                       <div className="flex items-center gap-3">
@@ -273,7 +273,7 @@ export default function CIMPage() {
                               {model.name}
                             </span>
                             {model.is_builtin && (
-                              <span className="text-xs px-2 py-0.5 rounded bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300">
+                              <span className="text-xs px-2 py-0.5 rounded bg-nog-100 text-slate-600 dark:bg-nog-700 dark:text-slate-300">
                                 Built-in
                               </span>
                             )}
@@ -291,7 +291,7 @@ export default function CIMPage() {
                           <div className="flex items-center gap-1">
                             <button
                               onClick={(e) => { e.stopPropagation(); setEditingModel(model); setShowModelForm(true); }}
-                              className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                              className="p-1.5 hover:bg-nog-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                             >
                               <Edit2 className="w-4 h-4 text-slate-500" />
                             </button>
@@ -313,7 +313,7 @@ export default function CIMPage() {
 
                     {/* Expanded Fields */}
                     {isExpanded && (
-                      <div className="border-t border-slate-200 dark:border-slate-700 p-4 bg-slate-50 dark:bg-slate-900/50">
+                      <div className="border-t border-slate-200 dark:border-slate-700 p-4 bg-nog-50 dark:bg-nog-900/50">
                         <div className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
                           Fields
                         </div>
@@ -321,7 +321,7 @@ export default function CIMPage() {
                           {model.fields.map((field) => (
                             <div
                               key={field.name}
-                              className="bg-white dark:bg-slate-800 rounded-lg p-3 border border-slate-200 dark:border-slate-700"
+                              className="bg-white dark:bg-nog-800 rounded-lg p-3 border border-slate-200 dark:border-slate-700"
                             >
                               <div className="flex items-center justify-between mb-1">
                                 <span className="font-medium text-slate-900 dark:text-slate-100">
@@ -372,14 +372,14 @@ export default function CIMPage() {
                 placeholder="Search mappings..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className="w-full pl-10 pr-4 py-2 bg-white dark:bg-nog-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
               />
             </div>
             <div className="relative">
               <select
                 value={sourceFilter}
                 onChange={(e) => setSourceFilter(e.target.value)}
-                className="appearance-none pl-4 pr-10 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className="appearance-none pl-4 pr-10 py-2 bg-white dark:bg-nog-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
               >
                 <option value="">All Sources</option>
                 {uniqueSources.map(src => (
@@ -392,7 +392,7 @@ export default function CIMPage() {
               <select
                 value={modelFilter}
                 onChange={(e) => setModelFilter(e.target.value)}
-                className="appearance-none pl-4 pr-10 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className="appearance-none pl-4 pr-10 py-2 bg-white dark:bg-nog-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
               >
                 <option value="">All Models</option>
                 {models.map(m => (
@@ -411,10 +411,10 @@ export default function CIMPage() {
           </div>
 
           {/* Mappings Table */}
-          <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+          <div className="bg-white dark:bg-nog-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-slate-50 dark:bg-slate-900/50 border-b border-slate-200 dark:border-slate-700">
+                <thead className="bg-nog-50 dark:bg-nog-900/50 border-b border-slate-200 dark:border-slate-700">
                   <tr>
                     <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Source Type</th>
                     <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Source Field</th>
@@ -441,9 +441,9 @@ export default function CIMPage() {
                     </tr>
                   ) : (
                     filteredMappings.map((mapping) => (
-                      <tr key={mapping.id} className="hover:bg-slate-50 dark:hover:bg-slate-700/50">
+                      <tr key={mapping.id} className="hover:bg-nog-50 dark:hover:bg-slate-700/50">
                         <td className="px-4 py-3">
-                          <span className="px-2 py-1 rounded text-xs font-medium bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300">
+                          <span className="px-2 py-1 rounded text-xs font-medium bg-nog-100 text-slate-700 dark:bg-nog-700 dark:text-slate-300">
                             {mapping.source_type}
                           </span>
                         </td>
@@ -485,7 +485,7 @@ export default function CIMPage() {
                           <div className="flex items-center justify-end gap-2">
                             <button
                               onClick={() => { setEditingMapping(mapping); setShowMappingForm(true); }}
-                              className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                              className="p-1.5 hover:bg-nog-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                             >
                               <Edit2 className="w-4 h-4 text-slate-500" />
                             </button>
@@ -596,7 +596,7 @@ function DataModelFormModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white dark:bg-nog-800 rounded-xl shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
             {model ? 'Edit Data Model' : 'Create Data Model'}
@@ -618,7 +618,7 @@ function DataModelFormModal({
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="e.g., My_Custom_Model"
-                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm disabled:opacity-50"
+                className="w-full px-3 py-2 bg-white dark:bg-nog-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm disabled:opacity-50"
               />
             </div>
             <div>
@@ -628,7 +628,7 @@ function DataModelFormModal({
               <select
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value as DataModel['category'] })}
-                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
+                className="w-full px-3 py-2 bg-white dark:bg-nog-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
               >
                 <option value="authentication">Authentication</option>
                 <option value="network">Network</option>
@@ -646,7 +646,7 @@ function DataModelFormModal({
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               rows={2}
-              className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
+              className="w-full px-3 py-2 bg-white dark:bg-nog-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
             />
           </div>
 
@@ -673,12 +673,12 @@ function DataModelFormModal({
                     value={field.name}
                     onChange={(e) => handleFieldChange(index, 'name', e.target.value)}
                     placeholder="Field name"
-                    className="flex-1 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
+                    className="flex-1 px-3 py-2 bg-white dark:bg-nog-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
                   />
                   <select
                     value={field.type}
                     onChange={(e) => handleFieldChange(index, 'type', e.target.value)}
-                    className="w-32 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
+                    className="w-32 px-3 py-2 bg-white dark:bg-nog-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
                   >
                     <option value="string">string</option>
                     <option value="number">number</option>
@@ -692,7 +692,7 @@ function DataModelFormModal({
                     value={field.description || ''}
                     onChange={(e) => handleFieldChange(index, 'description', e.target.value)}
                     placeholder="Description"
-                    className="flex-1 px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
+                    className="flex-1 px-3 py-2 bg-white dark:bg-nog-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
                   />
                   {formData.fields.length > 1 && (
                     <button
@@ -771,7 +771,7 @@ function FieldMappingFormModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-lg mx-4">
+      <div className="bg-white dark:bg-nog-800 rounded-xl shadow-xl w-full max-w-lg mx-4">
         <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
           <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
             {mapping ? 'Edit Field Mapping' : 'Create Field Mapping'}
@@ -792,7 +792,7 @@ function FieldMappingFormModal({
                 value={formData.source_type}
                 onChange={(e) => setFormData({ ...formData, source_type: e.target.value })}
                 placeholder="e.g., nginx, sshd, sysmon"
-                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
+                className="w-full px-3 py-2 bg-white dark:bg-nog-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
               />
             </div>
             <div>
@@ -805,7 +805,7 @@ function FieldMappingFormModal({
                 value={formData.source_field}
                 onChange={(e) => setFormData({ ...formData, source_field: e.target.value })}
                 placeholder="e.g., remote_addr, user"
-                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
+                className="w-full px-3 py-2 bg-white dark:bg-nog-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
               />
             </div>
           </div>
@@ -817,7 +817,7 @@ function FieldMappingFormModal({
               <select
                 value={formData.data_model}
                 onChange={(e) => setFormData({ ...formData, data_model: e.target.value, cim_field: '' })}
-                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
+                className="w-full px-3 py-2 bg-white dark:bg-nog-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
               >
                 {models.map(m => (
                   <option key={m.name} value={m.name}>{m.name}</option>
@@ -831,7 +831,7 @@ function FieldMappingFormModal({
               <select
                 value={formData.cim_field}
                 onChange={(e) => setFormData({ ...formData, cim_field: e.target.value })}
-                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
+                className="w-full px-3 py-2 bg-white dark:bg-nog-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
               >
                 <option value="">Select field...</option>
                 {selectedModel?.fields.map(f => (
@@ -849,7 +849,7 @@ function FieldMappingFormModal({
               value={formData.transform}
               onChange={(e) => setFormData({ ...formData, transform: e.target.value })}
               placeholder="e.g., lower(), int(), float() * 1000"
-              className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
+              className="w-full px-3 py-2 bg-white dark:bg-nog-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
             />
             <p className="text-xs text-slate-500 mt-1">
               Transforms: lower(), upper(), trim(), int(), float(), substr(0,10)
@@ -864,7 +864,7 @@ function FieldMappingFormModal({
                 type="number"
                 value={formData.priority}
                 onChange={(e) => setFormData({ ...formData, priority: Number(e.target.value) })}
-                className="w-full px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
+                className="w-full px-3 py-2 bg-white dark:bg-nog-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
               />
             </div>
             <div className="flex items-end">

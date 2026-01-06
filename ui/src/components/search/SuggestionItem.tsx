@@ -17,7 +17,7 @@ const CATEGORY_STYLES: Record<SuggestionCategory, { bg: string; text: string; la
   value: { bg: 'bg-cyan-500/20', text: 'text-cyan-400', label: 'Val' },
   operator: { bg: 'bg-orange-500/20', text: 'text-orange-400', label: 'Op' },
   keyword: { bg: 'bg-pink-500/20', text: 'text-pink-400', label: 'Key' },
-  history: { bg: 'bg-slate-500/20', text: 'text-slate-400', label: 'History' },
+  history: { bg: 'bg-nog-500/20', text: 'text-slate-400', label: 'History' },
 };
 
 export function SuggestionItem({ suggestion, isSelected, onClick }: SuggestionItemProps) {
@@ -30,7 +30,7 @@ export function SuggestionItem({ suggestion, isSelected, onClick }: SuggestionIt
         transition-colors duration-75
         ${isSelected
           ? 'bg-amber-500/20 dark:bg-amber-500/10'
-          : 'hover:bg-slate-100 dark:hover:bg-nog-700/50'
+          : 'hover:bg-nog-100 dark:hover:bg-nog-700/50'
         }
       `}
       onClick={onClick}
@@ -60,7 +60,7 @@ export function SuggestionItem({ suggestion, isSelected, onClick }: SuggestionIt
 
         {/* Show syntax hint when selected */}
         {suggestion.syntax && isSelected && (
-          <div className="text-xs text-slate-400 dark:text-slate-500 font-mono mt-1.5 bg-slate-100 dark:bg-nog-900/50 px-2 py-1 rounded">
+          <div className="text-xs text-slate-400 dark:text-slate-500 font-mono mt-1.5 bg-nog-100 dark:bg-nog-900/50 px-2 py-1 rounded">
             {suggestion.syntax}
           </div>
         )}

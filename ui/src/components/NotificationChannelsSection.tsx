@@ -213,7 +213,7 @@ export default function NotificationChannelsSection() {
   }
 
   return (
-    <section className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+    <section className="bg-white dark:bg-nog-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
           <Bell className="w-5 h-5" />
@@ -281,14 +281,14 @@ export default function NotificationChannelsSection() {
               key={channel.id}
               className={`p-4 rounded-lg border ${
                 channel.enabled
-                  ? 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700'
-                  : 'bg-slate-50 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700 opacity-60'
+                  ? 'bg-white dark:bg-nog-900 border-slate-200 dark:border-slate-700'
+                  : 'bg-nog-50 dark:bg-nog-900/50 border-slate-200 dark:border-slate-700 opacity-60'
               }`}
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-3">
                   {/* Service Icon */}
-                  <div className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-lg bg-nog-100 dark:bg-nog-800 flex items-center justify-center">
                     {SERVICE_ICONS[channel.service] ? (
                       <img
                         src={SERVICE_ICONS[channel.service]}
@@ -360,7 +360,7 @@ export default function NotificationChannelsSection() {
                   {/* Edit */}
                   <button
                     onClick={() => openEditModal(channel)}
-                    className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                    className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-nog-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
                     title="Edit"
                   >
                     <Edit2 className="w-4 h-4" />
@@ -403,7 +403,7 @@ export default function NotificationChannelsSection() {
       {/* Add/Edit Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-nog-800 rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-slate-200 dark:border-slate-700">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
@@ -429,7 +429,7 @@ export default function NotificationChannelsSection() {
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
                   placeholder="e.g., slack-ops-alerts"
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-900 text-slate-900 dark:text-slate-100"
                 />
               </div>
 
@@ -441,7 +441,7 @@ export default function NotificationChannelsSection() {
                 <select
                   value={formService}
                   onChange={(e) => setFormService(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-900 text-slate-900 dark:text-slate-100"
                 >
                   {services.map((service) => (
                     <option key={service.id} value={service.id}>
@@ -474,7 +474,7 @@ export default function NotificationChannelsSection() {
                   value={formUrl}
                   onChange={(e) => setFormUrl(e.target.value)}
                   placeholder={services.find(s => s.id === formService)?.urlPattern || 'service://...'}
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-mono text-sm"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-900 text-slate-900 dark:text-slate-100 font-mono text-sm"
                 />
                 <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
                   Format: {services.find(s => s.id === formService)?.urlPattern || 'See service documentation'}
@@ -491,7 +491,7 @@ export default function NotificationChannelsSection() {
                   value={formDescription}
                   onChange={(e) => setFormDescription(e.target.value)}
                   placeholder="e.g., #ops-alerts channel"
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-900 text-slate-900 dark:text-slate-100"
                 />
               </div>
 
@@ -501,7 +501,7 @@ export default function NotificationChannelsSection() {
                   type="button"
                   onClick={() => setFormEnabled(!formEnabled)}
                   className={`relative w-11 h-6 rounded-full transition-colors ${
-                    formEnabled ? 'bg-green-500' : 'bg-slate-300 dark:bg-slate-600'
+                    formEnabled ? 'bg-green-500' : 'bg-slate-300 dark:bg-nog-600'
                   }`}
                 >
                   <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${

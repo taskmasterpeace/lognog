@@ -57,7 +57,7 @@ export function DashboardVariablesBar({
   }
 
   return (
-    <div className="flex items-center gap-3 px-4 py-2 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700 overflow-x-auto">
+    <div className="flex items-center gap-3 px-4 py-2 bg-nog-50 dark:bg-nog-800/50 border-b border-slate-200 dark:border-slate-700 overflow-x-auto">
       {variables.map((variable) => (
         <VariableDropdown
           key={variable.id}
@@ -150,7 +150,7 @@ function VariableDropdown({
           type="text"
           value={typeof value === 'string' ? value : ''}
           onChange={(e) => onChange(e.target.value)}
-          className="px-2 py-1 text-sm border border-slate-200 dark:border-slate-600 rounded bg-white dark:bg-slate-700 min-w-[120px]"
+          className="px-2 py-1 text-sm border border-slate-200 dark:border-slate-600 rounded bg-white dark:bg-nog-700 min-w-[120px]"
           placeholder={variable.default_value || 'Enter value...'}
         />
       </div>
@@ -165,7 +165,7 @@ function VariableDropdown({
         </span>
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center gap-2 px-3 py-1.5 text-sm bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg hover:border-slate-300 dark:hover:border-slate-500 transition-colors min-w-[120px]"
+          className="flex items-center gap-2 px-3 py-1.5 text-sm bg-white dark:bg-nog-700 border border-slate-200 dark:border-slate-600 rounded-lg hover:border-slate-300 dark:hover:border-slate-500 transition-colors min-w-[120px]"
         >
           <span className="truncate">{displayValue}</span>
           <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
@@ -186,7 +186,7 @@ function VariableDropdown({
       {isOpen && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
-          <div className="absolute top-full left-0 mt-1 z-20 w-64 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg">
+          <div className="absolute top-full left-0 mt-1 z-20 w-64 bg-white dark:bg-nog-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg">
             {/* Search */}
             <div className="p-2 border-b border-slate-100 dark:border-slate-700">
               <input
@@ -194,7 +194,7 @@ function VariableDropdown({
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Search..."
-                className="w-full px-2 py-1.5 text-sm border border-slate-200 dark:border-slate-600 rounded bg-slate-50 dark:bg-slate-700"
+                className="w-full px-2 py-1.5 text-sm border border-slate-200 dark:border-slate-600 rounded bg-nog-50 dark:bg-nog-700"
                 autoFocus
               />
             </div>
@@ -210,7 +210,7 @@ function VariableDropdown({
                   {variable.include_all && (
                     <button
                       onClick={() => handleSelect('*')}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-slate-50 dark:hover:bg-slate-700"
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-nog-50 dark:hover:bg-slate-700"
                     >
                       {(Array.isArray(value) ? value.includes('*') : value === '*') && (
                         <Check className="w-4 h-4 text-amber-500" />
@@ -226,7 +226,7 @@ function VariableDropdown({
                       <button
                         key={option}
                         onClick={() => handleSelect(option)}
-                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-slate-50 dark:hover:bg-slate-700"
+                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-nog-50 dark:hover:bg-slate-700"
                       >
                         {variable.multi_select ? (
                           <div

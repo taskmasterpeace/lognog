@@ -570,6 +570,248 @@ export const DASHBOARD_TEMPLATES: DashboardTemplateData[] = [
       ],
     },
   },
+
+  // ============================================
+  // SaaS Conversion Funnel Dashboard
+  // ============================================
+  {
+    name: 'SaaS Conversion Funnel',
+    description: 'Track user journey from signup through payment - signups, profiles, checkouts, subscriptions',
+    category: 'application',
+    required_sources: ['hey-youre-hired', 'saas-analytics'],
+    template: {
+      name: 'Conversion Funnel',
+      description: 'User acquisition and conversion analytics',
+      logo_url: '/hey-youre-hired-logo.png',
+      accent_color: '#3B82F6',
+      panels: [
+        // Row 1: Key Funnel Metrics
+        {
+          title: 'Signups (24h)',
+          query: 'search message:"User signup completed" | stats count',
+          visualization: 'stat',
+          position_x: 0, position_y: 0, width: 3, height: 2,
+        },
+        {
+          title: 'Profiles Created',
+          query: 'search message:"Profile created" | stats count',
+          visualization: 'stat',
+          position_x: 3, position_y: 0, width: 3, height: 2,
+        },
+        {
+          title: 'Checkouts Started',
+          query: 'search message:"Checkout started" | stats count',
+          visualization: 'stat',
+          position_x: 6, position_y: 0, width: 3, height: 2,
+        },
+        {
+          title: 'Paid Subscriptions',
+          query: 'search message:"Subscription synced" status:active | stats count',
+          visualization: 'stat',
+          position_x: 9, position_y: 0, width: 3, height: 2,
+        },
+        // Row 2: Trends
+        {
+          title: 'Signups Over Time',
+          query: 'search message:"User signup completed" | timechart span=1h count',
+          visualization: 'line',
+          position_x: 0, position_y: 2, width: 6, height: 3,
+        },
+        {
+          title: 'Signups by Source',
+          query: 'search message:"User signup completed" | stats count by utm_source | sort desc count | limit 10',
+          visualization: 'bar',
+          position_x: 6, position_y: 2, width: 6, height: 3,
+        },
+        // Row 3: Feature Usage
+        {
+          title: 'Feature Usage',
+          query: 'search message:"Feature used" OR message:"Feature completed" | stats count by message | sort desc count | limit 10',
+          visualization: 'pie',
+          position_x: 0, position_y: 5, width: 4, height: 3,
+        },
+        {
+          title: 'Job Recommendations Performance',
+          query: 'search message:"Feature completed: job_recommendations" | stats avg(duration_ms) as avg_ms, avg(jobs_found) as avg_jobs',
+          visualization: 'stat',
+          position_x: 4, position_y: 5, width: 4, height: 3,
+        },
+        {
+          title: 'Subscriptions by Plan',
+          query: 'search message:"Subscription synced" | stats count by plan_name | sort desc count',
+          visualization: 'bar',
+          position_x: 8, position_y: 5, width: 4, height: 3,
+        },
+        // Row 4: Errors
+        {
+          title: 'Error Rate Over Time',
+          query: 'search message:"failed" OR message:"error" | timechart span=1h count',
+          visualization: 'line',
+          position_x: 0, position_y: 8, width: 6, height: 3,
+        },
+        {
+          title: 'Errors by Type',
+          query: 'search message:"failed" OR message:"error" | stats count by message | sort desc count | limit 10',
+          visualization: 'table',
+          position_x: 6, position_y: 8, width: 6, height: 3,
+        },
+        // Row 5: Recent Events
+        {
+          title: 'Recent Funnel Events',
+          query: 'search message:"User signup completed" OR message:"Profile created" OR message:"Checkout started" OR message:"Subscription synced" | table timestamp message user_email utm_source plan_name | sort desc timestamp | limit 50',
+          visualization: 'table',
+          position_x: 0, position_y: 11, width: 12, height: 4,
+        },
+      ],
+      variables: [
+        {
+          name: 'utm_source',
+          label: 'UTM Source',
+          type: 'query',
+          query: 'search message:"User signup completed" | stats count by utm_source | table utm_source',
+          include_all: true,
+          multi_select: true,
+        },
+        {
+          name: 'plan_name',
+          label: 'Plan',
+          type: 'query',
+          query: 'search message:"Subscription synced" | stats count by plan_name | table plan_name',
+          include_all: true,
+          multi_select: true,
+        },
+      ],
+    },
+  },
+
+  // ============================================
+  // LogNog Self-Monitoring Dashboard
+  // ============================================
+  {
+    name: 'LogNog Health',
+    description: 'Monitor LogNog itself - API performance, query execution, alerts, and ingest rates',
+    category: 'system',
+    required_sources: ['lognog-internal'],
+    template: {
+      name: 'LogNog Health',
+      description: 'Self-monitoring dashboard for LogNog operational health',
+      accent_color: '#D97706',
+      panels: [
+        // Row 1: Key Metrics
+        {
+          title: 'API Requests (24h)',
+          query: 'search app_scope="lognog" category="api" | stats count',
+          visualization: 'stat',
+          position_x: 0, position_y: 0, width: 2, height: 2,
+        },
+        {
+          title: 'API Errors',
+          query: 'search app_scope="lognog" category="api" success=false | stats count',
+          visualization: 'stat',
+          position_x: 2, position_y: 0, width: 2, height: 2,
+        },
+        {
+          title: 'Avg Response (ms)',
+          query: 'search app_scope="lognog" category="api" | stats avg(duration_ms)',
+          visualization: 'stat',
+          position_x: 4, position_y: 0, width: 2, height: 2,
+        },
+        {
+          title: 'Queries Executed',
+          query: 'search app_scope="lognog" category="search" | stats count',
+          visualization: 'stat',
+          position_x: 6, position_y: 0, width: 2, height: 2,
+        },
+        {
+          title: 'Events Ingested',
+          query: 'search app_scope="lognog" action="ingest.batch" | stats sum(event_count)',
+          visualization: 'stat',
+          position_x: 8, position_y: 0, width: 2, height: 2,
+        },
+        {
+          title: 'Alerts Triggered',
+          query: 'search app_scope="lognog" action="alert.triggered" | stats count',
+          visualization: 'stat',
+          position_x: 10, position_y: 0, width: 2, height: 2,
+        },
+        // Row 2: API Performance
+        {
+          title: 'API Request Rate',
+          query: 'search app_scope="lognog" category="api" | timechart span=1h count',
+          visualization: 'line',
+          position_x: 0, position_y: 2, width: 6, height: 3,
+        },
+        {
+          title: 'API Latency (p95)',
+          query: 'search app_scope="lognog" category="api" | timechart span=1h p95(duration_ms)',
+          visualization: 'line',
+          position_x: 6, position_y: 2, width: 6, height: 3,
+        },
+        // Row 3: Error Analysis
+        {
+          title: 'Errors by Category',
+          query: 'search app_scope="lognog" success=false | stats count by category | sort desc count',
+          visualization: 'pie',
+          position_x: 0, position_y: 5, width: 4, height: 3,
+        },
+        {
+          title: 'Error Rate Over Time',
+          query: 'search app_scope="lognog" success=false | timechart span=1h count',
+          visualization: 'line',
+          position_x: 4, position_y: 5, width: 8, height: 3,
+        },
+        // Row 4: Ingest & Queries
+        {
+          title: 'Ingest Rate by Source',
+          query: 'search app_scope="lognog" action="ingest.batch" | timechart span=1h sum(event_count) by source_type',
+          visualization: 'area',
+          position_x: 0, position_y: 8, width: 6, height: 3,
+        },
+        {
+          title: 'Query Performance',
+          query: 'search app_scope="lognog" category="search" | timechart span=1h avg(duration_ms) p95(duration_ms)',
+          visualization: 'line',
+          position_x: 6, position_y: 8, width: 6, height: 3,
+        },
+        // Row 5: Auth & Alerts
+        {
+          title: 'Authentication Events',
+          query: 'search app_scope="lognog" category="auth" | stats count by action | sort desc count',
+          visualization: 'bar',
+          position_x: 0, position_y: 11, width: 4, height: 3,
+        },
+        {
+          title: 'Alert Summary',
+          query: 'search app_scope="lognog" category="alert" | stats count by action | sort desc count',
+          visualization: 'bar',
+          position_x: 4, position_y: 11, width: 4, height: 3,
+        },
+        {
+          title: 'Slow Queries (>5s)',
+          query: 'search app_scope="lognog" action="search.slow" | table timestamp message duration_ms | sort desc timestamp | limit 20',
+          visualization: 'table',
+          position_x: 8, position_y: 11, width: 4, height: 3,
+        },
+        // Row 6: Recent Activity
+        {
+          title: 'Recent Errors',
+          query: 'search app_scope="lognog" success=false | table timestamp category action message | sort desc timestamp | limit 25',
+          visualization: 'table',
+          position_x: 0, position_y: 14, width: 12, height: 4,
+        },
+      ],
+      variables: [
+        {
+          name: 'category',
+          label: 'Category',
+          type: 'query',
+          query: 'search app_scope="lognog" | stats count by category | table category',
+          include_all: true,
+          multi_select: true,
+        },
+      ],
+    },
+  },
 ];
 
 export default DASHBOARD_TEMPLATES;

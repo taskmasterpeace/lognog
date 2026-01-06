@@ -76,7 +76,7 @@ function NavLink({ to, icon: Icon, children, onClick }: NavLinkProps) {
       className={`group flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
         isActive
           ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-md shadow-amber-500/25'
-          : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900 hover:translate-x-0.5 dark:text-nog-400 dark:hover:bg-nog-800 dark:hover:text-nog-100'
+          : 'text-slate-600 hover:bg-nog-100 hover:text-slate-900 hover:translate-x-0.5 dark:text-nog-400 dark:hover:bg-nog-800 dark:hover:text-nog-100'
       }`}
     >
       <Icon className={`w-5 h-5 flex-shrink-0 transition-transform duration-200 ${isActive ? '' : 'text-slate-400 group-hover:text-slate-600 group-hover:scale-110 dark:group-hover:text-nog-300'}`} />
@@ -151,7 +151,7 @@ function UserMenu() {
       <div className="flex gap-2">
         <Link
           to="/settings"
-          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm text-slate-600 hover:text-slate-900 dark:text-nog-400 dark:hover:text-nog-100 hover:bg-slate-100 dark:hover:bg-nog-700 rounded-lg transition-all duration-200 hover:scale-105 active:scale-95"
+          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm text-slate-600 hover:text-slate-900 dark:text-nog-400 dark:hover:text-nog-100 hover:bg-nog-100 dark:hover:bg-nog-700 rounded-lg transition-all duration-200 hover:scale-105 active:scale-95"
         >
           <Settings className="w-4 h-4" />
           Settings
@@ -188,12 +188,12 @@ function Layout({ children }: { children: React.ReactNode }) {
   const closeSidebar = () => setSidebarOpen(false);
 
   return (
-    <div className="min-h-screen flex bg-slate-50 dark:bg-nog-900">
+    <div className="min-h-screen flex bg-nog-50 dark:bg-nog-900">
       {/* Mobile Header */}
       <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-white dark:bg-nog-800 border-b border-slate-200 dark:border-nog-700 px-4 py-3 flex items-center gap-3">
         <button
           onClick={() => setSidebarOpen(true)}
-          className="p-2 -ml-2 rounded-lg hover:bg-slate-100 dark:hover:bg-nog-700 transition-colors"
+          className="p-2 -ml-2 rounded-lg hover:bg-nog-100 dark:hover:bg-nog-700 transition-colors"
           aria-label="Open menu"
         >
           <Menu className="w-6 h-6 text-slate-600 dark:text-nog-300" />
@@ -238,7 +238,7 @@ function Layout({ children }: { children: React.ReactNode }) {
             {/* Close button on mobile, theme toggle on desktop */}
             <button
               onClick={closeSidebar}
-              className="lg:hidden p-2 -mr-2 rounded-lg hover:bg-slate-100 dark:hover:bg-nog-700 transition-colors"
+              className="lg:hidden p-2 -mr-2 rounded-lg hover:bg-nog-100 dark:hover:bg-nog-700 transition-colors"
               aria-label="Close menu"
             >
               <X className="w-5 h-5 text-slate-600 dark:text-nog-300" />
@@ -285,7 +285,7 @@ function Layout({ children }: { children: React.ReactNode }) {
 
         {/* Connection Status - hide on small screens to save space */}
         <div className="hidden sm:block p-4 border-t border-slate-100 dark:border-nog-700">
-          <div className="p-3 bg-slate-50 dark:bg-nog-900 rounded-lg">
+          <div className="p-3 bg-nog-50 dark:bg-nog-900 rounded-lg">
             <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-nog-400">
               <Database className="w-4 h-4 text-amber-500 dark:text-amber-400 flex-shrink-0" />
               <span className="truncate">ClickHouse Connected</span>
@@ -335,7 +335,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (isLoading || onboardingLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-nog-900">
+      <div className="min-h-screen flex items-center justify-center bg-nog-50 dark:bg-nog-900">
         <div className="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -371,7 +371,7 @@ function AppRoutes() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-nog-900">
+      <div className="min-h-screen flex items-center justify-center bg-nog-50 dark:bg-nog-900">
         <div className="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );

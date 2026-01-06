@@ -198,7 +198,7 @@ export function NogChat() {
       // Bold
       formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
       // Inline code
-      formatted = formatted.replace(/`([^`]+)`/g, '<code class="bg-slate-200 dark:bg-slate-600 px-1 rounded text-sm">$1</code>');
+      formatted = formatted.replace(/`([^`]+)`/g, '<code class="bg-slate-200 dark:bg-nog-600 px-1 rounded text-sm">$1</code>');
       return formatted;
     };
 
@@ -232,7 +232,7 @@ export function NogChat() {
           ) : (
             <>
               <div
-                className="bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded-2xl rounded-tl-sm p-3"
+                className="bg-nog-100 dark:bg-nog-700 text-slate-900 dark:text-slate-100 rounded-2xl rounded-tl-sm p-3"
               >
                 <div
                   className="text-sm whitespace-pre-wrap prose prose-sm dark:prose-invert max-w-none"
@@ -250,9 +250,9 @@ export function NogChat() {
               {codeBlocks.map((code, codeIndex) => (
                 <div
                   key={codeIndex}
-                  className="relative bg-slate-800 dark:bg-slate-900 rounded-lg overflow-hidden"
+                  className="relative bg-nog-800 dark:bg-nog-900 rounded-lg overflow-hidden"
                 >
-                  <div className="flex items-center justify-between px-3 py-1.5 bg-slate-700 dark:bg-slate-800 border-b border-slate-600">
+                  <div className="flex items-center justify-between px-3 py-1.5 bg-slate-700 dark:bg-nog-800 border-b border-slate-600">
                     <span className="text-xs text-slate-400 font-mono">DSL Query</span>
                     <button
                       onClick={() => copyToClipboard(code, index * 100 + codeIndex)}
@@ -316,7 +316,7 @@ export function NogChat() {
   }
 
   return (
-    <div className="fixed inset-2 sm:inset-auto sm:bottom-6 sm:right-6 z-50 sm:w-[420px] bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col max-h-[calc(100vh-1rem)] sm:max-h-[650px] animate-scale-in safe-area-inset">
+    <div className="fixed inset-2 sm:inset-auto sm:bottom-6 sm:right-6 z-50 sm:w-[420px] bg-white dark:bg-nog-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col max-h-[calc(100vh-1rem)] sm:max-h-[650px] animate-scale-in safe-area-inset">
       {/* Header */}
       <div className="flex items-center justify-between p-3 sm:p-4 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-amber-500/10 to-orange-500/10 rounded-t-2xl">
         <div className="flex items-center gap-2 sm:gap-3">
@@ -344,7 +344,7 @@ export function NogChat() {
         </div>
         <button
           onClick={() => setIsOpen(false)}
-          className="p-2.5 sm:p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+          className="p-2.5 sm:p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-nog-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
           aria-label="Close chat"
         >
           <X className="w-6 h-6 sm:w-5 sm:h-5" />
@@ -413,7 +413,7 @@ export function NogChat() {
                       setInput(prompt);
                       inputRef.current?.focus();
                     }}
-                    className="w-full text-left px-3 py-2 text-sm bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors text-slate-600 dark:text-slate-300 truncate"
+                    className="w-full text-left px-3 py-2 text-sm bg-nog-50 dark:bg-nog-700/50 hover:bg-nog-100 dark:hover:bg-slate-700 rounded-lg transition-colors text-slate-600 dark:text-slate-300 truncate"
                   >
                     "{prompt}"
                   </button>
@@ -429,7 +429,7 @@ export function NogChat() {
             <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
               <Bot className="w-4 h-4 text-white" />
             </div>
-            <div className="p-3 bg-slate-100 dark:bg-slate-700 rounded-2xl rounded-tl-sm">
+            <div className="p-3 bg-nog-100 dark:bg-nog-700 rounded-2xl rounded-tl-sm">
               <div className="flex items-center gap-2">
                 <Loader2 className="w-4 h-4 animate-spin text-amber-500" />
                 <span className="text-sm text-slate-500">Thinking...</span>
@@ -458,7 +458,7 @@ export function NogChat() {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSubmit()}
             placeholder="Ask about queries, alerts, your data..."
-            className="flex-1 px-4 py-2.5 bg-slate-100 dark:bg-slate-700 border-none rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500"
+            className="flex-1 px-4 py-2.5 bg-nog-100 dark:bg-nog-700 border-none rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500"
             disabled={loading}
           />
           <button

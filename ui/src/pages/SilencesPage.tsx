@@ -132,7 +132,7 @@ export default function SilencesPage() {
       )}
 
       {!isLoading && silences && silences.length === 0 && (
-        <div className="bg-white dark:bg-slate-800 rounded-lg shadow p-12 text-center">
+        <div className="bg-white dark:bg-nog-800 rounded-lg shadow p-12 text-center">
           <BellOff className="h-16 w-16 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100 mb-2">No active silences</h3>
           <p className="text-slate-600 dark:text-slate-400 mb-4">
@@ -153,7 +153,7 @@ export default function SilencesPage() {
           {silences.map((silence) => (
             <div
               key={silence.id}
-              className="bg-white dark:bg-slate-800 rounded-lg shadow hover:shadow-md transition-shadow p-6"
+              className="bg-white dark:bg-nog-800 rounded-lg shadow hover:shadow-md transition-shadow p-6"
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-start gap-4 flex-1">
@@ -240,13 +240,13 @@ function CreateSilenceModal({ onClose, alerts }: CreateSilenceModalProps) {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white dark:bg-nog-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div className="p-6 border-b border-slate-200 dark:border-slate-700">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">Create Silence</h2>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+              className="p-2 hover:bg-nog-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
             >
               <X className="h-5 w-5" />
             </button>
@@ -314,7 +314,7 @@ function CreateSilenceModal({ onClose, alerts }: CreateSilenceModalProps) {
                   type="text"
                   value={targetId}
                   onChange={(e) => setTargetId(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
                   placeholder="e.g., server1, 192.168.1.100"
                   required
                 />
@@ -329,7 +329,7 @@ function CreateSilenceModal({ onClose, alerts }: CreateSilenceModalProps) {
                 <select
                   value={targetId}
                   onChange={(e) => setTargetId(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
                   required
                 >
                   <option value="">Select an alert...</option>
@@ -349,7 +349,7 @@ function CreateSilenceModal({ onClose, alerts }: CreateSilenceModalProps) {
               <select
                 value={duration}
                 onChange={(e) => setDuration(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
               >
                 {DURATION_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -366,7 +366,7 @@ function CreateSilenceModal({ onClose, alerts }: CreateSilenceModalProps) {
               <textarea
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
                 rows={3}
                 placeholder="Why are you silencing these alerts?"
               />
@@ -380,7 +380,7 @@ function CreateSilenceModal({ onClose, alerts }: CreateSilenceModalProps) {
                 type="text"
                 value={createdBy}
                 onChange={(e) => setCreatedBy(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100 focus:ring-2 focus:ring-amber-500 focus:border-amber-500"
                 placeholder="Your name or username"
               />
             </div>
@@ -390,7 +390,7 @@ function CreateSilenceModal({ onClose, alerts }: CreateSilenceModalProps) {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700"
+              className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-nog-50 dark:hover:bg-slate-700"
             >
               Cancel
             </button>

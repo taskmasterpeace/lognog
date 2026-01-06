@@ -130,7 +130,7 @@ export default function VariableInsertHelper({ onInsert, compact = false }: Vari
             <button
               key={v.name}
               onClick={() => handleInsertClick(v.name)}
-              className="px-2 py-1 text-xs bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300 rounded hover:bg-amber-100 dark:hover:bg-amber-900/30 hover:text-amber-700 dark:hover:text-amber-300 font-mono transition-colors"
+              className="px-2 py-1 text-xs bg-nog-100 dark:bg-nog-700 text-slate-600 dark:text-slate-300 rounded hover:bg-amber-100 dark:hover:bg-amber-900/30 hover:text-amber-700 dark:hover:text-amber-300 font-mono transition-colors"
               title={v.description}
             >
               {v.name.replace(/\{\{|\}\}/g, '')}
@@ -149,7 +149,7 @@ export default function VariableInsertHelper({ onInsert, compact = false }: Vari
 
   return (
     <div className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
-      <div className="bg-slate-50 dark:bg-slate-800 px-3 py-2 border-b border-slate-200 dark:border-slate-700">
+      <div className="bg-nog-50 dark:bg-nog-800 px-3 py-2 border-b border-slate-200 dark:border-slate-700">
         <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
           <Code2 className="w-4 h-4" />
           Template Variables
@@ -165,7 +165,7 @@ export default function VariableInsertHelper({ onInsert, compact = false }: Vari
           <div key={category.name} className="border-b border-slate-100 dark:border-slate-700 last:border-b-0">
             <button
               onClick={() => setExpandedCategory(expandedCategory === category.name ? null : category.name)}
-              className="w-full px-3 py-2 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+              className="w-full px-3 py-2 flex items-center justify-between hover:bg-nog-50 dark:hover:bg-nog-800/50 transition-colors"
             >
               <div className="flex items-center gap-2">
                 <span className="text-slate-400">{category.icon}</span>
@@ -183,7 +183,7 @@ export default function VariableInsertHelper({ onInsert, compact = false }: Vari
                 {category.variables.map((variable) => (
                   <div
                     key={variable.name}
-                    className="flex items-start justify-between gap-2 p-2 rounded bg-slate-50 dark:bg-slate-800/50 hover:bg-amber-50 dark:hover:bg-amber-900/20 group cursor-pointer"
+                    className="flex items-start justify-between gap-2 p-2 rounded bg-nog-50 dark:bg-nog-800/50 hover:bg-amber-50 dark:hover:bg-amber-900/20 group cursor-pointer"
                     onClick={() => handleInsertClick(variable.name)}
                   >
                     <div className="flex-1 min-w-0">
@@ -221,7 +221,7 @@ export default function VariableInsertHelper({ onInsert, compact = false }: Vari
         <div className="border-b border-slate-100 dark:border-slate-700">
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className="w-full px-3 py-2 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+            className="w-full px-3 py-2 flex items-center justify-between hover:bg-nog-50 dark:hover:bg-nog-800/50 transition-colors"
           >
             <div className="flex items-center gap-2">
               <span className="text-slate-400"><Hash className="w-4 h-4" /></span>
@@ -241,7 +241,7 @@ export default function VariableInsertHelper({ onInsert, compact = false }: Vari
                 {FILTERS.map((filter) => (
                   <div
                     key={filter.name}
-                    className="p-1.5 rounded bg-slate-50 dark:bg-slate-800/50 hover:bg-amber-50 dark:hover:bg-amber-900/20 cursor-pointer"
+                    className="p-1.5 rounded bg-nog-50 dark:bg-nog-800/50 hover:bg-amber-50 dark:hover:bg-amber-900/20 cursor-pointer"
                     onClick={() => handleCopy(`:${filter.name.replace(':N', ':')}`)}
                     title={filter.example}
                   >

@@ -28,7 +28,7 @@ export function AppScopeFilter({ value, onChange, className = '' }: AppScopeFilt
 
   if (loading) {
     return (
-      <select disabled className={`bg-slate-700 text-slate-300 rounded px-3 py-1.5 text-sm ${className}`}>
+      <select disabled className={`bg-amber-50 dark:bg-nog-700 text-amber-700 dark:text-amber-200 rounded-lg px-3 py-1.5 text-sm ${className}`}>
         <option>Loading...</option>
       </select>
     );
@@ -44,9 +44,10 @@ export function AppScopeFilter({ value, onChange, className = '' }: AppScopeFilt
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className={`bg-slate-700 text-slate-200 rounded px-3 py-1.5 text-sm border border-slate-600
-        focus:border-amber-500 focus:ring-1 focus:ring-amber-500 focus:outline-none
-        hover:border-slate-500 transition-colors cursor-pointer ${className}`}
+      className={`bg-amber-50 dark:bg-nog-700 text-amber-800 dark:text-amber-200 rounded-lg px-3 py-1.5 text-sm
+        border border-amber-200 dark:border-nog-600
+        focus:border-amber-500 focus:ring-2 focus:ring-amber-500/30 focus:outline-none
+        hover:border-amber-400 dark:hover:border-nog-500 transition-colors cursor-pointer ${className}`}
     >
       {allScopes.map((scope) => (
         <option key={scope} value={scope}>

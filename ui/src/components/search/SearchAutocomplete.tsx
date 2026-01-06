@@ -181,7 +181,7 @@ export function SearchAutocomplete({
         className="
           w-full h-11 sm:h-12
           pl-10 sm:pl-12 pr-4
-          bg-slate-50 dark:bg-nog-900
+          bg-nog-50 dark:bg-nog-900
           border border-slate-200 dark:border-nog-700
           rounded-lg
           text-slate-900 dark:text-white

@@ -108,7 +108,7 @@ export default function LogViewerExample() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-slate-50">
+    <div className="h-screen flex flex-col bg-nog-50">
       {/* Header */}
       <div className="bg-white border-b border-slate-200 shadow-sm p-6">
         <h1 className="text-2xl font-bold text-slate-900 mb-2">

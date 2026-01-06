@@ -45,7 +45,7 @@ function RelevanceBadge({ category }: { category: 'high' | 'medium' | 'low' }) {
   const styles = {
     high: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
     medium: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-    low: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400',
+    low: 'bg-nog-100 text-slate-600 dark:bg-nog-700 dark:text-slate-400',
   };
 
   return (
@@ -101,7 +101,7 @@ function SourceCard({
       {/* Header */}
       <button
         onClick={onToggle}
-        className="w-full flex items-center gap-2 p-3 text-left hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+        className="w-full flex items-center gap-2 p-3 text-left hover:bg-nog-50 dark:hover:bg-nog-800 transition-colors"
       >
         {isExpanded ? (
           <ChevronDown className="w-4 h-4 text-slate-400 flex-shrink-0" />
@@ -219,11 +219,11 @@ export function CitationsPanel({
   };
 
   return (
-    <div className="border border-slate-200 dark:border-slate-700 rounded-xl bg-slate-50 dark:bg-slate-800/50 overflow-hidden">
+    <div className="border border-slate-200 dark:border-slate-700 rounded-xl bg-nog-50 dark:bg-nog-800/50 overflow-hidden">
       {/* Panel Header */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center gap-2 px-4 py-3 text-left hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+        className="w-full flex items-center gap-2 px-4 py-3 text-left hover:bg-nog-100 dark:hover:bg-nog-800 transition-colors"
       >
         {isExpanded ? (
           <ChevronDown className="w-4 h-4 text-slate-400" />

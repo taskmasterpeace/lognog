@@ -69,7 +69,7 @@ export function DashboardShareModal({
 
         <div className="modal-body space-y-4">
           {/* Public Toggle */}
-          <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+          <div className="flex items-center justify-between p-3 bg-nog-50 dark:bg-nog-800 rounded-lg">
             <div>
               <p className="font-medium text-slate-900 dark:text-slate-100">
                 Enable public sharing
@@ -81,7 +81,7 @@ export function DashboardShareModal({
             <button
               onClick={() => setIsPublic(!isPublic)}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                isPublic ? 'bg-amber-500' : 'bg-slate-300 dark:bg-slate-600'
+                isPublic ? 'bg-amber-500' : 'bg-slate-300 dark:bg-nog-600'
               }`}
             >
               <span
@@ -105,7 +105,7 @@ export function DashboardShareModal({
                       type="text"
                       value={publicUrl}
                       readOnly
-                      className="input flex-1 font-mono text-sm bg-slate-50 dark:bg-slate-800"
+                      className="input flex-1 font-mono text-sm bg-nog-50 dark:bg-nog-800"
                     />
                     <button
                       onClick={handleCopyLink}
@@ -180,7 +180,7 @@ export function DashboardShareModal({
                           setExpiresAt(date.toISOString().slice(0, 16));
                         }
                       }}
-                      className="px-2 py-1 text-xs rounded bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300"
+                      className="px-2 py-1 text-xs rounded bg-nog-100 dark:bg-nog-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300"
                     >
                       {label}
                     </button>

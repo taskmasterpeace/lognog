@@ -28,7 +28,7 @@
   }
 
   body {
-    @apply bg-slate-50 text-slate-900 antialiased;
+    @apply bg-nog-50 text-slate-900 antialiased;
     @apply dark:bg-nog-900 dark:text-nog-100;
   }
 
@@ -43,7 +43,7 @@
   }
 
   ::-webkit-scrollbar-track {
-    @apply bg-slate-100 dark:bg-nog-800;
+    @apply bg-nog-100 dark:bg-nog-800;
   }
 
   ::-webkit-scrollbar-thumb {
@@ -64,12 +64,12 @@
   }
 
   .btn-secondary {
-    @apply btn bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 hover:border-slate-300 focus:ring-slate-500;
+    @apply btn bg-white text-slate-700 border border-slate-200 hover:bg-nog-50 hover:border-slate-300 focus:ring-slate-500;
     @apply dark:bg-nog-800 dark:text-nog-200 dark:border-nog-700 dark:hover:bg-nog-700 dark:hover:border-nog-600;
   }
 
   .btn-ghost {
-    @apply btn text-slate-600 hover:bg-slate-100 hover:text-slate-900;
+    @apply btn text-slate-600 hover:bg-nog-100 hover:text-slate-900;
     @apply dark:text-nog-400 dark:hover:bg-nog-800 dark:hover:text-nog-100;
   }
 
@@ -96,7 +96,7 @@
   }
 
   .input-search {
-    @apply input pl-11 font-mono text-sm bg-slate-50 focus:bg-white;
+    @apply input pl-11 font-mono text-sm bg-nog-50 focus:bg-white;
     @apply dark:bg-nog-900 dark:focus:bg-nog-800;
   }
 
@@ -133,7 +133,7 @@
   .severity-4 { @apply bg-lime-100 text-lime-800 ring-1 ring-lime-600/30 dark:bg-lime-900/30 dark:text-lime-400 dark:ring-lime-500/30; }
   .severity-5 { @apply bg-green-100 text-green-800 ring-1 ring-green-600/30 dark:bg-green-900/30 dark:text-green-400 dark:ring-green-500/30; }
   .severity-6 { @apply bg-emerald-100 text-emerald-800 ring-1 ring-emerald-600/30 dark:bg-emerald-900/30 dark:text-emerald-400 dark:ring-emerald-500/30; }
-  .severity-7 { @apply bg-slate-100 text-slate-800 ring-1 ring-slate-600/30 dark:bg-slate-900/30 dark:text-slate-400 dark:ring-slate-500/30; }
+  .severity-7 { @apply bg-nog-100 text-slate-800 ring-1 ring-slate-600/30 dark:bg-nog-900/30 dark:text-slate-400 dark:ring-slate-500/30; }
 
   /* Table */
   .table-container {
@@ -146,7 +146,7 @@
   }
 
   .table thead {
-    @apply bg-slate-50 border-b border-slate-200;
+    @apply bg-nog-50 border-b border-slate-200;
     @apply dark:bg-nog-800 dark:border-nog-700;
   }
 
@@ -161,13 +161,13 @@
   }
 
   .table tbody tr {
-    @apply hover:bg-slate-50 transition-all duration-150 hover:shadow-sm;
+    @apply hover:bg-nog-50 transition-all duration-150 hover:shadow-sm;
     @apply dark:hover:bg-nog-800;
   }
 
   /* Code/Query */
   .code {
-    @apply font-mono text-sm bg-slate-100 px-2 py-0.5 rounded;
+    @apply font-mono text-sm bg-nog-100 px-2 py-0.5 rounded;
     @apply dark:bg-nog-800 dark:text-nog-300;
   }
 
@@ -183,13 +183,13 @@
   }
 
   .dropdown-item {
-    @apply w-full px-4 py-2.5 text-left text-sm hover:bg-slate-50 transition-colors;
+    @apply w-full px-4 py-2.5 text-left text-sm hover:bg-nog-50 transition-colors;
     @apply dark:hover:bg-nog-700 dark:text-nog-200;
   }
 
   /* Modal */
   .modal-overlay {
-    @apply fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50;
+    @apply fixed inset-0 bg-nog-900/50 backdrop-blur-sm flex items-center justify-center z-50;
     @apply dark:bg-nog-950/70;
     animation: modalOverlayEnter 0.2s ease-out;
   }
@@ -210,7 +210,7 @@
   }
 
   .modal-footer {
-    @apply px-6 py-4 bg-slate-50 flex justify-end gap-3;
+    @apply px-6 py-4 bg-nog-50 flex justify-end gap-3;
     @apply dark:bg-nog-900;
   }
 }

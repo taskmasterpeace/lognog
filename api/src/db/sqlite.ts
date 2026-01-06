@@ -751,6 +751,11 @@ function initializeSchema(): void {
     database.exec("ALTER TABLE dashboards ADD COLUMN app_scope TEXT DEFAULT 'default'");
   }
 
+  // Add category column for dashboard grouping/tabs
+  if (!columnNames.includes('category')) {
+    database.exec("ALTER TABLE dashboards ADD COLUMN category TEXT DEFAULT 'general'");
+  }
+
   const alertColumns = database.pragma('table_info(alerts)') as Array<{ name: string }>;
   const alertColumnNames = alertColumns.map((col) => col.name);
   if (!alertColumnNames.includes('app_scope')) {
@@ -1107,6 +1112,7 @@ export interface Dashboard {
   public_token?: string;
   public_password?: string;
   app_scope?: string;
+  category?: string;
   created_at: string;
   updated_at: string;
 }
@@ -1173,12 +1179,12 @@ export function getDashboardPanels(dashboardId: string): DashboardPanel[] {
   return database.prepare('SELECT * FROM dashboard_panels WHERE dashboard_id = ?').all(dashboardId) as DashboardPanel[];
 }
 
-export function createDashboard(name: string, description?: string, appScope?: string): Dashboard {
+export function createDashboard(name: string, description?: string, appScope?: string, category?: string): Dashboard {
   const database = getSQLiteDB();
   const id = uuidv4();
   database.prepare(
-    'INSERT INTO dashboards (id, name, description, app_scope) VALUES (?, ?, ?, ?)'
-  ).run(id, name, description || null, appScope || 'default');
+    'INSERT INTO dashboards (id, name, description, app_scope, category) VALUES (?, ?, ?, ?, ?)'
+  ).run(id, name, description || null, appScope || 'default', category || 'general');
   return getDashboard(id)!;
 }
 
@@ -2897,6 +2903,7 @@ export function updateDashboard(
     public_password?: string;
     public_expires_at?: string;
     app_scope?: string;
+    category?: string;
   }
 ): Dashboard | undefined {
   const database = getSQLiteDB();
@@ -2942,6 +2949,10 @@ export function updateDashboard(
   if (updates.app_scope !== undefined) {
     fields.push('app_scope = ?');
     values.push(updates.app_scope);
+  }
+  if (updates.category !== undefined) {
+    fields.push('category = ?');
+    values.push(updates.category);
   }
 
   if (fields.length === 0) {

@@ -204,9 +204,9 @@ export default function ReportsPage() {
   }
 
   return (
-    <div className="min-h-full bg-slate-50 dark:bg-slate-900">
+    <div className="min-h-full bg-nog-50 dark:bg-nog-900">
       {/* Header */}
-      <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 shadow-sm">
+      <div className="bg-white dark:bg-nog-800 border-b border-slate-200 dark:border-slate-700 shadow-sm">
         <div className="p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
@@ -300,7 +300,7 @@ export default function ReportsPage() {
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-start gap-2 sm:gap-3 min-w-0 flex-1">
                       <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                        report.enabled ? 'bg-amber-100' : 'bg-slate-100'
+                        report.enabled ? 'bg-amber-100' : 'bg-nog-100'
                       }`}>
                         <FileText className={`w-4 h-4 sm:w-5 sm:h-5 ${
                           report.enabled ? 'text-amber-600' : 'text-slate-400'
@@ -308,7 +308,7 @@ export default function ReportsPage() {
                       </div>
                       <div className="min-w-0 flex-1">
                         <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-sm sm:text-base truncate">{report.name}</h3>
-                        <code className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-1.5 sm:px-2 py-0.5 rounded mt-1 inline-block max-w-full truncate">
+                        <code className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 bg-nog-100 dark:bg-nog-700 px-1.5 sm:px-2 py-0.5 rounded mt-1 inline-block max-w-full truncate">
                           {report.query}
                         </code>
                         <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 text-[10px] sm:text-xs text-slate-500">
@@ -335,7 +335,7 @@ export default function ReportsPage() {
                         className={`p-1.5 sm:p-2 rounded-lg transition-colors ${
                           report.enabled
                             ? 'text-amber-600 bg-amber-50 hover:bg-amber-100'
-                            : 'text-slate-400 bg-slate-100 hover:bg-slate-200'
+                            : 'text-slate-400 bg-nog-100 hover:bg-slate-200'
                         }`}
                         title={report.enabled ? 'Pause schedule' : 'Enable schedule'}
                       >
@@ -354,7 +354,7 @@ export default function ReportsPage() {
             </div>
           ) : (
             <div className="card p-6 sm:p-8 text-center">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-nog-100 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
                 <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-slate-400" />
               </div>
               <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-1 text-sm sm:text-base">No scheduled reports</h3>
@@ -554,7 +554,7 @@ export default function ReportsPage() {
       {showPreviewModal && reportPreview && (
         <div className="modal-overlay" onClick={() => !previewFullscreen && setShowPreviewModal(false)}>
           <div
-            className={`bg-white dark:bg-slate-800 rounded-xl shadow-2xl flex flex-col animate-slide-up ${
+            className={`bg-white dark:bg-nog-800 rounded-xl shadow-2xl flex flex-col animate-slide-up ${
               previewFullscreen
                 ? 'fixed inset-4 m-0 max-w-none max-h-none'
                 : 'max-w-5xl w-full max-h-[90vh] m-4'
@@ -602,7 +602,7 @@ export default function ReportsPage() {
             </div>
 
             {/* Preview Content */}
-            <div className="flex-1 overflow-auto bg-slate-100 dark:bg-slate-900 p-4">
+            <div className="flex-1 overflow-auto bg-nog-100 dark:bg-nog-900 p-4">
               <iframe
                 srcDoc={reportPreview}
                 className="w-full h-full min-h-[500px] bg-white rounded-lg shadow-inner border border-slate-200"

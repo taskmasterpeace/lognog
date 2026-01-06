@@ -19,7 +19,7 @@ export default function ImagePlaceholder({
 }: ImagePlaceholderProps) {
   return (
     <div
-      className={`relative bg-slate-800/50 border-2 border-dashed border-slate-600 rounded-xl overflow-hidden ${className}`}
+      className={`relative bg-nog-800/50 border-2 border-dashed border-slate-600 rounded-xl overflow-hidden ${className}`}
       style={{ aspectRatio }}
     >
       <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">

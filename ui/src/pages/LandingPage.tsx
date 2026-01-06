@@ -120,9 +120,9 @@ const screenshots = [
 
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900">
+    <div className="min-h-screen bg-gradient-to-b from-nog-900 via-slate-800 to-nog-900">
       {/* Header */}
-      <header className="border-b border-slate-700/50 sticky top-0 bg-slate-900/95 backdrop-blur-sm z-50">
+      <header className="border-b border-slate-700/50 sticky top-0 bg-nog-900/95 backdrop-blur-sm z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -231,7 +231,7 @@ export default function LandingPage() {
       </section>
 
       {/* Who It's For - SMB Focus */}
-      <section className="py-16 bg-slate-800/50 border-y border-slate-700/50">
+      <section className="py-16 bg-nog-800/50 border-y border-slate-700/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-white mb-4">
@@ -243,7 +243,7 @@ export default function LandingPage() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="p-6 bg-slate-800/50 rounded-xl border border-slate-700/50 text-center">
+            <div className="p-6 bg-nog-800/50 rounded-xl border border-slate-700/50 text-center">
               <div className="w-14 h-14 bg-amber-500/10 rounded-xl flex items-center justify-center mx-auto mb-4">
                 <Terminal className="w-7 h-7 text-amber-400" />
               </div>
@@ -253,7 +253,7 @@ export default function LandingPage() {
               </p>
             </div>
 
-            <div className="p-6 bg-slate-800/50 rounded-xl border border-slate-700/50 text-center">
+            <div className="p-6 bg-nog-800/50 rounded-xl border border-slate-700/50 text-center">
               <div className="w-14 h-14 bg-amber-500/10 rounded-xl flex items-center justify-center mx-auto mb-4">
                 <Building2 className="w-7 h-7 text-amber-400" />
               </div>
@@ -263,7 +263,7 @@ export default function LandingPage() {
               </p>
             </div>
 
-            <div className="p-6 bg-slate-800/50 rounded-xl border border-slate-700/50 text-center">
+            <div className="p-6 bg-nog-800/50 rounded-xl border border-slate-700/50 text-center">
               <div className="w-14 h-14 bg-amber-500/10 rounded-xl flex items-center justify-center mx-auto mb-4">
                 <Users className="w-7 h-7 text-amber-400" />
               </div>
@@ -399,28 +399,28 @@ export default function LandingPage() {
       </section>
 
       {/* The Problem */}
-      <section className="py-16 bg-slate-800/30">
+      <section className="py-16 bg-nog-800/30">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-2xl font-bold text-white mb-10">
             The Problem with Log Management Today
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div className="p-6 bg-slate-800/50 rounded-xl border border-slate-700/50">
+            <div className="p-6 bg-nog-800/50 rounded-xl border border-slate-700/50">
               <p className="text-3xl mb-3 text-red-400">$$$</p>
               <p className="text-lg font-medium text-white mb-2">Splunk</p>
               <p className="text-slate-400 text-sm">$1,800+/year for 500MB/day</p>
             </div>
-            <div className="p-6 bg-slate-800/50 rounded-xl border border-slate-700/50">
+            <div className="p-6 bg-nog-800/50 rounded-xl border border-slate-700/50">
               <p className="text-3xl mb-3 text-yellow-400">YAML</p>
               <p className="text-lg font-medium text-white mb-2">ELK Stack</p>
               <p className="text-slate-400 text-sm">3+ components, 8GB+ RAM</p>
             </div>
-            <div className="p-6 bg-slate-800/50 rounded-xl border border-slate-700/50">
+            <div className="p-6 bg-nog-800/50 rounded-xl border border-slate-700/50">
               <p className="text-3xl mb-3 text-amber-400">GCP</p>
               <p className="text-lg font-medium text-white mb-2">Chronicle</p>
               <p className="text-slate-400 text-sm">Google Cloud lock-in only</p>
             </div>
-            <div className="p-6 bg-slate-800/50 rounded-xl border border-slate-700/50">
+            <div className="p-6 bg-nog-800/50 rounded-xl border border-slate-700/50">
               <p className="text-3xl mb-3 text-amber-400">SaaS</p>
               <p className="text-lg font-medium text-white mb-2">Datadog/etc</p>
               <p className="text-slate-400 text-sm">Your logs on their servers</p>
@@ -444,7 +444,7 @@ export default function LandingPage() {
             </p>
           </div>
 
-          <div className="bg-slate-800/50 rounded-xl border border-slate-700/50 overflow-hidden">
+          <div className="bg-nog-800/50 rounded-xl border border-slate-700/50 overflow-hidden">
             <div className="grid grid-cols-2 text-sm font-medium">
               <div className="p-4 bg-slate-700/50 text-slate-300 text-center border-b border-slate-700">Splunk SPL</div>
               <div className="p-4 bg-amber-900/30 text-amber-300 text-center border-b border-slate-700">LogNog Query</div>
@@ -468,7 +468,7 @@ export default function LandingPage() {
       </section>
 
       {/* Comparison Table */}
-      <section className="py-16 bg-slate-800/50">
+      <section className="py-16 bg-nog-800/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-white mb-4">
@@ -480,7 +480,7 @@ export default function LandingPage() {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full bg-slate-800/50 rounded-xl border border-slate-700/50 overflow-hidden">
+            <table className="w-full bg-nog-800/50 rounded-xl border border-slate-700/50 overflow-hidden">
               <thead>
                 <tr className="border-b border-slate-700">
                   <th className="px-6 py-4 text-left text-slate-400 font-medium">Feature</th>
@@ -583,7 +583,7 @@ export default function LandingPage() {
             {features.map((feature) => (
               <div
                 key={feature.title}
-                className="p-6 bg-slate-800/50 rounded-xl border border-slate-700/50 hover:border-amber-500/50 transition-colors group"
+                className="p-6 bg-nog-800/50 rounded-xl border border-slate-700/50 hover:border-amber-500/50 transition-colors group"
               >
                 <div className="w-12 h-12 bg-amber-500/10 rounded-lg flex items-center justify-center mb-4 group-hover:bg-amber-500/20 transition-colors">
                   <feature.icon className="w-6 h-6 text-amber-400" />
@@ -601,7 +601,7 @@ export default function LandingPage() {
       </section>
 
       {/* Integrations */}
-      <section className="py-16 bg-slate-800/50">
+      <section className="py-16 bg-nog-800/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-white mb-4">
@@ -615,7 +615,7 @@ export default function LandingPage() {
             {integrations.map((integration) => (
               <div
                 key={integration.name}
-                className="px-5 py-3 bg-slate-800 rounded-lg border border-slate-700 flex items-center gap-3 hover:border-amber-500/50 transition-colors"
+                className="px-5 py-3 bg-nog-800 rounded-lg border border-slate-700 flex items-center gap-3 hover:border-amber-500/50 transition-colors"
               >
                 <Server className="w-5 h-5 text-amber-400" />
                 <div>
@@ -637,7 +637,7 @@ export default function LandingPage() {
             </h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-            <div className="p-6 bg-slate-800/50 rounded-xl border border-slate-700/50 text-center">
+            <div className="p-6 bg-nog-800/50 rounded-xl border border-slate-700/50 text-center">
               <div className="text-4xl mb-4">📁</div>
               <h3 className="text-xl font-semibold text-white mb-2">Agent Only</h3>
               <p className="text-slate-400 text-sm mb-4">
@@ -645,7 +645,7 @@ export default function LandingPage() {
               </p>
               <div className="text-xs text-slate-500">Perfect for file monitoring</div>
             </div>
-            <div className="p-6 bg-gradient-to-b from-amber-900/50 to-slate-800/50 rounded-xl border border-amber-500/50 text-center relative">
+            <div className="p-6 bg-gradient-to-b from-amber-900/50 to-nog-800/50 rounded-xl border border-amber-500/50 text-center relative">
               <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-amber-500 text-white text-xs font-medium rounded-full">
                 Popular
               </div>
@@ -656,7 +656,7 @@ export default function LandingPage() {
               </p>
               <div className="text-xs text-slate-500">Perfect for SMBs & small teams</div>
             </div>
-            <div className="p-6 bg-slate-800/50 rounded-xl border border-slate-700/50 text-center">
+            <div className="p-6 bg-nog-800/50 rounded-xl border border-slate-700/50 text-center">
               <div className="text-4xl mb-4">🐳</div>
               <h3 className="text-xl font-semibold text-white mb-2">LogNog Full</h3>
               <p className="text-slate-400 text-sm mb-4">
@@ -669,7 +669,7 @@ export default function LandingPage() {
       </section>
 
       {/* Getting Started */}
-      <section className="py-16 bg-slate-800/30">
+      <section className="py-16 bg-nog-800/30">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-white mb-4">
@@ -687,7 +687,7 @@ export default function LandingPage() {
               </div>
               <div className="pl-12">
                 <h3 className="text-xl font-semibold text-white mb-3">Clone & Start</h3>
-                <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700/50 mb-3">
+                <div className="bg-nog-800/50 rounded-lg p-4 border border-slate-700/50 mb-3">
                   <code className="text-sm text-amber-400 font-mono">
                     git clone lognog.git<br />
                     docker-compose up -d
@@ -705,7 +705,7 @@ export default function LandingPage() {
               </div>
               <div className="pl-12">
                 <h3 className="text-xl font-semibold text-white mb-3">Configure Sources</h3>
-                <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700/50 mb-3">
+                <div className="bg-nog-800/50 rounded-lg p-4 border border-slate-700/50 mb-3">
                   <div className="text-sm text-slate-300 space-y-1">
                     <div className="flex items-center gap-2">
                       <Check className="w-4 h-4 text-amber-400" />
@@ -733,7 +733,7 @@ export default function LandingPage() {
               </div>
               <div className="pl-12">
                 <h3 className="text-xl font-semibold text-white mb-3">Search & Alert</h3>
-                <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700/50 mb-3">
+                <div className="bg-nog-800/50 rounded-lg p-4 border border-slate-700/50 mb-3">
                   <code className="text-sm text-amber-400 font-mono">
                     search severity=error<br />
                     | stats count by hostname<br />
@@ -771,7 +771,7 @@ export default function LandingPage() {
             </p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            <div className="p-6 bg-slate-800/50 rounded-xl border border-slate-700/50 hover:border-amber-500/50 transition-colors">
+            <div className="p-6 bg-nog-800/50 rounded-xl border border-slate-700/50 hover:border-amber-500/50 transition-colors">
               <div className="flex items-start gap-3 mb-4">
                 <div className="w-10 h-10 bg-amber-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
                   <Terminal className="w-5 h-5 text-amber-400" />
@@ -790,7 +790,7 @@ export default function LandingPage() {
               </div>
             </div>
 
-            <div className="p-6 bg-slate-800/50 rounded-xl border border-slate-700/50 hover:border-amber-500/50 transition-colors">
+            <div className="p-6 bg-nog-800/50 rounded-xl border border-slate-700/50 hover:border-amber-500/50 transition-colors">
               <div className="flex items-start gap-3 mb-4">
                 <div className="w-10 h-10 bg-amber-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
                   <Server className="w-5 h-5 text-amber-400" />
@@ -809,7 +809,7 @@ export default function LandingPage() {
               </div>
             </div>
 
-            <div className="p-6 bg-slate-800/50 rounded-xl border border-slate-700/50 hover:border-amber-500/50 transition-colors">
+            <div className="p-6 bg-nog-800/50 rounded-xl border border-slate-700/50 hover:border-amber-500/50 transition-colors">
               <div className="flex items-start gap-3 mb-4">
                 <div className="w-10 h-10 bg-amber-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
                   <Building2 className="w-5 h-5 text-amber-400" />
@@ -828,7 +828,7 @@ export default function LandingPage() {
               </div>
             </div>
 
-            <div className="p-6 bg-slate-800/50 rounded-xl border border-slate-700/50 hover:border-amber-500/50 transition-colors">
+            <div className="p-6 bg-nog-800/50 rounded-xl border border-slate-700/50 hover:border-amber-500/50 transition-colors">
               <div className="flex items-start gap-3 mb-4">
                 <div className="w-10 h-10 bg-amber-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
                   <Users className="w-5 h-5 text-amber-400" />
@@ -847,7 +847,7 @@ export default function LandingPage() {
               </div>
             </div>
 
-            <div className="p-6 bg-slate-800/50 rounded-xl border border-slate-700/50 hover:border-amber-500/50 transition-colors">
+            <div className="p-6 bg-nog-800/50 rounded-xl border border-slate-700/50 hover:border-amber-500/50 transition-colors">
               <div className="flex items-start gap-3 mb-4">
                 <div className="w-10 h-10 bg-amber-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
                   <Shield className="w-5 h-5 text-amber-400" />
@@ -866,7 +866,7 @@ export default function LandingPage() {
               </div>
             </div>
 
-            <div className="p-6 bg-slate-800/50 rounded-xl border border-slate-700/50 hover:border-amber-500/50 transition-colors">
+            <div className="p-6 bg-nog-800/50 rounded-xl border border-slate-700/50 hover:border-amber-500/50 transition-colors">
               <div className="flex items-start gap-3 mb-4">
                 <div className="w-10 h-10 bg-amber-500/10 rounded-lg flex items-center justify-center flex-shrink-0">
                   <Database className="w-5 h-5 text-amber-400" />
@@ -889,7 +889,7 @@ export default function LandingPage() {
       </section>
 
       {/* FAQ Section */}
-      <section className="py-16 bg-slate-800/30">
+      <section className="py-16 bg-nog-800/30">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-white mb-4">
@@ -897,7 +897,7 @@ export default function LandingPage() {
             </h2>
           </div>
           <div className="space-y-6">
-            <div className="bg-slate-800/50 rounded-xl border border-slate-700/50 p-6">
+            <div className="bg-nog-800/50 rounded-xl border border-slate-700/50 p-6">
               <h3 className="text-lg font-semibold text-white mb-2">
                 Do I really need Docker? What about Windows?
               </h3>
@@ -907,7 +907,7 @@ export default function LandingPage() {
               </p>
             </div>
 
-            <div className="bg-slate-800/50 rounded-xl border border-slate-700/50 p-6">
+            <div className="bg-nog-800/50 rounded-xl border border-slate-700/50 p-6">
               <h3 className="text-lg font-semibold text-white mb-2">
                 How is this different from Grafana Loki?
               </h3>
@@ -917,7 +917,7 @@ export default function LandingPage() {
               </p>
             </div>
 
-            <div className="bg-slate-800/50 rounded-xl border border-slate-700/50 p-6">
+            <div className="bg-nog-800/50 rounded-xl border border-slate-700/50 p-6">
               <h3 className="text-lg font-semibold text-white mb-2">
                 Can I really handle millions of logs per day?
               </h3>
@@ -927,7 +927,7 @@ export default function LandingPage() {
               </p>
             </div>
 
-            <div className="bg-slate-800/50 rounded-xl border border-slate-700/50 p-6">
+            <div className="bg-nog-800/50 rounded-xl border border-slate-700/50 p-6">
               <h3 className="text-lg font-semibold text-white mb-2">
                 What about compliance? Can I use this for SOC 2 / HIPAA?
               </h3>
@@ -937,7 +937,7 @@ export default function LandingPage() {
               </p>
             </div>
 
-            <div className="bg-slate-800/50 rounded-xl border border-slate-700/50 p-6">
+            <div className="bg-nog-800/50 rounded-xl border border-slate-700/50 p-6">
               <h3 className="text-lg font-semibold text-white mb-2">
                 Is there a hosted version coming?
               </h3>
@@ -947,7 +947,7 @@ export default function LandingPage() {
               </p>
             </div>
 
-            <div className="bg-slate-800/50 rounded-xl border border-slate-700/50 p-6">
+            <div className="bg-nog-800/50 rounded-xl border border-slate-700/50 p-6">
               <h3 className="text-lg font-semibold text-white mb-2">
                 Can I contribute? What's the license?
               </h3>
@@ -991,7 +991,7 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="py-12 border-t border-slate-700/50 bg-slate-900">
+      <footer className="py-12 border-t border-slate-700/50 bg-nog-900">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
             <div>

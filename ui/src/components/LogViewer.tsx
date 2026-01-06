@@ -38,7 +38,7 @@ const SEVERITY_CONFIG = {
   4: { name: 'Warning', color: 'text-amber-700 bg-amber-100 ring-amber-600/30', bgColor: 'bg-amber-50/50' },
   5: { name: 'Notice', color: 'text-amber-700 bg-amber-100 ring-amber-600/30', bgColor: 'bg-amber-50/50' },
   6: { name: 'Info', color: 'text-amber-700 bg-amber-100 ring-amber-600/30', bgColor: 'bg-amber-50/50' },
-  7: { name: 'Debug', color: 'text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 ring-slate-600/30', bgColor: 'bg-slate-50/50 dark:bg-slate-800/50' },
+  7: { name: 'Debug', color: 'text-slate-700 dark:text-slate-300 bg-nog-100 dark:bg-nog-800 ring-slate-600/30', bgColor: 'bg-nog-50/50 dark:bg-nog-800/50' },
 };
 
 // Helper function to get relative time
@@ -134,7 +134,7 @@ const FieldValue: React.FC<FieldValueProps> = ({ field, value, onAddFilter, sear
   const renderValue = () => {
     if (field === 'severity' && typeof value === 'number') {
       return (
-        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ring-1 ${SEVERITY_CONFIG[value as keyof typeof SEVERITY_CONFIG]?.color || 'text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 ring-slate-600/30'}`}>
+        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ring-1 ${SEVERITY_CONFIG[value as keyof typeof SEVERITY_CONFIG]?.color || 'text-slate-700 dark:text-slate-300 bg-nog-100 dark:bg-nog-800 ring-slate-600/30'}`}>
           {SEVERITY_CONFIG[value as keyof typeof SEVERITY_CONFIG]?.name || value}
         </span>
       );
@@ -190,7 +190,7 @@ const FieldValue: React.FC<FieldValueProps> = ({ field, value, onAddFilter, sear
           </button>
           <button
             onClick={handleCopy}
-            className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-slate-700 dark:text-nog-300 hover:bg-slate-50 dark:hover:bg-nog-700 rounded transition-colors"
+            className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-slate-700 dark:text-nog-300 hover:bg-nog-50 dark:hover:bg-nog-700 rounded transition-colors"
             title="Copy value"
           >
             {copied ? (
@@ -264,7 +264,7 @@ const LogRow: React.FC<LogRowProps> = ({
     <div
       style={style}
       className={`border-b border-slate-200 dark:border-nog-700 transition-colors ${
-        isExpanded ? severityConfig.bgColor : 'hover:bg-slate-50 dark:hover:bg-nog-800'
+        isExpanded ? severityConfig.bgColor : 'hover:bg-nog-50 dark:hover:bg-nog-800'
       }`}
     >
       <div className="flex items-start gap-2 px-4 py-2">
@@ -476,7 +476,7 @@ export default function LogViewer({
   if (!isLoading && logs.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
-        <div className="w-16 h-16 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-4">
+        <div className="w-16 h-16 rounded-full bg-nog-100 dark:bg-nog-800 flex items-center justify-center mb-4">
           <AlertCircle className="w-8 h-8 text-slate-400" />
         </div>
         <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">No Logs Found</h3>
@@ -500,7 +500,7 @@ export default function LogViewer({
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-slate-50 dark:bg-nog-900 border-b border-slate-200 dark:border-nog-700">
+      <div className="flex items-center justify-between px-4 py-3 bg-nog-50 dark:bg-nog-900 border-b border-slate-200 dark:border-nog-700">
         <div className="flex items-center gap-4">
           <span className="text-sm font-semibold text-slate-700 dark:text-nog-300">
             {logs.length.toLocaleString()} {logs.length === 1 ? 'log' : 'logs'}
@@ -548,7 +548,7 @@ export default function LogViewer({
       </div>
 
       {/* Footer */}
-      <div className="px-4 py-2 bg-slate-50 dark:bg-nog-900 border-t border-slate-200 dark:border-nog-700 text-xs text-slate-500 dark:text-nog-400">
+      <div className="px-4 py-2 bg-nog-50 dark:bg-nog-900 border-t border-slate-200 dark:border-nog-700 text-xs text-slate-500 dark:text-nog-400">
         <span>Click any row to expand. Hover over field values for quick actions.</span>
       </div>
     </div>

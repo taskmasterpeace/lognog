@@ -67,7 +67,7 @@ export function AutocompleteDropdown({
 
       {/* Footer with keyboard hints */}
       {suggestions.length > 0 && (
-        <div className="px-3 py-1.5 text-[11px] text-slate-400 dark:text-slate-500 border-t border-slate-100 dark:border-nog-700 bg-slate-50 dark:bg-nog-900/50 flex items-center gap-4">
+        <div className="px-3 py-1.5 text-[11px] text-slate-400 dark:text-slate-500 border-t border-slate-100 dark:border-nog-700 bg-nog-50 dark:bg-nog-900/50 flex items-center gap-4">
           <span className="flex items-center gap-1">
             <kbd className="px-1 py-0.5 bg-slate-200 dark:bg-nog-700 rounded text-[10px]">↑</kbd>
             <kbd className="px-1 py-0.5 bg-slate-200 dark:bg-nog-700 rounded text-[10px]">↓</kbd>

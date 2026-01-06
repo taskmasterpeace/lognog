@@ -168,7 +168,7 @@ export default function StorageTab() {
         <div className="flex gap-2">
           <button
             onClick={() => refetch()}
-            className="flex items-center gap-2 px-3 py-2 text-sm bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600"
+            className="flex items-center gap-2 px-3 py-2 text-sm bg-nog-100 dark:bg-nog-700 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600"
           >
             <RefreshCw className="w-4 h-4" />
             Refresh
@@ -342,7 +342,7 @@ export default function StorageTab() {
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 dark:bg-slate-800">
+            <thead className="bg-nog-50 dark:bg-nog-800">
               <tr>
                 <th className="px-4 py-3 text-left font-medium text-slate-600 dark:text-slate-300">Index</th>
                 <th className="px-4 py-3 text-right font-medium text-slate-600 dark:text-slate-300">Size</th>
@@ -357,7 +357,7 @@ export default function StorageTab() {
               {storage.indexes.map((idx, i) => (
                 <tr
                   key={idx.index_name}
-                  className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                  className="hover:bg-nog-50 dark:hover:bg-nog-800/50 transition-colors"
                 >
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">

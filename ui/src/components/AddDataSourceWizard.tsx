@@ -294,7 +294,7 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+      <div className="bg-white dark:bg-nog-800 rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header with Logo */}
         <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -308,14 +308,14 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
                 (e.target as HTMLImageElement).className = 'h-8 w-8';
               }}
             />
-            <div className="h-6 w-px bg-slate-300 dark:bg-slate-600" />
+            <div className="h-6 w-px bg-slate-300 dark:bg-nog-600" />
             <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
               Add Data Source
             </h2>
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+            className="p-2 hover:bg-nog-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
           >
             <X className="w-5 h-5 text-slate-500" />
           </button>
@@ -332,7 +332,7 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
                       ? 'bg-amber-500 text-white'
                       : s < step
                       ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'
-                      : 'bg-slate-100 text-slate-400 dark:bg-slate-700 dark:text-slate-500'
+                      : 'bg-nog-100 text-slate-400 dark:bg-nog-700 dark:text-slate-500'
                   }`}
                 >
                   {s < step ? <Check className="w-4 h-4" /> : s}
@@ -340,7 +340,7 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
                 {s < 3 && (
                   <div
                     className={`w-12 h-0.5 mx-1 ${
-                      s < step ? 'bg-amber-500' : 'bg-slate-200 dark:bg-slate-600'
+                      s < step ? 'bg-amber-500' : 'bg-slate-200 dark:bg-nog-600'
                     }`}
                   />
                 )}
@@ -417,11 +417,11 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
                     type="text"
                     value={getEndpointUrl()}
                     readOnly
-                    className="flex-1 px-4 py-2 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 font-mono text-sm"
+                    className="flex-1 px-4 py-2 bg-nog-100 dark:bg-nog-900 border border-slate-200 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 font-mono text-sm"
                   />
                   <button
                     onClick={() => handleCopy(getEndpointUrl(), 'endpoint')}
-                    className="p-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg transition-colors"
+                    className="p-2 bg-nog-100 dark:bg-nog-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg transition-colors"
                   >
                     {copiedSection === 'endpoint' ? (
                       <Check className="w-5 h-5 text-green-500" />
@@ -444,7 +444,7 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
                       value={newApiKeyName}
                       onChange={(e) => setNewApiKeyName(e.target.value)}
                       placeholder="Enter key name (e.g., my-app)"
-                      className="flex-1 px-4 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
+                      className="flex-1 px-4 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-900 text-slate-900 dark:text-slate-100"
                     />
                     <button
                       onClick={handleCreateApiKey}
@@ -471,11 +471,11 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
                       type="text"
                       value={selectedApiKey}
                       readOnly
-                      className="flex-1 px-4 py-2 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 font-mono text-sm"
+                      className="flex-1 px-4 py-2 bg-nog-100 dark:bg-nog-900 border border-slate-200 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 font-mono text-sm"
                     />
                     <button
                       onClick={() => handleCopy(selectedApiKey, 'apikey')}
-                      className="p-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg transition-colors"
+                      className="p-2 bg-nog-100 dark:bg-nog-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg transition-colors"
                     >
                       {copiedSection === 'apikey' ? (
                         <Check className="w-5 h-5 text-green-500" />
@@ -519,7 +519,7 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
                   value={indexName}
                   onChange={(e) => setIndexName(e.target.value)}
                   placeholder="e.g., my-app"
-                  className="w-full px-4 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
+                  className="w-full px-4 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-900 text-slate-900 dark:text-slate-100"
                 />
                 {indexName && (
                   <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
@@ -578,7 +578,7 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
                     setPreviewError(null);
                   }}
                   rows={6}
-                  className="w-full px-4 py-3 font-mono text-sm border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
+                  className="w-full px-4 py-3 font-mono text-sm border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-900 text-slate-900 dark:text-slate-100"
                 />
               </div>
 
@@ -587,7 +587,7 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
                 <button
                   onClick={handlePreview}
                   disabled={validating}
-                  className="px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg flex items-center gap-2"
+                  className="px-4 py-2 bg-nog-100 dark:bg-nog-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg flex items-center gap-2"
                 >
                   {validating ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -633,7 +633,7 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
               )}
 
               {previewResult && (
-                <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-lg space-y-3">
+                <div className="p-4 bg-nog-50 dark:bg-nog-900 rounded-lg space-y-3">
                   <h4 className="font-medium text-slate-700 dark:text-slate-300">Extracted Fields:</h4>
 
                   {/* Standard Fields */}
@@ -708,7 +708,7 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
                       className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
                         activeSnippet === lang
                           ? 'bg-amber-500 text-white'
-                          : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600'
+                          : 'bg-nog-100 dark:bg-nog-700 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600'
                       }`}
                     >
                       {lang === 'nodejs' ? 'Node.js' : lang.charAt(0).toUpperCase() + lang.slice(1)}
@@ -716,7 +716,7 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
                   ))}
                 </div>
                 <div className="relative">
-                  <pre className="bg-slate-900 dark:bg-black rounded-lg p-4 overflow-x-auto text-sm text-slate-100 font-mono">
+                  <pre className="bg-nog-900 dark:bg-black rounded-lg p-4 overflow-x-auto text-sm text-slate-100 font-mono">
                     {getCodeSnippet()}
                   </pre>
                   <button
@@ -736,7 +736,7 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between bg-slate-50 dark:bg-slate-900">
+        <div className="p-6 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between bg-nog-50 dark:bg-nog-900">
           <div>
             {step > 1 && (
               <button

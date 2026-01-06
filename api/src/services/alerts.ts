@@ -21,6 +21,7 @@ import {
 } from '../db/sqlite.js';
 import { executeDSLQuery, getBackend } from '../db/backend.js';
 import { processTemplate, generateAISummary, TemplateContext } from './template-engine.js';
+import { logAlertEvaluated, logAlertAction } from './internal-logger.js';
 
 // Parse time range string like "-5m", "-1h", "-24h" to milliseconds
 function parseTimeRange(timeRange: string): number {
@@ -588,6 +589,8 @@ export async function evaluateAlert(alertId: string): Promise<{
     return { triggered: false, resultCount: 0, message: 'Alert is disabled' };
   }
 
+  const startTime = performance.now();
+
   try {
     // Calculate time range
     const timeRangeMs = parseTimeRange(alert.time_range);
@@ -632,6 +635,14 @@ export async function evaluateAlert(alertId: string): Promise<{
     }
 
     if (!triggered) {
+      const duration_ms = Math.round(performance.now() - startTime);
+      logAlertEvaluated({
+        alert_id: alertId,
+        alert_name: alert.name,
+        duration_ms,
+        result_count: resultCount,
+        triggered: false,
+      });
       return { triggered: false, resultCount, message: 'Condition not met' };
     }
 
@@ -642,6 +653,15 @@ export async function evaluateAlert(alertId: string): Promise<{
       : undefined;
 
     if (isAlertSilenced(alertId, hostname)) {
+      const duration_ms = Math.round(performance.now() - startTime);
+      logAlertEvaluated({
+        alert_id: alertId,
+        alert_name: alert.name,
+        duration_ms,
+        result_count: resultCount,
+        triggered: true,
+        silenced: true,
+      });
       return {
         triggered: false,
         resultCount,
@@ -653,6 +673,15 @@ export async function evaluateAlert(alertId: string): Promise<{
     if (alert.throttle_enabled) {
       const recentTrigger = getRecentAlertTrigger(alertId, alert.throttle_window_seconds);
       if (recentTrigger) {
+        const duration_ms = Math.round(performance.now() - startTime);
+        logAlertEvaluated({
+          alert_id: alertId,
+          alert_name: alert.name,
+          duration_ms,
+          result_count: resultCount,
+          triggered: true,
+          throttled: true,
+        });
         return {
           triggered: false,
           resultCount,
@@ -720,15 +749,47 @@ export async function evaluateAlert(alertId: string): Promise<{
 
     console.log(`Alert triggered: ${alert.name} (${resultCount} results)`);
 
+    // Log alert triggered
+    const duration_ms = Math.round(performance.now() - startTime);
+    logAlertEvaluated({
+      alert_id: alertId,
+      alert_name: alert.name,
+      duration_ms,
+      result_count: resultCount,
+      triggered: true,
+    });
+
+    // Log each action result
+    for (const result of actionResults) {
+      logAlertAction({
+        alert_id: alertId,
+        alert_name: alert.name,
+        action_type: result.type,
+        success: result.success,
+        message: result.message,
+      });
+    }
+
     return {
       triggered: true,
       resultCount,
       message: `Alert triggered - ${actionResults.filter(r => r.success).length}/${actionResults.length} actions succeeded`,
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
-    console.error(`Error evaluating alert ${alert.name}:`, message);
-    return { triggered: false, resultCount: 0, message: `Error: ${message}` };
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error(`Error evaluating alert ${alert.name}:`, errorMessage);
+
+    const duration_ms = Math.round(performance.now() - startTime);
+    logAlertEvaluated({
+      alert_id: alertId,
+      alert_name: alert.name,
+      duration_ms,
+      result_count: 0,
+      triggered: false,
+      error: errorMessage,
+    });
+
+    return { triggered: false, resultCount: 0, message: `Error: ${errorMessage}` };
   }
 }
 

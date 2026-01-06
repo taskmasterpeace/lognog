@@ -167,9 +167,9 @@ export default function DataSourcesPage() {
       : (templatesByCategory as Record<string, SourceTemplate[]>)?.[selectedCategory] || [];
 
   return (
-    <div className="min-h-full bg-slate-50 dark:bg-slate-900">
+    <div className="min-h-full bg-nog-50 dark:bg-nog-900">
       {/* Header */}
-      <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 shadow-sm">
+      <div className="bg-white dark:bg-nog-800 border-b border-slate-200 dark:border-slate-700 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 py-6">
           <div className="flex items-start justify-between">
             <div>
@@ -196,8 +196,8 @@ export default function DataSourcesPage() {
               onClick={() => handleTabChange('active')}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-t-lg font-medium text-sm transition-colors border-b-2 ${
                 activeTab === 'active'
-                  ? 'bg-slate-50 dark:bg-slate-900 text-amber-600 dark:text-amber-400 border-amber-500'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border-transparent hover:bg-slate-100 dark:hover:bg-slate-700'
+                  ? 'bg-nog-50 dark:bg-nog-900 text-amber-600 dark:text-amber-400 border-amber-500'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border-transparent hover:bg-nog-100 dark:hover:bg-slate-700'
               }`}
             >
               <Activity className="w-4 h-4" />
@@ -206,7 +206,7 @@ export default function DataSourcesPage() {
                 <span className={`px-1.5 py-0.5 text-xs rounded-full ${
                   activeTab === 'active'
                     ? 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300'
-                    : 'bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-300'
+                    : 'bg-slate-200 dark:bg-nog-600 text-slate-600 dark:text-slate-300'
                 }`}>
                   {activeSources.sources.length}
                 </span>
@@ -216,8 +216,8 @@ export default function DataSourcesPage() {
               onClick={() => handleTabChange('templates')}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-t-lg font-medium text-sm transition-colors border-b-2 ${
                 activeTab === 'templates'
-                  ? 'bg-slate-50 dark:bg-slate-900 text-amber-600 dark:text-amber-400 border-amber-500'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border-transparent hover:bg-slate-100 dark:hover:bg-slate-700'
+                  ? 'bg-nog-50 dark:bg-nog-900 text-amber-600 dark:text-amber-400 border-amber-500'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border-transparent hover:bg-nog-100 dark:hover:bg-slate-700'
               }`}
             >
               <Database className="w-4 h-4" />
@@ -226,7 +226,7 @@ export default function DataSourcesPage() {
                 <span className={`px-1.5 py-0.5 text-xs rounded-full ${
                   activeTab === 'templates'
                     ? 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300'
-                    : 'bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-300'
+                    : 'bg-slate-200 dark:bg-nog-600 text-slate-600 dark:text-slate-300'
                 }`}>
                   {stats.total}
                 </span>
@@ -236,8 +236,8 @@ export default function DataSourcesPage() {
               onClick={() => handleTabChange('config')}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-t-lg font-medium text-sm transition-colors border-b-2 ${
                 activeTab === 'config'
-                  ? 'bg-slate-50 dark:bg-slate-900 text-amber-600 dark:text-amber-400 border-amber-500'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border-transparent hover:bg-slate-100 dark:hover:bg-slate-700'
+                  ? 'bg-nog-50 dark:bg-nog-900 text-amber-600 dark:text-amber-400 border-amber-500'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border-transparent hover:bg-nog-100 dark:hover:bg-slate-700'
               }`}
             >
               <Settings className="w-4 h-4" />
@@ -272,7 +272,7 @@ export default function DataSourcesPage() {
                       </Link>.
                     </p>
                     <div className="flex flex-wrap items-center gap-2">
-                      <code className="text-xs bg-slate-800 text-slate-100 px-3 py-1.5 rounded font-mono">
+                      <code className="text-xs bg-nog-800 text-slate-100 px-3 py-1.5 rounded font-mono">
                         curl -H "X-Index: my-app" -H "X-API-Key: ..." /api/ingest/http
                       </code>
                       <Link
@@ -311,7 +311,7 @@ export default function DataSourcesPage() {
                   <button
                     key={idx.index_name}
                     onClick={() => navigate(`/search?q=${encodeURIComponent(`search index=${idx.index_name}`)}`)}
-                    className="px-4 py-2 bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-amber-300 dark:hover:border-amber-600 transition-colors flex items-center gap-3"
+                    className="px-4 py-2 bg-white dark:bg-nog-800 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-amber-300 dark:hover:border-amber-600 transition-colors flex items-center gap-3"
                   >
                     <div className="text-sm font-medium text-slate-900 dark:text-slate-100">
                       {idx.index_name || 'main'}
@@ -333,9 +333,9 @@ export default function DataSourcesPage() {
                 <Loader2 className="w-8 h-8 text-amber-500 animate-spin" />
               </div>
             ) : activeSources && activeSources.sources.length > 0 ? (
-              <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+              <div className="bg-white dark:bg-nog-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
                 <table className="w-full">
-                  <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
+                  <thead className="bg-nog-50 dark:bg-nog-900 border-b border-slate-200 dark:border-slate-700">
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                         Status
@@ -367,7 +367,7 @@ export default function DataSourcesPage() {
                       return (
                         <tr
                           key={`${source.app_name}-${source.index_name}-${idx}`}
-                          className="hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                          className="hover:bg-nog-50 dark:hover:bg-slate-700/50 transition-colors"
                         >
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">
@@ -386,7 +386,7 @@ export default function DataSourcesPage() {
                             </div>
                           </td>
                           <td className="px-4 py-3">
-                            <span className="px-2 py-1 text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 rounded">
+                            <span className="px-2 py-1 text-xs font-medium bg-nog-100 dark:bg-nog-700 text-slate-700 dark:text-slate-300 rounded">
                               {source.index_name || 'main'}
                             </span>
                           </td>
@@ -424,7 +424,7 @@ export default function DataSourcesPage() {
                                   )}`
                                 )
                               }
-                              className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-600 rounded transition-colors"
+                              className="p-1.5 hover:bg-nog-100 dark:hover:bg-slate-600 rounded transition-colors"
                               title="View logs"
                             >
                               <ExternalLink className="w-4 h-4 text-slate-400 hover:text-amber-500" />
@@ -437,7 +437,7 @@ export default function DataSourcesPage() {
                 </table>
               </div>
             ) : (
-              <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+              <div className="bg-white dark:bg-nog-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
                 {/* Header */}
                 <div className="p-6 border-b border-slate-200 dark:border-slate-700 text-center">
                   <Activity className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
@@ -462,7 +462,7 @@ export default function DataSourcesPage() {
                     <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
                       Point any syslog-compatible device to LogNog.
                     </p>
-                    <code className="block text-xs bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 p-2 rounded font-mono mb-2">
+                    <code className="block text-xs bg-nog-100 dark:bg-nog-700 text-slate-700 dark:text-slate-300 p-2 rounded font-mono mb-2">
                       Port: UDP/TCP 514
                     </code>
                     <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -481,7 +481,7 @@ export default function DataSourcesPage() {
                     <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
                       Send JSON logs with custom index names.
                     </p>
-                    <code className="block text-xs bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 p-2 rounded font-mono mb-2 break-all">
+                    <code className="block text-xs bg-nog-100 dark:bg-nog-700 text-slate-700 dark:text-slate-300 p-2 rounded font-mono mb-2 break-all">
                       POST /api/ingest/http
                       <br />
                       X-Index: my-app
@@ -502,7 +502,7 @@ export default function DataSourcesPage() {
                     <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
                       Install on Windows/Linux to collect logs and events.
                     </p>
-                    <code className="block text-xs bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 p-2 rounded font-mono mb-2">
+                    <code className="block text-xs bg-nog-100 dark:bg-nog-700 text-slate-700 dark:text-slate-300 p-2 rounded font-mono mb-2">
                       LogNogIn.exe init
                     </code>
                     <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -512,7 +512,7 @@ export default function DataSourcesPage() {
                 </div>
 
                 {/* Footer */}
-                <div className="p-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                <div className="p-4 bg-nog-50 dark:bg-nog-900 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
                   <p className="text-sm text-slate-500 dark:text-slate-400">
                     Need help? Check out our{' '}
                     <Link to="/docs" className="text-amber-600 dark:text-amber-400 hover:underline">
@@ -539,19 +539,19 @@ export default function DataSourcesPage() {
             {/* Stats Cards */}
             {stats && (
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
+                <div className="bg-white dark:bg-nog-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
                   <div className="text-sm text-slate-500 dark:text-slate-400">Total Templates</div>
                   <div className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1">{stats.total}</div>
                 </div>
-                <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
+                <div className="bg-white dark:bg-nog-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
                   <div className="text-sm text-slate-500 dark:text-slate-400">Built-in</div>
                   <div className="text-2xl font-bold text-amber-500 mt-1">{stats.built_in}</div>
                 </div>
-                <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
+                <div className="bg-white dark:bg-nog-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
                   <div className="text-sm text-slate-500 dark:text-slate-400">Custom</div>
                   <div className="text-2xl font-bold text-amber-500 mt-1">{stats.custom}</div>
                 </div>
-                <div className="bg-white dark:bg-slate-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
+                <div className="bg-white dark:bg-nog-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
                   <div className="text-sm text-slate-500 dark:text-slate-400">Categories</div>
                   <div className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1">
                     {Object.keys(stats.by_category).filter((k) => stats.by_category[k] > 0).length}
@@ -567,7 +567,7 @@ export default function DataSourcesPage() {
                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                   selectedCategory === 'all'
                     ? 'bg-amber-500 text-white'
-                    : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
+                    : 'bg-white dark:bg-nog-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-nog-50 dark:hover:bg-slate-700'
                 }`}
               >
                 All Templates ({allTemplates.length})
@@ -582,7 +582,7 @@ export default function DataSourcesPage() {
                     className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
                       selectedCategory === category
                         ? 'bg-amber-500 text-white'
-                        : 'bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'
+                        : 'bg-white dark:bg-nog-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-nog-50 dark:hover:bg-slate-700'
                     }`}
                   >
                     <Icon className="w-4 h-4" />
@@ -601,7 +601,7 @@ export default function DataSourcesPage() {
                 return (
                   <div
                     key={template.id}
-                    className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5 hover:shadow-lg transition-shadow cursor-pointer"
+                    className="bg-white dark:bg-nog-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5 hover:shadow-lg transition-shadow cursor-pointer"
                     onClick={() => openTemplateSetup(template)}
                   >
                     <div className="flex items-start justify-between mb-3">
@@ -609,7 +609,7 @@ export default function DataSourcesPage() {
                         <Icon className="w-6 h-6" />
                       </div>
                       {template.built_in ? (
-                        <span className="px-2 py-1 text-xs font-medium bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 rounded">
+                        <span className="px-2 py-1 text-xs font-medium bg-nog-100 dark:bg-nog-700 text-slate-600 dark:text-slate-400 rounded">
                           Built-in
                         </span>
                       ) : null}
@@ -619,9 +619,9 @@ export default function DataSourcesPage() {
                     <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2 mb-3">{template.description}</p>
 
                     <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                      <span className="px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded capitalize">{template.category}</span>
+                      <span className="px-2 py-1 bg-nog-100 dark:bg-nog-700 rounded capitalize">{template.category}</span>
                       {template.field_extractions && template.field_extractions.length > 0 && (
-                        <span className="px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded">
+                        <span className="px-2 py-1 bg-nog-100 dark:bg-nog-700 rounded">
                           {template.field_extractions.length} fields
                         </span>
                       )}
@@ -632,7 +632,7 @@ export default function DataSourcesPage() {
             </div>
 
             {filteredTemplates.length === 0 && (
-              <div className="text-center py-12 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+              <div className="text-center py-12 bg-white dark:bg-nog-800 rounded-xl border border-slate-200 dark:border-slate-700">
                 <Search className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
                 <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100 mb-2">
                   No templates found
@@ -647,7 +647,7 @@ export default function DataSourcesPage() {
 
         {/* Source Config Tab (Placeholder) */}
         {activeTab === 'config' && (
-          <div className="bg-white dark:bg-slate-800 rounded-xl p-12 text-center border border-slate-200 dark:border-slate-700">
+          <div className="bg-white dark:bg-nog-800 rounded-xl p-12 text-center border border-slate-200 dark:border-slate-700">
             <Settings className="w-16 h-16 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
             <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">
               Source Configuration
@@ -666,7 +666,7 @@ export default function DataSourcesPage() {
       {/* Setup Modal */}
       {showSetupModal && selectedTemplate && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+          <div className="bg-white dark:bg-nog-800 rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
             {/* Header */}
             <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -691,7 +691,7 @@ export default function DataSourcesPage() {
                   setShowSetupModal(false);
                   setSelectedTemplate(null);
                 }}
-                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
+                className="p-2 hover:bg-nog-100 dark:hover:bg-slate-700 rounded-lg"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -706,7 +706,7 @@ export default function DataSourcesPage() {
                     <Info className="w-5 h-5 text-amber-500" />
                     Setup Instructions
                   </div>
-                  <div className="prose dark:prose-invert max-w-none bg-slate-50 dark:bg-slate-900 rounded-lg p-4">
+                  <div className="prose dark:prose-invert max-w-none bg-nog-50 dark:bg-nog-900 rounded-lg p-4">
                     <pre className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
                       {selectedTemplate.setup_instructions}
                     </pre>
@@ -724,7 +724,7 @@ export default function DataSourcesPage() {
                     </div>
                     <button
                       onClick={() => handleCopy(selectedTemplate.agent_config_example!, 'agent')}
-                      className="px-3 py-1 text-sm bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded flex items-center gap-2"
+                      className="px-3 py-1 text-sm bg-nog-100 dark:bg-nog-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded flex items-center gap-2"
                     >
                       {copiedSection === 'agent' ? (
                         <>
@@ -739,7 +739,7 @@ export default function DataSourcesPage() {
                       )}
                     </button>
                   </div>
-                  <div className="bg-slate-900 dark:bg-black rounded-lg p-4 overflow-x-auto">
+                  <div className="bg-nog-900 dark:bg-black rounded-lg p-4 overflow-x-auto">
                     <pre className="text-sm text-slate-100 font-mono">{selectedTemplate.agent_config_example}</pre>
                   </div>
                 </div>
@@ -755,7 +755,7 @@ export default function DataSourcesPage() {
                     </div>
                     <button
                       onClick={() => handleCopy(selectedTemplate.syslog_config_example!, 'syslog')}
-                      className="px-3 py-1 text-sm bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded flex items-center gap-2"
+                      className="px-3 py-1 text-sm bg-nog-100 dark:bg-nog-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded flex items-center gap-2"
                     >
                       {copiedSection === 'syslog' ? (
                         <>
@@ -770,7 +770,7 @@ export default function DataSourcesPage() {
                       )}
                     </button>
                   </div>
-                  <div className="bg-slate-900 dark:bg-black rounded-lg p-4 overflow-x-auto">
+                  <div className="bg-nog-900 dark:bg-black rounded-lg p-4 overflow-x-auto">
                     <pre className="text-sm text-slate-100 font-mono">{selectedTemplate.syslog_config_example}</pre>
                   </div>
                 </div>
@@ -787,7 +787,7 @@ export default function DataSourcesPage() {
                     {selectedTemplate.field_extractions.map((extraction, idx) => (
                       <div
                         key={idx}
-                        className="bg-slate-50 dark:bg-slate-900 rounded-lg p-3 border border-slate-200 dark:border-slate-700"
+                        className="bg-nog-50 dark:bg-nog-900 rounded-lg p-3 border border-slate-200 dark:border-slate-700"
                       >
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
@@ -799,7 +799,7 @@ export default function DataSourcesPage() {
                                 Required
                               </span>
                             )}
-                            <span className="px-2 py-0.5 text-xs bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400 rounded">
+                            <span className="px-2 py-0.5 text-xs bg-slate-200 dark:bg-nog-700 text-slate-600 dark:text-slate-400 rounded">
                               {extraction.pattern_type}
                             </span>
                           </div>
@@ -807,7 +807,7 @@ export default function DataSourcesPage() {
                         {extraction.description && (
                           <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">{extraction.description}</p>
                         )}
-                        <code className="text-xs font-mono text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 px-2 py-1 rounded">
+                        <code className="text-xs font-mono text-slate-700 dark:text-slate-300 bg-white dark:bg-nog-800 px-2 py-1 rounded">
                           {extraction.pattern}
                         </code>
                       </div>
@@ -823,7 +823,7 @@ export default function DataSourcesPage() {
                     <FileCode className="w-5 h-5 text-orange-500" />
                     Sample Log Line
                   </div>
-                  <div className="bg-slate-900 dark:bg-black rounded-lg p-4 overflow-x-auto">
+                  <div className="bg-nog-900 dark:bg-black rounded-lg p-4 overflow-x-auto">
                     <pre className="text-sm text-slate-100 font-mono whitespace-pre-wrap">
                       {selectedTemplate.sample_log}
                     </pre>
@@ -848,7 +848,7 @@ export default function DataSourcesPage() {
             </div>
 
             {/* Footer */}
-            <div className="p-6 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between bg-slate-50 dark:bg-slate-900">
+            <div className="p-6 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between bg-nog-50 dark:bg-nog-900">
               <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
                 {selectedTemplate.built_in ? (
                   <>

@@ -100,7 +100,7 @@ function AnnotationBadge({ annotation, editMode, onDelete }: AnnotationBadgeProp
       {showDetails && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setShowDetails(false)} />
-          <div className="absolute top-full left-0 mt-1 z-20 w-64 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg p-3">
+          <div className="absolute top-full left-0 mt-1 z-20 w-64 bg-white dark:bg-nog-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg p-3">
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1">
                 <h4 className="font-medium text-slate-900 dark:text-slate-100">

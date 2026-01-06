@@ -193,7 +193,7 @@ export function VariableEditorModal({
                   )}
 
                   {testResults.length > 0 && (
-                    <div className="mt-2 p-2 bg-slate-50 dark:bg-slate-800 rounded-lg max-h-32 overflow-y-auto">
+                    <div className="mt-2 p-2 bg-nog-50 dark:bg-nog-800 rounded-lg max-h-32 overflow-y-auto">
                       <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
                         Preview ({testResults.length} values):
                       </p>
@@ -201,7 +201,7 @@ export function VariableEditorModal({
                         {testResults.slice(0, 20).map((v, i) => (
                           <span
                             key={i}
-                            className="px-2 py-0.5 text-xs bg-white dark:bg-slate-700 rounded border border-slate-200 dark:border-slate-600"
+                            className="px-2 py-0.5 text-xs bg-white dark:bg-nog-700 rounded border border-slate-200 dark:border-slate-600"
                           >
                             {v}
                           </span>
@@ -237,7 +237,7 @@ export function VariableEditorModal({
 
           {/* Interval Options (for interval type) */}
           {type === 'interval' && (
-            <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg">
+            <div className="p-3 bg-nog-50 dark:bg-nog-800 rounded-lg">
               <p className="text-sm text-slate-600 dark:text-slate-400">
                 Interval variables provide time span options: 1m, 5m, 15m, 1h, 4h, 1d
               </p>

@@ -233,7 +233,7 @@ export function AgentPage() {
   return (
     <div className="flex h-[calc(100vh-4rem)]">
       {/* Sidebar - Conversations */}
-      <div className="w-64 border-r border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 flex flex-col">
+      <div className="w-64 border-r border-slate-200 dark:border-slate-700 bg-nog-50 dark:bg-nog-800/50 flex flex-col">
         <div className="p-4 border-b border-slate-200 dark:border-slate-700">
           <button
             onClick={startNewConversation}
@@ -256,7 +256,7 @@ export function AgentPage() {
                 className={`group flex items-center gap-2 px-3 py-2 rounded-lg cursor-pointer transition-colors ${
                   currentConversation?.id === conv.id
                     ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300'
-                    : 'hover:bg-slate-100 dark:hover:bg-slate-700/50'
+                    : 'hover:bg-nog-100 dark:hover:bg-slate-700/50'
                 }`}
                 onClick={() => loadConversation(conv.id)}
               >
@@ -284,7 +284,7 @@ export function AgentPage() {
           <div className="relative">
             <button
               onClick={() => setShowPersonaDropdown(!showPersonaDropdown)}
-              className="flex items-center gap-3 px-4 py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg transition-colors"
+              className="flex items-center gap-3 px-4 py-2 bg-nog-100 dark:bg-nog-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg transition-colors"
             >
               <div className="p-1.5 bg-gradient-to-r from-amber-500 to-amber-500 rounded-lg">
                 <PersonaIcon className="w-4 h-4 text-white" />
@@ -301,7 +301,7 @@ export function AgentPage() {
             </button>
 
             {showPersonaDropdown && (
-              <div className="absolute top-full left-0 mt-2 w-80 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 z-50">
+              <div className="absolute top-full left-0 mt-2 w-80 bg-white dark:bg-nog-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 z-50">
                 {personas.map((persona) => {
                   const Icon = PERSONA_ICONS[persona.icon] || Bot;
                   return (
@@ -311,7 +311,7 @@ export function AgentPage() {
                         setSelectedPersona(persona);
                         setShowPersonaDropdown(false);
                       }}
-                      className={`w-full flex items-start gap-3 p-4 hover:bg-slate-50 dark:hover:bg-slate-700/50 first:rounded-t-xl last:rounded-b-xl transition-colors ${
+                      className={`w-full flex items-start gap-3 p-4 hover:bg-nog-50 dark:hover:bg-slate-700/50 first:rounded-t-xl last:rounded-b-xl transition-colors ${
                         selectedPersona?.id === persona.id ? 'bg-amber-50 dark:bg-amber-900/20' : ''
                       }`}
                     >
@@ -362,7 +362,7 @@ export function AgentPage() {
                   <button
                     key={i}
                     onClick={() => setInput(example)}
-                    className="text-left px-4 py-3 bg-slate-100 dark:bg-slate-700/50 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl text-sm text-slate-700 dark:text-slate-300 transition-colors"
+                    className="text-left px-4 py-3 bg-nog-100 dark:bg-nog-700/50 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl text-sm text-slate-700 dark:text-slate-300 transition-colors"
                   >
                     {example}
                   </button>
@@ -389,7 +389,7 @@ export function AgentPage() {
                     className={`inline-block p-4 rounded-2xl ${
                       msg.role === 'user'
                         ? 'bg-amber-500 text-white rounded-tr-sm'
-                        : 'bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded-tl-sm'
+                        : 'bg-nog-100 dark:bg-nog-700 text-slate-900 dark:text-slate-100 rounded-tl-sm'
                     }`}
                   >
                     <div className="text-sm whitespace-pre-wrap">{msg.content}</div>
@@ -401,7 +401,7 @@ export function AgentPage() {
                       {msg.toolCalls.map((tc, i) => (
                         <div
                           key={i}
-                          className="flex items-start gap-2 p-3 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700"
+                          className="flex items-start gap-2 p-3 bg-nog-50 dark:bg-nog-800 rounded-lg border border-slate-200 dark:border-slate-700"
                         >
                           <Wrench className="w-4 h-4 text-slate-400 mt-0.5" />
                           <div className="flex-1 min-w-0">
@@ -426,7 +426,7 @@ export function AgentPage() {
                                 <summary className="text-xs text-slate-400 cursor-pointer hover:text-slate-600 dark:hover:text-slate-300">
                                   View result
                                 </summary>
-                                <pre className="mt-1 text-xs text-slate-500 dark:text-slate-400 overflow-x-auto max-h-40 overflow-y-auto bg-slate-100 dark:bg-slate-900 p-2 rounded">
+                                <pre className="mt-1 text-xs text-slate-500 dark:text-slate-400 overflow-x-auto max-h-40 overflow-y-auto bg-nog-100 dark:bg-nog-900 p-2 rounded">
                                   {JSON.stringify(tc.result.data as Record<string, unknown>, null, 2)}
                                 </pre>
                               </details>
@@ -446,7 +446,7 @@ export function AgentPage() {
               <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-r from-amber-500 to-amber-500 flex items-center justify-center">
                 <Bot className="w-5 h-5 text-white" />
               </div>
-              <div className="p-4 bg-slate-100 dark:bg-slate-700 rounded-2xl rounded-tl-sm">
+              <div className="p-4 bg-nog-100 dark:bg-nog-700 rounded-2xl rounded-tl-sm">
                 <div className="flex items-center gap-2">
                   <Loader2 className="w-4 h-4 animate-spin text-amber-500" />
                   <span className="text-sm text-slate-600 dark:text-slate-300">Thinking...</span>
@@ -458,7 +458,7 @@ export function AgentPage() {
         </div>
 
         {/* Input */}
-        <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+        <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-nog-800">
           <div className="flex items-end gap-3 max-w-4xl mx-auto">
             <textarea
               ref={inputRef}
@@ -471,7 +471,7 @@ export function AgentPage() {
                 }
               }}
               placeholder={`Ask ${selectedPersona?.name || 'the agent'}...`}
-              className="flex-1 px-4 py-3 bg-slate-100 dark:bg-slate-700 border-none rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 resize-none min-h-[44px] max-h-[200px]"
+              className="flex-1 px-4 py-3 bg-nog-100 dark:bg-nog-700 border-none rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500 resize-none min-h-[44px] max-h-[200px]"
               disabled={loading || !aiAvailable}
               rows={1}
             />

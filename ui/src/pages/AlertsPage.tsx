@@ -84,7 +84,7 @@ const TRIGGER_CONDITIONS = [
 
 const SEVERITIES = [
   { value: 'info', label: 'Info', icon: Info, color: 'text-amber-500', bg: 'bg-amber-100' },
-  { value: 'low', label: 'Low', icon: AlertCircle, color: 'text-slate-500', bg: 'bg-slate-100' },
+  { value: 'low', label: 'Low', icon: AlertCircle, color: 'text-slate-500', bg: 'bg-nog-100' },
   { value: 'medium', label: 'Medium', icon: AlertTriangle, color: 'text-yellow-500', bg: 'bg-yellow-100' },
   { value: 'high', label: 'High', icon: AlertTriangle, color: 'text-orange-500', bg: 'bg-orange-100' },
   { value: 'critical', label: 'Critical', icon: Zap, color: 'text-red-500', bg: 'bg-red-100' },
@@ -439,7 +439,7 @@ export default function AlertsPage() {
               setSelectedAlertId(null);
               setShowHistoryModal(true);
             }}
-            className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg flex items-center justify-center gap-2"
+            className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-nog-100 hover:bg-slate-200 dark:bg-nog-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg flex items-center justify-center gap-2"
           >
             <History className="w-4 h-4" />
             <span className="hidden sm:inline">Alert History</span>
@@ -471,7 +471,7 @@ export default function AlertsPage() {
             return (
               <div
                 key={alert.id}
-                className={`bg-white dark:bg-slate-800 rounded-xl shadow-sm border ${
+                className={`bg-white dark:bg-nog-800 rounded-xl shadow-sm border ${
                   alert.enabled ? 'border-slate-200 dark:border-slate-700' : 'border-slate-200/50 dark:border-slate-700/50 opacity-60'
                 }`}
               >
@@ -539,7 +539,7 @@ export default function AlertsPage() {
                       className={`p-1.5 sm:p-2 rounded-lg flex-shrink-0 ${
                         alert.enabled
                           ? 'text-green-500 hover:bg-green-50'
-                          : 'text-slate-400 hover:bg-slate-100'
+                          : 'text-slate-400 hover:bg-nog-100'
                       }`}
                       title={alert.enabled ? 'Disable' : 'Enable'}
                     >
@@ -547,7 +547,7 @@ export default function AlertsPage() {
                     </button>
                     <button
                       onClick={() => handleEdit(alert)}
-                      className="p-1.5 sm:p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg flex-shrink-0"
+                      className="p-1.5 sm:p-2 text-slate-400 hover:text-slate-600 hover:bg-nog-100 rounded-lg flex-shrink-0"
                       title="Edit"
                     >
                       <Settings className="w-4 h-4" />
@@ -604,7 +604,7 @@ export default function AlertsPage() {
                           {alert.actions.map((action, i) => (
                             <div
                               key={i}
-                              className="px-3 py-1 bg-slate-100 dark:bg-slate-700 rounded-full text-sm flex items-center gap-2"
+                              className="px-3 py-1 bg-nog-100 dark:bg-nog-700 rounded-full text-sm flex items-center gap-2"
                             >
                               {action.type === 'email' && <Mail className="w-3 h-3" />}
                               {action.type === 'webhook' && <Globe className="w-3 h-3" />}
@@ -625,7 +625,7 @@ export default function AlertsPage() {
           })}
         </div>
       ) : (
-        <div className="text-center py-12 bg-white dark:bg-slate-800 rounded-xl">
+        <div className="text-center py-12 bg-white dark:bg-nog-800 rounded-xl">
           <Bell className="w-12 h-12 text-slate-300 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100 mb-2">No alerts configured</h3>
           <p className="text-slate-500 dark:text-slate-400 mb-4">
@@ -647,7 +647,7 @@ export default function AlertsPage() {
       {/* Create/Edit Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-nog-800 rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
               <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
                 {editingAlert ? 'Edit Alert' : 'Create Alert'}
@@ -658,7 +658,7 @@ export default function AlertsPage() {
                   setEditingAlert(null);
                   resetForm();
                 }}
-                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
+                className="p-2 hover:bg-nog-100 dark:hover:bg-slate-700 rounded-lg"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -677,7 +677,7 @@ export default function AlertsPage() {
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     placeholder="e.g., High Error Rate"
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100"
                   />
                 </div>
                 <div>
@@ -689,7 +689,7 @@ export default function AlertsPage() {
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     placeholder="Alert when error count is high"
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100"
                   />
                 </div>
               </div>
@@ -706,7 +706,7 @@ export default function AlertsPage() {
                     onChange={(e) => setFormData({ ...formData, search_query: e.target.value })}
                     placeholder="search severity<=3 | stats count"
                     rows={3}
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 font-mono text-sm"
+                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100 font-mono text-sm"
                   />
                 </div>
               </div>
@@ -738,7 +738,7 @@ export default function AlertsPage() {
                     <select
                       value={formData.trigger_type}
                       onChange={(e) => setFormData({ ...formData, trigger_type: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100"
                     >
                       {TRIGGER_TYPES.map((t) => (
                         <option key={t.value} value={t.value}>{t.label}</option>
@@ -756,7 +756,7 @@ export default function AlertsPage() {
                     <select
                       value={formData.trigger_condition}
                       onChange={(e) => setFormData({ ...formData, trigger_condition: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100"
                     >
                       {TRIGGER_CONDITIONS.map((c) => (
                         <option key={c.value} value={c.value}>{c.label}</option>
@@ -775,7 +775,7 @@ export default function AlertsPage() {
                       type="number"
                       value={formData.trigger_threshold}
                       onChange={(e) => setFormData({ ...formData, trigger_threshold: parseInt(e.target.value) || 0 })}
-                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100"
                     />
                   </div>
                 </div>
@@ -802,7 +802,7 @@ export default function AlertsPage() {
                     <select
                       value={formData.cron_expression}
                       onChange={(e) => setFormData({ ...formData, cron_expression: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100"
                     >
                       {SCHEDULE_OPTIONS.map((s) => (
                         <option key={s.value} value={s.value}>{s.label}</option>
@@ -820,7 +820,7 @@ export default function AlertsPage() {
                     <select
                       value={formData.time_range}
                       onChange={(e) => setFormData({ ...formData, time_range: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100"
                     >
                       {TIME_RANGES.map((t) => (
                         <option key={t.value} value={t.value}>{t.label}</option>
@@ -844,7 +844,7 @@ export default function AlertsPage() {
                         className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
                           formData.severity === s.value
                             ? `${s.bg} border-current ${s.color}`
-                            : 'border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-700'
+                            : 'border-slate-200 dark:border-slate-600 hover:bg-nog-50 dark:hover:bg-slate-700'
                         }`}
                       >
                         <Icon className={`w-4 h-4 ${s.color}`} />
@@ -882,7 +882,7 @@ export default function AlertsPage() {
                       type="number"
                       value={formData.throttle_window_seconds}
                       onChange={(e) => setFormData({ ...formData, throttle_window_seconds: parseInt(e.target.value) || 300 })}
-                      className="w-32 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                      className="w-32 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100"
                     />
                   </div>
                 )}
@@ -904,28 +904,28 @@ export default function AlertsPage() {
                     <button
                       type="button"
                       onClick={() => addAction('email')}
-                      className="px-3 py-1 text-sm bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 rounded-lg flex items-center gap-1"
+                      className="px-3 py-1 text-sm bg-nog-100 hover:bg-slate-200 dark:bg-nog-700 dark:hover:bg-slate-600 rounded-lg flex items-center gap-1"
                     >
                       <Mail className="w-3 h-3" /> Email
                     </button>
                     <button
                       type="button"
                       onClick={() => addAction('webhook')}
-                      className="px-3 py-1 text-sm bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 rounded-lg flex items-center gap-1"
+                      className="px-3 py-1 text-sm bg-nog-100 hover:bg-slate-200 dark:bg-nog-700 dark:hover:bg-slate-600 rounded-lg flex items-center gap-1"
                     >
                       <Globe className="w-3 h-3" /> Webhook
                     </button>
                     <button
                       type="button"
                       onClick={() => addAction('script')}
-                      className="px-3 py-1 text-sm bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 rounded-lg flex items-center gap-1"
+                      className="px-3 py-1 text-sm bg-nog-100 hover:bg-slate-200 dark:bg-nog-700 dark:hover:bg-slate-600 rounded-lg flex items-center gap-1"
                     >
                       <Terminal className="w-3 h-3" /> Script
                     </button>
                     <button
                       type="button"
                       onClick={() => addAction('log')}
-                      className="px-3 py-1 text-sm bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 rounded-lg flex items-center gap-1"
+                      className="px-3 py-1 text-sm bg-nog-100 hover:bg-slate-200 dark:bg-nog-700 dark:hover:bg-slate-600 rounded-lg flex items-center gap-1"
                     >
                       <FileText className="w-3 h-3" /> Log
                     </button>
@@ -945,7 +945,7 @@ export default function AlertsPage() {
                 ) : (
                   <div className="space-y-3">
                     {formData.actions.map((action, index) => (
-                      <div key={index} className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                      <div key={index} className="p-4 bg-nog-50 dark:bg-nog-700/50 rounded-lg">
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center gap-2 font-medium capitalize">
                             {action.type === 'email' && <Mail className="w-4 h-4" />}
@@ -977,7 +977,7 @@ export default function AlertsPage() {
                                 placeholder="recipient@example.com"
                                 value={action.config.to || ''}
                                 onChange={(e) => updateAction(index, { to: e.target.value })}
-                                className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm ${
+                                className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100 text-sm ${
                                   action.config.to && !isValidEmail(action.config.to)
                                     ? 'border-red-400 focus:ring-red-200 focus:border-red-400'
                                     : 'border-slate-300 dark:border-slate-600'
@@ -1001,7 +1001,7 @@ export default function AlertsPage() {
                                 placeholder="e.g., High Error Rate on {{hostname}}"
                                 value={action.config.subject || ''}
                                 onChange={(e) => updateAction(index, { subject: e.target.value })}
-                                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm"
+                                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100 text-sm"
                               />
                             </div>
 
@@ -1018,7 +1018,7 @@ export default function AlertsPage() {
                                 value={action.config.body || ''}
                                 onChange={(e) => updateAction(index, { body: e.target.value })}
                                 rows={4}
-                                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm font-mono"
+                                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100 text-sm font-mono"
                               />
                               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                                 Leave empty to use default template
@@ -1038,7 +1038,7 @@ export default function AlertsPage() {
                                 placeholder="https://api.example.com/webhook"
                                 value={action.config.url || ''}
                                 onChange={(e) => updateAction(index, { url: e.target.value })}
-                                className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm ${
+                                className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100 text-sm ${
                                   action.config.url && !(action.config.url.startsWith('http://') || action.config.url.startsWith('https://'))
                                     ? 'border-red-400 focus:ring-red-200 focus:border-red-400'
                                     : 'border-slate-300 dark:border-slate-600'
@@ -1056,7 +1056,7 @@ export default function AlertsPage() {
                               <select
                                 value={action.config.method || 'POST'}
                                 onChange={(e) => updateAction(index, { method: e.target.value as 'GET' | 'POST' | 'PUT' })}
-                                className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm"
+                                className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100 text-sm"
                               >
                                 <option value="GET">GET</option>
                                 <option value="POST">POST</option>
@@ -1077,7 +1077,7 @@ export default function AlertsPage() {
                                 value={action.config.payload || ''}
                                 onChange={(e) => updateAction(index, { payload: e.target.value })}
                                 rows={6}
-                                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm font-mono"
+                                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100 text-sm font-mono"
                               />
                               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                                 Leave empty to use default payload
@@ -1095,7 +1095,7 @@ export default function AlertsPage() {
                               <select
                                 value={action.config.channel || ''}
                                 onChange={(e) => updateAction(index, { channel: e.target.value, apprise_urls: '' })}
-                                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm"
+                                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100 text-sm"
                               >
                                 <option value="">Select a channel or use custom URL...</option>
                                 {notificationChannels?.filter(ch => ch.enabled).map((channel) => (
@@ -1116,7 +1116,7 @@ export default function AlertsPage() {
                                   placeholder="e.g., slack://tokenA/tokenB/tokenC/#channel"
                                   value={action.config.apprise_urls || ''}
                                   onChange={(e) => updateAction(index, { apprise_urls: e.target.value })}
-                                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm font-mono"
+                                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100 text-sm font-mono"
                                 />
                                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                                   <a href="https://github.com/caronc/apprise/wiki" target="_blank" rel="noopener noreferrer" className="text-amber-500 hover:underline">
@@ -1139,7 +1139,7 @@ export default function AlertsPage() {
                                 placeholder="e.g., 🚨 {{alert_name:upper}}"
                                 value={action.config.title || ''}
                                 onChange={(e) => updateAction(index, { title: e.target.value })}
-                                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm"
+                                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100 text-sm"
                               />
                             </div>
 
@@ -1156,7 +1156,7 @@ export default function AlertsPage() {
                                 value={action.config.message || ''}
                                 onChange={(e) => updateAction(index, { message: e.target.value })}
                                 rows={4}
-                                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm font-mono"
+                                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100 text-sm font-mono"
                               />
                               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                                 Use <code className="text-amber-600">{'{{ai_summary}}'}</code> for AI-generated summary
@@ -1170,7 +1170,7 @@ export default function AlertsPage() {
                               <select
                                 value={action.config.format || 'text'}
                                 onChange={(e) => updateAction(index, { format: e.target.value as 'text' | 'markdown' | 'html' })}
-                                className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm"
+                                className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100 text-sm"
                               >
                                 <option value="text">Plain Text</option>
                                 <option value="markdown">Markdown</option>
@@ -1195,7 +1195,7 @@ export default function AlertsPage() {
                                 placeholder='e.g., python /scripts/alert.py --name "{{alert_name}}" --count {{result_count}}'
                                 value={action.config.command || ''}
                                 onChange={(e) => updateAction(index, { command: e.target.value })}
-                                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm font-mono"
+                                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100 text-sm font-mono"
                               />
                               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                                 Execute a shell command when the alert triggers
@@ -1232,7 +1232,7 @@ export default function AlertsPage() {
                                 placeholder="e.g., High Error Rate on {{hostname}}"
                                 value={action.config.title || ''}
                                 onChange={(e) => updateAction(index, { title: e.target.value })}
-                                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm"
+                                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100 text-sm"
                               />
                             </div>
 
@@ -1249,7 +1249,7 @@ export default function AlertsPage() {
                                 value={action.config.message || ''}
                                 onChange={(e) => updateAction(index, { message: e.target.value })}
                                 rows={3}
-                                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm font-mono"
+                                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100 text-sm font-mono"
                               />
                               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                                 Leave empty to use alert name as message
@@ -1263,7 +1263,7 @@ export default function AlertsPage() {
                               <select
                                 value={action.config.expires_in || '24h'}
                                 onChange={(e) => updateAction(index, { expires_in: e.target.value })}
-                                className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-sm"
+                                className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100 text-sm"
                               >
                                 <option value="1h">1 hour</option>
                                 <option value="4h">4 hours</option>
@@ -1304,7 +1304,7 @@ export default function AlertsPage() {
                 type="button"
                 onClick={handleTest}
                 disabled={testing || !formData.search_query}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg flex items-center gap-2 disabled:opacity-50"
+                className="px-4 py-2 bg-nog-100 hover:bg-slate-200 dark:bg-nog-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg flex items-center gap-2 disabled:opacity-50"
               >
                 {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : <TestTube className="w-4 h-4" />}
                 Test Alert
@@ -1317,7 +1317,7 @@ export default function AlertsPage() {
                     setEditingAlert(null);
                     resetForm();
                   }}
-                  className="px-4 py-2 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
+                  className="px-4 py-2 text-slate-700 dark:text-slate-200 hover:bg-nog-100 dark:hover:bg-slate-700 rounded-lg"
                 >
                   Cancel
                 </button>
@@ -1338,7 +1338,7 @@ export default function AlertsPage() {
       {/* History Modal */}
       {showHistoryModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+          <div className="bg-white dark:bg-nog-800 rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
             <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
               <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                 <History className="w-5 h-5" />
@@ -1346,7 +1346,7 @@ export default function AlertsPage() {
               </h2>
               <button
                 onClick={() => setShowHistoryModal(false)}
-                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
+                className="p-2 hover:bg-nog-100 dark:hover:bg-slate-700 rounded-lg"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1363,7 +1363,7 @@ export default function AlertsPage() {
                     return (
                       <div
                         key={entry.id}
-                        className="p-4 bg-slate-50 dark:bg-slate-700/50 rounded-lg"
+                        className="p-4 bg-nog-50 dark:bg-nog-700/50 rounded-lg"
                       >
                         <div className="flex items-start gap-3">
                           <div className={`p-2 rounded-lg ${severity.bg}`}>
@@ -1468,7 +1468,7 @@ function QuickSilenceModal({ alertId, alertName, onClose }: QuickSilenceModalPro
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl max-w-md w-full mx-4">
+      <div className="bg-white dark:bg-nog-800 rounded-lg shadow-xl max-w-md w-full mx-4">
         <div className="p-6 border-b border-slate-200 dark:border-slate-700">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
@@ -1477,7 +1477,7 @@ function QuickSilenceModal({ alertId, alertName, onClose }: QuickSilenceModalPro
             </h2>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+              className="p-2 hover:bg-nog-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
             >
               <X className="h-5 w-5" />
             </button>
@@ -1499,7 +1499,7 @@ function QuickSilenceModal({ alertId, alertName, onClose }: QuickSilenceModalPro
               <select
                 value={duration}
                 onChange={(e) => setDuration(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 dark:bg-slate-700 dark:text-slate-100"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 dark:bg-nog-700 dark:text-slate-100"
               >
                 {durationOptions.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -1516,7 +1516,7 @@ function QuickSilenceModal({ alertId, alertName, onClose }: QuickSilenceModalPro
               <textarea
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 dark:bg-slate-700 dark:text-slate-100"
+                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 dark:bg-nog-700 dark:text-slate-100"
                 rows={3}
                 placeholder="Why are you silencing this alert?"
               />
@@ -1527,7 +1527,7 @@ function QuickSilenceModal({ alertId, alertName, onClose }: QuickSilenceModalPro
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700"
+              className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-nog-50 dark:hover:bg-slate-700"
             >
               Cancel
             </button>

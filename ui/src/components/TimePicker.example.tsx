@@ -37,7 +37,7 @@ export default function TimePickerExample() {
       </div>
 
       {/* Display Current Selection */}
-      <div className="card p-4 bg-slate-50">
+      <div className="card p-4 bg-nog-50">
         <p className="text-sm font-medium text-slate-900 mb-2">Current Selection:</p>
         <div className="space-y-1">
           <p className="text-sm text-slate-700">
@@ -56,7 +56,7 @@ export default function TimePickerExample() {
       {/* Usage Instructions */}
       <div className="card p-4">
         <h3 className="font-semibold text-slate-900 mb-3">Usage</h3>
-        <pre className="text-xs bg-slate-900 text-slate-100 p-4 rounded-lg overflow-x-auto">
+        <pre className="text-xs bg-nog-900 text-slate-100 p-4 rounded-lg overflow-x-auto">
 {`import TimePicker from './components/TimePicker';
 
 function MyComponent() {

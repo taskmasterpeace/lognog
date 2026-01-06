@@ -90,13 +90,13 @@ export function PaginatedTable({
       {/* Table */}
       <div className="flex-1 overflow-auto">
         <table className="w-full text-sm">
-          <thead className="sticky top-0 bg-white dark:bg-slate-800 z-10">
+          <thead className="sticky top-0 bg-white dark:bg-nog-800 z-10">
             <tr>
               {columns.map((column) => (
                 <th
                   key={column}
                   onClick={() => handleSort(column)}
-                  className="text-left p-2 border-b border-slate-200 dark:border-slate-700 font-medium text-slate-600 dark:text-slate-400 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 select-none"
+                  className="text-left p-2 border-b border-slate-200 dark:border-slate-700 font-medium text-slate-600 dark:text-slate-400 cursor-pointer hover:bg-nog-50 dark:hover:bg-slate-700/50 select-none"
                 >
                   <div className="flex items-center gap-1">
                     <span>{column}</span>
@@ -118,7 +118,7 @@ export function PaginatedTable({
               <tr
                 key={i}
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
-                className={`hover:bg-slate-50 dark:hover:bg-slate-800/50 ${
+                className={`hover:bg-nog-50 dark:hover:bg-nog-800/50 ${
                   onRowClick ? 'cursor-pointer' : ''
                 }`}
               >
@@ -142,13 +142,13 @@ export function PaginatedTable({
       </div>
 
       {/* Pagination */}
-      <div className="flex items-center justify-between px-2 py-2 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+      <div className="flex items-center justify-between px-2 py-2 border-t border-slate-200 dark:border-slate-700 bg-nog-50 dark:bg-nog-800/50">
         <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
           <span>Show</span>
           <select
             value={pageSize}
             onChange={(e) => handlePageSizeChange(Number(e.target.value))}
-            className="px-2 py-1 border border-slate-200 dark:border-slate-600 rounded bg-white dark:bg-slate-700 text-sm"
+            className="px-2 py-1 border border-slate-200 dark:border-slate-600 rounded bg-white dark:bg-nog-700 text-sm"
           >
             {[10, 25, 50, 100].map((size) => (
               <option key={size} value={size}>

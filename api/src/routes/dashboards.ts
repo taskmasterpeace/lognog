@@ -92,13 +92,13 @@ router.get('/:id', (req: Request, res: Response) => {
 // Create a new dashboard
 router.post('/', (req: Request, res: Response) => {
   try {
-    const { name, description, app_scope } = req.body;
+    const { name, description, app_scope, category } = req.body;
 
     if (!name) {
       return res.status(400).json({ error: 'Name is required' });
     }
 
-    const dashboard = createDashboard(name, description, app_scope);
+    const dashboard = createDashboard(name, description, app_scope, category);
     return res.status(201).json(dashboard);
   } catch (error) {
     console.error('Error creating dashboard:', error);
@@ -318,13 +318,14 @@ router.put('/:id', (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Dashboard not found' });
     }
 
-    const { name, description, logo_url, accent_color, header_color } = req.body;
+    const { name, description, logo_url, accent_color, header_color, category } = req.body;
     const updated = updateDashboard(req.params.id, {
       name,
       description,
       logo_url,
       accent_color,
       header_color,
+      category,
     });
 
     return res.json(updated);

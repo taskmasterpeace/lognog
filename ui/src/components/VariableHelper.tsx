@@ -99,7 +99,7 @@ export default function VariableHelper({ onInsert }: VariableHelperProps) {
       </button>
 
       {showHelper && (
-        <div className="absolute top-full mt-2 left-0 z-50 w-[500px] bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 max-h-[500px] overflow-hidden flex flex-col">
+        <div className="absolute top-full mt-2 left-0 z-50 w-[500px] bg-white dark:bg-nog-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 max-h-[500px] overflow-hidden flex flex-col">
           <div className="p-4 border-b border-slate-200 dark:border-slate-700">
             <div className="flex items-center justify-between mb-2">
               <h3 className="font-semibold text-slate-900 dark:text-slate-100">Available Variables</h3>
@@ -111,7 +111,7 @@ export default function VariableHelper({ onInsert }: VariableHelperProps) {
               </button>
             </div>
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              Click any variable to copy it to your clipboard. Use <code className="px-1 py-0.5 bg-slate-100 dark:bg-slate-700 rounded">{'{{variable}}'}</code> syntax.
+              Click any variable to copy it to your clipboard. Use <code className="px-1 py-0.5 bg-nog-100 dark:bg-nog-700 rounded">{'{{variable}}'}</code> syntax.
             </p>
           </div>
 
@@ -123,7 +123,7 @@ export default function VariableHelper({ onInsert }: VariableHelperProps) {
                 <div key={category.name} className="mb-4 last:mb-0">
                   <button
                     onClick={() => toggleCategory(category.name)}
-                    className="w-full flex items-center gap-2 p-2 hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-lg text-left"
+                    className="w-full flex items-center gap-2 p-2 hover:bg-nog-50 dark:hover:bg-slate-700/50 rounded-lg text-left"
                   >
                     {isExpanded ? (
                       <ChevronDown className="w-4 h-4 text-slate-400" />
@@ -145,7 +145,7 @@ export default function VariableHelper({ onInsert }: VariableHelperProps) {
                           <button
                             key={variable.name}
                             onClick={() => handleCopyVariable(variable.name)}
-                            className="w-full p-3 bg-slate-50 dark:bg-slate-700/50 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg text-left border border-transparent hover:border-amber-200 dark:hover:border-amber-800 transition-colors group"
+                            className="w-full p-3 bg-nog-50 dark:bg-nog-700/50 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg text-left border border-transparent hover:border-amber-200 dark:hover:border-amber-800 transition-colors group"
                           >
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex-1 min-w-0">
@@ -177,14 +177,14 @@ export default function VariableHelper({ onInsert }: VariableHelperProps) {
             })}
           </div>
 
-          <div className="p-4 bg-slate-50 dark:bg-slate-700/50 border-t border-slate-200 dark:border-slate-700">
+          <div className="p-4 bg-nog-50 dark:bg-nog-700/50 border-t border-slate-200 dark:border-slate-700">
             <div className="text-xs text-slate-600 dark:text-slate-400">
               <strong>Tips:</strong>
               <ul className="list-disc list-inside mt-1 space-y-1">
                 <li>Variables are replaced with actual values when the alert triggers</li>
                 <li>If a field doesn't exist, the raw variable name is shown</li>
-                <li>Use dot notation for nested fields: <code className="px-1 bg-white dark:bg-slate-800 rounded">{'{{result.field.subfield}}'}</code></li>
-                <li>Access specific results: <code className="px-1 bg-white dark:bg-slate-800 rounded">{'{{result[0].field}}'}</code></li>
+                <li>Use dot notation for nested fields: <code className="px-1 bg-white dark:bg-nog-800 rounded">{'{{result.field.subfield}}'}</code></li>
+                <li>Access specific results: <code className="px-1 bg-white dark:bg-nog-800 rounded">{'{{result[0].field}}'}</code></li>
               </ul>
             </div>
           </div>

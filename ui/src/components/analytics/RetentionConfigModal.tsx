@@ -35,7 +35,7 @@ export default function RetentionConfigModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-2xl w-full max-w-md">
+      <div className="bg-white dark:bg-nog-800 rounded-xl shadow-2xl w-full max-w-md">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
           <div className="flex items-center gap-3">
@@ -51,7 +51,7 @@ export default function RetentionConfigModal({
           </div>
           <button
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700"
+            className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-lg hover:bg-nog-100 dark:hover:bg-slate-700"
           >
             <X className="w-5 h-5" />
           </button>
@@ -72,7 +72,7 @@ export default function RetentionConfigModal({
                   className={`px-3 py-2 text-sm rounded-lg border transition-colors ${
                     retentionDays === preset.value
                       ? 'bg-amber-500 text-white border-amber-500'
-                      : 'bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:border-amber-300 dark:hover:border-amber-500'
+                      : 'bg-white dark:bg-nog-700 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-600 hover:border-amber-300 dark:hover:border-amber-500'
                   }`}
                 >
                   {preset.label}
@@ -93,7 +93,7 @@ export default function RetentionConfigModal({
                 max="365"
                 value={retentionDays}
                 onChange={(e) => setRetentionDays(parseInt(e.target.value))}
-                className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-amber-500"
+                className="w-full h-2 bg-slate-200 dark:bg-nog-700 rounded-lg appearance-none cursor-pointer accent-amber-500"
               />
               <div className="flex items-center justify-between">
                 <span className="text-xs text-slate-500 dark:text-slate-400">1 day</span>
@@ -107,7 +107,7 @@ export default function RetentionConfigModal({
                       const val = parseInt(e.target.value) || 1;
                       setRetentionDays(Math.min(365, Math.max(1, val)));
                     }}
-                    className="w-20 px-2 py-1 text-center text-sm border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                    className="w-20 px-2 py-1 text-center text-sm border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100"
                   />
                   <span className="text-sm text-slate-600 dark:text-slate-400">days</span>
                 </div>
@@ -133,7 +133,7 @@ export default function RetentionConfigModal({
           )}
 
           {/* Info box */}
-          <div className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg text-sm text-slate-600 dark:text-slate-400">
+          <div className="p-3 bg-nog-50 dark:bg-nog-700/50 rounded-lg text-sm text-slate-600 dark:text-slate-400">
             <p>
               Logs older than the retention period will be automatically deleted during cleanup.
               The default retention is 90 days.
@@ -142,7 +142,7 @@ export default function RetentionConfigModal({
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-between p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 rounded-b-xl">
+        <div className="flex items-center justify-between p-4 border-t border-slate-200 dark:border-slate-700 bg-nog-50 dark:bg-nog-800/50 rounded-b-xl">
           <button
             onClick={() => setRetentionDays(90)}
             className="text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
@@ -152,7 +152,7 @@ export default function RetentionConfigModal({
           <div className="flex gap-3">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg"
+              className="px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-nog-100 dark:hover:bg-slate-700 rounded-lg"
             >
               Cancel
             </button>

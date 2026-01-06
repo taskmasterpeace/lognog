@@ -30,7 +30,7 @@ export function DashboardHeader({
 
   return (
     <div
-      className="dashboard-header px-4 py-3 border-b-2 transition-colors bg-white dark:bg-slate-800"
+      className="dashboard-header px-4 py-3 border-b-2 transition-colors bg-white dark:bg-nog-800"
       style={{ ...headerStyle, ...accentStyle }}
     >
       <div className="flex items-center justify-between">
@@ -38,7 +38,7 @@ export function DashboardHeader({
           {backLink && (
             <Link
               to={backLink}
-              className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+              className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-nog-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
             >
               <ArrowLeft className="w-5 h-5" />
             </Link>

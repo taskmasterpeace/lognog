@@ -259,12 +259,12 @@ export default function TimePickerEnhanced({ onRangeChange, defaultRange = '-24h
       {isOpen && (
         <div className="dropdown right-0 w-80 sm:w-96 animate-fade-in max-h-[80vh] overflow-hidden flex flex-col">
           {/* Tab Headers */}
-          <div className="flex border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800">
+          <div className="flex border-b border-slate-200 dark:border-slate-700 bg-nog-50 dark:bg-nog-800">
             <button
               onClick={() => setViewMode('presets')}
               className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors ${
                 viewMode === 'presets'
-                  ? 'text-sky-600 border-b-2 border-sky-500 bg-white dark:bg-slate-900'
+                  ? 'text-sky-600 border-b-2 border-sky-500 bg-white dark:bg-nog-900'
                   : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'
               }`}
             >
@@ -274,7 +274,7 @@ export default function TimePickerEnhanced({ onRangeChange, defaultRange = '-24h
               onClick={() => setViewMode('relative')}
               className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors ${
                 viewMode === 'relative'
-                  ? 'text-sky-600 border-b-2 border-sky-500 bg-white dark:bg-slate-900'
+                  ? 'text-sky-600 border-b-2 border-sky-500 bg-white dark:bg-nog-900'
                   : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'
               }`}
             >
@@ -284,7 +284,7 @@ export default function TimePickerEnhanced({ onRangeChange, defaultRange = '-24h
               onClick={() => setViewMode('absolute')}
               className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors ${
                 viewMode === 'absolute'
-                  ? 'text-sky-600 border-b-2 border-sky-500 bg-white dark:bg-slate-900'
+                  ? 'text-sky-600 border-b-2 border-sky-500 bg-white dark:bg-nog-900'
                   : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'
               }`}
             >
@@ -302,7 +302,7 @@ export default function TimePickerEnhanced({ onRangeChange, defaultRange = '-24h
                     {/* Group Header */}
                     <button
                       onClick={() => setExpandedGroup(expandedGroup === group.label ? null : group.label)}
-                      className="w-full px-4 py-2 flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider hover:bg-slate-50 dark:hover:bg-slate-800"
+                      className="w-full px-4 py-2 flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider hover:bg-nog-50 dark:hover:bg-nog-800"
                     >
                       <span>{group.label}</span>
                       <ChevronRight
@@ -327,7 +327,7 @@ export default function TimePickerEnhanced({ onRangeChange, defaultRange = '-24h
                               className={`dropdown-item w-full text-left pl-8 pr-4 py-2 text-sm transition-all duration-150 ${
                                 selectedPreset.value === preset.value
                                   ? 'bg-sky-50 text-sky-600 font-medium dark:bg-sky-900/20 dark:text-sky-400'
-                                  : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800'
+                                  : 'text-slate-700 dark:text-slate-300 hover:bg-nog-50 dark:hover:bg-nog-800'
                               }`}
                             >
                               {preset.label}
@@ -385,7 +385,7 @@ export default function TimePickerEnhanced({ onRangeChange, defaultRange = '-24h
                 </div>
 
                 {/* Preview */}
-                <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+                <div className="p-3 bg-nog-50 dark:bg-nog-800 rounded-lg border border-slate-200 dark:border-slate-700">
                   <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Preview</p>
                   <p className="text-sm font-mono text-slate-900 dark:text-slate-100">
                     Last {relativeAmount} {TIME_UNITS.find(u => u.value === relativeUnit)?.label.toLowerCase()}
@@ -484,7 +484,7 @@ export default function TimePickerEnhanced({ onRangeChange, defaultRange = '-24h
 
       {/* Visual Display - Selected Range Info (for custom ranges) */}
       {selectedPreset.value === 'custom' && selectedPreset.latest && (
-        <div className="absolute top-full left-0 right-0 mt-1 px-3 py-2 bg-white dark:bg-slate-800 border border-sky-200 dark:border-sky-700 rounded-lg shadow-sm text-xs text-slate-600 dark:text-slate-400">
+        <div className="absolute top-full left-0 right-0 mt-1 px-3 py-2 bg-white dark:bg-nog-800 border border-sky-200 dark:border-sky-700 rounded-lg shadow-sm text-xs text-slate-600 dark:text-slate-400">
           <div className="flex items-center justify-between">
             <span className="font-medium text-sky-700 dark:text-sky-400">Custom:</span>
             <span className="font-mono text-xs">

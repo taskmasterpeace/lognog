@@ -81,7 +81,7 @@ export default function FacetFilters({ facets, selectedFilters, onFilterChange }
       'text-amber-700 bg-amber-50 border-amber-200', // Info
       'text-amber-700 bg-amber-50 border-amber-200',       // Debug
     ];
-    return !isNaN(num) && num >= 0 && num <= 7 ? colors[num] : 'text-slate-700 bg-slate-50 border-slate-200 dark:text-nog-300 dark:bg-nog-800 dark:border-nog-700';
+    return !isNaN(num) && num >= 0 && num <= 7 ? colors[num] : 'text-slate-700 bg-nog-50 border-slate-200 dark:text-nog-300 dark:bg-nog-800 dark:border-nog-700';
   };
 
   const totalSelected = getTotalSelectedCount();
@@ -89,7 +89,7 @@ export default function FacetFilters({ facets, selectedFilters, onFilterChange }
   return (
     <div className="h-full flex flex-col bg-white dark:bg-nog-800 border-r border-slate-200 dark:border-nog-700">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-slate-200 dark:border-nog-700 bg-slate-50 dark:bg-nog-900">
+      <div className="px-4 py-3 border-b border-slate-200 dark:border-nog-700 bg-nog-50 dark:bg-nog-900">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-slate-700 dark:text-nog-300 uppercase tracking-wide">
             Filters
@@ -128,7 +128,7 @@ export default function FacetFilters({ facets, selectedFilters, onFilterChange }
                 {/* Panel Header */}
                 <button
                   onClick={() => togglePanel(facet.field)}
-                  className="w-full px-4 py-2.5 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-nog-700 transition-all duration-150 group"
+                  className="w-full px-4 py-2.5 flex items-center justify-between hover:bg-nog-50 dark:hover:bg-nog-700 transition-all duration-150 group"
                 >
                   <div className="flex items-center gap-2">
                     {isCollapsed ? (
@@ -149,7 +149,7 @@ export default function FacetFilters({ facets, selectedFilters, onFilterChange }
 
                 {/* Panel Content */}
                 {!isCollapsed && (
-                  <div className="px-4 py-2 bg-slate-50/50 dark:bg-nog-900/30 animate-slide-up">
+                  <div className="px-4 py-2 bg-nog-50/50 dark:bg-nog-900/30 animate-slide-up">
                     {facet.values.length === 0 ? (
                       <p className="text-xs text-slate-500 py-2">No values</p>
                     ) : (
@@ -166,7 +166,7 @@ export default function FacetFilters({ facets, selectedFilters, onFilterChange }
                               className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-all duration-150 hover:scale-[1.02] ${
                                 isSelected
                                   ? 'bg-amber-100 dark:bg-amber-900/20 hover:bg-amber-200 dark:hover:bg-amber-900/30'
-                                  : 'hover:bg-slate-100 dark:hover:bg-nog-700'
+                                  : 'hover:bg-nog-100 dark:hover:bg-nog-700'
                               }`}
                             >
                               <input
@@ -208,7 +208,7 @@ export default function FacetFilters({ facets, selectedFilters, onFilterChange }
 
       {/* Footer Info */}
       {facets.length > 0 && (
-        <div className="px-4 py-3 border-t border-slate-200 dark:border-nog-700 bg-slate-50 dark:bg-nog-900">
+        <div className="px-4 py-3 border-t border-slate-200 dark:border-nog-700 bg-nog-50 dark:bg-nog-900">
           <p className="text-xs text-slate-500 dark:text-slate-400">
             Showing top {facets.reduce((max, f) => Math.max(max, f.values.length), 0)} values per field
           </p>

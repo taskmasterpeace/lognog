@@ -4,6 +4,7 @@ import { executeQuery } from '../db/clickhouse.js';
 import { parseAndCompile } from '../dsl/index.js';
 import { evaluateAlert } from './alerts.js';
 import { executeDSLQuery } from '../db/backend.js';
+import { logReportGenerated } from './internal-logger.js';
 
 interface ScheduledReport {
   id: string;
@@ -190,6 +191,7 @@ function escapeHtml(str: string): string {
 
 async function runReport(report: ScheduledReport): Promise<void> {
   console.log(`Running scheduled report: ${report.name}`);
+  const startTime = performance.now();
 
   try {
     // Compile and execute query
@@ -227,8 +229,25 @@ async function runReport(report: ScheduledReport): Promise<void> {
         ],
       });
 
+      const duration_ms = Math.round(performance.now() - startTime);
+      logReportGenerated({
+        report_id: report.id,
+        report_name: report.name,
+        duration_ms,
+        row_count: results.length,
+        sent_to: recipients,
+      });
+
       console.log(`Report "${report.name}" sent to ${recipients.join(', ')}`);
     } else {
+      const duration_ms = Math.round(performance.now() - startTime);
+      logReportGenerated({
+        report_id: report.id,
+        report_name: report.name,
+        duration_ms,
+        row_count: results.length,
+      });
+
       console.log(`Report "${report.name}" generated but SMTP not configured`);
     }
 
@@ -236,6 +255,17 @@ async function runReport(report: ScheduledReport): Promise<void> {
     const db = getSQLiteDB();
     db.prepare("UPDATE scheduled_reports SET last_run = datetime('now') WHERE id = ?").run(report.id);
   } catch (error) {
+    const duration_ms = Math.round(performance.now() - startTime);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+    logReportGenerated({
+      report_id: report.id,
+      report_name: report.name,
+      duration_ms,
+      row_count: 0,
+      error: errorMessage,
+    });
+
     console.error(`Error running report "${report.name}":`, error);
   }
 }

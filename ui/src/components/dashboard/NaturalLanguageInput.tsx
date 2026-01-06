@@ -118,7 +118,7 @@ export function NaturalLanguageInput({
       {showExamples && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setShowExamples(false)} />
-          <div className="absolute top-full left-0 right-0 mt-1 z-20 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg overflow-hidden">
+          <div className="absolute top-full left-0 right-0 mt-1 z-20 bg-white dark:bg-nog-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg overflow-hidden">
             <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-700">
               <span className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">
                 Example queries
@@ -128,7 +128,7 @@ export function NaturalLanguageInput({
               <button
                 key={i}
                 onClick={() => handleExample(example)}
-                className="w-full px-3 py-2 text-left hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
+                className="w-full px-3 py-2 text-left hover:bg-nog-50 dark:hover:bg-slate-700/50 transition-colors"
               >
                 <p className="text-sm text-slate-900 dark:text-slate-100">{example.text}</p>
                 <p className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5 truncate">
@@ -142,13 +142,13 @@ export function NaturalLanguageInput({
 
       {/* Generated Query */}
       {generatedQuery && (
-        <div className="mt-2 p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-600 rounded-lg">
+        <div className="mt-2 p-3 bg-white dark:bg-nog-800 border border-slate-200 dark:border-slate-600 rounded-lg">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
                 Generated Query:
               </p>
-              <code className="block p-2 bg-slate-50 dark:bg-slate-900 rounded text-sm font-mono text-slate-800 dark:text-slate-200 overflow-x-auto">
+              <code className="block p-2 bg-nog-50 dark:bg-nog-900 rounded text-sm font-mono text-slate-800 dark:text-slate-200 overflow-x-auto">
                 {generatedQuery}
               </code>
             </div>
@@ -165,7 +165,7 @@ export function NaturalLanguageInput({
                 setInput('');
                 setGeneratedQuery(null);
               }}
-              className="px-3 py-1.5 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
+              className="px-3 py-1.5 text-sm text-slate-600 dark:text-slate-400 hover:bg-nog-100 dark:hover:bg-slate-700 rounded"
             >
               Cancel
             </button>

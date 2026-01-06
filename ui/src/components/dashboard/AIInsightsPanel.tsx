@@ -98,7 +98,7 @@ export function AIInsightsPanel({
   };
 
   return (
-    <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
+    <div className="bg-white dark:bg-nog-800 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-amber-50 to-amber-50 dark:from-amber-900/20 dark:to-amber-900/20">
         <div className="flex items-center gap-2">
@@ -156,7 +156,7 @@ export function AIInsightsPanel({
                     ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
                     : insight.severity === 'warning'
                     ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'
-                    : 'bg-slate-50 dark:bg-slate-700/50 border-slate-200 dark:border-slate-600'
+                    : 'bg-nog-50 dark:bg-nog-700/50 border-slate-200 dark:border-slate-600'
                 }`}
               >
                 <div className="flex items-start gap-3">
