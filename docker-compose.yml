@@ -195,6 +195,9 @@ networks:
 
 volumes:
   clickhouse-data:
+    # Use existing spunk volume to preserve historical data
+    external: true
+    name: spunk_clickhouse-data
   vector-data:
   api-data:
   geoip-data:
