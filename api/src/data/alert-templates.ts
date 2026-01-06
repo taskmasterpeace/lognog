@@ -22,6 +22,7 @@ export interface AlertTemplateData {
   severity: AlertSeverity;
   throttle_enabled: boolean;
   throttle_window_seconds: number;
+  enabled?: boolean;  // Optional - defaults to true, set false for templates that should be disabled by default
 }
 
 export const ALERT_TEMPLATES: AlertTemplateData[] = [

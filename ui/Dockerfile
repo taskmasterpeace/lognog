@@ -6,8 +6,8 @@ WORKDIR /app
 # Copy package.json only (not lock file to avoid platform issues)
 COPY package.json ./
 
-# Install dependencies fresh for Linux
-RUN npm install
+# Install dependencies fresh for Linux (--legacy-peer-deps for echarts/wordcloud compatibility)
+RUN npm install --legacy-peer-deps
 
 # Copy source code
 COPY . .
