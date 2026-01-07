@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
-import { parseToAST, validateQuery, ParseError } from '../dsl/index.js';
-import { executeDSLQuery, getFields, getFieldValues, getBackendInfo, discoverStructuredDataFields, DiscoveredField } from '../db/backend.js';
+import { parseToAST, validateQuery, ParseError, isSimpleCondition } from '../dsl/index.js';
+import { executeDSLQuery, executeRawQuery, getFields, getFieldValues, getBackendInfo, discoverStructuredDataFields, DiscoveredField, isLiteMode } from '../db/backend.js';
 import {
   getSavedSearches,
   getSavedSearch,
@@ -17,10 +17,102 @@ import { optionalAuth, rateLimit } from '../auth/middleware.js';
 
 const router = Router();
 
+// Helper: Calculate histogram interval based on time range
+function calculateHistogramInterval(startMs: number, endMs: number): {
+  interval: string;
+  intervalMs: number;
+  clickhouseFunc: string;
+  sqliteFunc: string;
+} {
+  const rangeMs = endMs - startMs;
+  const HOUR = 3600000;
+  const DAY = 86400000;
+
+  if (rangeMs <= HOUR) {
+    return {
+      interval: '1 MINUTE',
+      intervalMs: 60000,
+      clickhouseFunc: 'toStartOfMinute(timestamp)',
+      sqliteFunc: "strftime('%Y-%m-%d %H:%M:00', timestamp)"
+    };
+  }
+  if (rangeMs <= 8 * HOUR) {
+    return {
+      interval: '5 MINUTE',
+      intervalMs: 300000,
+      clickhouseFunc: 'toStartOfFiveMinutes(timestamp)',
+      sqliteFunc: "strftime('%Y-%m-%d %H:', timestamp) || printf('%02d:00', (CAST(strftime('%M', timestamp) AS INTEGER) / 5) * 5)"
+    };
+  }
+  if (rangeMs <= DAY) {
+    return {
+      interval: '30 MINUTE',
+      intervalMs: 1800000,
+      clickhouseFunc: 'toStartOfInterval(timestamp, INTERVAL 30 MINUTE)',
+      sqliteFunc: "strftime('%Y-%m-%d %H:', timestamp) || printf('%02d:00', (CAST(strftime('%M', timestamp) AS INTEGER) / 30) * 30)"
+    };
+  }
+  if (rangeMs <= 7 * DAY) {
+    return {
+      interval: '1 HOUR',
+      intervalMs: 3600000,
+      clickhouseFunc: 'toStartOfHour(timestamp)',
+      sqliteFunc: "strftime('%Y-%m-%d %H:00:00', timestamp)"
+    };
+  }
+  if (rangeMs <= 30 * DAY) {
+    return {
+      interval: '4 HOUR',
+      intervalMs: 14400000,
+      clickhouseFunc: 'toStartOfInterval(timestamp, INTERVAL 4 HOUR)',
+      sqliteFunc: "strftime('%Y-%m-%d ', timestamp) || printf('%02d:00:00', (CAST(strftime('%H', timestamp) AS INTEGER) / 4) * 4)"
+    };
+  }
+  return {
+    interval: '1 DAY',
+    intervalMs: 86400000,
+    clickhouseFunc: 'toStartOfDay(timestamp)',
+    sqliteFunc: "strftime('%Y-%m-%d 00:00:00', timestamp)"
+  };
+}
+
+// Helper: Parse relative time string to epoch ms
+function parseRelativeTime(timeStr: string, referenceTime: number = Date.now()): number {
+  if (!timeStr) return referenceTime;
+
+  // Already a number (epoch)
+  if (/^\d+$/.test(timeStr)) {
+    return parseInt(timeStr, 10);
+  }
+
+  // ISO date string
+  if (timeStr.includes('T') || timeStr.includes('-')) {
+    const parsed = Date.parse(timeStr);
+    if (!isNaN(parsed)) return parsed;
+  }
+
+  // Relative time like -1h, -7d, -30m
+  const match = timeStr.match(/^-(\d+)([smhdw])$/i);
+  if (match) {
+    const value = parseInt(match[1], 10);
+    const unit = match[2].toLowerCase();
+    const multipliers: Record<string, number> = {
+      's': 1000,
+      'm': 60000,
+      'h': 3600000,
+      'd': 86400000,
+      'w': 604800000,
+    };
+    return referenceTime - (value * (multipliers[unit] || 3600000));
+  }
+
+  return referenceTime;
+}
+
 // Execute a DSL query (rate limited: 120/min for CPU-intensive parsing)
 router.post('/query', rateLimit(120, 60000), async (req: Request, res: Response) => {
   try {
-    const { query, earliest, latest, extract_fields = false, source_type } = req.body;
+    const { query, earliest, latest, extract_fields = false, source_type, include_histogram = true } = req.body;
 
     if (!query || typeof query !== 'string') {
       return res.status(400).json({ error: 'Query is required' });
@@ -34,11 +126,110 @@ router.post('/query', rateLimit(120, 60000), async (req: Request, res: Response)
     // Measure execution time
     const startTime = performance.now();
 
-    // Execute query using backend abstraction (handles both ClickHouse and SQLite)
-    const { sql, results: rawResults } = await executeDSLQuery(query, {
-      earliest,
-      latest,
-    });
+    // Parse time range for histogram
+    const now = Date.now();
+    const startMs = parseRelativeTime(earliest || '-24h', now);
+    const endMs = parseRelativeTime(latest || 'now', now);
+    const { interval, intervalMs, clickhouseFunc, sqliteFunc } = calculateHistogramInterval(startMs, endMs);
+
+    // Build histogram query (for both ClickHouse and SQLite)
+    let histogramPromise: Promise<{ bucket: string; count: number }[]> | null = null;
+
+    if (include_histogram) {
+      // Parse the DSL to extract WHERE conditions
+      try {
+        const ast = parseToAST(query);
+        const liteMode = isLiteMode();
+
+        // Build WHERE clause from the search conditions
+        let whereClause = '1=1';
+
+        // Check if the AST has a search node with conditions
+        if (ast.stages && ast.stages.length > 0) {
+          const searchStage = ast.stages[0];
+          if (searchStage.type === 'search' && searchStage.conditions && searchStage.conditions.length > 0) {
+            // Build conditions from the search stage
+            const conditions: string[] = [];
+
+            for (const cond of searchStage.conditions) {
+              if (isSimpleCondition(cond)) {
+                // Skip wildcard search (search *) - it means "all logs"
+                if (cond.field === '*' && cond.value === '*') {
+                  continue;
+                }
+
+                let field: string;
+                if (cond.field === 'message' || cond.field === '*') {
+                  field = 'message';
+                } else if (cond.field.includes('.')) {
+                  // Handle nested fields differently for SQLite vs ClickHouse
+                  field = liteMode
+                    ? `json_extract(structured_data, '$.${cond.field}')`
+                    : `structured_data['${cond.field}']`;
+                } else {
+                  field = cond.field;
+                }
+
+                if (cond.operator === '~') {
+                  // SQLite uses LIKE (case-insensitive by default), ClickHouse uses ILIKE
+                  conditions.push(`${field} ${liteMode ? 'LIKE' : 'ILIKE'} '%${cond.value}%'`);
+                } else {
+                  const quotedValue = typeof cond.value === 'string' ? `'${cond.value}'` : cond.value;
+                  conditions.push(`${field} ${cond.operator} ${quotedValue}`);
+                }
+              }
+              // Skip LogicGroup for now - simple conditions are most common
+            }
+
+            if (conditions.length > 0) {
+              whereClause = conditions.join(' AND ');
+            }
+          }
+        }
+
+        // Add time range to WHERE clause
+        const startIso = new Date(startMs).toISOString();
+        const endIso = new Date(endMs).toISOString();
+        whereClause += ` AND timestamp >= '${startIso}' AND timestamp <= '${endIso}'`;
+
+        // Build histogram SQL (different for each backend)
+        let histogramSql: string;
+        if (liteMode) {
+          histogramSql = `
+            SELECT
+              ${sqliteFunc} AS bucket,
+              COUNT(*) AS count
+            FROM logs
+            WHERE ${whereClause}
+            GROUP BY bucket
+            ORDER BY bucket ASC
+          `;
+        } else {
+          histogramSql = `
+            SELECT
+              ${clickhouseFunc} AS bucket,
+              count() AS count
+            FROM lognog.logs
+            WHERE ${whereClause}
+            GROUP BY bucket
+            ORDER BY bucket ASC
+          `;
+        }
+
+        histogramPromise = executeRawQuery<{ bucket: string; count: number }>(histogramSql);
+      } catch {
+        // If parsing fails for histogram, just skip it
+        histogramPromise = null;
+      }
+    }
+
+    // Execute main query and histogram in parallel
+    const [mainResult, histogramResult] = await Promise.all([
+      executeDSLQuery(query, { earliest, latest }),
+      histogramPromise || Promise.resolve(null),
+    ]);
+
+    const { sql, results: rawResults } = mainResult;
 
     // Apply field extraction if requested
     let results = rawResults;
@@ -49,7 +240,21 @@ router.post('/query', rateLimit(120, 60000), async (req: Request, res: Response)
     // Calculate execution time
     const executionTime = Math.round(performance.now() - startTime);
 
-    return res.json({
+    // Build response
+    const response: {
+      query: string;
+      sql: string;
+      results: unknown[];
+      count: number;
+      fields_extracted: boolean;
+      backend: string;
+      executionTime: number;
+      histogram?: {
+        interval: string;
+        intervalMs: number;
+        buckets: { timestamp: number; count: number }[];
+      };
+    } = {
       query,
       sql,
       results,
@@ -57,7 +262,21 @@ router.post('/query', rateLimit(120, 60000), async (req: Request, res: Response)
       fields_extracted: extract_fields,
       backend: getBackendInfo().backend,
       executionTime,
-    });
+    };
+
+    // Add histogram if available
+    if (histogramResult && histogramResult.length > 0) {
+      response.histogram = {
+        interval,
+        intervalMs,
+        buckets: histogramResult.map(row => ({
+          timestamp: new Date(row.bucket).getTime(),
+          count: Number(row.count),
+        })),
+      };
+    }
+
+    return res.json(response);
   } catch (error) {
     if (error instanceof ParseError) {
       return res.status(400).json({
