@@ -80,11 +80,19 @@ function getCsrfToken(): string | null {
   return match ? decodeURIComponent(match[1]) : null;
 }
 
+// Token refresh lock to prevent multiple simultaneous refresh attempts
+let refreshPromise: Promise<boolean> | null = null;
+
 // Authenticated request helper
 export async function authFetch(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<Response> {
+  // Wait for any ongoing token refresh to complete before making request
+  if (refreshPromise) {
+    await refreshPromise;
+  }
+
   const token = getAccessToken();
 
   const headers: HeadersInit = {
@@ -129,28 +137,41 @@ export async function authFetch(
 }
 
 async function refreshTokens(): Promise<boolean> {
+  // If a refresh is already in progress, wait for it
+  if (refreshPromise) {
+    return refreshPromise;
+  }
+
   const refreshToken = getRefreshToken();
   if (!refreshToken) return false;
 
-  try {
-    const response = await fetch(`${API_BASE}/auth/refresh`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken }),
-    });
+  // Create a new refresh promise that other requests will wait for
+  refreshPromise = (async () => {
+    try {
+      const response = await fetch(`${API_BASE}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+      });
 
-    if (!response.ok) {
+      if (!response.ok) {
+        clearTokens();
+        return false;
+      }
+
+      const data = await response.json();
+      setTokens(data.accessToken, data.refreshToken);
+      return true;
+    } catch {
       clearTokens();
       return false;
+    } finally {
+      // Clear the promise when done
+      refreshPromise = null;
     }
+  })();
 
-    const data = await response.json();
-    setTokens(data.accessToken, data.refreshToken);
-    return true;
-  } catch {
-    clearTokens();
-    return false;
-  }
+  return refreshPromise;
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {

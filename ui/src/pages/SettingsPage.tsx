@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useAuth, ApiKey, User as UserType } from '../contexts/AuthContext';
+import { useAuth, authFetch, ApiKey, User as UserType } from '../contexts/AuthContext';
 import {
   User,
   Users,
@@ -190,7 +190,21 @@ export default function SettingsPage() {
       const users = await getUsers();
       setAllUsers(users);
     } catch (err) {
-      setUsersError(err instanceof Error ? err.message : 'Failed to load users');
+      // Provide specific error messages based on error type
+      if (err instanceof Error) {
+        const message = err.message.toLowerCase();
+        if (message.includes('403') || message.includes('admin')) {
+          setUsersError('Admin access required to view users');
+        } else if (message.includes('401') || message.includes('unauthorized') || message.includes('expired')) {
+          setUsersError('Session expired. Please log in again.');
+        } else if (message.includes('network') || message.includes('fetch') || message.includes('insufficient')) {
+          setUsersError('Network error. Please check your connection and try again.');
+        } else {
+          setUsersError(err.message);
+        }
+      } else {
+        setUsersError('Failed to load users');
+      }
     } finally {
       setUsersLoading(false);
     }
@@ -247,10 +261,7 @@ export default function SettingsPage() {
   const loadPreferences = async () => {
     setPrefsLoading(true);
     try {
-      const token = localStorage.getItem('lognog_access_token');
-      const response = await fetch('/api/settings/preferences', {
-        headers: { 'Authorization': `Bearer ${token}` },
-      });
+      const response = await authFetch('/settings/preferences');
       if (response.ok) {
         const data = await response.json();
         setPreferences(data);
@@ -262,9 +273,14 @@ export default function SettingsPage() {
         if (data.timezone) {
           setContextTimezone(data.timezone);
         }
+      } else if (response.status === 401) {
+        console.warn('Session expired while loading preferences');
       }
     } catch (err) {
-      console.error('Failed to load preferences:', err);
+      // Only log network errors, don't crash
+      if (err instanceof Error && !err.message.includes('fetch')) {
+        console.error('Failed to load preferences:', err);
+      }
     } finally {
       setPrefsLoading(false);
     }
@@ -274,13 +290,8 @@ export default function SettingsPage() {
     setPrefsSaving(true);
     setPrefsSuccess(false);
     try {
-      const token = localStorage.getItem('lognog_access_token');
-      const response = await fetch('/api/settings/preferences', {
+      const response = await authFetch('/settings/preferences', {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
         body: JSON.stringify(updates),
       });
       if (response.ok) {
