@@ -7,6 +7,7 @@ CREATE DATABASE IF NOT EXISTS lognog;
 CREATE TABLE IF NOT EXISTS lognog.logs
 (
     -- Core fields
+    id String DEFAULT generateUUIDv4(),
     timestamp DateTime64(3) DEFAULT now64(3),
     received_at DateTime64(3) DEFAULT now64(3),
 
@@ -24,6 +25,7 @@ CREATE TABLE IF NOT EXISTS lognog.logs
     -- Message content
     message String,
     raw String DEFAULT '',
+    message_truncated UInt8 DEFAULT 0,  -- 1 if message was truncated, full content in raw
 
     -- Structured data (JSON)
     structured_data String DEFAULT '{}',

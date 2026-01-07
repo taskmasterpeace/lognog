@@ -5,23 +5,7 @@ import {
   Lock,
   AlertCircle,
 } from 'lucide-react';
-import {
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-  AreaChart,
-  Area,
-} from 'recharts';
-import { HeatmapChart } from '../components/charts/HeatmapChart';
-import { GaugeChart } from '../components/charts/GaugeChart';
-import { WordCloudChart } from '../components/charts/WordCloudChart';
+import { AreaChart, BarChart, PieChart, HeatmapChart, GaugeChart, WordCloudChart } from '../components/charts';
 import { executeSearch } from '../api/client';
 
 const CHART_COLORS = ['#0ea5e9', '#8b5cf6', '#22c55e', '#f59e0b', '#ef4444', '#ec4899', '#06b6d4', '#84cc16'];
@@ -308,59 +292,43 @@ function PanelVisualization({
         </div>
       );
 
-    case 'bar':
+    case 'bar': {
+      const categoryKey = Object.keys(data[0])[0];
+      const valueKey = Object.keys(data[0])[1] || 'count';
       return (
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data.slice(0, 10)}>
-            <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
-            <XAxis dataKey={Object.keys(data[0])[0]} tick={{ fontSize: 10 }} />
-            <YAxis tick={{ fontSize: 10 }} />
-            <Tooltip />
-            <Bar dataKey={Object.keys(data[0])[1] || 'count'} fill={accentColor} />
-          </BarChart>
-        </ResponsiveContainer>
+        <BarChart
+          data={data.slice(0, 10).map((d) => ({ category: String(d[categoryKey]), value: Number(d[valueKey]) || 0 }))}
+          height={200}
+          barColor={accentColor}
+          showValues={false}
+        />
       );
+    }
 
-    case 'pie':
+    case 'pie': {
+      const nameKey = Object.keys(data[0])[0];
+      const valueKey = Object.keys(data[0])[1] || 'count';
       return (
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie
-              data={data.slice(0, 8)}
-              dataKey={Object.keys(data[0])[1] || 'count'}
-              nameKey={Object.keys(data[0])[0]}
-              cx="50%"
-              cy="50%"
-              outerRadius="80%"
-              label
-            >
-              {data.slice(0, 8).map((_, i) => (
-                <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-              ))}
-            </Pie>
-            <Tooltip />
-          </PieChart>
-        </ResponsiveContainer>
+        <PieChart
+          data={data.slice(0, 8).map((d) => ({ name: String(d[nameKey]), value: Number(d[valueKey]) || 0 }))}
+          height={200}
+          colors={CHART_COLORS}
+        />
       );
+    }
 
-    case 'line':
+    case 'line': {
+      const xKey = Object.keys(data[0])[0];
+      const yKey = Object.keys(data[0])[1] || 'count';
       return (
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" opacity={0.1} />
-            <XAxis dataKey={Object.keys(data[0])[0]} tick={{ fontSize: 10 }} />
-            <YAxis tick={{ fontSize: 10 }} />
-            <Tooltip />
-            <Area
-              type="monotone"
-              dataKey={Object.keys(data[0])[1] || 'count'}
-              fill={accentColor}
-              fillOpacity={0.2}
-              stroke={accentColor}
-            />
-          </AreaChart>
-        </ResponsiveContainer>
+        <AreaChart
+          data={data}
+          series={[{ name: yKey, dataKey: yKey, color: accentColor }]}
+          xAxisKey={xKey}
+          height={200}
+        />
       );
+    }
 
     case 'heatmap':
       return <HeatmapChart data={data} />;

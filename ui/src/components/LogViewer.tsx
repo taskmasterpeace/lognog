@@ -8,17 +8,22 @@ import {
   Check,
   Loader2,
   AlertCircle,
+  Maximize2,
+  X,
 } from 'lucide-react';
 import { AnnotatedValue, useSourceAnnotationsOptional } from './SourceAnnotations';
 import { useDateFormat } from '../contexts/DateFormatContext';
+import { getFullMessage } from '../api/client';
 
 // Types
 export interface LogEntry {
+  id?: string;
   timestamp: string;
   hostname?: string;
   app_name?: string;
   severity?: number;
   message?: string;
+  message_truncated?: boolean;
   [key: string]: any;
 }
 
@@ -219,6 +224,7 @@ interface LogRowProps {
   isExpanded: boolean;
   onToggleExpand: (index: number) => void;
   onAddFilter?: (field: string, value: string, exclude?: boolean) => void;
+  onLoadFullMessage?: (logId: string) => void;
   searchTerms?: string[];
 }
 
@@ -229,6 +235,7 @@ const LogRow: React.FC<LogRowProps> = ({
   isExpanded,
   onToggleExpand,
   onAddFilter,
+  onLoadFullMessage,
   searchTerms,
 }) => {
   const { formatDate } = useDateFormat();
@@ -311,6 +318,9 @@ const LogRow: React.FC<LogRowProps> = ({
               <span className="text-slate-700 dark:text-nog-200 font-mono text-xs truncate">
                 {log.message ? highlightText(log.message, searchTerms) : '—'}
               </span>
+              {log.message_truncated && (
+                <span className="ml-2 text-amber-500 dark:text-amber-400 text-xs flex-shrink-0">[truncated]</span>
+              )}
             </div>
           )}
 
@@ -338,6 +348,17 @@ const LogRow: React.FC<LogRowProps> = ({
                   );
                 })}
               </div>
+
+              {/* Show Full Message button for truncated logs */}
+              {log.message_truncated && log.id && onLoadFullMessage && (
+                <button
+                  onClick={() => onLoadFullMessage(log.id!)}
+                  className="mt-2 text-xs text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 flex items-center gap-1 font-medium"
+                >
+                  <Maximize2 className="w-3 h-3" />
+                  Show full message
+                </button>
+              )}
 
               {/* Structured Data Fields (parsed from JSON) */}
               {structuredFields.length > 0 && (
@@ -413,6 +434,36 @@ export default function LogViewer({
   const [visibleStart, setVisibleStart] = useState(0);
   const [visibleEnd, setVisibleEnd] = useState(50);
   const annotationContext = useSourceAnnotationsOptional();
+
+  // State for full message modal
+  const [fullMessageModal, setFullMessageModal] = useState<{
+    isOpen: boolean;
+    logId: string | null;
+    content: string | null;
+    loading: boolean;
+  }>({ isOpen: false, logId: null, content: null, loading: false });
+
+  // Load full message handler
+  const loadFullMessage = useCallback(async (logId: string) => {
+    setFullMessageModal({ isOpen: true, logId, content: null, loading: true });
+    try {
+      const data = await getFullMessage(logId);
+      setFullMessageModal(prev => ({ ...prev, content: data.fullMessage, loading: false }));
+    } catch (err) {
+      console.error('Failed to load full message:', err);
+      setFullMessageModal(prev => ({ ...prev, content: 'Failed to load full message', loading: false }));
+    }
+  }, []);
+
+  // Copy to clipboard helper
+  const copyToClipboard = async (text: string | null) => {
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
 
   // Load annotations for visible logs
   useEffect(() => {
@@ -538,6 +589,7 @@ export default function LogViewer({
               isExpanded={expandedRows.has(realIndex)}
               onToggleExpand={handleToggleExpand}
               onAddFilter={onAddFilter}
+              onLoadFullMessage={loadFullMessage}
               searchTerms={searchTerms}
             />
           );
@@ -551,6 +603,49 @@ export default function LogViewer({
       <div className="px-4 py-2 bg-nog-50 dark:bg-nog-900 border-t border-slate-200 dark:border-nog-700 text-xs text-slate-500 dark:text-nog-400">
         <span>Click any row to expand. Hover over field values for quick actions.</span>
       </div>
+
+      {/* Full Message Modal */}
+      {fullMessageModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white dark:bg-nog-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[80vh] flex flex-col mx-4">
+            <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-nog-700">
+              <h3 className="font-semibold text-slate-900 dark:text-slate-100">Full Message</h3>
+              <button
+                onClick={() => setFullMessageModal({ isOpen: false, logId: null, content: null, loading: false })}
+                className="p-1 hover:bg-slate-100 dark:hover:bg-nog-700 rounded transition-colors"
+              >
+                <X className="w-5 h-5 text-slate-500 dark:text-nog-400" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-auto p-4">
+              {fullMessageModal.loading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-6 h-6 animate-spin text-amber-500" />
+                </div>
+              ) : (
+                <pre className="text-sm font-mono whitespace-pre-wrap break-words text-slate-700 dark:text-nog-200">
+                  {fullMessageModal.content}
+                </pre>
+              )}
+            </div>
+            <div className="p-4 border-t border-slate-200 dark:border-nog-700 flex justify-end gap-2">
+              <button
+                onClick={() => copyToClipboard(fullMessageModal.content)}
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-700 dark:text-nog-300 hover:bg-slate-100 dark:hover:bg-nog-700 rounded transition-colors"
+              >
+                <Copy className="w-4 h-4" />
+                Copy
+              </button>
+              <button
+                onClick={() => setFullMessageModal({ isOpen: false, logId: null, content: null, loading: false })}
+                className="px-3 py-2 text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 rounded transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

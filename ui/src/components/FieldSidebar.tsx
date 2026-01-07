@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { ChevronDown, ChevronRight, Pin, Search, Loader2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, Pin, Search, Loader2, VolumeX, Volume2 } from 'lucide-react';
 import { discoverFields, getFieldPreferences, pinField, DiscoveredField } from '../api/client';
+import { useMute } from '../contexts/MuteContext';
 import FieldBrowserModal from './FieldBrowserModal';
 
 export interface FacetValue {
@@ -22,14 +23,18 @@ interface FieldSidebarProps {
   timeRange?: string;
 }
 
+// Fields that can be muted
+const MUTABLE_FIELDS = ['app_name', 'index_name', 'hostname'];
+
 export default function FieldSidebar({
   results,
   selectedFilters,
   onFilterChange,
   timeRange = '-24h',
 }: FieldSidebarProps) {
+  const { isMuted, toggleMute, getMutedCount } = useMute();
   const [collapsedPanels, setCollapsedPanels] = useState<Set<string>>(new Set());
-  const [pinnedFields, setPinnedFields] = useState<string[]>(['severity', 'hostname', 'app_name', 'index_name']);
+  const [pinnedFields, setPinnedFields] = useState<string[]>(['severity', 'index_name', 'hostname', 'app_name']);
   const [discoveredFields, setDiscoveredFields] = useState<DiscoveredField[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showBrowser, setShowBrowser] = useState(false);
@@ -324,6 +329,8 @@ export default function FieldSidebar({
                   const isChanged = isPending !== wasApplied;
                   const displayValue =
                     facet.field === 'severity' ? getSeverityLabel(item.value) : item.value;
+                  const canMute = MUTABLE_FIELDS.includes(facet.field);
+                  const valueMuted = canMute && isMuted(facet.field, item.value);
 
                   // Calculate percentage with edge case handling
                   const rawPercent = fieldTotal > 0 ? (item.count / fieldTotal) * 100 : 0;
@@ -334,66 +341,91 @@ export default function FieldSidebar({
                     `${percent.toFixed(1)}%`;
 
                   return (
-                    <label
-                      key={item.value}
-                      className={`relative flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-all duration-150 hover:scale-[1.02] overflow-hidden ${
-                        isPending
-                          ? isChanged
-                            ? 'bg-amber-200 dark:bg-amber-900/30 hover:bg-amber-300 dark:hover:bg-amber-900/40 ring-1 ring-amber-400 dark:ring-amber-700'
-                            : 'bg-amber-100 dark:bg-amber-900/20 hover:bg-amber-200 dark:hover:bg-amber-900/30'
-                          : isChanged
-                            ? 'bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/20 ring-1 ring-red-200 dark:ring-red-800'
-                            : 'hover:bg-nog-100 dark:hover:bg-nog-700'
-                      }`}
-                    >
-                      {/* Percentage bar background */}
-                      {percent > 0 && (
-                        <div
-                          className={`absolute left-0 top-0 bottom-0 transition-all duration-300 ${
-                            isPending
+                    <div key={item.value} className="flex items-center gap-1">
+                      <label
+                        className={`relative flex-1 flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-all duration-150 hover:scale-[1.02] overflow-hidden ${
+                          valueMuted
+                            ? 'opacity-50'
+                            : isPending
                               ? isChanged
-                                ? 'bg-amber-300/60 dark:bg-amber-800/40'
-                                : 'bg-amber-200/60 dark:bg-amber-800/30'
-                              : 'bg-amber-100/50 dark:bg-amber-900/20'
-                          }`}
-                          style={{ width: `${percent}%` }}
-                        />
-                      )}
-                      <input
-                        type="checkbox"
-                        checked={isPending}
-                        onChange={() => toggleValue(facet.field, item.value)}
-                        className={`relative z-10 w-4 h-4 border-slate-300 rounded focus:ring-offset-0 cursor-pointer ${
-                          isChanged ? 'text-amber-700 focus:ring-amber-600' : 'text-amber-600 focus:ring-amber-500'
+                                ? 'bg-amber-200 dark:bg-amber-900/30 hover:bg-amber-300 dark:hover:bg-amber-900/40 ring-1 ring-amber-400 dark:ring-amber-700'
+                                : 'bg-amber-100 dark:bg-amber-900/20 hover:bg-amber-200 dark:hover:bg-amber-900/30'
+                              : isChanged
+                                ? 'bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/20 ring-1 ring-red-200 dark:ring-red-800'
+                                : 'hover:bg-nog-100 dark:hover:bg-nog-700'
                         }`}
-                      />
-                      <div className="relative z-10 flex-1 min-w-0 flex items-center justify-between gap-2">
-                        {facet.field === 'severity' ? (
-                          <span
-                            className={`text-xs font-medium px-2 py-0.5 rounded border truncate ${getSeverityColor(
-                              item.value
-                            )}`}
-                          >
-                            {displayValue}
-                          </span>
-                        ) : (
-                          <span
-                            className="text-sm text-slate-700 dark:text-nog-300 truncate"
-                            title={displayValue}
-                          >
-                            {displayValue}
-                          </span>
+                      >
+                        {/* Percentage bar background */}
+                        {percent > 0 && !valueMuted && (
+                          <div
+                            className={`absolute left-0 top-0 bottom-0 transition-all duration-300 ${
+                              isPending
+                                ? isChanged
+                                  ? 'bg-amber-300/60 dark:bg-amber-800/40'
+                                  : 'bg-amber-200/60 dark:bg-amber-800/30'
+                                : 'bg-amber-100/50 dark:bg-amber-900/20'
+                            }`}
+                            style={{ width: `${percent}%` }}
+                          />
                         )}
-                        <span className="text-xs text-slate-500 font-medium tabular-nums flex-shrink-0 whitespace-nowrap">
-                          {item.count.toLocaleString()}
-                          {percentDisplay && (
-                            <span className="text-slate-400 dark:text-nog-500 ml-1">
-                              ({percentDisplay})
+                        <input
+                          type="checkbox"
+                          checked={isPending}
+                          onChange={() => toggleValue(facet.field, item.value)}
+                          className={`relative z-10 w-4 h-4 border-slate-300 rounded focus:ring-offset-0 cursor-pointer ${
+                            isChanged ? 'text-amber-700 focus:ring-amber-600' : 'text-amber-600 focus:ring-amber-500'
+                          }`}
+                        />
+                        <div className="relative z-10 flex-1 min-w-0 flex items-center justify-between gap-2">
+                          {facet.field === 'severity' ? (
+                            <span
+                              className={`text-xs font-medium px-2 py-0.5 rounded border truncate ${getSeverityColor(
+                                item.value
+                              )}`}
+                            >
+                              {displayValue}
+                            </span>
+                          ) : (
+                            <span
+                              className={`text-sm truncate ${valueMuted ? 'line-through text-slate-400 dark:text-nog-500' : 'text-slate-700 dark:text-nog-300'}`}
+                              title={displayValue}
+                            >
+                              {displayValue}
                             </span>
                           )}
-                        </span>
-                      </div>
-                    </label>
+                          <span className="text-xs text-slate-500 font-medium tabular-nums flex-shrink-0 whitespace-nowrap">
+                            {item.count.toLocaleString()}
+                            {percentDisplay && (
+                              <span className="text-slate-400 dark:text-nog-500 ml-1">
+                                ({percentDisplay})
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                      </label>
+                      {/* Mute button for mutable fields */}
+                      {canMute && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleMute(facet.field, item.value);
+                          }}
+                          className={`relative z-10 p-1 rounded transition-colors ${
+                            valueMuted
+                              ? 'text-slate-400 dark:text-nog-500 hover:text-slate-600 dark:hover:text-nog-300 hover:bg-nog-100 dark:hover:bg-nog-700'
+                              : 'text-slate-300 dark:text-nog-600 hover:text-slate-500 dark:hover:text-nog-400 hover:bg-nog-100 dark:hover:bg-nog-700'
+                          }`}
+                          title={valueMuted ? 'Unmute (show in search results)' : 'Mute (hide from search results)'}
+                        >
+                          {valueMuted ? (
+                            <VolumeX className="w-4 h-4" />
+                          ) : (
+                            <Volume2 className="w-4 h-4" />
+                          )}
+                        </button>
+                      )}
+                    </div>
                   );
                 })}
               </div>
@@ -417,7 +449,15 @@ export default function FieldSidebar({
           <h3 className="text-sm font-semibold text-slate-700 dark:text-nog-300 uppercase tracking-wide">
             Fields
           </h3>
-          {isLoading && <Loader2 className="w-4 h-4 animate-spin text-slate-400" />}
+          <div className="flex items-center gap-2">
+            {getMutedCount() > 0 && (
+              <span className="flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-slate-200 dark:bg-nog-700 text-slate-600 dark:text-nog-400" title="Values hidden from search results">
+                <VolumeX className="w-3 h-3" />
+                {getMutedCount()} muted
+              </span>
+            )}
+            {isLoading && <Loader2 className="w-4 h-4 animate-spin text-slate-400" />}
+          </div>
         </div>
         {totalSelected > 0 && (
           <p className="text-xs text-slate-500 dark:text-nog-400 mt-1">

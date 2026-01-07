@@ -17,6 +17,7 @@ export interface PieChartProps {
   legendPosition?: 'top' | 'bottom' | 'left' | 'right';
   radius?: string | [string, string];
   onItemClick?: (name: string, value: number) => void;
+  colors?: string[];
 }
 
 const DEFAULT_COLORS = [
@@ -41,6 +42,7 @@ export const PieChart: React.FC<PieChartProps> = ({
   legendPosition = 'right',
   radius,
   onItemClick,
+  colors,
 }) => {
   const defaultRadius = donut ? ['40%', '70%'] : '70%';
   const pieRadius = radius || defaultRadius;
@@ -81,7 +83,7 @@ export const PieChart: React.FC<PieChartProps> = ({
         },
       },
       legend: legendConfig,
-      color: DEFAULT_COLORS,
+      color: colors || DEFAULT_COLORS,
       series: [
         {
           type: 'pie',
@@ -122,7 +124,7 @@ export const PieChart: React.FC<PieChartProps> = ({
         },
       ],
     };
-  }, [data, title, darkMode, donut, showLegend, legendPosition, pieRadius]);
+  }, [data, title, darkMode, donut, showLegend, legendPosition, pieRadius, colors]);
 
   const onEvents = React.useMemo(() => {
     if (!onItemClick) return undefined;

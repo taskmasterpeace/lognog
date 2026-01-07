@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { parseToAST, validateQuery, ParseError, isSimpleCondition } from '../dsl/index.js';
-import { executeDSLQuery, executeRawQuery, getFields, getFieldValues, getBackendInfo, discoverStructuredDataFields, DiscoveredField, isLiteMode } from '../db/backend.js';
+import { executeDSLQuery, executeRawQuery, getFields, getFieldValues, getBackendInfo, discoverStructuredDataFields, DiscoveredField, isLiteMode, getLogById } from '../db/backend.js';
 import {
   getSavedSearches,
   getSavedSearch,
@@ -634,6 +634,42 @@ router.delete('/saved/:id', (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error deleting saved search:', error);
     return res.status(500).json({ error: 'Failed to delete saved search' });
+  }
+});
+
+/**
+ * GET /api/search/logs/:id/full-message
+ * Fetch full message content for a truncated log entry (lazy loading)
+ */
+router.get('/logs/:id/full-message', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    if (!id || typeof id !== 'string') {
+      return res.status(400).json({ error: 'Invalid log ID' });
+    }
+
+    // Fetch the log entry with message fields
+    const log = await getLogById(id, ['id', 'message', 'raw', 'message_truncated']);
+
+    if (!log) {
+      return res.status(404).json({ error: 'Log not found' });
+    }
+
+    // Return full message: from raw if truncated, else from message
+    const fullMessage = log.message_truncated
+      ? (log.raw as string || log.message as string || '')
+      : (log.message as string || '');
+
+    return res.json({
+      id,
+      fullMessage,
+      byteSize: Buffer.byteLength(fullMessage, 'utf8'),
+      truncated: !!log.message_truncated,
+    });
+  } catch (error) {
+    console.error('Error fetching full message:', error);
+    return res.status(500).json({ error: 'Failed to fetch full message' });
   }
 });
 

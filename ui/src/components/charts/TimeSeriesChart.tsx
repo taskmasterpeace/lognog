@@ -141,9 +141,12 @@ export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
         },
         axisLabel: {
           color: darkMode ? '#9ca3af' : '#6b7280',
+          hideOverlap: true,
           formatter: (value: number) => {
             const date = new Date(value);
-            return date.toLocaleTimeString();
+            const hours = date.getHours().toString().padStart(2, '0');
+            const minutes = date.getMinutes().toString().padStart(2, '0');
+            return `${hours}:${minutes}`;
           },
         },
         axisLine: {
@@ -200,9 +203,40 @@ export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
           },
         },
       ] : undefined,
+      toolbox: onBrushEnd ? {
+        show: true,
+        right: 10,
+        top: 0,
+        feature: {
+          brush: {
+            type: ['lineX', 'clear'],
+            title: {
+              lineX: 'Horizontal selection',
+              clear: 'Clear selection',
+            },
+          },
+        },
+        iconStyle: {
+          borderColor: darkMode ? '#9ca3af' : '#6b7280',
+        },
+        emphasis: {
+          iconStyle: {
+            borderColor: '#f59e0b',
+          },
+        },
+      } : undefined,
       brush: onBrushEnd ? {
         toolbox: ['lineX', 'clear'],
+        brushLink: 'all',
         xAxisIndex: 0,
+        brushType: 'lineX',  // Enable brush mode automatically for drag-to-select
+        throttleType: 'debounce',
+        throttleDelay: 300,
+        brushStyle: {
+          borderWidth: 1,
+          color: 'rgba(245, 158, 11, 0.2)',
+          borderColor: '#f59e0b',
+        },
       } : undefined,
       series: seriesConfig,
     };
@@ -212,19 +246,49 @@ export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
     const events: Record<string, (params: unknown) => void> = {};
 
     if (onBrushEnd) {
+      // Handle brush selection end
       events.brushEnd = (params: any) => {
         if (params.areas && params.areas.length > 0) {
           const area = params.areas[0];
-          const [startTime, endTime] = area.coordRange;
-          onBrushEnd(startTime, endTime);
+          if (area.coordRange && area.coordRange.length >= 2) {
+            const [startTime, endTime] = area.coordRange;
+            onBrushEnd(startTime, endTime);
+          }
+        }
+      };
+
+      // Also handle brushSelected for immediate feedback
+      events.brushSelected = (params: any) => {
+        if (params.batch && params.batch.length > 0) {
+          const batch = params.batch[0];
+          if (batch.areas && batch.areas.length > 0) {
+            const area = batch.areas[0];
+            if (area.coordRange && area.coordRange.length >= 2) {
+              const [startTime, endTime] = area.coordRange;
+              onBrushEnd(startTime, endTime);
+            }
+          }
         }
       };
     }
 
     if (onBarClick && chartType === 'bar') {
       events.click = (params: any) => {
-        if (params.data && Array.isArray(params.data) && params.data.length >= 1) {
-          const timestamp = params.data[0];
+        // Handle different data formats from ECharts
+        let timestamp: number | undefined;
+        if (params.data) {
+          if (Array.isArray(params.data) && params.data.length >= 1) {
+            timestamp = params.data[0];
+          } else if (typeof params.data === 'object' && params.data.value) {
+            // Handle object format { value: [time, count] }
+            timestamp = Array.isArray(params.data.value) ? params.data.value[0] : params.data.value;
+          }
+        }
+        // Also check params.value directly (some ECharts versions use this)
+        if (!timestamp && params.value && Array.isArray(params.value)) {
+          timestamp = params.value[0];
+        }
+        if (timestamp) {
           onBarClick(timestamp);
         }
       };

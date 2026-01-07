@@ -1,9 +1,12 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useMemo, ReactNode } from 'react';
 import { DateFormat, formatTimestamp, formatDateOnly, formatTimeOnly } from '../utils/formatDate';
 
 interface DateFormatContextType {
   dateFormat: DateFormat;
   setDateFormat: (format: DateFormat) => void;
+  timezone: string; // 'browser' or IANA timezone name
+  setTimezone: (tz: string) => void;
+  resolvedTimezone: string; // Actual IANA timezone name (resolved from 'browser')
   formatDate: (date: Date | string | number | null | undefined) => string;
   formatDatePart: (date: Date | string | number | null | undefined) => string;
   formatTimePart: (date: Date | string | number | null | undefined) => string;
@@ -11,14 +14,34 @@ interface DateFormatContextType {
 
 const DateFormatContext = createContext<DateFormatContextType | null>(null);
 
+// Get browser's default timezone
+function getBrowserTimezone(): string {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone;
+  } catch {
+    return 'UTC';
+  }
+}
+
 export function DateFormatProvider({ children }: { children: ReactNode }) {
   const [dateFormat, setDateFormat] = useState<DateFormat>('12-hour');
+  const [timezone, setTimezone] = useState<string>('browser');
 
-  // Load format from localStorage on mount
+  // Resolve 'browser' to actual IANA timezone
+  const resolvedTimezone = useMemo(() => {
+    return timezone === 'browser' ? getBrowserTimezone() : timezone;
+  }, [timezone]);
+
+  // Load format and timezone from localStorage on mount
   useEffect(() => {
-    const stored = localStorage.getItem('lognog_date_format');
-    if (stored && ['12-hour', '24-hour', 'day-of-week', 'iso', 'short'].includes(stored)) {
-      setDateFormat(stored as DateFormat);
+    const storedFormat = localStorage.getItem('lognog_date_format');
+    if (storedFormat && ['12-hour', '24-hour', 'day-of-week', 'iso', 'short'].includes(storedFormat)) {
+      setDateFormat(storedFormat as DateFormat);
+    }
+
+    const storedTimezone = localStorage.getItem('lognog_timezone');
+    if (storedTimezone) {
+      setTimezone(storedTimezone);
     }
   }, []);
 
@@ -27,12 +50,20 @@ export function DateFormatProvider({ children }: { children: ReactNode }) {
     localStorage.setItem('lognog_date_format', dateFormat);
   }, [dateFormat]);
 
+  // Save timezone to localStorage when it changes
+  useEffect(() => {
+    localStorage.setItem('lognog_timezone', timezone);
+  }, [timezone]);
+
   const value: DateFormatContextType = {
     dateFormat,
     setDateFormat,
-    formatDate: (date) => formatTimestamp(date, dateFormat),
-    formatDatePart: (date) => formatDateOnly(date, dateFormat),
-    formatTimePart: (date) => formatTimeOnly(date, dateFormat),
+    timezone,
+    setTimezone,
+    resolvedTimezone,
+    formatDate: (date) => formatTimestamp(date, dateFormat, resolvedTimezone),
+    formatDatePart: (date) => formatDateOnly(date, dateFormat, resolvedTimezone),
+    formatTimePart: (date) => formatTimeOnly(date, dateFormat, resolvedTimezone),
   };
 
   return (

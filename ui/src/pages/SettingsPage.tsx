@@ -43,6 +43,7 @@ interface UserPreferences {
   default_view_mode: 'log' | 'table' | 'json';
   query_history_limit: number;
   date_format: '12-hour' | '24-hour' | 'day-of-week' | 'iso' | 'short';
+  timezone: string;
 }
 
 // Tab configuration - base tabs for all users
@@ -76,7 +77,7 @@ export default function SettingsPage() {
     deactivateUser,
     activateUser,
   } = useAuth();
-  const { setDateFormat } = useDateFormat();
+  const { setDateFormat, setTimezone: setContextTimezone, resolvedTimezone } = useDateFormat();
   const [activeTab, setActiveTab] = useState<TabId>('preferences');
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [loading, setLoading] = useState(true);
@@ -106,6 +107,7 @@ export default function SettingsPage() {
     default_view_mode: 'log',
     query_history_limit: 10,
     date_format: '12-hour',
+    timezone: 'browser',
   });
   const [prefsLoading, setPrefsLoading] = useState(true);
   const [prefsSaving, setPrefsSaving] = useState(false);
@@ -256,6 +258,10 @@ export default function SettingsPage() {
         if (data.date_format) {
           setDateFormat(data.date_format);
         }
+        // Sync timezone with context
+        if (data.timezone) {
+          setContextTimezone(data.timezone);
+        }
       }
     } catch (err) {
       console.error('Failed to load preferences:', err);
@@ -291,6 +297,11 @@ export default function SettingsPage() {
         // Apply date format immediately
         if (updates.date_format) {
           setDateFormat(updates.date_format);
+        }
+
+        // Apply timezone immediately
+        if (updates.timezone) {
+          setContextTimezone(updates.timezone);
         }
       }
     } catch (err) {
@@ -778,6 +789,50 @@ export default function SettingsPage() {
             </select>
             <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
               How timestamps are displayed throughout the app
+            </p>
+          </div>
+
+          {/* Display Timezone */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Display Timezone
+            </label>
+            <select
+              value={preferences.timezone || 'browser'}
+              onChange={(e) => savePreferences({ timezone: e.target.value })}
+              disabled={prefsSaving}
+              className="w-full max-w-xs px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-800 text-slate-900 dark:text-slate-100"
+            >
+              <option value="browser">Browser Default ({resolvedTimezone})</option>
+              <optgroup label="Americas">
+                <option value="America/New_York">New York (ET)</option>
+                <option value="America/Chicago">Chicago (CT)</option>
+                <option value="America/Denver">Denver (MT)</option>
+                <option value="America/Los_Angeles">Los Angeles (PT)</option>
+                <option value="America/Anchorage">Anchorage (AKT)</option>
+                <option value="America/Sao_Paulo">Sao Paulo (BRT)</option>
+              </optgroup>
+              <optgroup label="Europe">
+                <option value="Europe/London">London (GMT/BST)</option>
+                <option value="Europe/Paris">Paris (CET)</option>
+                <option value="Europe/Berlin">Berlin (CET)</option>
+                <option value="Europe/Moscow">Moscow (MSK)</option>
+              </optgroup>
+              <optgroup label="Asia/Pacific">
+                <option value="Asia/Dubai">Dubai (GST)</option>
+                <option value="Asia/Kolkata">India (IST)</option>
+                <option value="Asia/Singapore">Singapore (SGT)</option>
+                <option value="Asia/Shanghai">China (CST)</option>
+                <option value="Asia/Tokyo">Tokyo (JST)</option>
+                <option value="Australia/Sydney">Sydney (AEST)</option>
+                <option value="Pacific/Auckland">Auckland (NZST)</option>
+              </optgroup>
+              <optgroup label="Other">
+                <option value="UTC">UTC</option>
+              </optgroup>
+            </select>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              Controls how timestamps are displayed. Log data is stored in UTC.
             </p>
           </div>
 

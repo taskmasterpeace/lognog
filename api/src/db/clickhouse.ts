@@ -46,6 +46,20 @@ export async function healthCheck(): Promise<boolean> {
   }
 }
 
+/**
+ * Get a single log entry by ID (for lazy loading full message)
+ */
+export async function getLogById(
+  id: string,
+  fields: string[] = ['id', 'message', 'raw', 'message_truncated']
+): Promise<Record<string, unknown> | null> {
+  const fieldList = fields.join(', ');
+  const sql = `SELECT ${fieldList} FROM lognog.logs WHERE id = {id:String} LIMIT 1`;
+
+  const results = await executeQuery<Record<string, unknown>>(sql, { id });
+  return results[0] || null;
+}
+
 export async function closeConnection(): Promise<void> {
   if (client) {
     await client.close();

@@ -7,6 +7,9 @@ import {
   setSystemSettings,
   getSystemSetting,
   setSystemSetting,
+  getMutedValues,
+  setMutedValues,
+  MutedValues,
 } from '../db/sqlite';
 
 const router = Router();
@@ -32,6 +35,7 @@ router.get('/preferences', authenticate, (req: Request, res: Response) => {
       default_view_mode: 'log',
       query_history_limit: 10,
       date_format: '12-hour',
+      timezone: 'browser',
     });
   }
 
@@ -42,6 +46,7 @@ router.get('/preferences', authenticate, (req: Request, res: Response) => {
     default_view_mode: prefs.default_view_mode,
     query_history_limit: prefs.query_history_limit,
     date_format: prefs.date_format || '12-hour',
+    timezone: prefs.timezone || 'browser',
   });
 });
 
@@ -53,7 +58,7 @@ router.put('/preferences', authenticate, (req: Request, res: Response) => {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 
-  const { theme, default_time_range, sidebar_open, default_view_mode, query_history_limit, date_format } = req.body;
+  const { theme, default_time_range, sidebar_open, default_view_mode, query_history_limit, date_format, timezone } = req.body;
 
   // Validate inputs
   if (theme && !['light', 'dark', 'system'].includes(theme)) {
@@ -72,6 +77,15 @@ router.put('/preferences', authenticate, (req: Request, res: Response) => {
     return res.status(400).json({ error: 'Invalid date format. Must be 12-hour, 24-hour, day-of-week, iso, or short' });
   }
 
+  // Validate timezone if provided (must be 'browser' or a valid IANA timezone)
+  if (timezone && timezone !== 'browser') {
+    try {
+      Intl.DateTimeFormat(undefined, { timeZone: timezone });
+    } catch {
+      return res.status(400).json({ error: 'Invalid timezone' });
+    }
+  }
+
   const prefs = upsertUserPreferences(userId, {
     theme,
     default_time_range,
@@ -79,6 +93,7 @@ router.put('/preferences', authenticate, (req: Request, res: Response) => {
     default_view_mode,
     query_history_limit,
     date_format,
+    timezone,
   });
 
   return res.json({
@@ -88,7 +103,46 @@ router.put('/preferences', authenticate, (req: Request, res: Response) => {
     default_view_mode: prefs.default_view_mode,
     query_history_limit: prefs.query_history_limit,
     date_format: prefs.date_format || '12-hour',
+    timezone: prefs.timezone || 'browser',
   });
+});
+
+// ============ Muted Values ============
+
+// GET /api/settings/muted - Get current user's muted values
+router.get('/muted', authenticate, (req: Request, res: Response) => {
+  const userId = req.user?.id;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const mutedValues = getMutedValues(userId);
+  return res.json(mutedValues);
+});
+
+// PUT /api/settings/muted - Update current user's muted values
+router.put('/muted', authenticate, (req: Request, res: Response) => {
+  const userId = req.user?.id;
+
+  if (!userId) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+
+  const { app_name, index_name, hostname } = req.body as Partial<MutedValues>;
+
+  // Validate that all fields are arrays of strings
+  const isValidArray = (arr: unknown): arr is string[] =>
+    Array.isArray(arr) && arr.every((item) => typeof item === 'string');
+
+  const mutedValues: MutedValues = {
+    app_name: isValidArray(app_name) ? app_name : [],
+    index_name: isValidArray(index_name) ? index_name : [],
+    hostname: isValidArray(hostname) ? hostname : [],
+  };
+
+  const updated = setMutedValues(userId, mutedValues);
+  return res.json(updated);
 });
 
 // ============ System Settings (Admin only) ============

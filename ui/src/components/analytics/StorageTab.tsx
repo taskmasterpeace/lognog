@@ -11,18 +11,8 @@ import {
   RefreshCw,
   AlertTriangle,
 } from 'lucide-react';
-import {
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  BarChart,
-  Bar,
-  Cell,
-} from 'recharts';
+import { AreaChart, BarChart } from '../charts';
+import { useTheme } from '../../contexts/ThemeContext';
 import { getStorageStats, updateRetentionSetting, triggerRetentionCleanup } from '../../api/client';
 import RetentionConfigModal from './RetentionConfigModal';
 
@@ -77,6 +67,8 @@ export default function StorageTab() {
   const queryClient = useQueryClient();
   const [selectedIndex, setSelectedIndex] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const { resolvedTheme } = useTheme();
+  const isDarkMode = resolvedTheme === 'dark';
 
   const { data: storage, isLoading, error, refetch } = useQuery({
     queryKey: ['storage-stats'],
@@ -236,48 +228,13 @@ export default function StorageTab() {
               Daily data volume
             </p>
           </div>
-          <div className="h-56 sm:h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={trendData}>
-                <defs>
-                  <linearGradient id="colorBytes" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" className="dark:stroke-slate-700" />
-                <XAxis
-                  dataKey="day"
-                  stroke="#94a3b8"
-                  fontSize={12}
-                  tickLine={false}
-                />
-                <YAxis
-                  stroke="#94a3b8"
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={(v) => formatBytes(v)}
-                />
-                <Tooltip
-                  formatter={(value: number) => [formatBytes(value), 'Size']}
-                  contentStyle={{
-                    borderRadius: '12px',
-                    border: '1px solid #e2e8f0',
-                    backgroundColor: 'white',
-                  }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="bytes"
-                  stroke="#f59e0b"
-                  strokeWidth={2}
-                  fill="url(#colorBytes)"
-                  name="Data Size"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
+          <AreaChart
+            data={trendData}
+            series={[{ name: 'Data Size', dataKey: 'bytes', color: '#f59e0b' }]}
+            xAxisKey="day"
+            height={288}
+            darkMode={isDarkMode}
+          />
         </div>
 
         {/* Index Sizes */}
@@ -290,48 +247,18 @@ export default function StorageTab() {
               Click to configure retention
             </p>
           </div>
-          <div className="h-56 sm:h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={indexData} layout="vertical" barSize={20}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" className="dark:stroke-slate-700" horizontal={false} />
-                <XAxis
-                  type="number"
-                  stroke="#94a3b8"
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                  tickFormatter={(v) => formatBytes(v)}
-                />
-                <YAxis
-                  dataKey="name"
-                  type="category"
-                  stroke="#94a3b8"
-                  fontSize={12}
-                  width={100}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <Tooltip
-                  formatter={(value: number) => [formatBytes(value), 'Size']}
-                  contentStyle={{
-                    borderRadius: '12px',
-                    border: '1px solid #e2e8f0',
-                    backgroundColor: 'white',
-                  }}
-                />
-                <Bar
-                  dataKey="size"
-                  radius={[0, 6, 6, 0]}
-                  cursor="pointer"
-                  onClick={(data) => handleIndexClick(data.fullName)}
-                >
-                  {indexData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          <BarChart
+            data={indexData.map((idx) => ({ category: idx.name, value: idx.size }))}
+            height={288}
+            darkMode={isDarkMode}
+            horizontal={true}
+            barColor="#f59e0b"
+            showValues={false}
+            onBarClick={(category) => {
+              const idx = indexData.find((i) => i.name === category);
+              if (idx) handleIndexClick(idx.fullName);
+            }}
+          />
         </div>
       </div>
 

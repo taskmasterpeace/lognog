@@ -12,22 +12,10 @@ import {
   HardDrive,
   BarChart3,
 } from 'lucide-react';
-import {
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-  Area,
-  AreaChart,
-} from 'recharts';
+import { AreaChart, BarChart, PieChart } from '../components/charts';
 import { getStats, getTimeSeries } from '../api/client';
 import StorageTab from '../components/analytics/StorageTab';
+import { useTheme } from '../contexts/ThemeContext';
 
 const SEVERITY_COLORS = ['#dc2626', '#ea580c', '#d97706', '#eab308', '#84cc16', '#22c55e', '#10b981', '#06b6d4'];
 const SEVERITY_NAMES = ['Emergency', 'Alert', 'Critical', 'Error', 'Warning', 'Notice', 'Info', 'Debug'];
@@ -70,6 +58,8 @@ type TabType = 'analytics' | 'storage';
 export default function StatsPage() {
   const [activeTab, setActiveTab] = useState<TabType>('analytics');
   const navigate = useNavigate();
+  const { resolvedTheme } = useTheme();
+  const isDarkMode = resolvedTheme === 'dark';
 
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['stats'],
@@ -217,55 +207,18 @@ export default function StatsPage() {
                 </span>
               </div>
             </div>
-            <div className="h-56 sm:h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={timeSeries || []}>
-                  <defs>
-                    <linearGradient id="colorCount" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
-                    </linearGradient>
-                    <linearGradient id="colorErrors" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#ef4444" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                  <XAxis
-                    dataKey="time"
-                    tickFormatter={(v) => new Date(v).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    stroke="#94a3b8"
-                    fontSize={12}
-                    tickLine={false}
-                  />
-                  <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
-                  <Tooltip
-                    labelFormatter={(v) => new Date(v).toLocaleString()}
-                    contentStyle={{
-                      borderRadius: '12px',
-                      border: '1px solid #e2e8f0',
-                      boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="count"
-                    stroke="#f59e0b"
-                    strokeWidth={2}
-                    fill="url(#colorCount)"
-                    name="Total"
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="errors"
-                    stroke="#ef4444"
-                    strokeWidth={2}
-                    fill="url(#colorErrors)"
-                    name="Errors"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
+            <AreaChart
+              data={timeSeries || []}
+              series={[
+                { name: 'Total', dataKey: 'count', color: '#f59e0b' },
+                { name: 'Errors', dataKey: 'errors', color: '#ef4444' },
+              ]}
+              xAxisKey="time"
+              height={288}
+              darkMode={isDarkMode}
+              xAxisFormatter={(v) => new Date(v).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              tooltipFormatter={(v) => new Date(v).toLocaleString()}
+            />
           </div>
 
           {/* Severity Distribution */}
@@ -274,34 +227,19 @@ export default function StatsPage() {
               <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-sm sm:text-base">Severity Distribution</h3>
               <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Click to filter by severity</p>
             </div>
-            <div className="h-48 sm:h-72 flex items-center">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={severityData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={70}
-                    outerRadius={100}
-                    paddingAngle={3}
-                    dataKey="value"
-                    cursor="pointer"
-                    onClick={(data) => handleDrilldown('severity', String(data.severity))}
-                  >
-                    {severityData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.fill} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      borderRadius: '12px',
-                      border: '1px solid #e2e8f0',
-                      backgroundColor: 'white',
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
+            <PieChart
+              data={severityData.map(s => ({ name: s.name, value: s.value }))}
+              height={288}
+              darkMode={isDarkMode}
+              donut={true}
+              showLegend={false}
+              radius={['50%', '70%']}
+              colors={severityData.map(s => s.fill)}
+              onItemClick={(name) => {
+                const item = severityData.find(s => s.name === name);
+                if (item) handleDrilldown('severity', String(item.severity));
+              }}
+            />
             <div className="flex flex-wrap justify-center gap-2 sm:gap-3 mt-3 sm:mt-4">
               {severityData.slice(0, 6).map((entry) => (
                 <button
@@ -325,37 +263,15 @@ export default function StatsPage() {
               <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-sm sm:text-base">Top Hosts</h3>
               <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Click to search by host</p>
             </div>
-            <div className="h-56 sm:h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={stats?.topHosts || []} layout="vertical" barSize={20}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" className="dark:stroke-slate-700" horizontal={false} />
-                  <XAxis type="number" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis
-                    dataKey="hostname"
-                    type="category"
-                    stroke="#94a3b8"
-                    fontSize={12}
-                    width={100}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      borderRadius: '12px',
-                      border: '1px solid #e2e8f0',
-                      backgroundColor: 'white',
-                    }}
-                  />
-                  <Bar
-                    dataKey="count"
-                    fill="#f59e0b"
-                    radius={[0, 6, 6, 0]}
-                    cursor="pointer"
-                    onClick={(data) => handleDrilldown('hostname', data.hostname)}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            <BarChart
+              data={(stats?.topHosts || []).map(h => ({ category: h.hostname, value: h.count }))}
+              height={288}
+              darkMode={isDarkMode}
+              horizontal={true}
+              barColor="#f59e0b"
+              showValues={false}
+              onBarClick={(category) => handleDrilldown('hostname', category)}
+            />
           </div>
 
           {/* Top Applications */}
@@ -364,37 +280,15 @@ export default function StatsPage() {
               <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-sm sm:text-base">Top Applications</h3>
               <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">Click to search by app</p>
             </div>
-            <div className="h-56 sm:h-72">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={stats?.topApps || []} layout="vertical" barSize={20}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" className="dark:stroke-slate-700" horizontal={false} />
-                  <XAxis type="number" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis
-                    dataKey="app_name"
-                    type="category"
-                    stroke="#94a3b8"
-                    fontSize={12}
-                    width={100}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      borderRadius: '12px',
-                      border: '1px solid #e2e8f0',
-                      backgroundColor: 'white',
-                    }}
-                  />
-                  <Bar
-                    dataKey="count"
-                    fill="#8b5cf6"
-                    radius={[0, 6, 6, 0]}
-                    cursor="pointer"
-                    onClick={(data) => handleDrilldown('app_name', data.app_name)}
-                  />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            <BarChart
+              data={(stats?.topApps || []).map(a => ({ category: a.app_name, value: a.count }))}
+              height={288}
+              darkMode={isDarkMode}
+              horizontal={true}
+              barColor="#8b5cf6"
+              showValues={false}
+              onBarClick={(category) => handleDrilldown('app_name', category)}
+            />
           </div>
         </div>
       </div>

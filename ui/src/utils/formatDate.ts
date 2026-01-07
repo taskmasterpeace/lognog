@@ -17,11 +17,13 @@ export const DATE_FORMAT_OPTIONS = [
  * Format a timestamp according to the specified format
  * @param date - Date object, ISO string, or timestamp number
  * @param format - The date format preference
+ * @param timezone - Optional IANA timezone (e.g., 'America/New_York')
  * @returns Formatted date string
  */
 export function formatTimestamp(
   date: Date | string | number | null | undefined,
-  format: DateFormat = '12-hour'
+  format: DateFormat = '12-hour',
+  timezone?: string
 ): string {
   if (date == null) return '-';
 
@@ -30,6 +32,8 @@ export function formatTimestamp(
     : date;
 
   if (isNaN(d.getTime())) return '-';
+
+  const tzOption = timezone ? { timeZone: timezone } : {};
 
   switch (format) {
     case '12-hour':
@@ -40,6 +44,7 @@ export function formatTimestamp(
         hour: 'numeric',
         minute: '2-digit',
         hour12: true,
+        ...tzOption,
       });
 
     case '24-hour':
@@ -50,6 +55,7 @@ export function formatTimestamp(
         hour: '2-digit',
         minute: '2-digit',
         hour12: false,
+        ...tzOption,
       });
 
     case 'day-of-week':
@@ -61,9 +67,23 @@ export function formatTimestamp(
         hour: 'numeric',
         minute: '2-digit',
         hour12: true,
+        ...tzOption,
       });
 
     case 'iso':
+      // For ISO format with timezone, we need to format manually
+      if (timezone) {
+        return d.toLocaleString('en-CA', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false,
+          ...tzOption,
+        }).replace(',', '');
+      }
       return d.toISOString().replace('T', ' ').slice(0, 19);
 
     case 'short':
@@ -74,19 +94,22 @@ export function formatTimestamp(
         hour: 'numeric',
         minute: '2-digit',
         hour12: true,
+        ...tzOption,
       });
 
     default:
-      return d.toLocaleString();
+      return d.toLocaleString('en-US', tzOption);
   }
 }
 
 /**
  * Format just the date portion (no time)
+ * @param timezone - Optional IANA timezone (e.g., 'America/New_York')
  */
 export function formatDateOnly(
   date: Date | string | number | null | undefined,
-  format: DateFormat = '12-hour'
+  format: DateFormat = '12-hour',
+  timezone?: string
 ): string {
   if (date == null) return '-';
 
@@ -96,8 +119,18 @@ export function formatDateOnly(
 
   if (isNaN(d.getTime())) return '-';
 
+  const tzOption = timezone ? { timeZone: timezone } : {};
+
   switch (format) {
     case 'iso':
+      if (timezone) {
+        return d.toLocaleString('en-CA', {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          ...tzOption,
+        });
+      }
       return d.toISOString().slice(0, 10);
 
     case 'short':
@@ -105,6 +138,7 @@ export function formatDateOnly(
         month: 'numeric',
         day: 'numeric',
         year: '2-digit',
+        ...tzOption,
       });
 
     case 'day-of-week':
@@ -113,6 +147,7 @@ export function formatDateOnly(
         month: 'short',
         day: 'numeric',
         year: 'numeric',
+        ...tzOption,
       });
 
     default:
@@ -120,16 +155,19 @@ export function formatDateOnly(
         month: 'short',
         day: 'numeric',
         year: 'numeric',
+        ...tzOption,
       });
   }
 }
 
 /**
  * Format just the time portion (no date)
+ * @param timezone - Optional IANA timezone (e.g., 'America/New_York')
  */
 export function formatTimeOnly(
   date: Date | string | number | null | undefined,
-  format: DateFormat = '12-hour'
+  format: DateFormat = '12-hour',
+  timezone?: string
 ): string {
   if (date == null) return '-';
 
@@ -138,6 +176,8 @@ export function formatTimeOnly(
     : date;
 
   if (isNaN(d.getTime())) return '-';
+
+  const tzOption = timezone ? { timeZone: timezone } : {};
 
   switch (format) {
     case '24-hour':
@@ -147,6 +187,7 @@ export function formatTimeOnly(
         minute: '2-digit',
         second: '2-digit',
         hour12: false,
+        ...tzOption,
       });
 
     default:
@@ -155,6 +196,7 @@ export function formatTimeOnly(
         minute: '2-digit',
         second: '2-digit',
         hour12: true,
+        ...tzOption,
       });
   }
 }

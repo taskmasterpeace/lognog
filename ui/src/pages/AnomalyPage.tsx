@@ -18,17 +18,8 @@ import {
   ThumbsDown,
   Sparkles,
 } from 'lucide-react';
-import {
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  AreaChart,
-  Area,
-  BarChart,
-  Bar,
-} from 'recharts';
+import { AreaChart, BarChart } from '../components/charts';
+import { useTheme } from '../contexts/ThemeContext';
 import { authFetch } from '../contexts/AuthContext';
 
 // Types
@@ -248,6 +239,8 @@ function AnomalyRow({
 export default function AnomalyPage() {
   const queryClient = useQueryClient();
   const [selectedSeverity, setSelectedSeverity] = useState<string | undefined>();
+  const { resolvedTheme } = useTheme();
+  const isDarkMode = resolvedTheme === 'dark';
 
   // Queries
   const { data: dashboard, isLoading: dashboardLoading } = useQuery({
@@ -399,45 +392,15 @@ export default function AnomalyPage() {
                 Detections per hour (last 24h)
               </p>
             </div>
-            <div className="h-56 sm:h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={dashboard?.recentTrend || []}>
-                  <defs>
-                    <linearGradient id="colorAnomalies" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#a855f7" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#a855f7" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                  <XAxis
-                    dataKey="hour"
-                    tickFormatter={(v) =>
-                      new Date(v).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                    }
-                    stroke="#94a3b8"
-                    fontSize={12}
-                    tickLine={false}
-                  />
-                  <YAxis stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
-                  <Tooltip
-                    labelFormatter={(v) => new Date(v).toLocaleString()}
-                    contentStyle={{
-                      borderRadius: '12px',
-                      border: '1px solid #e2e8f0',
-                      boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)',
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="count"
-                    stroke="#a855f7"
-                    strokeWidth={2}
-                    fill="url(#colorAnomalies)"
-                    name="Anomalies"
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
+            <AreaChart
+              data={dashboard?.recentTrend || []}
+              series={[{ name: 'Anomalies', dataKey: 'count', color: '#a855f7' }]}
+              xAxisKey="hour"
+              height={256}
+              darkMode={isDarkMode}
+              xAxisFormatter={(v) => new Date(v).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              tooltipFormatter={(v) => new Date(v).toLocaleString()}
+            />
           </div>
 
           {/* Top Affected Entities */}
@@ -450,31 +413,17 @@ export default function AnomalyPage() {
                 Entities with most anomalies
               </p>
             </div>
-            <div className="h-56 sm:h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={dashboard?.topEntities?.slice(0, 8) || []} layout="vertical" barSize={16}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
-                  <XAxis type="number" stroke="#94a3b8" fontSize={12} tickLine={false} axisLine={false} />
-                  <YAxis
-                    dataKey="entityId"
-                    type="category"
-                    stroke="#94a3b8"
-                    fontSize={11}
-                    width={100}
-                    tickLine={false}
-                    axisLine={false}
-                    tickFormatter={(v) => v.length > 12 ? v.slice(0, 12) + '...' : v}
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      borderRadius: '12px',
-                      border: '1px solid #e2e8f0',
-                    }}
-                  />
-                  <Bar dataKey="count" fill="#a855f7" radius={[0, 6, 6, 0]} name="Anomalies" />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            <BarChart
+              data={(dashboard?.topEntities?.slice(0, 8) || []).map((e) => ({
+                category: e.entityId.length > 12 ? e.entityId.slice(0, 12) + '...' : e.entityId,
+                value: e.count,
+              }))}
+              height={256}
+              darkMode={isDarkMode}
+              horizontal={true}
+              barColor="#a855f7"
+              showValues={false}
+            />
           </div>
         </div>
 

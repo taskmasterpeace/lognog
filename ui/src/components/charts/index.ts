@@ -18,3 +18,6 @@ export type { StatCardProps } from './StatCard';
 
 export { WordCloudChart } from './WordCloudChart';
 export type { WordCloudChartProps, WordCloudData } from './WordCloudChart';
+
+export { AreaChart } from './AreaChart';
+export type { AreaChartProps, AreaChartSeries } from './AreaChart';

@@ -27,6 +27,7 @@ import {
   FileText,
 } from 'lucide-react';
 import { executeSearch, getSavedSearches, createSavedSearch, aiSearch, getAISuggestions, SavedSearchCreateRequest } from '../api/client';
+import { useMute } from '../contexts/MuteContext';
 import LogViewer from '../components/LogViewer';
 import TimePicker from '../components/TimePicker';
 import FieldSidebar from '../components/FieldSidebar';
@@ -49,6 +50,7 @@ const EXAMPLE_QUERIES = [
 
 export default function SearchPage() {
   const navigate = useNavigate();
+  const { mutedValues } = useMute();
   const [query, setQuery] = useState('search *');
   const [timeRange, setTimeRange] = useState(() => {
     return localStorage.getItem('lognog_default_time_range') || '-24h';
@@ -162,13 +164,46 @@ export default function SearchPage() {
     enabled: searchMode === 'ai',
   });
 
+  // Build exclusion filters from muted values to inject into queries
+  const buildMuteFilters = useCallback((): string => {
+    const filters: string[] = [];
+    if (mutedValues.app_name.length > 0) {
+      mutedValues.app_name.forEach(v => filters.push(`app_name!="${v}"`));
+    }
+    if (mutedValues.index_name.length > 0) {
+      mutedValues.index_name.forEach(v => filters.push(`index_name!="${v}"`));
+    }
+    if (mutedValues.hostname.length > 0) {
+      mutedValues.hostname.forEach(v => filters.push(`hostname!="${v}"`));
+    }
+    return filters.join(' ');
+  }, [mutedValues]);
+
+  // Inject mute filters into query before first pipe
+  const injectMuteFilters = useCallback((baseQuery: string): string => {
+    const muteFilters = buildMuteFilters();
+    if (!muteFilters) return baseQuery;
+
+    // Find first pipe and inject before it
+    const pipeIndex = baseQuery.indexOf('|');
+    if (pipeIndex === -1) {
+      return `${baseQuery.trim()} ${muteFilters}`;
+    }
+    const beforePipe = baseQuery.slice(0, pipeIndex).trim();
+    const afterPipe = baseQuery.slice(pipeIndex);
+    return `${beforePipe} ${muteFilters} ${afterPipe}`;
+  }, [buildMuteFilters]);
+
   const searchMutation = useMutation({
-    mutationFn: (params?: { query?: string; earliest?: string; latest?: string } | void) =>
-      executeSearch(
-        (params && params.query) ?? query,
+    mutationFn: (params?: { query?: string; earliest?: string; latest?: string } | void) => {
+      const baseQuery = (params && params.query) ?? query;
+      const queryWithMutes = injectMuteFilters(baseQuery);
+      return executeSearch(
+        queryWithMutes,
         (params && params.earliest) ?? (timeRange || undefined),
         (params && params.latest) ?? timeRangeLatest
-      ),
+      );
+    },
   });
 
   const aiSearchMutation = useMutation({

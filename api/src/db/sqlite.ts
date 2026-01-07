@@ -382,6 +382,8 @@ function initializeSchema(): void {
       default_view_mode TEXT DEFAULT 'log',
       query_history_limit INTEGER DEFAULT 10,
       date_format TEXT DEFAULT '12-hour',
+      timezone TEXT DEFAULT 'browser',
+      muted_values TEXT DEFAULT '{}',
       updated_at TEXT DEFAULT (datetime('now'))
     );
 
@@ -3555,7 +3557,15 @@ export interface UserPreferences {
   default_view_mode: 'log' | 'table' | 'json';
   query_history_limit: number;
   date_format: '12-hour' | '24-hour' | 'day-of-week' | 'iso' | 'short';
+  timezone: string;
+  muted_values: string;
   updated_at: string;
+}
+
+export interface MutedValues {
+  app_name: string[];
+  index_name: string[];
+  hostname: string[];
 }
 
 export function getUserPreferences(userId: string): UserPreferences | null {
@@ -3578,6 +3588,8 @@ export function upsertUserPreferences(userId: string, prefs: Partial<Omit<UserPr
     if (prefs.default_view_mode !== undefined) { fields.push('default_view_mode = ?'); values.push(prefs.default_view_mode); }
     if (prefs.query_history_limit !== undefined) { fields.push('query_history_limit = ?'); values.push(prefs.query_history_limit); }
     if (prefs.date_format !== undefined) { fields.push('date_format = ?'); values.push(prefs.date_format); }
+    if (prefs.timezone !== undefined) { fields.push('timezone = ?'); values.push(prefs.timezone); }
+    if (prefs.muted_values !== undefined) { fields.push('muted_values = ?'); values.push(prefs.muted_values); }
 
     if (fields.length > 0) {
       fields.push("updated_at = datetime('now')");
@@ -3586,8 +3598,8 @@ export function upsertUserPreferences(userId: string, prefs: Partial<Omit<UserPr
     }
   } else {
     database.prepare(`
-      INSERT INTO user_preferences (user_id, theme, default_time_range, sidebar_open, default_view_mode, query_history_limit, date_format)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO user_preferences (user_id, theme, default_time_range, sidebar_open, default_view_mode, query_history_limit, date_format, timezone, muted_values)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       userId,
       prefs.theme || 'system',
@@ -3595,11 +3607,54 @@ export function upsertUserPreferences(userId: string, prefs: Partial<Omit<UserPr
       prefs.sidebar_open ?? 1,
       prefs.default_view_mode || 'log',
       prefs.query_history_limit ?? 10,
-      prefs.date_format || '12-hour'
+      prefs.date_format || '12-hour',
+      prefs.timezone || 'browser',
+      prefs.muted_values || '{}'
     );
   }
 
   return getUserPreferences(userId)!;
+}
+
+const DEFAULT_MUTED_VALUES: MutedValues = { app_name: [], index_name: [], hostname: [] };
+
+export function getMutedValues(userId: string): MutedValues {
+  const prefs = getUserPreferences(userId);
+  if (!prefs?.muted_values) {
+    return { ...DEFAULT_MUTED_VALUES };
+  }
+  try {
+    const parsed = JSON.parse(prefs.muted_values);
+    return {
+      app_name: Array.isArray(parsed.app_name) ? parsed.app_name : [],
+      index_name: Array.isArray(parsed.index_name) ? parsed.index_name : [],
+      hostname: Array.isArray(parsed.hostname) ? parsed.hostname : [],
+    };
+  } catch {
+    return { ...DEFAULT_MUTED_VALUES };
+  }
+}
+
+export function setMutedValues(userId: string, mutedValues: MutedValues): MutedValues {
+  const database = getSQLiteDB();
+  const json = JSON.stringify(mutedValues);
+
+  // Ensure user preferences exist
+  const existing = getUserPreferences(userId);
+  if (existing) {
+    database.prepare(`
+      UPDATE user_preferences
+      SET muted_values = ?, updated_at = datetime('now')
+      WHERE user_id = ?
+    `).run(json, userId);
+  } else {
+    database.prepare(`
+      INSERT INTO user_preferences (user_id, muted_values)
+      VALUES (?, ?)
+    `).run(userId, json);
+  }
+
+  return mutedValues;
 }
 
 // ============ System Settings ============

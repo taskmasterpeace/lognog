@@ -63,6 +63,48 @@ function sanitizeAppName(name: string, defaultValue: string = 'generic'): string
   return sanitized || defaultValue;
 }
 
+/**
+ * Maximum message size in bytes (64 KB)
+ * Messages larger than this will be truncated, with full content stored in raw field
+ */
+const MESSAGE_MAX_BYTES = 64 * 1024;
+
+/**
+ * Truncate large messages to prevent storage bloat and UI performance issues.
+ * Full message is preserved in rawMessage for lazy loading.
+ */
+function truncateMessage(message: string): {
+  message: string;
+  rawMessage: string | null;
+  truncated: boolean;
+} {
+  if (!message || typeof message !== 'string') {
+    return { message: message || '', rawMessage: null, truncated: false };
+  }
+
+  const bytes = Buffer.byteLength(message, 'utf8');
+  if (bytes <= MESSAGE_MAX_BYTES) {
+    return { message, rawMessage: null, truncated: false };
+  }
+
+  // Truncate to ~64KB with clean break at character boundary
+  let truncated = message;
+  while (Buffer.byteLength(truncated, 'utf8') > MESSAGE_MAX_BYTES - 200) {
+    // Remove last 1000 chars to speed up truncation for very large messages
+    truncated = truncated.slice(0, -1000);
+  }
+
+  // Add truncation notice with original size
+  const sizeKB = (bytes / 1024).toFixed(1);
+  truncated += `\n\n[...truncated, ${sizeKB} KB total - click "Show full" to view]`;
+
+  return {
+    message: truncated,
+    rawMessage: message,  // Store full message for lazy loading
+    truncated: true
+  };
+}
+
 // Event schema from LogNog In agent
 const agentEventSchema = z.object({
   type: z.enum(['log', 'fim']),
@@ -102,13 +144,17 @@ router.post(
 
       // Transform events for storage
       const logs = events.map((event) => {
+        // Apply truncation to large messages
+        const truncation = truncateMessage(event.message || '');
+
         const baseLog = {
           timestamp: event.timestamp.replace('Z', ''),
           received_at: new Date().toISOString().replace('Z', ''),
           hostname: event.hostname,
           app_name: event.source,
-          message: event.message || '',
-          raw: JSON.stringify(event),
+          message: truncation.message,
+          raw: truncation.truncated ? truncation.rawMessage : JSON.stringify(event),
+          message_truncated: truncation.truncated ? 1 : 0,
           structured_data: JSON.stringify(event.metadata || {}),
           // Set index based on event type
           index_name: event.type === 'fim' ? 'security' : 'agent',
@@ -360,6 +406,7 @@ router.post('/otlp/v1/logs', authenticateIngestion, async (req, res) => {
       message: string;
       severity: number;
       raw: string;
+      message_truncated: number;
       structured_data: string;
       index_name: string;
     }> = [];
@@ -392,11 +439,14 @@ router.post('/otlp/v1/logs', authenticateIngestion, async (req, res) => {
           }
 
           // Extract body
-          let message = '';
+          let rawMessage = '';
           if (logRecord.body) {
             const bodyValue = extractOtlpValue(logRecord.body);
-            message = typeof bodyValue === 'string' ? bodyValue : JSON.stringify(bodyValue);
+            rawMessage = typeof bodyValue === 'string' ? bodyValue : JSON.stringify(bodyValue);
           }
+
+          // Apply truncation to large messages
+          const truncation = truncateMessage(rawMessage);
 
           // Extract attributes
           const logAttrs = extractAttributes(logRecord.attributes);
@@ -409,9 +459,10 @@ router.post('/otlp/v1/logs', authenticateIngestion, async (req, res) => {
             received_at: receivedAt,
             hostname: hostName,
             app_name: serviceName,
-            message,
+            message: truncation.message,
             severity,
-            raw: JSON.stringify(logRecord),
+            raw: truncation.truncated ? truncation.rawMessage! : JSON.stringify(logRecord),
+            message_truncated: truncation.truncated ? 1 : 0,
             structured_data: JSON.stringify({
               ...resourceAttrs,
               ...logAttrs,
@@ -648,14 +699,18 @@ router.post('/supabase', authenticateIngestion, async (req, res) => {
         });
       }
 
+      // Apply truncation to large messages
+      const truncation = truncateMessage(event.event_message || '');
+
       return {
         timestamp,
         received_at: receivedAt,
         hostname,
         app_name: appName,
-        message: event.event_message || '',
+        message: truncation.message,
         severity,
-        raw: JSON.stringify(event),
+        raw: truncation.truncated ? truncation.rawMessage : JSON.stringify(event),
+        message_truncated: truncation.truncated ? 1 : 0,
         structured_data: JSON.stringify(structuredData),
         index_name: 'supabase',
         protocol: 'supabase-log-drain',
@@ -742,7 +797,10 @@ router.post('/http', authenticateIngestion, async (req, res) => {
       const hostname = String(event.hostname || event.host || event.source || 'unknown');
       const appNameFromEvent = String(event.app_name || event.app || event.application || event.program || event.service || '');
       const appName = sanitizeAppName(customAppName || appNameFromEvent, 'generic');
-      const message = String(event.message || event.msg || event.log || event.text || JSON.stringify(event));
+      const rawMessage = String(event.message || event.msg || event.log || event.text || JSON.stringify(event));
+
+      // Apply truncation to large messages
+      const truncation = truncateMessage(rawMessage);
 
       // Try to determine severity
       let severity = 6; // default info
@@ -766,9 +824,10 @@ router.post('/http', authenticateIngestion, async (req, res) => {
         received_at: receivedAt,
         hostname,
         app_name: appName,
-        message,
+        message: truncation.message,
         severity,
-        raw: JSON.stringify(event),
+        raw: truncation.truncated ? truncation.rawMessage : JSON.stringify(event),
+        message_truncated: truncation.truncated ? 1 : 0,
         structured_data: JSON.stringify(event),
         index_name: customIndex,
         protocol: 'http',

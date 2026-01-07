@@ -29,20 +29,7 @@ import {
   Copy,
   Cloud,
 } from 'lucide-react';
-import {
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-  AreaChart,
-  Area,
-} from 'recharts';
+import { AreaChart, BarChart, PieChart } from '../components/charts';
 import {
   getDashboard,
   executeSearch,
@@ -159,121 +146,69 @@ function PanelVisualization({
   switch (panel.visualization) {
     case 'bar':
       return (
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={results} layout="vertical" barSize={20} onClick={(e) => e?.activePayload?.[0]?.payload && handleChartClick(e.activePayload[0].payload)}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
-            <XAxis type="number" stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} />
-            <YAxis
-              dataKey={labelKey}
-              type="category"
-              stroke="#94a3b8"
-              fontSize={11}
-              width={80}
-              tickLine={false}
-              axisLine={false}
-            />
-            <Tooltip
-              contentStyle={{
-                borderRadius: '8px',
-                border: '1px solid #e2e8f0',
-                fontSize: '12px',
-              }}
-            />
-            <Bar dataKey={valueKey} fill="#f59e0b" radius={[0, 4, 4, 0]} cursor="pointer" />
-          </BarChart>
-        </ResponsiveContainer>
+        <BarChart
+          data={results.map((item) => ({
+            category: String(item[labelKey] || ''),
+            value: Number(item[valueKey]) || 0,
+          }))}
+          height={200}
+          horizontal={true}
+          barColor="#f59e0b"
+          showValues={false}
+          onBarClick={(category) => {
+            const item = results.find((r) => String(r[labelKey]) === category);
+            if (item) handleChartClick(item);
+          }}
+        />
       );
 
-    case 'pie':
+    case 'pie': {
       const pieData = results.map((item, i) => ({
         name: String(item[labelKey] || `Item ${i + 1}`),
         value: Number(item[valueKey]) || 0,
-        fill: CHART_COLORS[i % CHART_COLORS.length],
       }));
       return (
         <div className="flex h-full">
-          <ResponsiveContainer width="60%" height="100%">
-            <PieChart>
-              <Pie
-                data={pieData}
-                cx="50%"
-                cy="50%"
-                innerRadius="50%"
-                outerRadius="80%"
-                paddingAngle={2}
-                dataKey="value"
-                onClick={(_, index) => {
-                  const item = results[index];
-                  if (item && onDrilldown) {
-                    handleChartClick(item);
-                  }
-                }}
-              >
-                {pieData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.fill} cursor="pointer" />
-                ))}
-              </Pie>
-              <Tooltip
-                contentStyle={{
-                  borderRadius: '8px',
-                  border: '1px solid #e2e8f0',
-                  fontSize: '12px',
-                }}
-              />
-            </PieChart>
-          </ResponsiveContainer>
+          <div className="w-3/5">
+            <PieChart
+              data={pieData}
+              height={200}
+              donut={true}
+              showLegend={false}
+              colors={CHART_COLORS}
+              onItemClick={(name) => {
+                const index = pieData.findIndex((p) => p.name === name);
+                const item = results[index];
+                if (item && onDrilldown) handleChartClick(item);
+              }}
+            />
+          </div>
           <div className="flex-1 flex flex-col justify-center gap-1 pr-2 overflow-y-auto">
-            {pieData.slice(0, 6).map((entry) => (
+            {pieData.slice(0, 6).map((entry, i) => (
               <div key={entry.name} className="flex items-center gap-2 text-xs">
-                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: entry.fill }} />
+                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }} />
                 <span className="truncate text-slate-600">{entry.name}</span>
               </div>
             ))}
           </div>
         </div>
       );
+    }
 
     case 'line':
       return (
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={results} onClick={(e) => e?.activePayload?.[0]?.payload && handleChartClick(e.activePayload[0].payload)}>
-            <defs>
-              <linearGradient id={`color-${panel.id}`} x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-            <XAxis
-              dataKey={labelKey}
-              stroke="#94a3b8"
-              fontSize={11}
-              tickLine={false}
-              tickFormatter={(v) => {
-                if (String(v).match(/\d{4}-\d{2}-\d{2}/)) {
-                  return new Date(v).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                }
-                return String(v).slice(0, 10);
-              }}
-            />
-            <YAxis stroke="#94a3b8" fontSize={11} tickLine={false} axisLine={false} />
-            <Tooltip
-              contentStyle={{
-                borderRadius: '8px',
-                border: '1px solid #e2e8f0',
-                fontSize: '12px',
-              }}
-            />
-            <Area
-              type="monotone"
-              dataKey={valueKey}
-              stroke="#f59e0b"
-              strokeWidth={2}
-              fill={`url(#color-${panel.id})`}
-              cursor="pointer"
-            />
-          </AreaChart>
-        </ResponsiveContainer>
+        <AreaChart
+          data={results}
+          series={[{ name: valueKey, dataKey: valueKey, color: '#f59e0b' }]}
+          xAxisKey={labelKey}
+          height={200}
+          xAxisFormatter={(v) => {
+            if (String(v).match(/\d{4}-\d{2}-\d{2}/)) {
+              return new Date(v).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            }
+            return String(v).slice(0, 10);
+          }}
+        />
       );
 
     case 'stat':

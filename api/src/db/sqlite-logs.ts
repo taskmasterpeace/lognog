@@ -41,6 +41,7 @@ function initializeLogsSchema(): void {
       priority INTEGER DEFAULT 14,
       message TEXT DEFAULT '',
       raw TEXT DEFAULT '',
+      message_truncated INTEGER DEFAULT 0,
       structured_data TEXT DEFAULT '{}',
       index_name TEXT DEFAULT 'main',
       protocol TEXT DEFAULT 'agent',
@@ -79,6 +80,13 @@ function initializeLogsSchema(): void {
       INSERT INTO logs_fts(rowid, message, raw) VALUES (NEW.rowid, NEW.message, NEW.raw);
     END;
   `);
+
+  // Migration: Add message_truncated column if it doesn't exist (for existing databases)
+  try {
+    database.exec(`ALTER TABLE logs ADD COLUMN message_truncated INTEGER DEFAULT 0`);
+  } catch {
+    // Column already exists, ignore error
+  }
 }
 
 export interface LogEntry {
@@ -92,6 +100,7 @@ export interface LogEntry {
   priority?: number;
   message?: string;
   raw?: string;
+  message_truncated?: number;
   structured_data?: string;
   index_name?: string;
   protocol?: string;
@@ -108,11 +117,11 @@ export async function insertLogs(logs: Record<string, unknown>[]): Promise<void>
   const insert = database.prepare(`
     INSERT INTO logs (
       id, timestamp, received_at, hostname, app_name, severity, facility,
-      priority, message, raw, structured_data, index_name, protocol,
+      priority, message, raw, message_truncated, structured_data, index_name, protocol,
       source_ip, source_port
     ) VALUES (
       @id, @timestamp, @received_at, @hostname, @app_name, @severity, @facility,
-      @priority, @message, @raw, @structured_data, @index_name, @protocol,
+      @priority, @message, @raw, @message_truncated, @structured_data, @index_name, @protocol,
       @source_ip, @source_port
     )
   `);
@@ -130,6 +139,7 @@ export async function insertLogs(logs: Record<string, unknown>[]): Promise<void>
         priority: log.priority ?? 14,
         message: log.message || '',
         raw: log.raw || '',
+        message_truncated: log.message_truncated ?? 0,
         structured_data: typeof log.structured_data === 'string'
           ? log.structured_data
           : JSON.stringify(log.structured_data || {}),
@@ -187,6 +197,22 @@ export async function searchLogs(
   `).all(searchTerm, limit) as LogEntry[];
 
   return results;
+}
+
+/**
+ * Get a single log entry by ID (for lazy loading full message)
+ */
+export async function getLogById(
+  id: string,
+  fields: string[] = ['id', 'message', 'raw', 'message_truncated']
+): Promise<Record<string, unknown> | null> {
+  const database = getSQLiteLogsDB();
+
+  const fieldList = fields.join(', ');
+  const sql = `SELECT ${fieldList} FROM logs WHERE id = ?`;
+
+  const result = database.prepare(sql).get(id) as Record<string, unknown> | undefined;
+  return result || null;
 }
 
 /**

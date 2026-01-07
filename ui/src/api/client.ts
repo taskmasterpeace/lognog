@@ -6,12 +6,24 @@ function getCsrfToken(): string | null {
   return match ? decodeURIComponent(match[1]) : null;
 }
 
+export interface HistogramBucket {
+  timestamp: number;
+  count: number;
+}
+
+export interface SearchHistogram {
+  interval: string;
+  intervalMs: number;
+  buckets: HistogramBucket[];
+}
+
 export interface SearchResult {
   query: string;
   sql: string;
   results: Record<string, unknown>[];
   count: number;
   executionTime?: number;
+  histogram?: SearchHistogram;
 }
 
 export interface SavedSearch {
@@ -2243,4 +2255,36 @@ export async function triggerRetentionCleanup(): Promise<{ message: string; dele
   return request('/retention/cleanup', {
     method: 'POST',
   });
+}
+
+// ============ Muted Values API ============
+
+export interface MutedValues {
+  app_name: string[];
+  index_name: string[];
+  hostname: string[];
+}
+
+export async function getMutedValues(): Promise<MutedValues> {
+  return request('/settings/muted');
+}
+
+export async function updateMutedValues(values: MutedValues): Promise<MutedValues> {
+  return request('/settings/muted', {
+    method: 'PUT',
+    body: JSON.stringify(values),
+  });
+}
+
+// ============ Full Message (Lazy Loading) API ============
+
+export interface FullMessageResponse {
+  id: string;
+  fullMessage: string;
+  byteSize: number;
+  truncated: boolean;
+}
+
+export async function getFullMessage(logId: string): Promise<FullMessageResponse> {
+  return request(`/search/logs/${encodeURIComponent(logId)}/full-message`);
 }

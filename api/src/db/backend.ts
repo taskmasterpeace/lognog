@@ -485,6 +485,31 @@ function mapClickHouseJSONType(type: string): string {
 }
 
 /**
+ * Get a single log entry by ID (for lazy loading full message content)
+ */
+export async function getLogById(
+  id: string,
+  fields: string[] = ['id', 'message', 'raw', 'message_truncated']
+): Promise<Record<string, unknown> | null> {
+  // Validate field names to prevent SQL injection
+  const validFields = [
+    'id', 'timestamp', 'received_at', 'hostname', 'app_name',
+    'severity', 'facility', 'priority', 'message', 'raw',
+    'message_truncated', 'structured_data', 'index_name', 'protocol',
+    'source_ip', 'source_port'
+  ];
+  const safeFields = fields.filter(f => validFields.includes(f));
+  if (safeFields.length === 0) {
+    safeFields.push('message', 'raw', 'message_truncated');
+  }
+
+  if (isLiteMode()) {
+    return sqliteLogs.getLogById(id, safeFields);
+  }
+  return clickhouse.getLogById(id, safeFields);
+}
+
+/**
  * Active source info for the Data Sources dashboard
  */
 export interface ActiveSource {
