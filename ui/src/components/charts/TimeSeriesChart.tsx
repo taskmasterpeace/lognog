@@ -20,6 +20,10 @@ export interface TimeSeriesChartProps {
   yAxisLabel?: string;
   xAxisLabel?: string;
   onBrushEnd?: (startTime: number, endTime: number) => void;
+  chartType?: 'line' | 'bar';
+  onBarClick?: (timestamp: number) => void;
+  barColor?: string;
+  barHoverColor?: string;
 }
 
 export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
@@ -34,6 +38,10 @@ export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
   yAxisLabel = 'Count',
   xAxisLabel = 'Time',
   onBrushEnd,
+  chartType = 'line',
+  onBarClick,
+  barColor = '#f59e0b', // amber-500
+  barHoverColor,
 }) => {
   const seriesMap = React.useMemo(() => {
     const map = new Map<string, { timestamps: number[]; values: number[] }>();
@@ -54,17 +62,39 @@ export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
     return map;
   }, [data]);
 
+  // Calculate hover color based on dark mode
+  const computedHoverColor = barHoverColor || (darkMode ? '#fbbf24' : '#d97706');
+
   const option: EChartsOption = React.useMemo(() => {
-    const seriesConfig = Array.from(seriesMap.entries()).map(([name, { timestamps, values }]) => ({
-      name,
-      type: 'line' as const,
-      data: timestamps.map((time, idx) => [time, values[idx]]),
-      smooth: true,
-      areaStyle: showArea ? { opacity: 0.3 } : undefined,
-      emphasis: {
-        focus: 'series' as const,
-      },
-    }));
+    const seriesConfig = Array.from(seriesMap.entries()).map(([name, { timestamps, values }]) => {
+      if (chartType === 'bar') {
+        return {
+          name,
+          type: 'bar' as const,
+          data: timestamps.map((time, idx) => [time, values[idx]]),
+          itemStyle: {
+            color: barColor,
+            borderRadius: [2, 2, 0, 0],
+          },
+          emphasis: {
+            itemStyle: {
+              color: computedHoverColor,
+            },
+          },
+          barMaxWidth: 50,
+        };
+      }
+      return {
+        name,
+        type: 'line' as const,
+        data: timestamps.map((time, idx) => [time, values[idx]]),
+        smooth: true,
+        areaStyle: showArea ? { opacity: 0.3 } : undefined,
+        emphasis: {
+          focus: 'series' as const,
+        },
+      };
+    });
 
     return {
       title: title ? {
@@ -176,21 +206,32 @@ export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
       } : undefined,
       series: seriesConfig,
     };
-  }, [seriesMap, title, showZoom, showArea, darkMode, yAxisLabel, xAxisLabel, onBrushEnd]);
+  }, [seriesMap, title, showZoom, showArea, darkMode, yAxisLabel, xAxisLabel, onBrushEnd, chartType, barColor, computedHoverColor]);
 
   const onEvents = React.useMemo(() => {
-    if (!onBrushEnd) return undefined;
+    const events: Record<string, (params: unknown) => void> = {};
 
-    return {
-      brushEnd: (params: any) => {
+    if (onBrushEnd) {
+      events.brushEnd = (params: any) => {
         if (params.areas && params.areas.length > 0) {
           const area = params.areas[0];
           const [startTime, endTime] = area.coordRange;
           onBrushEnd(startTime, endTime);
         }
-      },
-    };
-  }, [onBrushEnd]);
+      };
+    }
+
+    if (onBarClick && chartType === 'bar') {
+      events.click = (params: any) => {
+        if (params.data && Array.isArray(params.data) && params.data.length >= 1) {
+          const timestamp = params.data[0];
+          onBarClick(timestamp);
+        }
+      };
+    }
+
+    return Object.keys(events).length > 0 ? events : undefined;
+  }, [onBrushEnd, onBarClick, chartType]);
 
   React.useEffect(() => {
     if (!autoRefresh || !refreshInterval) return;

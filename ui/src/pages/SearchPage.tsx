@@ -30,6 +30,7 @@ import { executeSearch, getSavedSearches, createSavedSearch, aiSearch, getAISugg
 import LogViewer from '../components/LogViewer';
 import TimePicker from '../components/TimePicker';
 import FieldSidebar from '../components/FieldSidebar';
+import { TimeSeriesChart } from '../components/charts/TimeSeriesChart';
 import { Tooltip } from '../components/ui/Tooltip';
 import { SearchAutocomplete } from '../components/search';
 import { SourceAnnotationProvider } from '../components/SourceAnnotations';
@@ -162,7 +163,12 @@ export default function SearchPage() {
   });
 
   const searchMutation = useMutation({
-    mutationFn: () => executeSearch(query, timeRange || undefined, timeRangeLatest),
+    mutationFn: (params?: { query?: string; earliest?: string; latest?: string } | void) =>
+      executeSearch(
+        (params && params.query) ?? query,
+        (params && params.earliest) ?? (timeRange || undefined),
+        (params && params.latest) ?? timeRangeLatest
+      ),
   });
 
   const aiSearchMutation = useMutation({
@@ -994,6 +1000,48 @@ export default function SearchPage() {
                   <pre className="text-sm font-mono overflow-x-auto whitespace-pre-wrap">
                     {sql}
                   </pre>
+                </div>
+              )}
+
+              {/* Timeline Histogram */}
+              {searchMutation.data?.histogram && searchMutation.data.histogram.buckets.length > 0 && (
+                <div className="mb-4 bg-white dark:bg-nog-800 rounded-lg border border-slate-200 dark:border-nog-700 p-3">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-xs text-slate-500 dark:text-nog-400">
+                      Events over time
+                    </span>
+                    <span className="text-xs text-slate-400 dark:text-nog-500">
+                      Click bar to zoom, drag to select range
+                    </span>
+                  </div>
+                  <TimeSeriesChart
+                    data={searchMutation.data.histogram.buckets.map(b => ({
+                      timestamp: b.timestamp,
+                      value: b.count,
+                    }))}
+                    height={100}
+                    showZoom={false}
+                    showArea={false}
+                    chartType="bar"
+                    darkMode={document.documentElement.classList.contains('dark')}
+                    onBrushEnd={(startTime, endTime) => {
+                      // Update time range and re-run search
+                      const startIso = new Date(startTime).toISOString();
+                      const endIso = new Date(endTime).toISOString();
+                      setTimeRange(startIso);
+                      setTimeRangeLatest(endIso);
+                      searchMutation.mutate({ query, earliest: startIso, latest: endIso });
+                    }}
+                    onBarClick={(timestamp) => {
+                      // Zoom to single bucket
+                      const bucketEnd = timestamp + (searchMutation.data?.histogram?.intervalMs || 3600000);
+                      const startIso = new Date(timestamp).toISOString();
+                      const endIso = new Date(bucketEnd).toISOString();
+                      setTimeRange(startIso);
+                      setTimeRangeLatest(endIso);
+                      searchMutation.mutate({ query, earliest: startIso, latest: endIso });
+                    }}
+                  />
                 </div>
               )}
 

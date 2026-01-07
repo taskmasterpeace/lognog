@@ -154,12 +154,13 @@ router.post('/query', rateLimit(120, 60000), async (req: Request, res: Response)
             for (const cond of searchStage.conditions) {
               if (isSimpleCondition(cond)) {
                 // Skip wildcard search (search *) - it means "all logs"
-                if (cond.field === '*' && cond.value === '*') {
+                // DSL parser may use '_all' or '*' as the field name for wildcards
+                if ((cond.field === '*' || cond.field === '_all') && cond.value === '*') {
                   continue;
                 }
 
                 let field: string;
-                if (cond.field === 'message' || cond.field === '*') {
+                if (cond.field === 'message' || cond.field === '*' || cond.field === '_all') {
                   field = 'message';
                 } else if (cond.field.includes('.')) {
                   // Handle nested fields differently for SQLite vs ClickHouse
@@ -187,10 +188,15 @@ router.post('/query', rateLimit(120, 60000), async (req: Request, res: Response)
           }
         }
 
-        // Add time range to WHERE clause
+        // Add time range to WHERE clause (different syntax for ClickHouse vs SQLite)
         const startIso = new Date(startMs).toISOString();
         const endIso = new Date(endMs).toISOString();
-        whereClause += ` AND timestamp >= '${startIso}' AND timestamp <= '${endIso}'`;
+        if (liteMode) {
+          whereClause += ` AND timestamp >= '${startIso}' AND timestamp <= '${endIso}'`;
+        } else {
+          // ClickHouse needs parseDateTimeBestEffort for DateTime64 comparison
+          whereClause += ` AND timestamp >= parseDateTimeBestEffort('${startIso}') AND timestamp <= parseDateTimeBestEffort('${endIso}')`;
+        }
 
         // Build histogram SQL (different for each backend)
         let histogramSql: string;
