@@ -34,6 +34,8 @@ const EXEMPT_PATHS = [
   '/api/auth/setup',
   '/api/auth/refresh',
   '/api/auth/setup-required',
+  '/onboarding',        // Onboarding - JWT protected, low risk
+  '/api/onboarding',    // Alternate path
 ];
 
 /**

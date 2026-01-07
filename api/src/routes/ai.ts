@@ -38,7 +38,7 @@ const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'deepseek-coder-v2:16b';
 const OLLAMA_REASONING_MODEL = process.env.OLLAMA_REASONING_MODEL || 'qwen3:30b';
 const OLLAMA_EMBED_MODEL = process.env.OLLAMA_EMBED_MODEL || 'nomic-embed-text';
 
-// Configuration for OpenRouter (fallback)
+// Configuration for OpenRouter (PRIMARY - cloud AI, no local server needed)
 const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || 'anthropic/claude-3.5-sonnet';
@@ -56,11 +56,12 @@ async function isOllamaAvailable(): Promise<boolean> {
   }
 }
 
-// Check if ANY AI provider is available (Ollama OR OpenRouter)
+// Check if ANY AI provider is available (OpenRouter OR Ollama)
 async function isAnyAIAvailable(): Promise<boolean> {
-  const ollamaAvailable = await isOllamaAvailable();
-  if (ollamaAvailable) return true;
-  return !!OPENROUTER_API_KEY;
+  // OpenRouter is primary - check it first
+  if (OPENROUTER_API_KEY) return true;
+  // Fall back to Ollama if no OpenRouter key
+  return await isOllamaAvailable();
 }
 
 // Generate text with Ollama
@@ -112,45 +113,13 @@ async function generateWithOpenRouter(prompt: string, model?: string): Promise<s
   return data.choices[0]?.message?.content || '';
 }
 
-// Unified generate function with fallback
+// Unified generate function - OpenRouter PRIMARY, Ollama fallback
 async function generateText(prompt: string, options?: { model?: string; useReasoning?: boolean; endpoint?: string }): Promise<{ response: string; provider: 'ollama' | 'openrouter' }> {
-  const ollamaAvailable = await isOllamaAvailable();
   const startTime = Date.now();
 
-  // Try Ollama first
-  if (ollamaAvailable) {
-    const model = options?.useReasoning ? OLLAMA_REASONING_MODEL : (options?.model || OLLAMA_MODEL);
-    try {
-      const response = await generateWithOllama(prompt, model);
-
-      // Log successful Ollama request
-      logAIRequest({
-        provider: 'ollama',
-        model,
-        duration_ms: Date.now() - startTime,
-        success: true,
-        endpoint: options?.endpoint,
-      });
-
-      return { response, provider: 'ollama' };
-    } catch (error) {
-      // Log failed Ollama request
-      logAIRequest({
-        provider: 'ollama',
-        model,
-        duration_ms: Date.now() - startTime,
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-        endpoint: options?.endpoint,
-      });
-      console.warn('Ollama generation failed, trying OpenRouter fallback:', error);
-    }
-  }
-
-  // Fallback to OpenRouter
+  // Try OpenRouter first (PRIMARY - no local server needed)
   if (OPENROUTER_API_KEY) {
     const model = options?.model || OPENROUTER_MODEL;
-    const openRouterStart = Date.now();
     try {
       const response = await generateWithOpenRouter(prompt, model);
 
@@ -158,7 +127,7 @@ async function generateText(prompt: string, options?: { model?: string; useReaso
       logAIRequest({
         provider: 'openrouter',
         model,
-        duration_ms: Date.now() - openRouterStart,
+        duration_ms: Date.now() - startTime,
         success: true,
         endpoint: options?.endpoint,
       });
@@ -169,17 +138,49 @@ async function generateText(prompt: string, options?: { model?: string; useReaso
       logAIRequest({
         provider: 'openrouter',
         model,
-        duration_ms: Date.now() - openRouterStart,
+        duration_ms: Date.now() - startTime,
         success: false,
         error: error instanceof Error ? error.message : String(error),
         endpoint: options?.endpoint,
       });
-      console.error('OpenRouter fallback failed:', error);
+      console.warn('OpenRouter generation failed, trying Ollama fallback:', error);
+    }
+  }
+
+  // Fallback to Ollama (local)
+  const ollamaAvailable = await isOllamaAvailable();
+  if (ollamaAvailable) {
+    const model = options?.useReasoning ? OLLAMA_REASONING_MODEL : (options?.model || OLLAMA_MODEL);
+    const ollamaStart = Date.now();
+    try {
+      const response = await generateWithOllama(prompt, model);
+
+      // Log successful Ollama request
+      logAIRequest({
+        provider: 'ollama',
+        model,
+        duration_ms: Date.now() - ollamaStart,
+        success: true,
+        endpoint: options?.endpoint,
+      });
+
+      return { response, provider: 'ollama' };
+    } catch (error) {
+      // Log failed Ollama request
+      logAIRequest({
+        provider: 'ollama',
+        model,
+        duration_ms: Date.now() - ollamaStart,
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+        endpoint: options?.endpoint,
+      });
+      console.error('Ollama fallback failed:', error);
       throw error;
     }
   }
 
-  throw new Error('No AI provider available. Configure Ollama or set OPENROUTER_API_KEY.');
+  throw new Error('No AI provider available. Set OPENROUTER_API_KEY or start Ollama.');
 }
 
 // Generate embeddings with Ollama
@@ -407,11 +408,11 @@ router.get('/status', async (_req: Request, res: Response) => {
         openrouter: {
           configured: openrouterConfigured,
           model: OPENROUTER_MODEL,
-          status: openrouterConfigured ? 'ready (fallback)' : 'not configured',
+          status: openrouterConfigured ? 'ready (PRIMARY)' : 'not configured',
         },
       },
-      primaryProvider: ollamaAvailable ? 'ollama' : (openrouterConfigured ? 'openrouter' : 'none'),
-      aiAvailable: ollamaAvailable || openrouterConfigured,
+      primaryProvider: openrouterConfigured ? 'openrouter' : (ollamaAvailable ? 'ollama' : 'none'),
+      aiAvailable: openrouterConfigured || ollamaAvailable,
     });
   } catch (error) {
     return res.json({
