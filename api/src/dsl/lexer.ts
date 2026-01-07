@@ -93,6 +93,9 @@ export class Lexer {
         return this.advance() && this.makeToken(TokenType.RPAREN, ')');
       case '~':
         return this.advance() && this.makeToken(TokenType.CONTAINS, '~');
+      case ':':
+        // Splunk-style colon operator - treat as contains (like ~)
+        return this.advance() && this.makeToken(TokenType.CONTAINS, ':');
       case '+':
         return this.advance() && this.makeToken(TokenType.PLUS, '+');
       case '*':

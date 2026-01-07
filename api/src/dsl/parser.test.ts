@@ -323,4 +323,53 @@ describe('Parser', () => {
     expect(ast.stages[1].type).toBe('bin');
     expect(ast.stages[2].type).toBe('top');
   });
+
+  // Splunk-style sort syntax tests
+  it('parses Splunk-style sort -field for descending', () => {
+    const ast = parse('search * | sort -count');
+
+    expect(ast.stages[1].type).toBe('sort');
+
+    const sort = ast.stages[1] as { type: 'sort'; fields: { field: string; direction: string }[] };
+    expect(sort.fields).toHaveLength(1);
+    expect(sort.fields[0].field).toBe('count');
+    expect(sort.fields[0].direction).toBe('desc');
+  });
+
+  it('parses Splunk-style sort +field for ascending', () => {
+    const ast = parse('search * | sort +timestamp');
+
+    expect(ast.stages[1].type).toBe('sort');
+
+    const sort = ast.stages[1] as { type: 'sort'; fields: { field: string; direction: string }[] };
+    expect(sort.fields).toHaveLength(1);
+    expect(sort.fields[0].field).toBe('timestamp');
+    expect(sort.fields[0].direction).toBe('asc');
+  });
+
+  it('parses Splunk-style sort with multiple fields', () => {
+    const ast = parse('search * | sort -count +hostname');
+
+    expect(ast.stages[1].type).toBe('sort');
+
+    const sort = ast.stages[1] as { type: 'sort'; fields: { field: string; direction: string }[] };
+    expect(sort.fields).toHaveLength(2);
+    expect(sort.fields[0].field).toBe('count');
+    expect(sort.fields[0].direction).toBe('desc');
+    expect(sort.fields[1].field).toBe('hostname');
+    expect(sort.fields[1].direction).toBe('asc');
+  });
+
+  it('parses colon operator as contains', () => {
+    const ast = parse('search message:"error"');
+
+    expect(ast.stages).toHaveLength(1);
+    expect(ast.stages[0].type).toBe('search');
+
+    const search = ast.stages[0] as { type: 'search'; conditions: any[] };
+    expect(search.conditions).toHaveLength(1);
+    expect(search.conditions[0].field).toBe('message');
+    expect(search.conditions[0].operator).toBe('~');
+    expect(search.conditions[0].value).toBe('error');
+  });
 });

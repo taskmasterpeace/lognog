@@ -106,4 +106,24 @@ describe('Lexer', () => {
       TokenType.EOF,
     ]);
   });
+
+  it('tokenizes Splunk-style colon operator as contains', () => {
+    const lexer = new Lexer('search message:"error"');
+    const tokens = lexer.tokenize();
+
+    expect(tokens[2].type).toBe(TokenType.CONTAINS);
+    expect(tokens[2].value).toBe(':');
+    expect(tokens[3].type).toBe(TokenType.STRING);
+    expect(tokens[3].value).toBe('error');
+  });
+
+  it('tokenizes both tilde and colon as contains', () => {
+    const lexer = new Lexer('a~"test" b:"test"');
+    const tokens = lexer.tokenize();
+
+    const containsTokens = tokens.filter(t => t.type === TokenType.CONTAINS);
+    expect(containsTokens).toHaveLength(2);
+    expect(containsTokens[0].value).toBe('~');
+    expect(containsTokens[1].value).toBe(':');
+  });
 });

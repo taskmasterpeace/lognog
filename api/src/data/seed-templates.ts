@@ -3,6 +3,7 @@ import {
   createDashboardTemplate,
   getSavedSearches,
   createSavedSearch,
+  deleteSavedSearchByName,
   SavedSearchCreateOptions,
 } from '../db/sqlite.js';
 import { DASHBOARD_TEMPLATES } from './dashboard-templates.js';
@@ -175,6 +176,35 @@ export function seedSavedSearches(): void {
   } else {
     console.log('[SavedSearches] All saved searches already exist');
   }
+}
+
+export function reseedSavedSearches(): { deleted: number; created: number } {
+  let deleted = 0;
+  let created = 0;
+
+  // Delete all template-based saved searches by name
+  for (const template of SAVED_SEARCH_TEMPLATES) {
+    if (deleteSavedSearchByName(template.name)) {
+      deleted++;
+      console.log(`[SavedSearches] Deleted: ${template.name}`);
+    }
+  }
+
+  // Recreate all saved searches from templates
+  for (const template of SAVED_SEARCH_TEMPLATES) {
+    const options: SavedSearchCreateOptions = {
+      description: template.description,
+      is_shared: template.is_shared,
+      time_range: template.time_range,
+      tags: template.tags,
+    };
+    createSavedSearch(template.name, template.query, options);
+    created++;
+    console.log(`[SavedSearches] Created: ${template.name}`);
+  }
+
+  console.log(`[SavedSearches] Reseed complete: deleted ${deleted}, created ${created}`);
+  return { deleted, created };
 }
 
 export default seedDashboardTemplates;

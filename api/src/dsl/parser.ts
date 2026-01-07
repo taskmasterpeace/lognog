@@ -416,6 +416,14 @@ export class Parser {
 
     // Parse fields
     while (!this.isAtEnd() && !this.check(TokenType.PIPE)) {
+      // Check for Splunk-style -field (descending) or +field (ascending)
+      let fieldDirection: 'asc' | 'desc' | null = null;
+      if (this.match(TokenType.MINUS)) {
+        fieldDirection = 'desc';  // Splunk-style: -count means descending
+      } else if (this.match(TokenType.PLUS)) {
+        fieldDirection = 'asc';   // Splunk-style: +count means ascending
+      }
+
       // Allow both identifiers and aggregation function keywords as field names
       // (e.g., you might want to sort by a field called "count")
       if (this.check(TokenType.IDENTIFIER) ||
@@ -423,8 +431,9 @@ export class Parser {
           this.check(TokenType.AVG) || this.check(TokenType.MIN) ||
           this.check(TokenType.MAX)) {
         const field = this.advance().value;
-        let direction = defaultDirection;
+        let direction = fieldDirection ?? defaultDirection;
 
+        // Also allow trailing desc/asc keywords
         if (this.match(TokenType.DESC)) {
           direction = 'desc';
         } else if (this.match(TokenType.ASC)) {

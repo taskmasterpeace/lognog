@@ -19,6 +19,7 @@ import { createDashboardPanel, getDashboard } from '../db/sqlite.js';
 import { getSQLiteDB } from '../db/sqlite.js';
 import { v4 as uuidv4 } from 'uuid';
 import { authenticate } from '../auth/middleware.js';
+import { reseedSavedSearches } from '../data/seed-templates.js';
 
 const router = Router();
 
@@ -164,6 +165,21 @@ router.get('/tags', (_req: Request, res: Response) => {
   } catch (error) {
     console.error('Error fetching tags:', error);
     return res.status(500).json({ error: 'Failed to fetch tags' });
+  }
+});
+
+// POST /saved-searches/reseed - Delete and reseed template-based saved searches
+router.post('/reseed', authenticate, (req: Request, res: Response) => {
+  try {
+    const result = reseedSavedSearches();
+    return res.json({
+      message: 'Saved searches reseeded successfully',
+      deleted: result.deleted,
+      created: result.created,
+    });
+  } catch (error) {
+    console.error('Error reseeding saved searches:', error);
+    return res.status(500).json({ error: 'Failed to reseed saved searches' });
   }
 });
 

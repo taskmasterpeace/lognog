@@ -997,6 +997,12 @@ export function deleteSavedSearch(id: string): boolean {
   return result.changes > 0;
 }
 
+export function deleteSavedSearchByName(name: string): boolean {
+  const database = getSQLiteDB();
+  const result = database.prepare('DELETE FROM saved_searches WHERE name = ?').run(name);
+  return result.changes > 0;
+}
+
 export function updateSavedSearchCache(
   id: string,
   results: unknown[],
