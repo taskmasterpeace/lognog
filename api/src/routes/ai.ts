@@ -29,6 +29,14 @@ import { hybridSearch, HybridSearchResponse, HybridSearchResult } from '../servi
 import { rerankWithLLM } from '../services/reranker.js';
 import { formatCitations, CitedSource, getCitationStats } from '../services/citations.js';
 import { logAIRequest } from '../services/internal-logger.js';
+import {
+  DSL_COMMANDS,
+  DSL_COMPARISON_OPERATORS,
+  DSL_LOGICAL_OPERATORS,
+  DSL_AGGREGATION_FUNCTIONS,
+  DSL_CORE_FIELDS,
+  DSL_COMMON_PATTERNS,
+} from '../data/dsl-reference.js';
 
 const router = Router();
 
@@ -289,24 +297,42 @@ router.post('/generate-query', async (req: Request, res: Response) => {
       });
     }
 
+    // Build comprehensive DSL context from reference data
+    const commandsList = DSL_COMMANDS.map(c => `- ${c.name}: ${c.syntax}`).join('\n');
+    const operatorsList = DSL_COMPARISON_OPERATORS.map(o => o.symbol).join(' ') + ' | AND OR NOT';
+    const aggFunctions = DSL_AGGREGATION_FUNCTIONS.map(f => f.name).join(', ');
+    const fields = DSL_CORE_FIELDS.map(f => f.name).join(', ');
+    const examples = DSL_COMMON_PATTERNS.slice(0, 6).map(p => `- "${p.name}" → ${p.query}`).join('\n');
+
     const systemPrompt = `You are a LogNog query generator. Convert natural language to LogNog DSL queries.
 
-LogNog DSL syntax:
-- search <conditions>: Filter logs (e.g., search severity>=error, search hostname="web-01")
-- | stats count by <field>: Aggregate data
-- | timechart span=<interval> count: Time-based aggregation (1h, 5m, 1d)
-- | table <fields>: Select specific fields
-- | sort desc <field>: Sort results
-- | limit <n>: Limit results
+## Commands
+${commandsList}
 
-Examples:
-- "show me errors" → search severity>=error | table timestamp hostname message | limit 100
-- "top hosts by log count" → search * | stats count by hostname | sort desc count | limit 10
-- "errors over time" → search severity>=error | timechart span=1h count
+## Operators
+${operatorsList}
 
-User request: ${prompt}
+## Aggregation Functions (use with stats/timechart)
+${aggFunctions}
 
-Respond with ONLY the query, no explanation.`;
+## Fields
+${fields}
+Note: Custom fields from structured_data are also available.
+
+## Severity Levels
+0=emergency, 1=alert, 2=critical, 3=error, 4=warning, 5=notice, 6=info, 7=debug
+Use severity<=3 for errors and above.
+
+## Time Spans (for timechart/bin)
+1s, 5s, 30s, 1m, 5m, 15m, 30m, 1h, 4h, 12h, 1d, 1w
+
+## Examples
+${examples}
+
+## User Request
+${prompt}
+
+Respond with ONLY the DSL query, no explanation. Always start with 'search'.`;
 
     const { response: query, provider } = await generateText(systemPrompt, { endpoint: '/ai/generate-query' });
 
