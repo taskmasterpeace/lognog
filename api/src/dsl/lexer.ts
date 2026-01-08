@@ -19,6 +19,7 @@ const KEYWORDS: Record<string, TokenType> = {
   'and': TokenType.AND,
   'or': TokenType.OR,
   'not': TokenType.NOT,
+  'in': TokenType.IN,
   'asc': TokenType.ASC,
   'desc': TokenType.DESC,
   'top': TokenType.TOP,

@@ -45,6 +45,8 @@ import {
   NotificationChannel,
 } from '../api/client';
 import VariableHelper from '../components/VariableHelper';
+import { useToast } from '../contexts/ToastContext';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 // Note: VariableInsertHelper is available for advanced template editing
 import { InfoTip } from '../components/ui/InfoTip';
 import AppScopeFilter from '../components/AppScopeFilter';
@@ -117,6 +119,8 @@ const TIME_RANGES = [
 
 export default function AlertsPage() {
   const { formatDate } = useDateFormat();
+  const toast = useToast();
+  const { confirm } = useConfirm();
   const [searchParams, setSearchParams] = useSearchParams();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showHistoryModal, setShowHistoryModal] = useState(false);
@@ -212,6 +216,10 @@ export default function AlertsPage() {
       queryClient.invalidateQueries({ queryKey: ['alerts'] });
       setShowCreateModal(false);
       resetForm();
+      toast.success('Alert Created', `"${formData.name}" has been created`);
+    },
+    onError: (error) => {
+      toast.error('Create Failed', error instanceof Error ? error.message : 'Failed to create alert');
     },
   });
 
@@ -228,6 +236,10 @@ export default function AlertsPage() {
       setShowCreateModal(false);
       setEditingAlert(null);
       resetForm();
+      toast.success('Alert Updated', `"${formData.name}" has been updated`);
+    },
+    onError: (error) => {
+      toast.error('Update Failed', error instanceof Error ? error.message : 'Failed to update alert');
     },
   });
 
@@ -250,7 +262,10 @@ export default function AlertsPage() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['alerts'] });
       queryClient.invalidateQueries({ queryKey: ['alertHistory'] });
-      alert(data.message);
+      toast.success('Alert Evaluated', data.message);
+    },
+    onError: (error) => {
+      toast.error('Evaluation Failed', error instanceof Error ? error.message : 'Unknown error');
     },
   });
 
@@ -553,9 +568,19 @@ export default function AlertsPage() {
                       <Settings className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => {
-                        if (confirm('Delete this alert?')) {
-                          deleteMutation.mutate(alert.id);
+                      onClick={async () => {
+                        const confirmed = await confirm({
+                          title: 'Delete Alert',
+                          message: `Are you sure you want to delete "${alert.name}"? This action cannot be undone.`,
+                          confirmText: 'Delete',
+                          cancelText: 'Cancel',
+                          variant: 'danger',
+                        });
+                        if (confirmed) {
+                          deleteMutation.mutate(alert.id, {
+                            onSuccess: () => toast.success('Alert Deleted', `"${alert.name}" has been deleted`),
+                            onError: (err) => toast.error('Delete Failed', err instanceof Error ? err.message : 'Unknown error'),
+                          });
                         }
                       }}
                       className="p-1.5 sm:p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg flex-shrink-0"

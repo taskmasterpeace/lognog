@@ -5,6 +5,7 @@ import { logAuthEvent } from '../auth/auth.js';
 import { insertLogs, getBackendInfo } from '../db/backend.js';
 import { getPendingNotifications, markNotificationDelivered, AgentNotification } from '../db/sqlite.js';
 import { logIngestionStats } from '../services/internal-logger.js';
+import { processLogs } from '../services/source-processor.js';
 
 const router = Router();
 
@@ -192,9 +193,12 @@ router.post(
         };
       });
 
+      // Process logs through source config pipeline (extractions, transforms, routing)
+      const processedLogs = processLogs(logs);
+
       // Insert into database
       const ingestStart = Date.now();
-      await insertLogs(logs);
+      await insertLogs(processedLogs);
       const ingestDuration = Date.now() - ingestStart;
 
       // Log the ingestion stats for self-monitoring
@@ -838,8 +842,11 @@ router.post('/http', authenticateIngestion, async (req, res) => {
       return res.status(200).json({ accepted: 0 });
     }
 
+    // Process logs through source config pipeline (extractions, transforms, routing)
+    const processedLogs = processLogs(logs);
+
     const ingestStart = Date.now();
-    await insertLogs(logs);
+    await insertLogs(processedLogs);
     const ingestDuration = Date.now() - ingestStart;
 
     // Log the ingestion stats for self-monitoring

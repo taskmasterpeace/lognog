@@ -322,11 +322,18 @@ export class SQLiteCompiler {
         break;
 
       case 'IN':
-        expr = `${field} IN (${cond.value})`;
-        break;
-
       case 'NOT IN':
-        expr = `${field} NOT IN (${cond.value})`;
+        // Parse JSON array of values and format for SQL
+        try {
+          const values = JSON.parse(String(cond.value)) as (string | number)[];
+          const formattedValues = values.map(v =>
+            typeof v === 'string' ? `'${this.escape(v)}'` : v
+          ).join(', ');
+          expr = `${field} ${cond.operator} (${formattedValues})`;
+        } catch {
+          // Fallback if not JSON
+          expr = `${field} ${cond.operator} (${cond.value})`;
+        }
         break;
 
       default:

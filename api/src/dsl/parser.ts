@@ -260,6 +260,27 @@ export class Parser {
       operator = '>=';
     } else if (this.match(TokenType.CONTAINS)) {
       operator = '~';
+    } else if (this.match(TokenType.IN)) {
+      // Parse IN (value1, value2, value3)
+      operator = negate ? 'NOT IN' : 'IN';
+      this.consume(TokenType.LPAREN, 'Expected "(" after IN');
+      const values: (string | number)[] = [];
+
+      // Parse comma-separated values
+      do {
+        if (this.check(TokenType.STRING)) {
+          values.push(this.advance().value);
+        } else if (this.check(TokenType.NUMBER)) {
+          values.push(parseFloat(this.advance().value));
+        } else if (this.check(TokenType.IDENTIFIER)) {
+          values.push(this.advance().value);
+        }
+      } while (this.match(TokenType.COMMA));
+
+      this.consume(TokenType.RPAREN, 'Expected ")" after IN values');
+
+      // Store values as comma-separated string or JSON array
+      return { field, operator, value: JSON.stringify(values), negate: false };
     } else {
       // No operator - this might be a keyword search
       return { field: '_raw', operator: '~', value: field, negate };

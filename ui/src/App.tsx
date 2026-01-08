@@ -30,6 +30,8 @@ import { ThemeProvider } from './contexts/ThemeContext';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { DateFormatProvider } from './contexts/DateFormatContext';
 import { MuteProvider } from './contexts/MuteContext';
+import { ToastProvider } from './contexts/ToastContext';
+import { ConfirmProvider } from './components/ui/ConfirmDialog';
 import ThemeToggle from './components/ThemeToggle';
 import NogChat from './components/NogChat';
 import AnimatedPage from './components/ui/AnimatedPage';
@@ -649,9 +651,13 @@ export default function App() {
       <DateFormatProvider>
         <AuthProvider>
           <MuteProvider>
-            <BrowserRouter>
-              <AppRoutes />
-            </BrowserRouter>
+            <ToastProvider>
+              <ConfirmProvider>
+                <BrowserRouter>
+                  <AppRoutes />
+                </BrowserRouter>
+              </ConfirmProvider>
+            </ToastProvider>
           </MuteProvider>
         </AuthProvider>
       </DateFormatProvider>

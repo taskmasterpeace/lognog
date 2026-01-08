@@ -67,6 +67,7 @@ export enum TokenType {
   GREATER_THAN = 'GREATER_THAN',
   GREATER_THAN_EQ = 'GREATER_THAN_EQ',
   CONTAINS = 'CONTAINS', // ~
+  IN = 'IN',
   PLUS = 'PLUS',
   MINUS = 'MINUS',
   MULTIPLY = 'MULTIPLY',

@@ -20,6 +20,8 @@ import DashboardBuilderWizard from '../components/DashboardBuilderWizard';
 import DashboardImportModal from '../components/dashboard/DashboardImportModal';
 import AppScopeFilter from '../components/AppScopeFilter';
 import { useDateFormat } from '../contexts/DateFormatContext';
+import { useToast } from '../contexts/ToastContext';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 
 const TEMPLATES = [
   {
@@ -50,6 +52,8 @@ const TEMPLATES = [
 
 export default function DashboardsPage() {
   const { formatDatePart } = useDateFormat();
+  const toast = useToast();
+  const { confirm } = useConfirm();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showWizard, setShowWizard] = useState(false);
   const [newDashboardName, setNewDashboardName] = useState('');
@@ -71,9 +75,13 @@ export default function DashboardsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dashboards'] });
       setShowCreateModal(false);
+      toast.success('Dashboard Created', `"${newDashboardName}" has been created`);
       setNewDashboardName('');
       setNewDashboardDescription('');
       setSelectedTemplate(null);
+    },
+    onError: (error) => {
+      toast.error('Create Failed', error instanceof Error ? error.message : 'Failed to create dashboard');
     },
   });
 
@@ -81,6 +89,10 @@ export default function DashboardsPage() {
     mutationFn: deleteDashboard,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dashboards'] });
+      toast.success('Dashboard Deleted', 'Dashboard has been deleted');
+    },
+    onError: (error) => {
+      toast.error('Delete Failed', error instanceof Error ? error.message : 'Failed to delete dashboard');
     },
   });
 
@@ -88,6 +100,10 @@ export default function DashboardsPage() {
     mutationFn: duplicateDashboard,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dashboards'] });
+      toast.success('Dashboard Duplicated', 'A copy of the dashboard has been created');
+    },
+    onError: (error) => {
+      toast.error('Duplicate Failed', error instanceof Error ? error.message : 'Failed to duplicate dashboard');
     },
   });
 
@@ -201,8 +217,15 @@ export default function DashboardsPage() {
                           <Copy className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => {
-                            if (confirm(`Delete dashboard "${dashboard.name}"? This cannot be undone.`)) {
+                          onClick={async () => {
+                            const confirmed = await confirm({
+                              title: 'Delete Dashboard',
+                              message: `Are you sure you want to delete "${dashboard.name}"? This action cannot be undone.`,
+                              confirmText: 'Delete',
+                              cancelText: 'Cancel',
+                              variant: 'danger',
+                            });
+                            if (confirmed) {
                               deleteMutation.mutate(dashboard.id);
                             }
                           }}
