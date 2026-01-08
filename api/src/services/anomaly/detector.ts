@@ -141,17 +141,23 @@ async function getRelatedLogs(
   const entityField = getEntityField(entityType);
   const windowStart = new Date(timestamp.getTime() - 60 * 60 * 1000); // 1 hour before
 
+  // Use parameterized query to prevent SQL injection
   const query = `
     SELECT message
     FROM lognog.logs
-    WHERE ${entityField} = '${entityId}'
-      AND timestamp >= parseDateTimeBestEffort('${windowStart.toISOString()}')
-      AND timestamp <= parseDateTimeBestEffort('${timestamp.toISOString()}')
+    WHERE ${entityField} = {entityId:String}
+      AND timestamp >= parseDateTimeBestEffort({windowStart:String})
+      AND timestamp <= parseDateTimeBestEffort({timestamp:String})
     ORDER BY timestamp DESC
-    LIMIT ${limit}
+    LIMIT {limit:UInt32}
   `;
 
-  const results = await executeQuery<{ message: string }>(query);
+  const results = await executeQuery<{ message: string }>(query, {
+    entityId,
+    windowStart: windowStart.toISOString(),
+    timestamp: timestamp.toISOString(),
+    limit,
+  });
   return results.map(r => r.message);
 }
 
@@ -264,14 +270,18 @@ export async function detectTimeAnomalies(
   const hourStart = new Date(timestamp);
   hourStart.setMinutes(0, 0, 0);
 
+  // Use parameterized query to prevent SQL injection
   const query = `
     SELECT count() as count
     FROM lognog.logs
-    WHERE ${entityField} = '${entityId}'
-      AND timestamp >= parseDateTimeBestEffort('${hourStart.toISOString()}')
+    WHERE ${entityField} = {entityId:String}
+      AND timestamp >= parseDateTimeBestEffort({hourStart:String})
   `;
 
-  const results = await executeQuery<{ count: number }>(query);
+  const results = await executeQuery<{ count: number }>(query, {
+    entityId,
+    hourStart: hourStart.toISOString(),
+  });
   const currentCount = results[0]?.count || 0;
 
   if (currentCount > 0) {
@@ -313,16 +323,16 @@ export async function detectNewBehavior(
   const cfg = { ...DEFAULT_CONFIG, ...config };
   const entityField = getEntityField(entityType);
 
-  // Check if entity has any historical data
+  // Check if entity has any historical data (parameterized query)
   const query = `
     SELECT
       min(timestamp) as first_seen,
       count() as total_events
     FROM lognog.logs
-    WHERE ${entityField} = '${entityId}'
+    WHERE ${entityField} = {entityId:String}
   `;
 
-  const results = await executeQuery<{ first_seen: string; total_events: number }>(query);
+  const results = await executeQuery<{ first_seen: string; total_events: number }>(query, { entityId });
 
   if (!results[0] || results[0].total_events === 0) {
     return [];
@@ -365,29 +375,44 @@ export async function detectNewBehavior(
 export async function storeAnomaly(anomaly: AnomalyEvent): Promise<string> {
   const id = crypto.randomUUID();
 
+  // Use parameterized query to prevent SQL injection
   const query = `
     INSERT INTO lognog.anomalies
     (id, timestamp, entity_type, entity_id, anomaly_type, metric_name,
      observed_value, expected_value, deviation_score, risk_score, severity,
      related_logs, context_data)
     VALUES (
-      '${id}',
-      parseDateTimeBestEffort('${anomaly.timestamp.toISOString()}'),
-      '${anomaly.entityType}',
-      '${anomaly.entityId}',
-      '${anomaly.anomalyType}',
-      '${anomaly.metricName}',
-      ${anomaly.observedValue},
-      ${anomaly.expectedValue},
-      ${anomaly.deviationScore},
-      ${anomaly.riskScore},
-      '${anomaly.severity}',
-      [${anomaly.relatedLogs.map(l => `'${l.replace(/'/g, "''").substring(0, 500)}'`).join(',')}],
-      '${JSON.stringify(anomaly.contextData).replace(/'/g, "''")}'
+      {id:String},
+      parseDateTimeBestEffort({timestamp:String}),
+      {entityType:String},
+      {entityId:String},
+      {anomalyType:String},
+      {metricName:String},
+      {observedValue:Float64},
+      {expectedValue:Float64},
+      {deviationScore:Float64},
+      {riskScore:Int32},
+      {severity:String},
+      {relatedLogs:Array(String)},
+      {contextData:String}
     )
   `;
 
-  await executeQuery(query);
+  await executeQuery(query, {
+    id,
+    timestamp: anomaly.timestamp.toISOString(),
+    entityType: anomaly.entityType,
+    entityId: anomaly.entityId,
+    anomalyType: anomaly.anomalyType,
+    metricName: anomaly.metricName,
+    observedValue: anomaly.observedValue,
+    expectedValue: anomaly.expectedValue,
+    deviationScore: anomaly.deviationScore,
+    riskScore: anomaly.riskScore,
+    severity: anomaly.severity,
+    relatedLogs: anomaly.relatedLogs.map(l => l.substring(0, 500)),
+    contextData: JSON.stringify(anomaly.contextData),
+  });
   return id;
 }
 
@@ -405,33 +430,46 @@ export async function getAnomalies(options: {
   limit?: number;
   offset?: number;
 }): Promise<AnomalyEvent[]> {
+  // Build parameterized conditions to prevent SQL injection
   const conditions: string[] = [];
+  const params: Record<string, unknown> = {};
 
   if (options.entityType) {
-    conditions.push(`entity_type = '${options.entityType}'`);
+    conditions.push(`entity_type = {entityType:String}`);
+    params.entityType = options.entityType;
   }
   if (options.entityId) {
-    conditions.push(`entity_id = '${options.entityId}'`);
+    conditions.push(`entity_id = {entityId:String}`);
+    params.entityId = options.entityId;
   }
   if (options.anomalyType) {
-    conditions.push(`anomaly_type = '${options.anomalyType}'`);
+    conditions.push(`anomaly_type = {anomalyType:String}`);
+    params.anomalyType = options.anomalyType;
   }
   if (options.severity) {
-    conditions.push(`severity = '${options.severity}'`);
+    conditions.push(`severity = {severity:String}`);
+    params.severity = options.severity;
   }
   if (options.minRiskScore !== undefined) {
-    conditions.push(`risk_score >= ${options.minRiskScore}`);
+    conditions.push(`risk_score >= {minRiskScore:Int32}`);
+    params.minRiskScore = options.minRiskScore;
   }
   if (options.startTime) {
-    conditions.push(`timestamp >= parseDateTimeBestEffort('${options.startTime.toISOString()}')`);
+    conditions.push(`timestamp >= parseDateTimeBestEffort({startTime:String})`);
+    params.startTime = options.startTime.toISOString();
   }
   if (options.endTime) {
-    conditions.push(`timestamp <= parseDateTimeBestEffort('${options.endTime.toISOString()}')`);
+    conditions.push(`timestamp <= parseDateTimeBestEffort({endTime:String})`);
+    params.endTime = options.endTime.toISOString();
   }
 
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
   const limit = options.limit || 100;
   const offset = options.offset || 0;
+
+  // Add limit and offset as parameters
+  params.limit = limit;
+  params.offset = offset;
 
   const query = `
     SELECT
@@ -452,8 +490,8 @@ export async function getAnomalies(options: {
     FROM lognog.anomalies
     ${whereClause}
     ORDER BY timestamp DESC
-    LIMIT ${limit}
-    OFFSET ${offset}
+    LIMIT {limit:UInt32}
+    OFFSET {offset:UInt32}
   `;
 
   const results = await executeQuery<{
@@ -471,7 +509,7 @@ export async function getAnomalies(options: {
     llm_analysis: string;
     related_logs: string[];
     context_data: string;
-  }>(query);
+  }>(query, params);
 
   return results.map(r => ({
     id: r.id,
@@ -494,12 +532,11 @@ export async function getAnomalies(options: {
  * Get anomaly by ID
  */
 export async function getAnomalyById(id: string): Promise<AnomalyEvent | null> {
-  const anomalies = await getAnomalies({ limit: 1 });
-  // This is a simplified version - in production we'd query by ID directly
+  // Use parameterized query to prevent SQL injection
   const query = `
     SELECT *
     FROM lognog.anomalies
-    WHERE id = '${id}'
+    WHERE id = {id:String}
     LIMIT 1
   `;
 
@@ -518,7 +555,7 @@ export async function getAnomalyById(id: string): Promise<AnomalyEvent | null> {
     llm_analysis: string;
     related_logs: string[];
     context_data: string;
-  }>(query);
+  }>(query, { id });
 
   if (results.length === 0) return null;
 
@@ -544,15 +581,18 @@ export async function getAnomalyById(id: string): Promise<AnomalyEvent | null> {
  * Submit user feedback on anomaly (true/false positive)
  */
 export async function submitFeedback(id: string, isFalsePositive: boolean): Promise<void> {
+  // Use parameterized query to prevent SQL injection
+  // Also add SETTINGS mutations_sync = 1 for synchronous execution
   const query = `
     ALTER TABLE lognog.anomalies
     UPDATE
-      is_false_positive = ${isFalsePositive ? 1 : 0},
+      is_false_positive = {isFalsePositive:UInt8},
       feedback_at = now()
-    WHERE id = '${id}'
+    WHERE id = {id:String}
+    SETTINGS mutations_sync = 1
   `;
 
-  await executeQuery(query);
+  await executeQuery(query, { id, isFalsePositive: isFalsePositive ? 1 : 0 });
 }
 
 /**
@@ -566,7 +606,9 @@ export async function getAnomalyDashboard(hoursBack: number = 24): Promise<{
   recentTrend: { hour: string; count: number }[];
 }> {
   const startTime = new Date(Date.now() - hoursBack * 60 * 60 * 1000);
+  const startTimeStr = startTime.toISOString();
 
+  // Parameterized queries for dashboard stats
   // Total and by severity
   const severityQuery = `
     SELECT
@@ -576,7 +618,7 @@ export async function getAnomalyDashboard(hoursBack: number = 24): Promise<{
       countIf(severity = 'high') as high,
       countIf(severity = 'critical') as critical
     FROM lognog.anomalies
-    WHERE timestamp >= parseDateTimeBestEffort('${startTime.toISOString()}')
+    WHERE timestamp >= parseDateTimeBestEffort({startTime:String})
       AND (is_false_positive IS NULL OR is_false_positive = 0)
   `;
 
@@ -586,7 +628,7 @@ export async function getAnomalyDashboard(hoursBack: number = 24): Promise<{
       anomaly_type,
       count() as count
     FROM lognog.anomalies
-    WHERE timestamp >= parseDateTimeBestEffort('${startTime.toISOString()}')
+    WHERE timestamp >= parseDateTimeBestEffort({startTime:String})
       AND (is_false_positive IS NULL OR is_false_positive = 0)
     GROUP BY anomaly_type
   `;
@@ -599,7 +641,7 @@ export async function getAnomalyDashboard(hoursBack: number = 24): Promise<{
       count() as count,
       avg(risk_score) as avg_risk
     FROM lognog.anomalies
-    WHERE timestamp >= parseDateTimeBestEffort('${startTime.toISOString()}')
+    WHERE timestamp >= parseDateTimeBestEffort({startTime:String})
       AND (is_false_positive IS NULL OR is_false_positive = 0)
     GROUP BY entity_type, entity_id
     ORDER BY count DESC
@@ -612,17 +654,18 @@ export async function getAnomalyDashboard(hoursBack: number = 24): Promise<{
       toStartOfHour(timestamp) as hour,
       count() as count
     FROM lognog.anomalies
-    WHERE timestamp >= parseDateTimeBestEffort('${startTime.toISOString()}')
+    WHERE timestamp >= parseDateTimeBestEffort({startTime:String})
       AND (is_false_positive IS NULL OR is_false_positive = 0)
     GROUP BY hour
     ORDER BY hour
   `;
 
+  const params = { startTime: startTimeStr };
   const [severityResults, typeResults, entityResults, trendResults] = await Promise.all([
-    executeQuery<{ total: number; low: number; medium: number; high: number; critical: number }>(severityQuery),
-    executeQuery<{ anomaly_type: string; count: number }>(typeQuery),
-    executeQuery<{ entity_type: string; entity_id: string; count: number; avg_risk: number }>(entitiesQuery),
-    executeQuery<{ hour: string; count: number }>(trendQuery),
+    executeQuery<{ total: number; low: number; medium: number; high: number; critical: number }>(severityQuery, params),
+    executeQuery<{ anomaly_type: string; count: number }>(typeQuery, params),
+    executeQuery<{ entity_type: string; entity_id: string; count: number; avg_risk: number }>(entitiesQuery, params),
+    executeQuery<{ hour: string; count: number }>(trendQuery, params),
   ]);
 
   const severity = severityResults[0] || { total: 0, low: 0, medium: 0, high: 0, critical: 0 };
@@ -672,18 +715,20 @@ export async function runDetection(
   for (const entityType of entityTypes) {
     const entityField = getEntityField(entityType);
 
-    // Get entities with recent activity
+    // Get entities with recent activity (parameterized query)
     const query = `
       SELECT
         ${entityField} as entity,
         count() as count
       FROM lognog.logs
-      WHERE timestamp >= parseDateTimeBestEffort('${hourAgo.toISOString()}')
+      WHERE timestamp >= parseDateTimeBestEffort({hourAgo:String})
         AND ${entityField} != ''
       GROUP BY entity
     `;
 
-    const entities = await executeQuery<{ entity: string; count: number }>(query);
+    const entities = await executeQuery<{ entity: string; count: number }>(query, {
+      hourAgo: hourAgo.toISOString(),
+    });
 
     for (const { entity, count } of entities) {
       for (const metricName of metricNames) {
@@ -691,13 +736,17 @@ export async function runDetection(
           // Get current value based on metric
           let currentValue = count;
           if (metricName === 'error_count') {
+            // Parameterized query for error count
             const errorQuery = `
               SELECT countIf(severity <= 3) as errors
               FROM lognog.logs
-              WHERE ${entityField} = '${entity}'
-                AND timestamp >= parseDateTimeBestEffort('${hourAgo.toISOString()}')
+              WHERE ${entityField} = {entity:String}
+                AND timestamp >= parseDateTimeBestEffort({hourAgo:String})
             `;
-            const errorResults = await executeQuery<{ errors: number }>(errorQuery);
+            const errorResults = await executeQuery<{ errors: number }>(errorQuery, {
+              entity,
+              hourAgo: hourAgo.toISOString(),
+            });
             currentValue = errorResults[0]?.errors || 0;
           }
 

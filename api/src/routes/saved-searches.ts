@@ -18,7 +18,7 @@ import { createAlert } from '../db/sqlite.js';
 import { createDashboardPanel, getDashboard } from '../db/sqlite.js';
 import { getSQLiteDB } from '../db/sqlite.js';
 import { v4 as uuidv4 } from 'uuid';
-import { authenticate } from '../auth/middleware.js';
+import { authenticate, optionalAuth } from '../auth/middleware.js';
 import { reseedSavedSearches } from '../data/seed-templates.js';
 
 const router = Router();
@@ -111,7 +111,7 @@ function parseTimeRange(timeRange: string): number {
 }
 
 // GET /saved-searches - List all saved searches with filters
-router.get('/', (req: Request, res: Response) => {
+router.get('/', optionalAuth, (req: Request, res: Response) => {
   try {
     const filters: SavedSearchFilters = {};
 
@@ -158,7 +158,7 @@ router.get('/', (req: Request, res: Response) => {
 });
 
 // GET /saved-searches/tags - Get all unique tags
-router.get('/tags', (_req: Request, res: Response) => {
+router.get('/tags', optionalAuth, (_req: Request, res: Response) => {
   try {
     const tags = getSavedSearchTags();
     return res.json({ tags });
@@ -184,7 +184,7 @@ router.post('/reseed', authenticate, (req: Request, res: Response) => {
 });
 
 // GET /saved-searches/:id - Get single saved search
-router.get('/:id', (req: Request, res: Response) => {
+router.get('/:id', optionalAuth, (req: Request, res: Response) => {
   try {
     const search = getSavedSearch(req.params.id);
     if (!search) {
@@ -207,7 +207,7 @@ router.get('/:id', (req: Request, res: Response) => {
 });
 
 // POST /saved-searches - Create new saved search
-router.post('/', (req: Request, res: Response) => {
+router.post('/', authenticate, (req: Request, res: Response) => {
   try {
     const data = createSchema.parse(req.body);
 
@@ -236,7 +236,7 @@ router.post('/', (req: Request, res: Response) => {
 });
 
 // PUT /saved-searches/:id - Update saved search
-router.put('/:id', (req: Request, res: Response) => {
+router.put('/:id', authenticate, (req: Request, res: Response) => {
   try {
     const existing = getSavedSearch(req.params.id);
     if (!existing) {
@@ -265,7 +265,7 @@ router.put('/:id', (req: Request, res: Response) => {
 });
 
 // DELETE /saved-searches/:id - Delete saved search
-router.delete('/:id', (req: Request, res: Response) => {
+router.delete('/:id', authenticate, (req: Request, res: Response) => {
   try {
     const success = deleteSavedSearch(req.params.id);
     if (!success) {
@@ -279,7 +279,7 @@ router.delete('/:id', (req: Request, res: Response) => {
 });
 
 // POST /saved-searches/:id/run - Execute search and cache results
-router.post('/:id/run', async (req: Request, res: Response) => {
+router.post('/:id/run', authenticate, async (req: Request, res: Response) => {
   try {
     const search = getSavedSearch(req.params.id);
     if (!search) {
@@ -338,7 +338,7 @@ router.post('/:id/run', async (req: Request, res: Response) => {
 });
 
 // GET /saved-searches/:id/results - Get cached results (loadjob equivalent)
-router.get('/:id/results', (req: Request, res: Response) => {
+router.get('/:id/results', optionalAuth, (req: Request, res: Response) => {
   try {
     const search = getSavedSearch(req.params.id);
     if (!search) {
@@ -370,7 +370,7 @@ router.get('/:id/results', (req: Request, res: Response) => {
 });
 
 // POST /saved-searches/:id/clear-cache - Clear cached results
-router.post('/:id/clear-cache', (req: Request, res: Response) => {
+router.post('/:id/clear-cache', authenticate, (req: Request, res: Response) => {
   try {
     const search = getSavedSearch(req.params.id);
     if (!search) {
@@ -386,7 +386,7 @@ router.post('/:id/clear-cache', (req: Request, res: Response) => {
 });
 
 // POST /saved-searches/:id/duplicate - Duplicate a saved search
-router.post('/:id/duplicate', (req: Request, res: Response) => {
+router.post('/:id/duplicate', authenticate, (req: Request, res: Response) => {
   try {
     const newSearch = duplicateSavedSearch(req.params.id, req.user?.id);
     if (!newSearch) {
@@ -404,7 +404,7 @@ router.post('/:id/duplicate', (req: Request, res: Response) => {
 });
 
 // POST /saved-searches/:id/create-alert - Create alert from saved search
-router.post('/:id/create-alert', (req: Request, res: Response) => {
+router.post('/:id/create-alert', authenticate, (req: Request, res: Response) => {
   try {
     const search = getSavedSearch(req.params.id);
     if (!search) {
@@ -440,7 +440,7 @@ router.post('/:id/create-alert', (req: Request, res: Response) => {
 });
 
 // POST /saved-searches/:id/create-panel - Create dashboard panel from saved search
-router.post('/:id/create-panel', (req: Request, res: Response) => {
+router.post('/:id/create-panel', authenticate, (req: Request, res: Response) => {
   try {
     const search = getSavedSearch(req.params.id);
     if (!search) {
@@ -484,7 +484,7 @@ router.post('/:id/create-panel', (req: Request, res: Response) => {
 });
 
 // POST /saved-searches/:id/create-report - Create scheduled report from saved search
-router.post('/:id/create-report', (req: Request, res: Response) => {
+router.post('/:id/create-report', authenticate, (req: Request, res: Response) => {
   try {
     const search = getSavedSearch(req.params.id);
     if (!search) {

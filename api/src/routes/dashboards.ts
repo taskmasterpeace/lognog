@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import bcrypt from 'bcrypt';
+import { safeJsonParse } from '../utils/json.js';
 import {
   generatePanel,
   generateDefaultDashboard,
@@ -79,7 +80,7 @@ router.get('/:id', (req: Request, res: Response) => {
       ...dashboard,
       panels: panels.map(p => ({
         ...p,
-        options: JSON.parse(p.options),
+        options: safeJsonParse(p.options, {}),
       })),
       pages,
     });
@@ -200,7 +201,7 @@ router.post('/from-wizard', (req: Request, res: Response) => {
       panels_created: createdPanels.length,
       panels: allPanels.map(p => ({
         ...p,
-        options: JSON.parse(p.options),
+        options: safeJsonParse(p.options, {}),
       })),
     });
   } catch (error) {
@@ -234,7 +235,7 @@ router.post('/:id/panels', (req: Request, res: Response) => {
 
     return res.status(201).json({
       ...panel,
-      options: JSON.parse(panel.options),
+      options: safeJsonParse(panel.options, {}),
     });
   } catch (error) {
     console.error('Error creating panel:', error);
@@ -269,7 +270,7 @@ router.put('/:id/panels/:panelId', (req: Request, res: Response) => {
 
     return res.json({
       ...panel,
-      options: JSON.parse(panel.options),
+      options: safeJsonParse(panel.options, {}),
     });
   } catch (error) {
     console.error('Error updating panel:', error);
@@ -517,6 +518,13 @@ router.post('/:id/variables', (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Name is required' });
     }
 
+    // Validate default_value type matches variable type
+    if (type === 'number' && default_value !== undefined && default_value !== null && default_value !== '') {
+      if (isNaN(Number(default_value))) {
+        return res.status(400).json({ error: 'default_value must be a number when type is "number"' });
+      }
+    }
+
     const variable = createDashboardVariable(req.params.id, name, {
       label,
       type,
@@ -603,6 +611,11 @@ router.post('/:id/annotations', (req: Request, res: Response) => {
 
     if (!timestamp || !title) {
       return res.status(400).json({ error: 'Timestamp and title are required' });
+    }
+
+    // Validate color format if provided (hex or CSS color name)
+    if (color && !/^#[0-9A-Fa-f]{6}$|^#[0-9A-Fa-f]{3}$|^[a-zA-Z]+$/.test(color)) {
+      return res.status(400).json({ error: 'Invalid color format. Use hex (#RGB or #RRGGBB) or CSS color name' });
     }
 
     const annotation = createDashboardAnnotation(req.params.id, timestamp, title, {
@@ -719,7 +732,7 @@ router.post('/:id/export', (req: Request, res: Response) => {
         title: p.title,
         query: p.query,
         visualization: p.visualization,
-        options: JSON.parse(p.options),
+        options: safeJsonParse(p.options, {}),
         position_x: p.position_x,
         position_y: p.position_y,
         width: p.width,
@@ -779,7 +792,7 @@ router.post('/:id/duplicate', (req: Request, res: Response) => {
         panel.title,
         panel.query,
         panel.visualization,
-        JSON.parse(panel.options),
+        safeJsonParse(panel.options, {}),
         {
           x: panel.position_x,
           y: panel.position_y,
@@ -808,7 +821,7 @@ router.post('/:id/duplicate', (req: Request, res: Response) => {
       ...newDashboard,
       panels: newPanels.map(p => ({
         ...p,
-        options: JSON.parse(p.options),
+        options: safeJsonParse(p.options, {}),
       })),
     });
   } catch (error) {
@@ -879,7 +892,7 @@ router.post('/import', (req: Request, res: Response) => {
       ...dashboard,
       panels: panels.map(p => ({
         ...p,
-        options: JSON.parse(p.options),
+        options: safeJsonParse(p.options, {}),
       })),
     });
   } catch (error) {
@@ -896,7 +909,7 @@ router.get('/templates', (_req: Request, res: Response) => {
     return res.json(templates.map(t => ({
       ...t,
       template_json: undefined, // Don't send full template in list
-      required_sources: t.required_sources ? JSON.parse(t.required_sources) : [],
+      required_sources: safeJsonParse(t.required_sources, []),
     })));
   } catch (error) {
     console.error('Error fetching templates:', error);
@@ -916,14 +929,43 @@ router.get('/templates/:templateId', (req: Request, res: Response) => {
 
     return res.json({
       ...template,
-      template_json: JSON.parse(template.template_json),
-      required_sources: template.required_sources ? JSON.parse(template.required_sources) : [],
+      template_json: safeJsonParse(template.template_json, {}),
+      required_sources: safeJsonParse(template.required_sources, []),
     });
   } catch (error) {
     console.error('Error fetching template:', error);
     return res.status(500).json({ error: 'Failed to fetch template' });
   }
 });
+
+// Template data structure for type safety
+interface TemplateData {
+  name?: string;
+  description?: string;
+  logo_url?: string;
+  accent_color?: string;
+  header_color?: string;
+  panels?: Array<{
+    title: string;
+    query: string;
+    visualization: string;
+    options?: Record<string, unknown>;
+    position_x?: number;
+    position_y?: number;
+    width?: number;
+    height?: number;
+  }>;
+  variables?: Array<{
+    name: string;
+    label?: string;
+    type?: 'query' | 'custom' | 'textbox' | 'interval';
+    query?: string;
+    default_value?: string;
+    multi_select?: boolean;
+    include_all?: boolean;
+    sort_order?: number;
+  }>;
+}
 
 // Create dashboard from template
 router.post('/templates/:templateId/create', (req: Request, res: Response) => {
@@ -933,7 +975,7 @@ router.post('/templates/:templateId/create', (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Template not found' });
     }
 
-    const templateData = JSON.parse(template.template_json);
+    const templateData = safeJsonParse<TemplateData>(template.template_json, {});
     const { name } = req.body;
 
     // Create dashboard from template
@@ -993,7 +1035,7 @@ router.post('/templates/:templateId/create', (req: Request, res: Response) => {
       ...dashboard,
       panels: panels.map(p => ({
         ...p,
-        options: JSON.parse(p.options),
+        options: safeJsonParse(p.options, {}),
       })),
     });
   } catch (error) {

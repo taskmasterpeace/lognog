@@ -9,11 +9,12 @@ import {
   deleteSourceAnnotation,
   getLookup,
 } from '../db/sqlite.js';
+import { authenticate } from '../auth/middleware.js';
 
 const router = Router();
 
-// GET /source-annotations - List all source annotations
-router.get('/', (req: Request, res: Response) => {
+// GET /source-annotations - List all source annotations (requires auth)
+router.get('/', authenticate, (req: Request, res: Response) => {
   try {
     const { field } = req.query;
     const annotations = getSourceAnnotations(field as string | undefined);
@@ -24,8 +25,8 @@ router.get('/', (req: Request, res: Response) => {
   }
 });
 
-// GET /source-annotations/batch - Batch lookup for LogViewer
-router.get('/batch', (req: Request, res: Response) => {
+// GET /source-annotations/batch - Batch lookup for LogViewer (requires auth)
+router.get('/batch', authenticate, (req: Request, res: Response) => {
   try {
     const { items } = req.query;
 
@@ -66,8 +67,8 @@ router.get('/batch', (req: Request, res: Response) => {
   }
 });
 
-// GET /source-annotations/:field/:value - Get single annotation by field and value
-router.get('/:field/:value', (req: Request, res: Response) => {
+// GET /source-annotations/:field/:value - Get single annotation by field and value (requires auth)
+router.get('/:field/:value', authenticate, (req: Request, res: Response) => {
   try {
     const { field, value } = req.params;
     const annotation = getSourceAnnotation(field, decodeURIComponent(value));
@@ -103,8 +104,8 @@ router.get('/:field/:value', (req: Request, res: Response) => {
   }
 });
 
-// POST /source-annotations - Create new annotation
-router.post('/', (req: Request, res: Response) => {
+// POST /source-annotations - Create new annotation (requires auth)
+router.post('/', authenticate, (req: Request, res: Response) => {
   try {
     const { field_name, field_value, title, description, details, icon, color, lookup_id, tags } = req.body;
 
@@ -137,8 +138,8 @@ router.post('/', (req: Request, res: Response) => {
   }
 });
 
-// PUT /source-annotations/:id - Update annotation
-router.put('/:id', (req: Request, res: Response) => {
+// PUT /source-annotations/:id - Update annotation (requires auth)
+router.put('/:id', authenticate, (req: Request, res: Response) => {
   try {
     const { title, description, details, icon, color, lookup_id, tags } = req.body;
 
@@ -172,8 +173,8 @@ router.put('/:id', (req: Request, res: Response) => {
   }
 });
 
-// DELETE /source-annotations/:id - Delete annotation
-router.delete('/:id', (req: Request, res: Response) => {
+// DELETE /source-annotations/:id - Delete annotation (requires auth)
+router.delete('/:id', authenticate, (req: Request, res: Response) => {
   try {
     const deleted = deleteSourceAnnotation(req.params.id);
     if (!deleted) {
@@ -186,8 +187,8 @@ router.delete('/:id', (req: Request, res: Response) => {
   }
 });
 
-// GET /source-annotations/by-id/:id - Get annotation by ID
-router.get('/by-id/:id', (req: Request, res: Response) => {
+// GET /source-annotations/by-id/:id - Get annotation by ID (requires auth)
+router.get('/by-id/:id', authenticate, (req: Request, res: Response) => {
   try {
     const annotation = getSourceAnnotationById(req.params.id);
     if (!annotation) {

@@ -25,6 +25,17 @@ import { ALERT_TEMPLATES } from '../data/alert-templates.js';
 
 const router = Router();
 
+// Safe JSON parse helper to prevent crashes on corrupted data
+function safeJsonParse<T>(json: string | null | undefined, defaultValue: T): T {
+  if (!json) return defaultValue;
+  try {
+    return JSON.parse(json) as T;
+  } catch {
+    console.warn('[Alerts] Failed to parse JSON:', json.substring(0, 100));
+    return defaultValue;
+  }
+}
+
 // Get all alerts (optionally filtered by app_scope)
 router.get('/', (req: Request, res: Response) => {
   try {
@@ -33,7 +44,7 @@ router.get('/', (req: Request, res: Response) => {
     // Parse actions JSON for each alert
     const alertsWithParsedActions = alerts.map(alert => ({
       ...alert,
-      actions: JSON.parse(alert.actions || '[]'),
+      actions: safeJsonParse<AlertAction[]>(alert.actions, []),
     }));
     res.json(alertsWithParsedActions);
   } catch (error) {
@@ -80,7 +91,7 @@ router.post('/from-template/:templateId', (req: Request, res: Response) => {
 
     res.status(201).json({
       ...alert,
-      actions: JSON.parse(alert.actions || '[]'),
+      actions: safeJsonParse<AlertAction[]>(alert.actions, []),
     });
   } catch (error) {
     console.error('Error creating alert from template:', error);
@@ -97,7 +108,7 @@ router.get('/:id', (req: Request, res: Response) => {
     }
     res.json({
       ...alert,
-      actions: JSON.parse(alert.actions || '[]'),
+      actions: safeJsonParse<AlertAction[]>(alert.actions, []),
     });
   } catch (error) {
     console.error('Error getting alert:', error);
@@ -148,7 +159,7 @@ router.post('/', (req: Request, res: Response) => {
 
     res.status(201).json({
       ...alert,
-      actions: JSON.parse(alert.actions || '[]'),
+      actions: safeJsonParse<AlertAction[]>(alert.actions, []),
     });
   } catch (error) {
     console.error('Error creating alert:', error);
@@ -206,7 +217,7 @@ router.put('/:id', (req: Request, res: Response) => {
 
     res.json({
       ...alert,
-      actions: JSON.parse(alert.actions || '[]'),
+      actions: safeJsonParse<AlertAction[]>(alert.actions, []),
     });
   } catch (error) {
     console.error('Error updating alert:', error);
@@ -240,9 +251,14 @@ router.post('/:id/toggle', (req: Request, res: Response) => {
       enabled: !existing.enabled,
     });
 
+    // Check if update succeeded
+    if (!alert) {
+      return res.status(500).json({ error: 'Failed to update alert' });
+    }
+
     res.json({
       ...alert,
-      actions: JSON.parse(alert?.actions || '[]'),
+      actions: safeJsonParse<AlertAction[]>(alert.actions, []),
     });
   } catch (error) {
     console.error('Error toggling alert:', error);
@@ -305,14 +321,14 @@ router.post('/evaluate-all', async (_req: Request, res: Response) => {
 // Get alert history
 router.get('/history', (_req: Request, res: Response) => {
   try {
-    const limit = parseInt(_req.query.limit as string, 10) || 100;
+    const limit = Math.min(parseInt(_req.query.limit as string, 10) || 100, 1000); // Add max limit
     const history = getAlertHistory(undefined, limit);
 
-    // Parse JSON fields
+    // Parse JSON fields safely
     const historyWithParsed = history.map(h => ({
       ...h,
-      actions_executed: h.actions_executed ? JSON.parse(h.actions_executed) : null,
-      sample_results: h.sample_results ? JSON.parse(h.sample_results) : null,
+      actions_executed: safeJsonParse(h.actions_executed, null),
+      sample_results: safeJsonParse(h.sample_results, null),
     }));
 
     res.json(historyWithParsed);
@@ -325,14 +341,14 @@ router.get('/history', (_req: Request, res: Response) => {
 // Get history for specific alert
 router.get('/:id/history', (req: Request, res: Response) => {
   try {
-    const limit = parseInt(req.query.limit as string, 10) || 100;
+    const limit = Math.min(parseInt(req.query.limit as string, 10) || 100, 1000); // Add max limit
     const history = getAlertHistory(req.params.id, limit);
 
-    // Parse JSON fields
+    // Parse JSON fields safely
     const historyWithParsed = history.map(h => ({
       ...h,
-      actions_executed: h.actions_executed ? JSON.parse(h.actions_executed) : null,
-      sample_results: h.sample_results ? JSON.parse(h.sample_results) : null,
+      actions_executed: safeJsonParse(h.actions_executed, null),
+      sample_results: safeJsonParse(h.sample_results, null),
     }));
 
     res.json(historyWithParsed);
@@ -358,8 +374,8 @@ router.post('/history/:id/acknowledge', (req: Request, res: Response) => {
 
     res.json({
       ...entry,
-      actions_executed: entry.actions_executed ? JSON.parse(entry.actions_executed) : null,
-      sample_results: entry.sample_results ? JSON.parse(entry.sample_results) : null,
+      actions_executed: safeJsonParse(entry.actions_executed, null),
+      sample_results: safeJsonParse(entry.sample_results, null),
     });
   } catch (error) {
     console.error('Error acknowledging alert:', error);

@@ -150,9 +150,18 @@ router.post('/generate', async (req: Request, res: Response) => {
           'w': 'WEEK',
           'm': 'MONTH'
         };
+        // Value is validated as integer, unit is from enum - safe to interpolate
         timeCondition = `timestamp >= now() - INTERVAL ${value} ${unitMap[unit]}`;
       } else {
-        // Assume it's an absolute timestamp
+        // Validate ISO timestamp format to prevent SQL injection
+        // Accepts: 2024-01-15, 2024-01-15T10:30:00, 2024-01-15T10:30:00Z, 2024-01-15T10:30:00.123Z
+        const isoTimestampRegex = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d{3})?Z?)?$/;
+        if (!isoTimestampRegex.test(timeRange)) {
+          return res.status(400).json({
+            error: 'Invalid timeRange format. Use relative format (-24h, -7d, -1w, -1m) or ISO timestamp (YYYY-MM-DD or YYYY-MM-DDTHH:MM:SSZ)'
+          });
+        }
+        // Safe to use after validation
         timeCondition = `timestamp >= parseDateTimeBestEffort('${timeRange}')`;
       }
 

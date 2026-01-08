@@ -42,6 +42,16 @@ function parseTimeRange(timeRange: string): number {
 
 // Substitute template variables in text (Splunk-style)
 // Supports: {{field}}, {{result.field}}, {{result[0].field}}
+/**
+ * Escape shell metacharacters to prevent command injection
+ * This is critical for security when substituting user-controlled values into shell commands
+ */
+function escapeShellArg(arg: string): string {
+  // Remove or escape dangerous shell metacharacters
+  // This prevents command injection attacks like: ; rm -rf / or $(malicious)
+  return arg.replace(/[;&|`$(){}[\]\\!#*?<>~'"]/g, '');
+}
+
 function substituteVariables(
   text: string,
   results: Record<string, unknown>[],
@@ -50,31 +60,37 @@ function substituteVariables(
     alert_severity: string;
     result_count: number;
     timestamp: string;
-  }
+  },
+  sanitizeForShell: boolean = false
 ): string {
   if (!text) return text;
 
   // Get first result for default variable access
   const firstResult = results.length > 0 ? results[0] : {};
 
+  // Helper to optionally sanitize values for shell commands
+  const sanitize = (value: string): string => {
+    return sanitizeForShell ? escapeShellArg(value) : value;
+  };
+
   // Replace {{variable}} patterns
   return text.replace(/\{\{([^}]+)\}\}/g, (match, path) => {
     const trimmedPath = path.trim();
 
-    // Handle alert metadata variables
-    if (trimmedPath === 'alert_name') return alertMetadata.alert_name;
-    if (trimmedPath === 'alert_severity') return alertMetadata.alert_severity;
-    if (trimmedPath === 'result_count') return String(alertMetadata.result_count);
-    if (trimmedPath === 'timestamp') return alertMetadata.timestamp;
+    // Handle alert metadata variables (sanitize user-configurable ones)
+    if (trimmedPath === 'alert_name') return sanitize(alertMetadata.alert_name);
+    if (trimmedPath === 'alert_severity') return alertMetadata.alert_severity; // enum, safe
+    if (trimmedPath === 'result_count') return String(alertMetadata.result_count); // number, safe
+    if (trimmedPath === 'timestamp') return alertMetadata.timestamp; // ISO format, safe
 
-    // Handle result.field pattern
+    // Handle result.field pattern - ALWAYS sanitize as this is user-controlled log data
     if (trimmedPath.startsWith('result.')) {
       const field = trimmedPath.substring(7);
       const value = getNestedValue(firstResult, field);
-      return value !== undefined ? String(value) : match;
+      return value !== undefined ? sanitize(String(value)) : match;
     }
 
-    // Handle result[0].field pattern
+    // Handle result[0].field pattern - sanitize as this is user-controlled log data
     if (trimmedPath.startsWith('result[')) {
       const indexMatch = trimmedPath.match(/^result\[(\d+)\]\.(.+)$/);
       if (indexMatch) {
@@ -82,15 +98,15 @@ function substituteVariables(
         const field = indexMatch[2];
         if (index < results.length) {
           const value = getNestedValue(results[index], field);
-          return value !== undefined ? String(value) : match;
+          return value !== undefined ? sanitize(String(value)) : match;
         }
       }
       return match;
     }
 
-    // Direct field access from first result
+    // Direct field access from first result - sanitize as this is user-controlled log data
     const value = getNestedValue(firstResult, trimmedPath);
-    return value !== undefined ? String(value) : match;
+    return value !== undefined ? sanitize(String(value)) : match;
   });
 }
 
@@ -257,16 +273,32 @@ async function executeWebhookAction(
       });
     }
 
-    const response = await fetch(config.url, {
-      method,
-      headers,
-      body: method !== 'GET' ? payload : undefined,
-    });
+    // Add timeout to prevent hanging on slow webhooks
+    const WEBHOOK_TIMEOUT_MS = 30000; // 30 seconds
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), WEBHOOK_TIMEOUT_MS);
 
-    if (response.ok) {
-      return { success: true, message: `Webhook ${method} ${config.url} - ${response.status}` };
-    } else {
-      return { success: false, message: `Webhook failed: ${response.status} ${response.statusText}` };
+    try {
+      const response = await fetch(config.url, {
+        method,
+        headers,
+        body: method !== 'GET' ? payload : undefined,
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (response.ok) {
+        return { success: true, message: `Webhook ${method} ${config.url} - ${response.status}` };
+      } else {
+        return { success: false, message: `Webhook failed: ${response.status} ${response.statusText}` };
+      }
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      if (fetchError instanceof Error && fetchError.name === 'AbortError') {
+        return { success: false, message: `Webhook timed out after ${WEBHOOK_TIMEOUT_MS / 1000} seconds` };
+      }
+      throw fetchError;
     }
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
@@ -412,8 +444,9 @@ async function executeScriptAction(
       timestamp: new Date().toISOString(),
     };
 
-    // Substitute variables in command
-    const command = substituteVariables(config.command, sampleResults, alertMetadata);
+    // Substitute variables in command with shell sanitization enabled
+    // This is CRITICAL for security - prevents command injection via log content
+    const command = substituteVariables(config.command, sampleResults, alertMetadata, true);
 
     // Set up environment variables for the script
     const env = {
@@ -430,18 +463,38 @@ async function executeScriptAction(
     const child = spawn(command, [], {
       shell: true,
       env,
-      timeout: 30000, // 30 second timeout
     });
+
+    const SCRIPT_TIMEOUT_MS = 30000; // 30 second timeout
 
     return new Promise((resolve) => {
       let stdout = '';
       let stderr = '';
+      let killed = false;
+
+      // Manual timeout since spawn doesn't support timeout option
+      const timeoutId = setTimeout(() => {
+        killed = true;
+        child.kill('SIGTERM');
+        // Force kill if SIGTERM doesn't work after 5 seconds
+        setTimeout(() => {
+          if (!child.killed) {
+            child.kill('SIGKILL');
+          }
+        }, 5000);
+      }, SCRIPT_TIMEOUT_MS);
 
       child.stdout?.on('data', (data) => { stdout += data; });
       child.stderr?.on('data', (data) => { stderr += data; });
 
       child.on('close', (code) => {
-        if (code === 0) {
+        clearTimeout(timeoutId);
+        if (killed) {
+          resolve({
+            success: false,
+            message: `Script timed out after ${SCRIPT_TIMEOUT_MS / 1000} seconds`,
+          });
+        } else if (code === 0) {
           resolve({
             success: true,
             message: `Script executed successfully${stdout ? `: ${stdout.substring(0, 100)}` : ''}`,
@@ -455,6 +508,7 @@ async function executeScriptAction(
       });
 
       child.on('error', (err) => {
+        clearTimeout(timeoutId);
         resolve({ success: false, message: `Script error: ${err.message}` });
       });
     });

@@ -92,6 +92,11 @@ async function getEntityMetrics(
 ): Promise<BaselineMetric[]> {
   const entityField = getEntityField(entityType);
 
+  // Use parameterized queries to prevent SQL injection
+  // Note: lookbackDays is validated as a number and used in INTERVAL which doesn't support params
+  const validLookbackDays = Math.max(1, Math.min(365, Math.floor(lookbackDays)));
+  const params = { entityId };
+
   // Query depends on metric type
   let query: string;
 
@@ -102,8 +107,8 @@ async function getEntityMetrics(
           toStartOfHour(timestamp) as hour,
           count() as value
         FROM lognog.logs
-        WHERE ${entityField} = '${entityId}'
-          AND timestamp >= now() - INTERVAL ${lookbackDays} DAY
+        WHERE ${entityField} = {entityId:String}
+          AND timestamp >= now() - INTERVAL ${validLookbackDays} DAY
         GROUP BY hour
         ORDER BY hour
       `;
@@ -115,8 +120,8 @@ async function getEntityMetrics(
           toStartOfHour(timestamp) as hour,
           countIf(severity <= 3) as value
         FROM lognog.logs
-        WHERE ${entityField} = '${entityId}'
-          AND timestamp >= now() - INTERVAL ${lookbackDays} DAY
+        WHERE ${entityField} = {entityId:String}
+          AND timestamp >= now() - INTERVAL ${validLookbackDays} DAY
         GROUP BY hour
         ORDER BY hour
       `;
@@ -128,8 +133,8 @@ async function getEntityMetrics(
           toStartOfHour(timestamp) as hour,
           sum(toUInt64OrZero(JSONExtractString(structured_data, 'bytes'))) as value
         FROM lognog.logs
-        WHERE ${entityField} = '${entityId}'
-          AND timestamp >= now() - INTERVAL ${lookbackDays} DAY
+        WHERE ${entityField} = {entityId:String}
+          AND timestamp >= now() - INTERVAL ${validLookbackDays} DAY
         GROUP BY hour
         ORDER BY hour
       `;
@@ -141,8 +146,8 @@ async function getEntityMetrics(
           toStartOfHour(timestamp) as hour,
           uniq(source_ip) as value
         FROM lognog.logs
-        WHERE ${entityField} = '${entityId}'
-          AND timestamp >= now() - INTERVAL ${lookbackDays} DAY
+        WHERE ${entityField} = {entityId:String}
+          AND timestamp >= now() - INTERVAL ${validLookbackDays} DAY
         GROUP BY hour
         ORDER BY hour
       `;
@@ -155,14 +160,14 @@ async function getEntityMetrics(
           toStartOfHour(timestamp) as hour,
           count() as value
         FROM lognog.logs
-        WHERE ${entityField} = '${entityId}'
-          AND timestamp >= now() - INTERVAL ${lookbackDays} DAY
+        WHERE ${entityField} = {entityId:String}
+          AND timestamp >= now() - INTERVAL ${validLookbackDays} DAY
         GROUP BY hour
         ORDER BY hour
       `;
   }
 
-  const results = await executeQuery<{ hour: string; value: number }>(query);
+  const results = await executeQuery<{ hour: string; value: number }>(query, params);
 
   return results.map(r => ({
     timestamp: new Date(r.hour),
@@ -251,32 +256,46 @@ export async function calculateBaseline(
 
 /**
  * Store baselines in ClickHouse
+ * Uses parameterized queries to prevent SQL injection
  */
 export async function storeBaselines(baselines: EntityBaseline[]): Promise<void> {
   if (baselines.length === 0) return;
 
-  const values = baselines.map(b => `(
-    '${b.entityType}',
-    '${b.entityId}',
-    '${b.metricName}',
-    ${b.hourOfDay},
-    ${b.dayOfWeek},
-    ${b.avgValue},
-    ${b.stdDev},
-    ${b.minValue},
-    ${b.maxValue},
-    ${b.sampleCount},
-    now()
-  )`).join(',\n');
+  // Insert each baseline individually with parameterized query
+  // This is safer than batch insert with string interpolation
+  for (const b of baselines) {
+    const query = `
+      INSERT INTO lognog.entity_baselines
+      (entity_type, entity_id, metric_name, hour_of_day, day_of_week,
+       avg_value, std_dev, min_value, max_value, sample_count, last_updated)
+      VALUES (
+        {entityType:String},
+        {entityId:String},
+        {metricName:String},
+        {hourOfDay:UInt8},
+        {dayOfWeek:UInt8},
+        {avgValue:Float64},
+        {stdDev:Float64},
+        {minValue:Float64},
+        {maxValue:Float64},
+        {sampleCount:UInt32},
+        now()
+      )
+    `;
 
-  const query = `
-    INSERT INTO lognog.entity_baselines
-    (entity_type, entity_id, metric_name, hour_of_day, day_of_week,
-     avg_value, std_dev, min_value, max_value, sample_count, last_updated)
-    VALUES ${values}
-  `;
-
-  await executeQuery(query);
+    await executeQuery(query, {
+      entityType: b.entityType,
+      entityId: b.entityId,
+      metricName: b.metricName,
+      hourOfDay: b.hourOfDay,
+      dayOfWeek: b.dayOfWeek,
+      avgValue: b.avgValue,
+      stdDev: b.stdDev,
+      minValue: b.minValue,
+      maxValue: b.maxValue,
+      sampleCount: b.sampleCount,
+    });
+  }
 }
 
 /**
@@ -289,7 +308,28 @@ export async function getBaseline(
   hourOfDay?: number,
   dayOfWeek?: number
 ): Promise<EntityBaseline[]> {
-  let query = `
+  // Build parameterized query to prevent SQL injection
+  const conditions: string[] = [
+    'entity_type = {entityType:String}',
+    'entity_id = {entityId:String}',
+    'metric_name = {metricName:String}',
+  ];
+  const params: Record<string, unknown> = {
+    entityType,
+    entityId,
+    metricName,
+  };
+
+  if (hourOfDay !== undefined) {
+    conditions.push('hour_of_day = {hourOfDay:UInt8}');
+    params.hourOfDay = hourOfDay;
+  }
+  if (dayOfWeek !== undefined) {
+    conditions.push('day_of_week = {dayOfWeek:UInt8}');
+    params.dayOfWeek = dayOfWeek;
+  }
+
+  const query = `
     SELECT
       entity_type,
       entity_id,
@@ -303,19 +343,9 @@ export async function getBaseline(
       sample_count,
       last_updated
     FROM lognog.entity_baselines
-    WHERE entity_type = '${entityType}'
-      AND entity_id = '${entityId}'
-      AND metric_name = '${metricName}'
+    WHERE ${conditions.join(' AND ')}
+    ORDER BY hour_of_day, day_of_week
   `;
-
-  if (hourOfDay !== undefined) {
-    query += ` AND hour_of_day = ${hourOfDay}`;
-  }
-  if (dayOfWeek !== undefined) {
-    query += ` AND day_of_week = ${dayOfWeek}`;
-  }
-
-  query += ' ORDER BY hour_of_day, day_of_week';
 
   const results = await executeQuery<{
     entity_type: string;
@@ -329,7 +359,7 @@ export async function getBaseline(
     max_value: number;
     sample_count: number;
     last_updated: string;
-  }>(query);
+  }>(query, params);
 
   return results.map(r => ({
     entityType: r.entity_type as EntityType,
@@ -354,11 +384,13 @@ export async function discoverEntities(
   lookbackDays: number = 7
 ): Promise<string[]> {
   const entityField = getEntityField(entityType);
+  // Validate lookbackDays as a number to prevent injection
+  const validLookbackDays = Math.max(1, Math.min(365, Math.floor(lookbackDays)));
 
   const query = `
     SELECT DISTINCT ${entityField} as entity
     FROM lognog.logs
-    WHERE timestamp >= now() - INTERVAL ${lookbackDays} DAY
+    WHERE timestamp >= now() - INTERVAL ${validLookbackDays} DAY
       AND ${entityField} != ''
     ORDER BY entity
     LIMIT 1000

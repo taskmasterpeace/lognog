@@ -6,12 +6,12 @@
 
 import { Router, Request, Response } from 'express';
 import { getGeoIPService } from '../services/geoip.js';
-import { rateLimit } from '../auth/middleware.js';
+import { authenticate, requireAdmin, rateLimit } from '../auth/middleware.js';
 
 const router = Router();
 
-// Get GeoIP service status
-router.get('/status', async (_req: Request, res: Response) => {
+// Get GeoIP service status (requires authentication)
+router.get('/status', authenticate, async (_req: Request, res: Response) => {
   try {
     const service = await getGeoIPService();
     const status = service.getStatus();
@@ -22,8 +22,8 @@ router.get('/status', async (_req: Request, res: Response) => {
   }
 });
 
-// Lookup single IP address
-router.get('/lookup/:ip', async (req: Request, res: Response) => {
+// Lookup single IP address (requires authentication)
+router.get('/lookup/:ip', authenticate, async (req: Request, res: Response) => {
   try {
     const { ip } = req.params;
 
@@ -58,8 +58,8 @@ router.get('/lookup/:ip', async (req: Request, res: Response) => {
   }
 });
 
-// Batch lookup multiple IPs (rate limited: 30/min - database intensive)
-router.post('/lookup', rateLimit(30, 60000), async (req: Request, res: Response) => {
+// Batch lookup multiple IPs (requires auth, rate limited: 30/min - database intensive)
+router.post('/lookup', authenticate, rateLimit(30, 60000), async (req: Request, res: Response) => {
   try {
     const { ips } = req.body;
 
@@ -112,8 +112,8 @@ router.post('/lookup', rateLimit(30, 60000), async (req: Request, res: Response)
   }
 });
 
-// Get cache statistics
-router.get('/cache/stats', async (_req: Request, res: Response) => {
+// Get cache statistics (requires admin)
+router.get('/cache/stats', authenticate, requireAdmin, async (_req: Request, res: Response) => {
   try {
     const service = await getGeoIPService();
     const stats = service.getCacheStats();
@@ -124,8 +124,8 @@ router.get('/cache/stats', async (_req: Request, res: Response) => {
   }
 });
 
-// Clear cache
-router.post('/cache/clear', async (_req: Request, res: Response) => {
+// Clear cache (requires admin - destructive operation)
+router.post('/cache/clear', authenticate, requireAdmin, async (_req: Request, res: Response) => {
   try {
     const service = await getGeoIPService();
     service.clearCache();
