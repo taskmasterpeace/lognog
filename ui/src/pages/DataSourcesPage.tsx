@@ -24,9 +24,13 @@ import {
   Lightbulb,
   Terminal,
   Layers,
+  VolumeX,
+  Volume2,
 } from 'lucide-react';
 import { getTemplatesByCategory, getTemplateStats, getActiveSources, SourceTemplate } from '../api/client';
 import AddDataSourceWizard from '../components/AddDataSourceWizard';
+import SourceConfigList from '../components/source-config/SourceConfigList';
+import { useMute } from '../contexts/MuteContext';
 
 type TabId = 'active' | 'templates' | 'config';
 
@@ -80,6 +84,7 @@ function formatRelativeTime(dateStr: string): string {
 
 export default function DataSourcesPage() {
   const navigate = useNavigate();
+  const { isMuted, toggleMute } = useMute();
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState<TabId>(() => {
     const tab = searchParams.get('tab');
@@ -307,23 +312,49 @@ export default function DataSourcesPage() {
             {/* Index Summary Cards */}
             {activeSources && activeSources.by_index.length > 0 && (
               <div className="flex flex-wrap gap-3 mb-6">
-                {activeSources.by_index.map((idx) => (
-                  <button
-                    key={idx.index_name}
-                    onClick={() => navigate(`/search?q=${encodeURIComponent(`search index=${idx.index_name}`)}`)}
-                    className="px-4 py-2 bg-white dark:bg-nog-800 rounded-lg border border-slate-200 dark:border-slate-700 hover:border-amber-300 dark:hover:border-amber-600 transition-colors flex items-center gap-3"
-                  >
-                    <div className="text-sm font-medium text-slate-900 dark:text-slate-100">
-                      {idx.index_name || 'main'}
+                {activeSources.by_index.map((idx) => {
+                  const indexName = idx.index_name || 'main';
+                  const muted = isMuted('index_name', indexName);
+                  return (
+                    <div
+                      key={idx.index_name}
+                      className={`px-4 py-2 bg-white dark:bg-nog-800 rounded-lg border transition-colors flex items-center gap-3 ${
+                        muted
+                          ? 'border-orange-300 dark:border-orange-700 opacity-60'
+                          : 'border-slate-200 dark:border-slate-700 hover:border-amber-300 dark:hover:border-amber-600'
+                      }`}
+                    >
+                      <button
+                        onClick={() => navigate(`/search?q=${encodeURIComponent(`search index=${indexName}`)}`)}
+                        className="flex items-center gap-3"
+                      >
+                        <div className={`text-sm font-medium ${muted ? 'line-through text-slate-500' : 'text-slate-900 dark:text-slate-100'}`}>
+                          {indexName}
+                        </div>
+                        <div className="text-xs text-slate-500 dark:text-slate-400">
+                          {idx.count.toLocaleString()} logs
+                        </div>
+                        <div className="text-xs text-slate-400">
+                          {idx.sources} sources
+                        </div>
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleMute('index_name', indexName);
+                        }}
+                        className={`p-1 rounded transition-colors ${
+                          muted
+                            ? 'text-orange-500 hover:bg-orange-100 dark:hover:bg-orange-900/30'
+                            : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-nog-100 dark:hover:bg-slate-600'
+                        }`}
+                        title={muted ? 'Unmute index' : 'Mute index (hide from search)'}
+                      >
+                        {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
+                      </button>
                     </div>
-                    <div className="text-xs text-slate-500 dark:text-slate-400">
-                      {idx.count.toLocaleString()} logs
-                    </div>
-                    <div className="text-xs text-slate-400">
-                      {idx.sources} sources
-                    </div>
-                  </button>
-                ))}
+                  );
+                })}
               </div>
             )}
 
@@ -416,19 +447,45 @@ export default function DataSourcesPage() {
                             </div>
                           </td>
                           <td className="px-4 py-3">
-                            <button
-                              onClick={() =>
-                                navigate(
-                                  `/search?q=${encodeURIComponent(
-                                    `search index=${source.index_name || 'main'} app_name="${source.app_name}"`
-                                  )}`
-                                )
-                              }
-                              className="p-1.5 hover:bg-nog-100 dark:hover:bg-slate-600 rounded transition-colors"
-                              title="View logs"
-                            >
-                              <ExternalLink className="w-4 h-4 text-slate-400 hover:text-amber-500" />
-                            </button>
+                            <div className="flex items-center gap-1">
+                              {/* Mute button */}
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleMute('index_name', source.index_name || 'main');
+                                }}
+                                className={`p-1.5 rounded transition-colors ${
+                                  isMuted('index_name', source.index_name || 'main')
+                                    ? 'text-orange-500 hover:bg-orange-100 dark:hover:bg-orange-900/30'
+                                    : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-nog-100 dark:hover:bg-slate-600'
+                                }`}
+                                title={
+                                  isMuted('index_name', source.index_name || 'main')
+                                    ? 'Unmute (show in search results)'
+                                    : 'Mute (hide from search results)'
+                                }
+                              >
+                                {isMuted('index_name', source.index_name || 'main') ? (
+                                  <VolumeX className="w-4 h-4" />
+                                ) : (
+                                  <Volume2 className="w-4 h-4" />
+                                )}
+                              </button>
+                              {/* View logs button */}
+                              <button
+                                onClick={() =>
+                                  navigate(
+                                    `/search?q=${encodeURIComponent(
+                                      `search index=${source.index_name || 'main'} app_name="${source.app_name}"`
+                                    )}`
+                                  )
+                                }
+                                className="p-1.5 hover:bg-nog-100 dark:hover:bg-slate-600 rounded transition-colors"
+                                title="View logs"
+                              >
+                                <ExternalLink className="w-4 h-4 text-slate-400 hover:text-amber-500" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -645,21 +702,9 @@ export default function DataSourcesPage() {
           </div>
         )}
 
-        {/* Source Config Tab (Placeholder) */}
+        {/* Source Config Tab */}
         {activeTab === 'config' && (
-          <div className="bg-white dark:bg-nog-800 rounded-xl p-12 text-center border border-slate-200 dark:border-slate-700">
-            <Settings className="w-16 h-16 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">
-              Source Configuration
-            </h3>
-            <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md mx-auto mb-6">
-              Create custom source definitions, configure index routing, set app_name overrides, and manage field extractions per source.
-            </p>
-            <div className="inline-flex items-center gap-2 px-4 py-2 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 rounded-lg text-sm">
-              <AlertCircle className="w-4 h-4" />
-              Coming soon
-            </div>
-          </div>
+          <SourceConfigList />
         )}
       </div>
 

@@ -2288,3 +2288,211 @@ export interface FullMessageResponse {
 export async function getFullMessage(logId: string): Promise<FullMessageResponse> {
   return request(`/search/logs/${encodeURIComponent(logId)}/full-message`);
 }
+
+// ============ Source Configs API ============
+
+export interface SourceConfig {
+  id: string;
+  name: string;
+  description?: string;
+  hostname_pattern?: string;
+  app_name_pattern?: string;
+  source_type?: string;
+  priority: number;
+  template_id?: string;
+  target_index?: string;
+  parsing_mode: string;
+  time_format?: string;
+  time_field?: string;
+  enabled: number;
+  match_count: number;
+  extraction_count?: number;
+  transform_count?: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SourceConfigExtraction {
+  id: string;
+  source_config_id: string;
+  field_name: string;
+  pattern: string;
+  pattern_type: string;
+  priority: number;
+  enabled: number;
+}
+
+export interface SourceConfigTransform {
+  id: string;
+  source_config_id: string;
+  transform_type: string;
+  source_field?: string;
+  target_field: string;
+  config?: string;
+  priority: number;
+  enabled: number;
+}
+
+export interface SourceRoutingRule {
+  id: string;
+  name: string;
+  conditions: string;
+  match_mode: string;
+  target_index: string;
+  priority: number;
+  enabled: number;
+  match_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SourceConfigWithDetails extends SourceConfig {
+  extractions: SourceConfigExtraction[];
+  transforms: SourceConfigTransform[];
+}
+
+export async function getSourceConfigs(enabled?: boolean): Promise<SourceConfig[]> {
+  const params = enabled !== undefined ? `?enabled=${enabled}` : '';
+  return request(`/source-configs${params}`);
+}
+
+export async function getSourceConfig(id: string): Promise<SourceConfigWithDetails> {
+  return request(`/source-configs/${id}`);
+}
+
+export async function createSourceConfig(data: Partial<SourceConfig>): Promise<SourceConfig> {
+  return request('/source-configs', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateSourceConfig(id: string, data: Partial<SourceConfig>): Promise<SourceConfig> {
+  return request(`/source-configs/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteSourceConfig(id: string): Promise<void> {
+  return request(`/source-configs/${id}`, { method: 'DELETE' });
+}
+
+export interface TestSourceConfigResult {
+  config_matches: boolean;
+  hostname_match: boolean | null;
+  target_index?: string;
+  parsing_mode: string;
+  extractions: Array<{
+    field_name: string;
+    pattern: string;
+    matched: boolean;
+    value?: string;
+  }>;
+  transform_count: number;
+}
+
+export async function testSourceConfig(id: string, sampleLog: string): Promise<TestSourceConfigResult> {
+  return request(`/source-configs/${id}/test`, {
+    method: 'POST',
+    body: JSON.stringify({ sample_log: sampleLog }),
+  });
+}
+
+// Extractions
+export async function getSourceConfigExtractions(configId: string): Promise<SourceConfigExtraction[]> {
+  return request(`/source-configs/${configId}/extractions`);
+}
+
+export async function createSourceConfigExtraction(configId: string, data: Partial<SourceConfigExtraction>): Promise<SourceConfigExtraction> {
+  return request(`/source-configs/${configId}/extractions`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateSourceConfigExtraction(configId: string, extractionId: string, data: Partial<SourceConfigExtraction>): Promise<SourceConfigExtraction> {
+  return request(`/source-configs/${configId}/extractions/${extractionId}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteSourceConfigExtraction(configId: string, extractionId: string): Promise<void> {
+  return request(`/source-configs/${configId}/extractions/${extractionId}`, { method: 'DELETE' });
+}
+
+// Transforms
+export async function getSourceConfigTransforms(configId: string): Promise<SourceConfigTransform[]> {
+  return request(`/source-configs/${configId}/transforms`);
+}
+
+export async function createSourceConfigTransform(configId: string, data: Partial<SourceConfigTransform>): Promise<SourceConfigTransform> {
+  return request(`/source-configs/${configId}/transforms`, {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateSourceConfigTransform(configId: string, transformId: string, data: Partial<SourceConfigTransform>): Promise<SourceConfigTransform> {
+  return request(`/source-configs/${configId}/transforms/${transformId}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteSourceConfigTransform(configId: string, transformId: string): Promise<void> {
+  return request(`/source-configs/${configId}/transforms/${transformId}`, { method: 'DELETE' });
+}
+
+// ============ Routing Rules API ============
+
+export async function getRoutingRules(enabled?: boolean): Promise<SourceRoutingRule[]> {
+  const params = enabled !== undefined ? `?enabled=${enabled}` : '';
+  return request(`/routing-rules${params}`);
+}
+
+export async function getRoutingRule(id: string): Promise<SourceRoutingRule> {
+  return request(`/routing-rules/${id}`);
+}
+
+export async function createRoutingRule(data: Partial<SourceRoutingRule>): Promise<SourceRoutingRule> {
+  return request('/routing-rules', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function updateRoutingRule(id: string, data: Partial<SourceRoutingRule>): Promise<SourceRoutingRule> {
+  return request(`/routing-rules/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+export async function deleteRoutingRule(id: string): Promise<void> {
+  return request(`/routing-rules/${id}`, { method: 'DELETE' });
+}
+
+export interface EvaluateRoutingResult {
+  matched_rules: Array<{
+    rule_id: string;
+    rule_name: string;
+    target_index: string;
+    priority: number;
+    matched_conditions: string[];
+  }>;
+  target_index: string | null;
+}
+
+export async function evaluateRoutingRules(data: {
+  sample_log?: string;
+  hostname?: string;
+  app_name?: string;
+  source_type?: string;
+}): Promise<EvaluateRoutingResult> {
+  return request('/routing-rules/evaluate', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}

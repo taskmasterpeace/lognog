@@ -13,9 +13,11 @@ import {
   Copy,
   Wand2,
   Filter,
+  Upload,
 } from 'lucide-react';
-import { getDashboards, createDashboard, deleteDashboard, duplicateDashboard, Dashboard } from '../api/client';
+import { getDashboards, createDashboard, deleteDashboard, duplicateDashboard, importDashboard, Dashboard, DashboardExport } from '../api/client';
 import DashboardBuilderWizard from '../components/DashboardBuilderWizard';
+import DashboardImportModal from '../components/dashboard/DashboardImportModal';
 import AppScopeFilter from '../components/AppScopeFilter';
 import { useDateFormat } from '../contexts/DateFormatContext';
 
@@ -54,6 +56,7 @@ export default function DashboardsPage() {
   const [newDashboardDescription, setNewDashboardDescription] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [appScope, setAppScope] = useState<string>('all');
+  const [showImportModal, setShowImportModal] = useState(false);
 
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -85,6 +88,16 @@ export default function DashboardsPage() {
     mutationFn: duplicateDashboard,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dashboards'] });
+    },
+  });
+
+  const importMutation = useMutation({
+    mutationFn: ({ template, name }: { template: DashboardExport; name?: string }) =>
+      importDashboard(template, name),
+    onSuccess: (dashboard) => {
+      queryClient.invalidateQueries({ queryKey: ['dashboards'] });
+      setShowImportModal(false);
+      navigate(`/dashboards/${dashboard.id}`);
     },
   });
 
@@ -143,6 +156,13 @@ export default function DashboardsPage() {
               >
                 <Plus className="w-5 h-5" />
                 <span className="hidden sm:inline">Blank</span>
+              </button>
+              <button
+                onClick={() => setShowImportModal(true)}
+                className="btn-secondary flex-1 sm:flex-initial justify-center"
+              >
+                <Upload className="w-5 h-5" />
+                <span className="hidden sm:inline">Import</span>
               </button>
             </div>
           </div>
@@ -362,6 +382,15 @@ export default function DashboardsPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Import Modal */}
+      {showImportModal && (
+        <DashboardImportModal
+          onImport={(template, name) => importMutation.mutate({ template, name })}
+          onCancel={() => setShowImportModal(false)}
+          importing={importMutation.isPending}
+        />
       )}
 
       {/* Dashboard Builder Wizard */}

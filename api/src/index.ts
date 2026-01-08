@@ -34,6 +34,8 @@ import savedSearchesRouter from './routes/saved-searches.js';
 import sourceAnnotationsRouter from './routes/source-annotations.js';
 import retentionRouter from './routes/retention.js';
 import dslRouter from './routes/dsl.js';
+import sourceConfigsRouter from './routes/source-configs.js';
+import routingRulesRouter from './routes/routing-rules.js';
 import { healthCheck as clickhouseHealth, executeQuery, closeConnection } from './db/clickhouse.js';
 import { closeDatabase } from './db/sqlite.js';
 import { startScheduler } from './services/scheduler.js';
@@ -110,6 +112,8 @@ app.use('/saved-searches', savedSearchesRouter);
 app.use('/source-annotations', sourceAnnotationsRouter);
 app.use('/retention', retentionRouter);
 app.use('/dsl', dslRouter);
+app.use('/source-configs', sourceConfigsRouter);
+app.use('/routing-rules', routingRulesRouter);
 
 // WebSocket endpoint for live tail
 const liveTailClients: Set<WebSocket> = new Set();

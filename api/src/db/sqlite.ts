@@ -218,6 +218,65 @@ function initializeSchema(): void {
       updated_at TEXT DEFAULT (datetime('now'))
     );
 
+    -- Source Configurations (Splunk-style source routing and parsing)
+    CREATE TABLE IF NOT EXISTS source_configs (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      description TEXT,
+      hostname_pattern TEXT,
+      app_name_pattern TEXT,
+      source_type TEXT,
+      priority INTEGER DEFAULT 100,
+      template_id TEXT,
+      target_index TEXT,
+      parsing_mode TEXT DEFAULT 'auto',
+      time_format TEXT,
+      time_field TEXT,
+      enabled INTEGER DEFAULT 1,
+      match_count INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+
+    -- Source Config Field Extractions
+    CREATE TABLE IF NOT EXISTS source_config_extractions (
+      id TEXT PRIMARY KEY,
+      source_config_id TEXT NOT NULL,
+      field_name TEXT NOT NULL,
+      pattern TEXT NOT NULL,
+      pattern_type TEXT DEFAULT 'regex',
+      priority INTEGER DEFAULT 100,
+      enabled INTEGER DEFAULT 1,
+      FOREIGN KEY (source_config_id) REFERENCES source_configs(id) ON DELETE CASCADE
+    );
+
+    -- Source Config Field Transforms
+    CREATE TABLE IF NOT EXISTS source_config_transforms (
+      id TEXT PRIMARY KEY,
+      source_config_id TEXT NOT NULL,
+      transform_type TEXT NOT NULL,
+      source_field TEXT,
+      target_field TEXT NOT NULL,
+      config TEXT,
+      priority INTEGER DEFAULT 100,
+      enabled INTEGER DEFAULT 1,
+      FOREIGN KEY (source_config_id) REFERENCES source_configs(id) ON DELETE CASCADE
+    );
+
+    -- Source Routing Rules (index routing)
+    CREATE TABLE IF NOT EXISTS source_routing_rules (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      conditions TEXT NOT NULL,
+      match_mode TEXT DEFAULT 'all',
+      target_index TEXT NOT NULL,
+      priority INTEGER DEFAULT 100,
+      enabled INTEGER DEFAULT 1,
+      match_count INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+
     -- Alert silences (3-level silencing: global, host, alert)
     CREATE TABLE IF NOT EXISTS alert_silences (
       id TEXT PRIMARY KEY,
@@ -5406,4 +5465,317 @@ export function deleteSourceAnnotation(id: string): boolean {
   const database = getSQLiteDB();
   const result = database.prepare('DELETE FROM source_annotations WHERE id = ?').run(id);
   return result.changes > 0;
+}
+
+// ============================================================================
+// Source Configs CRUD
+// ============================================================================
+
+export interface SourceConfig {
+  id: string;
+  name: string;
+  description?: string;
+  hostname_pattern?: string;
+  app_name_pattern?: string;
+  source_type?: string;
+  priority: number;
+  template_id?: string;
+  target_index?: string;
+  parsing_mode: string;
+  time_format?: string;
+  time_field?: string;
+  enabled: number;
+  match_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SourceConfigExtraction {
+  id: string;
+  source_config_id: string;
+  field_name: string;
+  pattern: string;
+  pattern_type: string;
+  priority: number;
+  enabled: number;
+}
+
+export interface SourceConfigTransform {
+  id: string;
+  source_config_id: string;
+  transform_type: string;
+  source_field?: string;
+  target_field: string;
+  config?: string;
+  priority: number;
+  enabled: number;
+}
+
+export interface SourceRoutingRule {
+  id: string;
+  name: string;
+  conditions: string;
+  match_mode: string;
+  target_index: string;
+  priority: number;
+  enabled: number;
+  match_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+// Get all source configs
+export function getSourceConfigs(enabled?: boolean): SourceConfig[] {
+  const database = getSQLiteDB();
+  if (enabled !== undefined) {
+    return database.prepare('SELECT * FROM source_configs WHERE enabled = ? ORDER BY priority ASC').all(enabled ? 1 : 0) as SourceConfig[];
+  }
+  return database.prepare('SELECT * FROM source_configs ORDER BY priority ASC').all() as SourceConfig[];
+}
+
+// Get single source config
+export function getSourceConfig(id: string): SourceConfig | undefined {
+  const database = getSQLiteDB();
+  return database.prepare('SELECT * FROM source_configs WHERE id = ?').get(id) as SourceConfig | undefined;
+}
+
+// Create source config
+export function createSourceConfig(data: Omit<SourceConfig, 'id' | 'match_count' | 'created_at' | 'updated_at'>): SourceConfig {
+  const database = getSQLiteDB();
+  const id = crypto.randomUUID();
+
+  database.prepare(`
+    INSERT INTO source_configs (id, name, description, hostname_pattern, app_name_pattern, source_type, priority, template_id, target_index, parsing_mode, time_format, time_field, enabled)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    id,
+    data.name,
+    data.description || null,
+    data.hostname_pattern || null,
+    data.app_name_pattern || null,
+    data.source_type || null,
+    data.priority ?? 100,
+    data.template_id || null,
+    data.target_index || null,
+    data.parsing_mode || 'auto',
+    data.time_format || null,
+    data.time_field || null,
+    data.enabled ?? 1
+  );
+
+  return getSourceConfig(id)!;
+}
+
+// Update source config
+export function updateSourceConfig(id: string, data: Partial<Omit<SourceConfig, 'id' | 'created_at' | 'updated_at'>>): SourceConfig | undefined {
+  const database = getSQLiteDB();
+  const fields: string[] = [];
+  const values: (string | number | null)[] = [];
+
+  const allowedFields = ['name', 'description', 'hostname_pattern', 'app_name_pattern', 'source_type', 'priority', 'template_id', 'target_index', 'parsing_mode', 'time_format', 'time_field', 'enabled', 'match_count'];
+
+  for (const [key, value] of Object.entries(data)) {
+    if (allowedFields.includes(key) && value !== undefined) {
+      fields.push(`${key} = ?`);
+      values.push(value as string | number | null);
+    }
+  }
+
+  if (fields.length === 0) {
+    return getSourceConfig(id);
+  }
+
+  fields.push("updated_at = datetime('now')");
+  values.push(id);
+
+  database.prepare(`UPDATE source_configs SET ${fields.join(', ')} WHERE id = ?`).run(...values);
+  return getSourceConfig(id);
+}
+
+// Delete source config (cascades to extractions and transforms)
+export function deleteSourceConfig(id: string): boolean {
+  const database = getSQLiteDB();
+  const result = database.prepare('DELETE FROM source_configs WHERE id = ?').run(id);
+  return result.changes > 0;
+}
+
+// Increment match count
+export function incrementSourceConfigMatchCount(id: string): void {
+  const database = getSQLiteDB();
+  database.prepare('UPDATE source_configs SET match_count = match_count + 1 WHERE id = ?').run(id);
+}
+
+// ============================================================================
+// Source Config Extractions CRUD
+// ============================================================================
+
+export function getSourceConfigExtractions(sourceConfigId: string): SourceConfigExtraction[] {
+  const database = getSQLiteDB();
+  return database.prepare('SELECT * FROM source_config_extractions WHERE source_config_id = ? ORDER BY priority ASC').all(sourceConfigId) as SourceConfigExtraction[];
+}
+
+export function getSourceConfigExtraction(id: string): SourceConfigExtraction | undefined {
+  const database = getSQLiteDB();
+  return database.prepare('SELECT * FROM source_config_extractions WHERE id = ?').get(id) as SourceConfigExtraction | undefined;
+}
+
+export function createSourceConfigExtraction(data: Omit<SourceConfigExtraction, 'id'>): SourceConfigExtraction {
+  const database = getSQLiteDB();
+  const id = crypto.randomUUID();
+
+  database.prepare(`
+    INSERT INTO source_config_extractions (id, source_config_id, field_name, pattern, pattern_type, priority, enabled)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(id, data.source_config_id, data.field_name, data.pattern, data.pattern_type || 'regex', data.priority ?? 100, data.enabled ?? 1);
+
+  return getSourceConfigExtraction(id)!;
+}
+
+export function updateSourceConfigExtraction(id: string, data: Partial<Omit<SourceConfigExtraction, 'id' | 'source_config_id'>>): SourceConfigExtraction | undefined {
+  const database = getSQLiteDB();
+  const fields: string[] = [];
+  const values: (string | number | null)[] = [];
+
+  const allowedFields = ['field_name', 'pattern', 'pattern_type', 'priority', 'enabled'];
+
+  for (const [key, value] of Object.entries(data)) {
+    if (allowedFields.includes(key) && value !== undefined) {
+      fields.push(`${key} = ?`);
+      values.push(value as string | number | null);
+    }
+  }
+
+  if (fields.length === 0) {
+    return getSourceConfigExtraction(id);
+  }
+
+  values.push(id);
+  database.prepare(`UPDATE source_config_extractions SET ${fields.join(', ')} WHERE id = ?`).run(...values);
+  return getSourceConfigExtraction(id);
+}
+
+export function deleteSourceConfigExtraction(id: string): boolean {
+  const database = getSQLiteDB();
+  const result = database.prepare('DELETE FROM source_config_extractions WHERE id = ?').run(id);
+  return result.changes > 0;
+}
+
+// ============================================================================
+// Source Config Transforms CRUD
+// ============================================================================
+
+export function getSourceConfigTransforms(sourceConfigId: string): SourceConfigTransform[] {
+  const database = getSQLiteDB();
+  return database.prepare('SELECT * FROM source_config_transforms WHERE source_config_id = ? ORDER BY priority ASC').all(sourceConfigId) as SourceConfigTransform[];
+}
+
+export function getSourceConfigTransform(id: string): SourceConfigTransform | undefined {
+  const database = getSQLiteDB();
+  return database.prepare('SELECT * FROM source_config_transforms WHERE id = ?').get(id) as SourceConfigTransform | undefined;
+}
+
+export function createSourceConfigTransform(data: Omit<SourceConfigTransform, 'id'>): SourceConfigTransform {
+  const database = getSQLiteDB();
+  const id = crypto.randomUUID();
+
+  database.prepare(`
+    INSERT INTO source_config_transforms (id, source_config_id, transform_type, source_field, target_field, config, priority, enabled)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(id, data.source_config_id, data.transform_type, data.source_field || null, data.target_field, data.config || null, data.priority ?? 100, data.enabled ?? 1);
+
+  return getSourceConfigTransform(id)!;
+}
+
+export function updateSourceConfigTransform(id: string, data: Partial<Omit<SourceConfigTransform, 'id' | 'source_config_id'>>): SourceConfigTransform | undefined {
+  const database = getSQLiteDB();
+  const fields: string[] = [];
+  const values: (string | number | null)[] = [];
+
+  const allowedFields = ['transform_type', 'source_field', 'target_field', 'config', 'priority', 'enabled'];
+
+  for (const [key, value] of Object.entries(data)) {
+    if (allowedFields.includes(key) && value !== undefined) {
+      fields.push(`${key} = ?`);
+      values.push(value as string | number | null);
+    }
+  }
+
+  if (fields.length === 0) {
+    return getSourceConfigTransform(id);
+  }
+
+  values.push(id);
+  database.prepare(`UPDATE source_config_transforms SET ${fields.join(', ')} WHERE id = ?`).run(...values);
+  return getSourceConfigTransform(id);
+}
+
+export function deleteSourceConfigTransform(id: string): boolean {
+  const database = getSQLiteDB();
+  const result = database.prepare('DELETE FROM source_config_transforms WHERE id = ?').run(id);
+  return result.changes > 0;
+}
+
+// ============================================================================
+// Source Routing Rules CRUD
+// ============================================================================
+
+export function getSourceRoutingRules(enabled?: boolean): SourceRoutingRule[] {
+  const database = getSQLiteDB();
+  if (enabled !== undefined) {
+    return database.prepare('SELECT * FROM source_routing_rules WHERE enabled = ? ORDER BY priority ASC').all(enabled ? 1 : 0) as SourceRoutingRule[];
+  }
+  return database.prepare('SELECT * FROM source_routing_rules ORDER BY priority ASC').all() as SourceRoutingRule[];
+}
+
+export function getSourceRoutingRule(id: string): SourceRoutingRule | undefined {
+  const database = getSQLiteDB();
+  return database.prepare('SELECT * FROM source_routing_rules WHERE id = ?').get(id) as SourceRoutingRule | undefined;
+}
+
+export function createSourceRoutingRule(data: Omit<SourceRoutingRule, 'id' | 'match_count' | 'created_at' | 'updated_at'>): SourceRoutingRule {
+  const database = getSQLiteDB();
+  const id = crypto.randomUUID();
+
+  database.prepare(`
+    INSERT INTO source_routing_rules (id, name, conditions, match_mode, target_index, priority, enabled)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(id, data.name, data.conditions, data.match_mode || 'all', data.target_index, data.priority ?? 100, data.enabled ?? 1);
+
+  return getSourceRoutingRule(id)!;
+}
+
+export function updateSourceRoutingRule(id: string, data: Partial<Omit<SourceRoutingRule, 'id' | 'created_at' | 'updated_at'>>): SourceRoutingRule | undefined {
+  const database = getSQLiteDB();
+  const fields: string[] = [];
+  const values: (string | number | null)[] = [];
+
+  const allowedFields = ['name', 'conditions', 'match_mode', 'target_index', 'priority', 'enabled', 'match_count'];
+
+  for (const [key, value] of Object.entries(data)) {
+    if (allowedFields.includes(key) && value !== undefined) {
+      fields.push(`${key} = ?`);
+      values.push(value as string | number | null);
+    }
+  }
+
+  if (fields.length === 0) {
+    return getSourceRoutingRule(id);
+  }
+
+  fields.push("updated_at = datetime('now')");
+  values.push(id);
+
+  database.prepare(`UPDATE source_routing_rules SET ${fields.join(', ')} WHERE id = ?`).run(...values);
+  return getSourceRoutingRule(id);
+}
+
+export function deleteSourceRoutingRule(id: string): boolean {
+  const database = getSQLiteDB();
+  const result = database.prepare('DELETE FROM source_routing_rules WHERE id = ?').run(id);
+  return result.changes > 0;
+}
+
+export function incrementRoutingRuleMatchCount(id: string): void {
+  const database = getSQLiteDB();
+  database.prepare('UPDATE source_routing_rules SET match_count = match_count + 1 WHERE id = ?').run(id);
 }
