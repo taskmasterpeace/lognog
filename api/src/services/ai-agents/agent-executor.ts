@@ -12,16 +12,27 @@ import {
   createAgentConversation,
   addAgentMessage,
   updateConversationTitle,
+  getSystemSetting,
   type AgentConversation,
   type AgentMessage,
 } from '../../db/sqlite.js';
 
-// Configuration
-const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
-const OLLAMA_MODEL = process.env.OLLAMA_AGENT_MODEL || process.env.OLLAMA_MODEL || 'llama3.2';
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+// Dynamic configuration getters - read from database first, then env, then defaults
+function getOllamaUrl(): string {
+  return getSystemSetting('ai_ollama_url') || process.env.OLLAMA_URL || 'http://localhost:11434';
+}
+function getOllamaAgentModel(): string {
+  return getSystemSetting('ai_ollama_agent_model') || process.env.OLLAMA_AGENT_MODEL || getSystemSetting('ai_ollama_model') || process.env.OLLAMA_MODEL || 'llama3.2';
+}
+function getOpenRouterApiKey(): string | undefined {
+  return getSystemSetting('ai_openrouter_api_key') || process.env.OPENROUTER_API_KEY || undefined;
+}
+function getOpenRouterModel(): string {
+  return getSystemSetting('ai_openrouter_model') || process.env.OPENROUTER_MODEL || 'anthropic/claude-3.5-sonnet';
+}
+
+// OpenRouter API endpoint (constant)
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || 'anthropic/claude-3.5-sonnet';
 
 const MAX_TOOL_ITERATIONS = 10;
 
@@ -55,7 +66,7 @@ export interface AgentResponse {
 // Check if Ollama is available
 async function isOllamaAvailable(): Promise<boolean> {
   try {
-    const response = await fetch(`${OLLAMA_URL}/api/tags`, {
+    const response = await fetch(`${getOllamaUrl()}/api/tags`, {
       method: 'GET',
       signal: AbortSignal.timeout(2000),
     });
@@ -77,7 +88,7 @@ async function callOpenRouter(
     function: { name: string; arguments: string };
   }>;
 }> {
-  if (!OPENROUTER_API_KEY) {
+  if (!getOpenRouterApiKey()) {
     throw new Error('OpenRouter API key not configured');
   }
 
@@ -85,12 +96,12 @@ async function callOpenRouter(
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+      'Authorization': `Bearer ${getOpenRouterApiKey()}`,
       'HTTP-Referer': 'https://lognog.local',
       'X-Title': 'LogNog AI Agent',
     },
     body: JSON.stringify({
-      model: OPENROUTER_MODEL,
+      model: getOpenRouterModel(),
       messages,
       tools,
       tool_choice: 'auto',
@@ -167,11 +178,11 @@ If you don't need to use any tools, just respond normally with your analysis or 
     })),
   ];
 
-  const response = await fetch(`${OLLAMA_URL}/api/chat`, {
+  const response = await fetch(`${getOllamaUrl()}/api/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: OLLAMA_MODEL,
+      model: getOllamaAgentModel(),
       messages: ollamaMessages,
       stream: false,
     }),

@@ -42,10 +42,10 @@ const SEVERITY_NAMES = ['Emergency', 'Alert', 'Critical', 'Error', 'Warning', 'N
 
 const EXAMPLE_QUERIES = [
   { name: 'All Logs', query: 'search *', desc: 'Show all recent logs' },
+  { name: 'User Logs', query: 'search index_name!=lognog-internal', desc: 'Exclude LogNog internal logs' },
   { name: 'Errors Only', query: 'search severity<=3', desc: 'Emergency, Alert, Critical, Error' },
   { name: 'By Host', query: 'search host=myserver', desc: 'Filter by hostname' },
   { name: 'Count by Host', query: 'search * | stats count by hostname', desc: 'Aggregate logs per host' },
-  { name: 'Top Apps', query: 'search * | stats count by app_name | sort desc count | limit 10', desc: 'Most active applications' },
 ];
 
 export default function SearchPage() {

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { ChevronDown, ChevronRight, Pin, Search, Loader2, VolumeX, Volume2 } from 'lucide-react';
-import { discoverFields, getFieldPreferences, pinField, DiscoveredField } from '../api/client';
+import { ChevronDown, ChevronRight, Pin, Search, Loader2, VolumeX, Volume2, Database } from 'lucide-react';
+import { discoverFields, getFieldPreferences, pinField, getFieldValues, DiscoveredField } from '../api/client';
 import { useMute } from '../contexts/MuteContext';
 import FieldBrowserModal from './FieldBrowserModal';
 
@@ -32,29 +32,34 @@ export default function FieldSidebar({
   onFilterChange,
   timeRange = '-24h',
 }: FieldSidebarProps) {
-  const { isMuted, toggleMute, getMutedCount } = useMute();
+  const { isMuted, toggleMute, getMutedCount, mutedValues, removeMute } = useMute();
+  const [showMutedPopover, setShowMutedPopover] = useState(false);
   const [collapsedPanels, setCollapsedPanels] = useState<Set<string>>(new Set());
   const [pinnedFields, setPinnedFields] = useState<string[]>(['severity', 'index_name', 'hostname', 'app_name']);
   const [discoveredFields, setDiscoveredFields] = useState<DiscoveredField[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showBrowser, setShowBrowser] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  // All available index values from the database (not just in current results)
+  const [allIndexes, setAllIndexes] = useState<{ value: string; count: number }[]>([]);
 
   // Pending filter selections (batched mode)
   const [pendingFilters, setPendingFilters] = useState<Record<string, string[]>>({});
 
-  // Fetch discovered fields and preferences
+  // Fetch discovered fields, preferences, and all available indexes
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
       try {
-        const [fieldsResult, prefsResult] = await Promise.all([
+        const [fieldsResult, prefsResult, indexResult] = await Promise.all([
           discoverFields({ earliest: timeRange, limit: 20 }),
           getFieldPreferences(),
+          getFieldValues('index_name', 100).catch(() => []), // Get all indexes from DB
         ]);
         setDiscoveredFields(fieldsResult.discovered);
         setPinnedFields(prefsResult.pinned);
         setIsAuthenticated(prefsResult.authenticated);
+        setAllIndexes(indexResult);
       } catch (err) {
         console.error('Failed to fetch field data:', err);
       } finally {
@@ -100,12 +105,26 @@ export default function FieldSidebar({
 
   // Build facets for pinned and discovered fields
   const { pinnedFacets, discoveredFacets } = useMemo(() => {
-    const pinned: Facet[] = pinnedFields.map((field) => ({
-      field,
-      values: calculateFacetValues(field),
-      isPinned: true,
-      source: 'core' as const,
-    }));
+    const pinned: Facet[] = pinnedFields.map((field) => {
+      let values = calculateFacetValues(field);
+
+      // For index_name, merge with all available indexes to show ones not in results
+      if (field === 'index_name' && allIndexes.length > 0) {
+        const inResultsSet = new Set(values.map(v => v.value));
+        // Add indexes that exist in DB but not in current results
+        const notInResults = allIndexes
+          .filter(idx => !inResultsSet.has(idx.value))
+          .map(idx => ({ value: idx.value, count: 0 })); // 0 count = not in current results
+        values = [...values, ...notInResults];
+      }
+
+      return {
+        field,
+        values,
+        isPinned: true,
+        source: 'core' as const,
+      };
+    });
 
     // Get discovered fields that aren't already pinned
     const discovered: Facet[] = discoveredFields
@@ -119,7 +138,7 @@ export default function FieldSidebar({
       }));
 
     return { pinnedFacets: pinned, discoveredFacets: discovered };
-  }, [pinnedFields, discoveredFields, calculateFacetValues]);
+  }, [pinnedFields, discoveredFields, calculateFacetValues, allIndexes]);
 
   // Sync pendingFilters with selectedFilters when selectedFilters changes
   useEffect(() => {
@@ -339,6 +358,8 @@ export default function FieldSidebar({
                     isNaN(percent) ? '' :
                     percent > 0 && percent < 0.1 ? '<0.1%' :
                     `${percent.toFixed(1)}%`;
+                  // Check if this value exists in DB but not in current results
+                  const notInResults = item.count === 0 && facet.field === 'index_name';
 
                   return (
                     <div key={item.value} className="flex items-center gap-1">
@@ -346,13 +367,15 @@ export default function FieldSidebar({
                         className={`relative flex-1 flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer transition-all duration-150 hover:scale-[1.02] overflow-hidden ${
                           valueMuted
                             ? 'opacity-50'
-                            : isPending
-                              ? isChanged
-                                ? 'bg-amber-200 dark:bg-amber-900/30 hover:bg-amber-300 dark:hover:bg-amber-900/40 ring-1 ring-amber-400 dark:ring-amber-700'
-                                : 'bg-amber-100 dark:bg-amber-900/20 hover:bg-amber-200 dark:hover:bg-amber-900/30'
-                              : isChanged
-                                ? 'bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/20 ring-1 ring-red-200 dark:ring-red-800'
-                                : 'hover:bg-nog-100 dark:hover:bg-nog-700'
+                            : notInResults
+                              ? 'bg-slate-100 dark:bg-nog-700/50 hover:bg-slate-200 dark:hover:bg-nog-700'
+                              : isPending
+                                ? isChanged
+                                  ? 'bg-amber-200 dark:bg-amber-900/30 hover:bg-amber-300 dark:hover:bg-amber-900/40 ring-1 ring-amber-400 dark:ring-amber-700'
+                                  : 'bg-amber-100 dark:bg-amber-900/20 hover:bg-amber-200 dark:hover:bg-amber-900/30'
+                                : isChanged
+                                  ? 'bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/20 ring-1 ring-red-200 dark:ring-red-800'
+                                  : 'hover:bg-nog-100 dark:hover:bg-nog-700'
                         }`}
                       >
                         {/* Percentage bar background */}
@@ -393,12 +416,21 @@ export default function FieldSidebar({
                               {displayValue}
                             </span>
                           )}
-                          <span className="text-xs text-slate-500 font-medium tabular-nums flex-shrink-0 whitespace-nowrap">
-                            {item.count.toLocaleString()}
-                            {percentDisplay && (
-                              <span className="text-slate-400 dark:text-nog-500 ml-1">
-                                ({percentDisplay})
-                              </span>
+                          <span className="text-xs text-slate-500 font-medium tabular-nums flex-shrink-0 whitespace-nowrap flex items-center gap-1">
+                            {notInResults ? (
+                              <>
+                                <Database className="w-3 h-3 text-slate-400" />
+                                <span className="text-slate-400 dark:text-nog-500 italic">not in results</span>
+                              </>
+                            ) : (
+                              <>
+                                {item.count.toLocaleString()}
+                                {percentDisplay && (
+                                  <span className="text-slate-400 dark:text-nog-500 ml-1">
+                                    ({percentDisplay})
+                                  </span>
+                                )}
+                              </>
                             )}
                           </span>
                         </div>
@@ -413,8 +445,8 @@ export default function FieldSidebar({
                           }}
                           className={`relative z-10 p-1 rounded transition-colors ${
                             valueMuted
-                              ? 'text-slate-400 dark:text-nog-500 hover:text-slate-600 dark:hover:text-nog-300 hover:bg-nog-100 dark:hover:bg-nog-700'
-                              : 'text-slate-300 dark:text-nog-600 hover:text-slate-500 dark:hover:text-nog-400 hover:bg-nog-100 dark:hover:bg-nog-700'
+                              ? 'text-orange-500 dark:text-orange-400 hover:text-orange-600 dark:hover:text-orange-300 hover:bg-orange-100 dark:hover:bg-orange-900/30'
+                              : 'text-slate-400 dark:text-nog-400 hover:text-slate-600 dark:hover:text-nog-200 hover:bg-nog-100 dark:hover:bg-nog-700'
                           }`}
                           title={valueMuted ? 'Unmute (show in search results)' : 'Mute (hide from search results)'}
                         >
@@ -451,10 +483,49 @@ export default function FieldSidebar({
           </h3>
           <div className="flex items-center gap-2">
             {getMutedCount() > 0 && (
-              <span className="flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-slate-200 dark:bg-nog-700 text-slate-600 dark:text-nog-400" title="Values hidden from search results">
-                <VolumeX className="w-3 h-3" />
-                {getMutedCount()} muted
-              </span>
+              <div className="relative">
+                <button
+                  onClick={() => setShowMutedPopover(!showMutedPopover)}
+                  className="flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 hover:bg-orange-200 dark:hover:bg-orange-900/50 transition-colors cursor-pointer"
+                  title="Click to manage muted values"
+                >
+                  <VolumeX className="w-3 h-3" />
+                  {getMutedCount()} muted
+                </button>
+                {showMutedPopover && (
+                  <div className="absolute right-0 top-full mt-1 w-64 bg-white dark:bg-nog-800 border border-slate-200 dark:border-nog-600 rounded-lg shadow-lg z-50">
+                    <div className="p-3 border-b border-slate-200 dark:border-nog-700">
+                      <h4 className="text-sm font-semibold text-slate-700 dark:text-nog-200">Muted Values</h4>
+                      <p className="text-xs text-slate-500 dark:text-nog-400 mt-1">Click to unmute and show in results</p>
+                    </div>
+                    <div className="max-h-60 overflow-y-auto p-2">
+                      {Object.entries(mutedValues).map(([field, values]) =>
+                        values.length > 0 && (
+                          <div key={field} className="mb-2">
+                            <div className="text-xs font-medium text-slate-500 dark:text-nog-400 px-2 py-1 uppercase">
+                              {field.replace('_', ' ')}
+                            </div>
+                            {values.map((value: string) => (
+                              <button
+                                key={value}
+                                onClick={() => {
+                                  removeMute(field, value);
+                                  if (getMutedCount() <= 1) setShowMutedPopover(false);
+                                }}
+                                className="w-full flex items-center gap-2 px-2 py-1.5 text-sm text-left text-slate-700 dark:text-nog-300 hover:bg-nog-100 dark:hover:bg-nog-700 rounded transition-colors"
+                              >
+                                <VolumeX className="w-4 h-4 text-orange-500" />
+                                <span className="truncate flex-1">{value}</span>
+                                <span className="text-xs text-slate-400 dark:text-nog-500">click to unmute</span>
+                              </button>
+                            ))}
+                          </div>
+                        )
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             )}
             {isLoading && <Loader2 className="w-4 h-4 animate-spin text-slate-400" />}
           </div>

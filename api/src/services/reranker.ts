@@ -8,10 +8,16 @@
 
 import { Ollama } from '@llamaindex/ollama';
 import { HybridSearchResult } from './hybrid-search.js';
+import { getSystemSetting } from '../db/sqlite.js';
 
-// Configuration
-const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3.2';
+// Dynamic configuration getters - read from database first, then env, then defaults
+function getOllamaUrl(): string {
+  return getSystemSetting('ai_ollama_url') || process.env.OLLAMA_URL || 'http://localhost:11434';
+}
+function getOllamaModel(): string {
+  return getSystemSetting('ai_ollama_model') || process.env.OLLAMA_MODEL || 'llama3.2';
+}
+
 const RERANK_TIMEOUT_MS = 10000; // 10 second timeout per batch
 const MAX_BATCH_SIZE = 5; // Process documents in batches
 
@@ -33,8 +39,8 @@ export interface RerankResult {
  */
 function createOllamaClient(): Ollama {
   return new Ollama({
-    model: OLLAMA_MODEL,
-    config: { host: OLLAMA_URL },
+    model: getOllamaModel(),
+    config: { host: getOllamaUrl() },
   });
 }
 

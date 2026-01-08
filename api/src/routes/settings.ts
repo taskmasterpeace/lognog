@@ -164,6 +164,10 @@ router.get('/system', authenticate, requireAdmin, (_req: Request, res: Response)
       data_retention_days: '90',
       ai_ollama_url: process.env.OLLAMA_URL || 'http://localhost:11434',
       ai_ollama_model: process.env.OLLAMA_MODEL || 'llama3.2',
+      // Internal logging defaults - OFF by default to reduce noise
+      internal_logging_enabled: 'false',
+      internal_logging_level: 'WARNING',  // Only log warnings and errors
+      internal_logging_categories: 'auth,alert,system',  // Only important categories
     },
   });
 });
@@ -184,6 +188,10 @@ router.put('/system', authenticate, requireAdmin, (req: Request, res: Response) 
     'ai_ollama_embed_model',
     'ai_openrouter_api_key',
     'ai_openrouter_model',
+    // Internal logging settings
+    'internal_logging_enabled',
+    'internal_logging_level',
+    'internal_logging_categories',
   ];
 
   const filteredSettings: Record<string, string> = {};
@@ -305,6 +313,59 @@ router.post('/ai/test', authenticate, requireAdmin, async (_req: Request, res: R
       error: `Failed to connect to Ollama: ${message}`,
     });
   }
+});
+
+// ============ Internal Logging Settings ============
+
+// GET /api/settings/internal-logging - Get internal logging settings (admin only)
+router.get('/internal-logging', authenticate, requireAdmin, (_req: Request, res: Response) => {
+  const enabled = getSystemSetting('internal_logging_enabled') || 'false';
+  const level = getSystemSetting('internal_logging_level') || 'WARNING';
+  const categories = getSystemSetting('internal_logging_categories') || 'auth,alert,system';
+
+  return res.json({
+    enabled: enabled === 'true',
+    level,
+    categories: categories.split(',').filter(Boolean),
+    available_levels: ['DEBUG', 'INFO', 'NOTICE', 'WARNING', 'ERROR', 'CRITICAL'],
+    available_categories: ['api', 'auth', 'search', 'alert', 'report', 'ingest', 'system', 'ai'],
+  });
+});
+
+// PUT /api/settings/internal-logging - Update internal logging settings (admin only)
+router.put('/internal-logging', authenticate, requireAdmin, (req: Request, res: Response) => {
+  const { enabled, level, categories } = req.body;
+
+  const updates: Record<string, string> = {};
+
+  if (typeof enabled === 'boolean') {
+    updates['internal_logging_enabled'] = enabled ? 'true' : 'false';
+  }
+
+  if (level) {
+    const validLevels = ['DEBUG', 'INFO', 'NOTICE', 'WARNING', 'ERROR', 'CRITICAL'];
+    if (!validLevels.includes(level)) {
+      return res.status(400).json({ error: `Invalid level. Must be one of: ${validLevels.join(', ')}` });
+    }
+    updates['internal_logging_level'] = level;
+  }
+
+  if (Array.isArray(categories)) {
+    const validCategories = ['api', 'auth', 'search', 'alert', 'report', 'ingest', 'system', 'ai'];
+    const invalidCategories = categories.filter(c => !validCategories.includes(c));
+    if (invalidCategories.length > 0) {
+      return res.status(400).json({ error: `Invalid categories: ${invalidCategories.join(', ')}` });
+    }
+    updates['internal_logging_categories'] = categories.join(',');
+  }
+
+  if (Object.keys(updates).length === 0) {
+    return res.status(400).json({ error: 'No valid settings provided' });
+  }
+
+  setSystemSettings(updates);
+
+  return res.json({ success: true, updated: Object.keys(updates) });
 });
 
 export default router;

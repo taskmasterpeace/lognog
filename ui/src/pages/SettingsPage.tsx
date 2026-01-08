@@ -125,6 +125,17 @@ export default function SettingsPage() {
   const [systemStats, setSystemStats] = useState<any>(null);
   const [systemLoading, setSystemLoading] = useState(false);
 
+  // Admin: Internal logging settings
+  const [internalLogging, setInternalLogging] = useState<{
+    enabled: boolean;
+    level: string;
+    categories: string[];
+    available_levels: string[];
+    available_categories: string[];
+  } | null>(null);
+  const [internalLoggingLoading, setInternalLoggingLoading] = useState(false);
+  const [internalLoggingSaving, setInternalLoggingSaving] = useState(false);
+
   // Admin: AI config
   const [aiConfig, setAiConfig] = useState<any>(null);
   const [aiLoading, setAiLoading] = useState(false);
@@ -177,6 +188,7 @@ export default function SettingsPage() {
     loadDemoStats();
     if (isAdmin) {
       loadSystemStats();
+      loadInternalLogging();
       loadAiConfig();
       loadUsers();
     }
@@ -393,6 +405,45 @@ export default function SettingsPage() {
       console.error('Failed to load system stats:', err);
     } finally {
       setSystemLoading(false);
+    }
+  };
+
+  const loadInternalLogging = async () => {
+    setInternalLoggingLoading(true);
+    try {
+      const token = localStorage.getItem('lognog_access_token');
+      const response = await fetch('/api/settings/internal-logging', {
+        headers: { 'Authorization': `Bearer ${token}` },
+      });
+      if (response.ok) {
+        setInternalLogging(await response.json());
+      }
+    } catch (err) {
+      console.error('Failed to load internal logging settings:', err);
+    } finally {
+      setInternalLoggingLoading(false);
+    }
+  };
+
+  const saveInternalLogging = async (updates: { enabled?: boolean; level?: string; categories?: string[] }) => {
+    setInternalLoggingSaving(true);
+    try {
+      const token = localStorage.getItem('lognog_access_token');
+      const response = await fetch('/api/settings/internal-logging', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify(updates),
+      });
+      if (response.ok) {
+        await loadInternalLogging(); // Reload to get updated state
+      }
+    } catch (err) {
+      console.error('Failed to save internal logging settings:', err);
+    } finally {
+      setInternalLoggingSaving(false);
     }
   };
 
@@ -1999,6 +2050,118 @@ export default function SettingsPage() {
                 <span className="font-medium text-slate-900 dark:text-slate-100">10,000 logs</span>
               </div>
             </div>
+          </div>
+
+          {/* Internal Logging Settings */}
+          <div className="pt-6 border-t border-slate-200 dark:border-slate-700">
+            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
+              Internal Logging
+              <InfoTip content="LogNog can log its own operational events for self-monitoring. These logs appear under index 'lognog-internal'." />
+            </h3>
+
+            {internalLoggingLoading ? (
+              <div className="flex items-center justify-center py-4">
+                <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
+              </div>
+            ) : internalLogging ? (
+              <div className="space-y-4">
+                {/* Enable/Disable Toggle */}
+                <div className="flex items-center justify-between py-2">
+                  <div>
+                    <span className="text-slate-700 dark:text-slate-300">Self-Monitoring</span>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      Log LogNog's own events to the database
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => saveInternalLogging({ enabled: !internalLogging.enabled })}
+                    disabled={internalLoggingSaving}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      internalLogging.enabled
+                        ? 'bg-amber-500'
+                        : 'bg-slate-300 dark:bg-slate-600'
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                        internalLogging.enabled ? 'translate-x-6' : 'translate-x-1'
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {internalLogging.enabled && (
+                  <>
+                    {/* Log Level */}
+                    <div className="flex items-center justify-between py-2">
+                      <div>
+                        <span className="text-slate-700 dark:text-slate-300">Minimum Level</span>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          Only log events at this severity or higher
+                        </p>
+                      </div>
+                      <select
+                        value={internalLogging.level}
+                        onChange={(e) => saveInternalLogging({ level: e.target.value })}
+                        disabled={internalLoggingSaving}
+                        className="px-3 py-1.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-800 text-slate-900 dark:text-slate-100 text-sm"
+                      >
+                        {internalLogging.available_levels.map((level) => (
+                          <option key={level} value={level}>
+                            {level}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* Categories */}
+                    <div className="py-2">
+                      <div className="mb-2">
+                        <span className="text-slate-700 dark:text-slate-300">Categories</span>
+                        <p className="text-xs text-slate-500 dark:text-slate-400">
+                          Which event types to log
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {internalLogging.available_categories.map((cat) => {
+                          const isSelected = internalLogging.categories.includes(cat);
+                          return (
+                            <button
+                              key={cat}
+                              onClick={() => {
+                                const newCategories = isSelected
+                                  ? internalLogging.categories.filter((c) => c !== cat)
+                                  : [...internalLogging.categories, cat];
+                                saveInternalLogging({ categories: newCategories });
+                              }}
+                              disabled={internalLoggingSaving}
+                              className={`px-3 py-1 text-xs font-medium rounded-full transition-colors ${
+                                isSelected
+                                  ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-700'
+                                  : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-600 hover:border-amber-300 dark:hover:border-amber-700'
+                              }`}
+                            >
+                              {cat}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {internalLoggingSaving && (
+                  <div className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Saving...
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Failed to load internal logging settings
+              </p>
+            )}
           </div>
         </div>
       ) : (

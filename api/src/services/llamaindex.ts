@@ -7,13 +7,22 @@ import {
 import { Ollama, OllamaEmbedding } from '@llamaindex/ollama';
 import path from 'path';
 import fs from 'fs';
-import { createRAGDocument } from '../db/sqlite.js';
+import { createRAGDocument, getSystemSetting } from '../db/sqlite.js';
 
-// Configuration
-const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'deepseek-coder-v2:16b';
-const OLLAMA_REASONING_MODEL = process.env.OLLAMA_REASONING_MODEL || 'qwen3:30b';
-const OLLAMA_EMBED_MODEL = process.env.OLLAMA_EMBED_MODEL || 'nomic-embed-text';
+// Dynamic configuration getters - read from database first, then env, then defaults
+function getOllamaUrl(): string {
+  return getSystemSetting('ai_ollama_url') || process.env.OLLAMA_URL || 'http://localhost:11434';
+}
+function getOllamaModel(): string {
+  return getSystemSetting('ai_ollama_model') || process.env.OLLAMA_MODEL || 'deepseek-coder-v2:16b';
+}
+function getOllamaReasoningModel(): string {
+  return getSystemSetting('ai_ollama_reasoning_model') || process.env.OLLAMA_REASONING_MODEL || 'qwen3:30b';
+}
+function getOllamaEmbedModel(): string {
+  return getSystemSetting('ai_ollama_embed_model') || process.env.OLLAMA_EMBED_MODEL || 'nomic-embed-text';
+}
+
 const PERSIST_DIR = process.env.LLAMAINDEX_PERSIST_DIR || '/data/llamaindex';
 
 // Initialize Ollama LLM and Embedding
@@ -23,32 +32,37 @@ let embedModel: OllamaEmbedding | null = null;
 let vectorIndex: VectorStoreIndex | null = null;
 
 export function initializeLlamaIndex(): void {
+  const ollamaUrl = getOllamaUrl();
+  const ollamaModel = getOllamaModel();
+  const reasoningModel = getOllamaReasoningModel();
+  const embedModelName = getOllamaEmbedModel();
+
   // Configure the default LLM (fast model for general queries)
   llm = new Ollama({
-    model: OLLAMA_MODEL,
-    config: { host: OLLAMA_URL },
+    model: ollamaModel,
+    config: { host: ollamaUrl },
   });
 
   // Configure reasoning LLM (for complex analysis)
   reasoningLlm = new Ollama({
-    model: OLLAMA_REASONING_MODEL,
-    config: { host: OLLAMA_URL },
+    model: reasoningModel,
+    config: { host: ollamaUrl },
   });
 
   // Configure embedding model
   embedModel = new OllamaEmbedding({
-    model: OLLAMA_EMBED_MODEL,
-    config: { host: OLLAMA_URL },
+    model: embedModelName,
+    config: { host: ollamaUrl },
   });
 
   // Set global settings
   Settings.llm = llm;
   Settings.embedModel = embedModel;
 
-  console.log(`LlamaIndex initialized with Ollama (${OLLAMA_URL})`);
-  console.log(`  LLM: ${OLLAMA_MODEL}`);
-  console.log(`  Reasoning: ${OLLAMA_REASONING_MODEL}`);
-  console.log(`  Embeddings: ${OLLAMA_EMBED_MODEL}`);
+  console.log(`LlamaIndex initialized with Ollama (${ollamaUrl})`);
+  console.log(`  LLM: ${ollamaModel}`);
+  console.log(`  Reasoning: ${reasoningModel}`);
+  console.log(`  Embeddings: ${embedModelName}`);
 }
 
 export async function loadOrCreateIndex(): Promise<VectorStoreIndex> {
@@ -180,7 +194,7 @@ export async function queryIndex(options: QueryOptions): Promise<QueryResult> {
   return {
     response: response.response,
     sourceNodes,
-    model: options.useReasoning ? OLLAMA_REASONING_MODEL : OLLAMA_MODEL,
+    model: options.useReasoning ? getOllamaReasoningModel() : getOllamaModel(),
   };
 }
 
@@ -230,9 +244,9 @@ export async function getIndexStats(): Promise<{
     documentCount,
     persistDir: PERSIST_DIR,
     models: {
-      llm: OLLAMA_MODEL,
-      reasoning: OLLAMA_REASONING_MODEL,
-      embedding: OLLAMA_EMBED_MODEL,
+      llm: getOllamaModel(),
+      reasoning: getOllamaReasoningModel(),
+      embedding: getOllamaEmbedModel(),
     },
   };
 }

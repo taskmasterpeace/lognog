@@ -11,6 +11,22 @@
  * - Loops: {{#each results limit=5}}...{{/each}}
  */
 
+import { getSystemSetting } from '../db/sqlite.js';
+
+// Dynamic configuration getters for AI providers
+function getOllamaUrl(): string | undefined {
+  return getSystemSetting('ai_ollama_url') || process.env.OLLAMA_URL || undefined;
+}
+function getOllamaModel(): string {
+  return getSystemSetting('ai_ollama_model') || process.env.OLLAMA_MODEL || 'llama3.2';
+}
+function getOpenRouterApiKey(): string | undefined {
+  return getSystemSetting('ai_openrouter_api_key') || process.env.OPENROUTER_API_KEY || undefined;
+}
+function getOpenRouterModel(): string {
+  return getSystemSetting('ai_openrouter_model') || process.env.OPENROUTER_MODEL || 'anthropic/claude-3-haiku-20240307';
+}
+
 // Type for context passed to template engine
 export interface TemplateContext {
   // Alert metadata
@@ -572,8 +588,8 @@ export function processTemplate(template: string, context: TemplateContext): str
  * Supports both Ollama and OpenRouter
  */
 export async function generateAISummary(context: TemplateContext): Promise<string> {
-  const ollamaUrl = process.env.OLLAMA_URL;
-  const openRouterKey = process.env.OPENROUTER_API_KEY;
+  const ollamaUrl = getOllamaUrl();
+  const openRouterKey = getOpenRouterApiKey();
 
   if (!ollamaUrl && !openRouterKey) {
     return '[AI summary unavailable - no AI provider configured]';
@@ -593,7 +609,7 @@ Provide a brief, actionable summary.`;
   try {
     if (openRouterKey) {
       // Try OpenRouter first if configured
-      const model = process.env.OPENROUTER_MODEL || 'anthropic/claude-3-haiku-20240307';
+      const model = getOpenRouterModel();
       const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers: {
@@ -617,7 +633,7 @@ Provide a brief, actionable summary.`;
 
     if (ollamaUrl) {
       // Fall back to Ollama
-      const model = process.env.OLLAMA_MODEL || 'llama3.2';
+      const model = getOllamaModel();
       const response = await fetch(`${ollamaUrl}/api/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

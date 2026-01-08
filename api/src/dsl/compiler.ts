@@ -30,6 +30,7 @@ const DEFAULT_FIELDS = [
   'timestamp',
   'hostname',
   'app_name',
+  'index_name',
   'severity',
   'message',
   'structured_data',

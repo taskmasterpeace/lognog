@@ -20,6 +20,7 @@
  */
 
 import { insertLogs, isLiteMode } from '../db/backend.js';
+import { getSystemSetting } from '../db/sqlite.js';
 
 // Event actions for self-monitoring (dot notation: category.action)
 export type EventAction =
@@ -86,11 +87,97 @@ export interface InternalEvent {
   severity?: number;
 }
 
-// Check if self-monitoring is enabled
+// Severity level thresholds for filtering
+const SEVERITY_LEVELS: Record<string, number> = {
+  'DEBUG': SEVERITY.DEBUG,      // 7
+  'INFO': SEVERITY.INFO,        // 6
+  'NOTICE': SEVERITY.NOTICE,    // 5
+  'WARNING': SEVERITY.WARNING,  // 4
+  'ERROR': SEVERITY.ERROR,      // 3
+  'CRITICAL': SEVERITY.CRITICAL, // 2
+};
+
+// Cache settings to avoid DB hits on every log call
+let settingsCache: {
+  enabled: boolean;
+  level: number;
+  categories: Set<string>;
+  lastCheck: number;
+} | null = null;
+const SETTINGS_CACHE_MS = 30000; // Refresh settings every 30 seconds
+
+/**
+ * Get internal logging settings (with caching)
+ */
+function getSettings(): { enabled: boolean; level: number; categories: Set<string> } {
+  const now = Date.now();
+
+  if (settingsCache && (now - settingsCache.lastCheck) < SETTINGS_CACHE_MS) {
+    return settingsCache;
+  }
+
+  try {
+    const enabled = getSystemSetting('internal_logging_enabled') || 'false';
+    const level = getSystemSetting('internal_logging_level') || 'WARNING';
+    const categories = getSystemSetting('internal_logging_categories') || 'auth,alert,system';
+
+    settingsCache = {
+      enabled: enabled === 'true',
+      level: SEVERITY_LEVELS[level] ?? SEVERITY.WARNING,
+      categories: new Set(categories.split(',').filter(Boolean)),
+      lastCheck: now,
+    };
+  } catch {
+    // DB might not be ready yet (startup), use defaults
+    settingsCache = {
+      enabled: false,
+      level: SEVERITY.WARNING,
+      categories: new Set(['auth', 'alert', 'system']),
+      lastCheck: now,
+    };
+  }
+
+  return settingsCache;
+}
+
+/**
+ * Check if self-monitoring is enabled for a given event
+ */
+function shouldLog(severity: number, category: EventCategory): boolean {
+  // Check env var override first (allows disabling completely)
+  const envEnabled = process.env.LOGNOG_SELF_MONITORING;
+  if (envEnabled === 'false' || envEnabled === '0') {
+    return false;
+  }
+
+  const settings = getSettings();
+
+  // Check if enabled
+  if (!settings.enabled) {
+    return false;
+  }
+
+  // Check severity (lower number = more severe, so we log if severity <= threshold)
+  if (severity > settings.level) {
+    return false;
+  }
+
+  // Check category
+  if (!settings.categories.has(category)) {
+    return false;
+  }
+
+  return true;
+}
+
+// Legacy function for backwards compatibility
 function isEnabled(): boolean {
-  const enabled = process.env.LOGNOG_SELF_MONITORING;
-  // Default to true unless explicitly disabled
-  return enabled !== 'false' && enabled !== '0';
+  const envEnabled = process.env.LOGNOG_SELF_MONITORING;
+  if (envEnabled === 'false' || envEnabled === '0') {
+    return false;
+  }
+  const settings = getSettings();
+  return settings.enabled;
 }
 
 // Queue for batching logs (reduces DB writes)
@@ -140,10 +227,12 @@ function ensureFlushTimer(): void {
  * @returns Promise that resolves when event is queued
  */
 export async function logInternalEvent(event: InternalEvent): Promise<void> {
-  if (!isEnabled()) return;
+  const severity = event.severity ?? SEVERITY.INFO;
+
+  // Check if this event should be logged based on settings
+  if (!shouldLog(severity, event.category)) return;
 
   const timestamp = new Date();
-  const severity = event.severity ?? SEVERITY.INFO;
 
   // Build the log entry matching ClickHouse schema
   // Note: ClickHouse DateTime64 doesn't accept 'Z' suffix, need space-separated format

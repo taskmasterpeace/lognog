@@ -8,13 +8,24 @@
 import { executeQuery } from '../../db/clickhouse.js';
 import { EntityType } from './baseline-calculator.js';
 import { AnomalyEvent } from './detector.js';
+import { getSystemSetting } from '../../db/sqlite.js';
 
-// Configuration
-const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3.2';
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+// Dynamic configuration getters - read from database first, then env, then defaults
+function getOllamaUrl(): string {
+  return getSystemSetting('ai_ollama_url') || process.env.OLLAMA_URL || 'http://localhost:11434';
+}
+function getOllamaModel(): string {
+  return getSystemSetting('ai_ollama_model') || process.env.OLLAMA_MODEL || 'llama3.2';
+}
+function getOpenRouterApiKey(): string | undefined {
+  return getSystemSetting('ai_openrouter_api_key') || process.env.OPENROUTER_API_KEY || undefined;
+}
+function getOpenRouterModel(): string {
+  return getSystemSetting('ai_openrouter_model') || process.env.OPENROUTER_MODEL || 'anthropic/claude-3.5-sonnet';
+}
+
+// OpenRouter API endpoint (constant)
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || 'anthropic/claude-3.5-sonnet';
 
 export interface LLMAnalysis {
   riskScore: number;           // 0-100
@@ -39,7 +50,7 @@ export interface AnalysisContext {
  */
 async function isOllamaAvailable(): Promise<boolean> {
   try {
-    const response = await fetch(`${OLLAMA_URL}/api/tags`, {
+    const response = await fetch(`${getOllamaUrl()}/api/tags`, {
       method: 'GET',
       signal: AbortSignal.timeout(2000),
     });
@@ -53,11 +64,11 @@ async function isOllamaAvailable(): Promise<boolean> {
  * Generate text with Ollama
  */
 async function generateWithOllama(prompt: string): Promise<string> {
-  const response = await fetch(`${OLLAMA_URL}/api/generate`, {
+  const response = await fetch(`${getOllamaUrl()}/api/generate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: OLLAMA_MODEL,
+      model: getOllamaModel(),
       prompt,
       stream: false,
       options: {
@@ -78,7 +89,7 @@ async function generateWithOllama(prompt: string): Promise<string> {
  * Generate text with OpenRouter
  */
 async function generateWithOpenRouter(prompt: string): Promise<string> {
-  if (!OPENROUTER_API_KEY) {
+  if (!getOpenRouterApiKey()) {
     throw new Error('OpenRouter API key not configured');
   }
 
@@ -86,12 +97,12 @@ async function generateWithOpenRouter(prompt: string): Promise<string> {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+      'Authorization': `Bearer ${getOpenRouterApiKey()}`,
       'HTTP-Referer': 'https://lognog.io',
       'X-Title': 'LogNog Anomaly Detection',
     },
     body: JSON.stringify({
-      model: OPENROUTER_MODEL,
+      model: getOpenRouterModel(),
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.3,
     }),
@@ -121,7 +132,7 @@ async function generateText(prompt: string): Promise<{ response: string; provide
     }
   }
 
-  if (OPENROUTER_API_KEY) {
+  if (getOpenRouterApiKey()) {
     try {
       const response = await generateWithOpenRouter(prompt);
       return { response, provider: 'openrouter' };
@@ -131,7 +142,7 @@ async function generateText(prompt: string): Promise<{ response: string; provide
     }
   }
 
-  throw new Error('No AI provider available. Configure Ollama or set OPENROUTER_API_KEY.');
+  throw new Error('No AI provider available. Configure OpenRouter API key in Settings or start Ollama.');
 }
 
 /**
@@ -368,7 +379,7 @@ export async function isLLMAvailable(): Promise<{ available: boolean; provider: 
     return { available: true, provider: 'ollama' };
   }
 
-  if (OPENROUTER_API_KEY) {
+  if (getOpenRouterApiKey()) {
     return { available: true, provider: 'openrouter' };
   }
 

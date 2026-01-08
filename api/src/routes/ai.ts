@@ -14,6 +14,7 @@ import {
   deleteRAGDocumentsBySource,
   getRAGDocumentsWithEmbeddings,
   RAGDocument,
+  getSystemSetting,
 } from '../db/sqlite.js';
 import {
   initializeLlamaIndex,
@@ -40,21 +41,34 @@ import {
 
 const router = Router();
 
-// Configuration for Ollama
-const OLLAMA_URL = process.env.OLLAMA_URL || 'http://localhost:11434';
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'deepseek-coder-v2:16b';
-const OLLAMA_REASONING_MODEL = process.env.OLLAMA_REASONING_MODEL || 'qwen3:30b';
-const OLLAMA_EMBED_MODEL = process.env.OLLAMA_EMBED_MODEL || 'nomic-embed-text';
+// Dynamic configuration getters - read from database first, then env, then defaults
+// This allows settings changed in the UI to take effect without server restart
+function getOllamaUrl(): string {
+  return getSystemSetting('ai_ollama_url') || process.env.OLLAMA_URL || 'http://localhost:11434';
+}
+function getOllamaModel(): string {
+  return getSystemSetting('ai_ollama_model') || process.env.OLLAMA_MODEL || 'deepseek-coder-v2:16b';
+}
+function getOllamaReasoningModel(): string {
+  return getSystemSetting('ai_ollama_reasoning_model') || process.env.OLLAMA_REASONING_MODEL || 'qwen3:30b';
+}
+function getOllamaEmbedModel(): string {
+  return getSystemSetting('ai_ollama_embed_model') || process.env.OLLAMA_EMBED_MODEL || 'nomic-embed-text';
+}
+function getOpenRouterApiKey(): string | undefined {
+  return getSystemSetting('ai_openrouter_api_key') || process.env.OPENROUTER_API_KEY || undefined;
+}
+function getOpenRouterModel(): string {
+  return getSystemSetting('ai_openrouter_model') || process.env.OPENROUTER_MODEL || 'anthropic/claude-3.5-sonnet';
+}
 
-// Configuration for OpenRouter (PRIMARY - cloud AI, no local server needed)
-const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
+// OpenRouter API endpoint (constant)
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
-const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || 'anthropic/claude-3.5-sonnet';
 
 // Check if Ollama is available
 async function isOllamaAvailable(): Promise<boolean> {
   try {
-    const response = await fetch(`${OLLAMA_URL}/api/tags`, {
+    const response = await fetch(`${getOllamaUrl()}/api/tags`, {
       method: 'GET',
       signal: AbortSignal.timeout(2000),
     });
@@ -67,18 +81,18 @@ async function isOllamaAvailable(): Promise<boolean> {
 // Check if ANY AI provider is available (OpenRouter OR Ollama)
 async function isAnyAIAvailable(): Promise<boolean> {
   // OpenRouter is primary - check it first
-  if (OPENROUTER_API_KEY) return true;
+  if (getOpenRouterApiKey()) return true;
   // Fall back to Ollama if no OpenRouter key
   return await isOllamaAvailable();
 }
 
 // Generate text with Ollama
 async function generateWithOllama(prompt: string, model?: string): Promise<string> {
-  const response = await fetch(`${OLLAMA_URL}/api/generate`, {
+  const response = await fetch(`${getOllamaUrl()}/api/generate`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: model || OLLAMA_MODEL,
+      model: model || getOllamaModel(),
       prompt,
       stream: false,
     }),
@@ -94,7 +108,7 @@ async function generateWithOllama(prompt: string, model?: string): Promise<strin
 
 // Generate text with OpenRouter (cloud fallback)
 async function generateWithOpenRouter(prompt: string, model?: string): Promise<string> {
-  if (!OPENROUTER_API_KEY) {
+  if (!getOpenRouterApiKey()) {
     throw new Error('OpenRouter API key not configured');
   }
 
@@ -102,12 +116,12 @@ async function generateWithOpenRouter(prompt: string, model?: string): Promise<s
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+      'Authorization': `Bearer ${getOpenRouterApiKey()}`,
       'HTTP-Referer': 'https://lognog.io',
       'X-Title': 'LogNog',
     },
     body: JSON.stringify({
-      model: model || OPENROUTER_MODEL,
+      model: model || getOpenRouterModel(),
       messages: [{ role: 'user', content: prompt }],
     }),
   });
@@ -126,8 +140,8 @@ async function generateText(prompt: string, options?: { model?: string; useReaso
   const startTime = Date.now();
 
   // Try OpenRouter first (PRIMARY - no local server needed)
-  if (OPENROUTER_API_KEY) {
-    const model = options?.model || OPENROUTER_MODEL;
+  if (getOpenRouterApiKey()) {
+    const model = options?.model || getOpenRouterModel();
     try {
       const response = await generateWithOpenRouter(prompt, model);
 
@@ -158,7 +172,7 @@ async function generateText(prompt: string, options?: { model?: string; useReaso
   // Fallback to Ollama (local)
   const ollamaAvailable = await isOllamaAvailable();
   if (ollamaAvailable) {
-    const model = options?.useReasoning ? OLLAMA_REASONING_MODEL : (options?.model || OLLAMA_MODEL);
+    const model = options?.useReasoning ? getOllamaReasoningModel() : (options?.model || getOllamaModel());
     const ollamaStart = Date.now();
     try {
       const response = await generateWithOllama(prompt, model);
@@ -188,16 +202,16 @@ async function generateText(prompt: string, options?: { model?: string; useReaso
     }
   }
 
-  throw new Error('No AI provider available. Set OPENROUTER_API_KEY or start Ollama.');
+  throw new Error('No AI provider available. Configure OpenRouter API key in Settings or start Ollama.');
 }
 
 // Generate embeddings with Ollama
 async function generateEmbedding(text: string): Promise<number[]> {
-  const response = await fetch(`${OLLAMA_URL}/api/embeddings`, {
+  const response = await fetch(`${getOllamaUrl()}/api/embeddings`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: OLLAMA_EMBED_MODEL,
+      model: getOllamaEmbedModel(),
       prompt: text,
     }),
   });
@@ -293,7 +307,7 @@ router.post('/generate-query', async (req: Request, res: Response) => {
     if (!available) {
       return res.status(503).json({
         error: 'AI service unavailable',
-        message: 'No AI provider available. Start Ollama or configure OPENROUTER_API_KEY.',
+        message: 'No AI provider available. Configure OpenRouter API key in Settings or start Ollama.',
       });
     }
 
@@ -356,7 +370,7 @@ router.post('/insights', async (req: Request, res: Response) => {
     if (!available) {
       return res.status(503).json({
         error: 'AI service unavailable',
-        message: 'No AI provider available. Start Ollama or configure OPENROUTER_API_KEY.',
+        message: 'No AI provider available. Configure OpenRouter API key in Settings or start Ollama.',
       });
     }
 
@@ -412,11 +426,11 @@ Generate realistic insights for a homelab log monitoring dashboard viewing ${tim
 router.get('/status', async (_req: Request, res: Response) => {
   try {
     const ollamaAvailable = await isOllamaAvailable();
-    const openrouterConfigured = !!OPENROUTER_API_KEY;
+    const openrouterConfigured = !!getOpenRouterApiKey();
 
     let ollamaModels: string[] = [];
     if (ollamaAvailable) {
-      const response = await fetch(`${OLLAMA_URL}/api/tags`);
+      const response = await fetch(`${getOllamaUrl()}/api/tags`);
       const data = await response.json() as { models: Array<{ name: string }> };
       ollamaModels = data.models?.map((m: { name: string }) => m.name) || [];
     }
@@ -425,15 +439,15 @@ router.get('/status', async (_req: Request, res: Response) => {
       providers: {
         ollama: {
           available: ollamaAvailable,
-          url: OLLAMA_URL,
-          model: OLLAMA_MODEL,
-          reasoningModel: OLLAMA_REASONING_MODEL,
-          embedModel: OLLAMA_EMBED_MODEL,
+          url: getOllamaUrl(),
+          model: getOllamaModel(),
+          reasoningModel: getOllamaReasoningModel(),
+          embedModel: getOllamaEmbedModel(),
           availableModels: ollamaModels,
         },
         openrouter: {
           configured: openrouterConfigured,
-          model: OPENROUTER_MODEL,
+          model: getOpenRouterModel(),
           status: openrouterConfigured ? 'ready (PRIMARY)' : 'not configured',
         },
       },
@@ -1622,7 +1636,7 @@ QUESTION: ${query}
 
 Provide a helpful, accurate response based on the context above.`;
 
-    const selectedModel = model === 'reasoning' ? OLLAMA_REASONING_MODEL : OLLAMA_MODEL;
+    const selectedModel = model === 'reasoning' ? getOllamaReasoningModel() : getOllamaModel();
     const response = await generateWithOllama(prompt, selectedModel);
 
     const result: Record<string, unknown> = {
