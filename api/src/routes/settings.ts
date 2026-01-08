@@ -11,6 +11,7 @@ import {
   setMutedValues,
   MutedValues,
 } from '../db/sqlite';
+import { executeRawQuery, isLiteMode } from '../db/backend.js';
 
 const router = Router();
 
@@ -366,6 +367,134 @@ router.put('/internal-logging', authenticate, requireAdmin, (req: Request, res: 
   setSystemSettings(updates);
 
   return res.json({ success: true, updated: Object.keys(updates) });
+});
+
+// ============ Log Management ============
+
+// POST /api/settings/logs/delete - Delete logs by criteria (admin only)
+router.post('/logs/delete', authenticate, requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const { index_name, app_name, app_scope, older_than_days } = req.body;
+
+    // Must specify at least one filter
+    if (!index_name && !app_name && !app_scope && !older_than_days) {
+      return res.status(400).json({
+        error: 'Must specify at least one filter: index_name, app_name, app_scope, or older_than_days',
+      });
+    }
+
+    // Build WHERE conditions
+    const conditions: string[] = [];
+
+    if (index_name) {
+      // Sanitize - only allow alphanumeric, dash, underscore
+      if (!/^[a-zA-Z0-9_-]+$/.test(index_name)) {
+        return res.status(400).json({ error: 'Invalid index_name format' });
+      }
+      conditions.push(`index_name = '${index_name}'`);
+    }
+
+    if (app_name) {
+      if (!/^[a-zA-Z0-9_.-]+$/.test(app_name)) {
+        return res.status(400).json({ error: 'Invalid app_name format' });
+      }
+      conditions.push(`app_name = '${app_name}'`);
+    }
+
+    if (app_scope) {
+      if (!/^[a-zA-Z0-9_.-]+$/.test(app_scope)) {
+        return res.status(400).json({ error: 'Invalid app_scope format' });
+      }
+      conditions.push(`app_scope = '${app_scope}'`);
+    }
+
+    if (older_than_days) {
+      const days = parseInt(older_than_days, 10);
+      if (isNaN(days) || days < 1) {
+        return res.status(400).json({ error: 'older_than_days must be a positive integer' });
+      }
+      if (isLiteMode()) {
+        conditions.push(`timestamp < datetime('now', '-${days} days')`);
+      } else {
+        conditions.push(`timestamp < now() - INTERVAL ${days} DAY`);
+      }
+    }
+
+    const whereClause = conditions.join(' AND ');
+
+    // Build delete query based on backend
+    let sql: string;
+    if (isLiteMode()) {
+      sql = `DELETE FROM logs WHERE ${whereClause}`;
+    } else {
+      // ClickHouse uses ALTER TABLE ... DELETE
+      sql = `ALTER TABLE lognog.logs DELETE WHERE ${whereClause}`;
+    }
+
+    console.log(`[Log Delete] Executing: ${sql}`);
+    await executeRawQuery(sql);
+
+    return res.json({
+      success: true,
+      message: 'Delete operation initiated',
+      filters: { index_name, app_name, app_scope, older_than_days },
+      note: isLiteMode()
+        ? 'Logs deleted immediately'
+        : 'ClickHouse mutations are async - logs will be removed shortly',
+    });
+  } catch (error) {
+    console.error('Error deleting logs:', error);
+    return res.status(500).json({
+      error: 'Failed to delete logs',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+// GET /api/settings/logs/stats - Get log statistics by index/app (admin only)
+router.get('/logs/stats', authenticate, requireAdmin, async (_req: Request, res: Response) => {
+  try {
+    let sql: string;
+    if (isLiteMode()) {
+      sql = `
+        SELECT
+          index_name,
+          app_name,
+          COUNT(*) as count,
+          MIN(timestamp) as oldest,
+          MAX(timestamp) as newest
+        FROM logs
+        GROUP BY index_name, app_name
+        ORDER BY count DESC
+        LIMIT 100
+      `;
+    } else {
+      sql = `
+        SELECT
+          index_name,
+          app_name,
+          count() as count,
+          min(timestamp) as oldest,
+          max(timestamp) as newest
+        FROM lognog.logs
+        GROUP BY index_name, app_name
+        ORDER BY count DESC
+        LIMIT 100
+      `;
+    }
+
+    const results = await executeRawQuery(sql);
+
+    return res.json({
+      stats: results,
+    });
+  } catch (error) {
+    console.error('Error getting log stats:', error);
+    return res.status(500).json({
+      error: 'Failed to get log stats',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
 });
 
 export default router;
