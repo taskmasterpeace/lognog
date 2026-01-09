@@ -28,6 +28,8 @@ import {
   Variable,
   Copy,
   Cloud,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react';
 import { AreaChart, BarChart, PieChart } from '../components/charts';
 import {
@@ -300,6 +302,7 @@ function PanelCard({
   onDuplicate,
   onRefresh,
   onDrilldown,
+  onFullscreen,
   editMode,
 }: {
   panel: DashboardPanel;
@@ -309,13 +312,14 @@ function PanelCard({
   onDuplicate: () => void;
   onRefresh: () => void;
   onDrilldown?: (field: string, value: string) => void;
+  onFullscreen?: () => void;
   editMode?: boolean;
 }) {
   const vizOption = VISUALIZATION_OPTIONS.find(v => v.value === panel.visualization) || VISUALIZATION_OPTIONS[0];
   const VizIcon = vizOption.icon;
 
   return (
-    <div className="card flex flex-col h-full">
+    <div className="card flex flex-col h-full group">
       <div className={`flex items-center justify-between p-3 border-b border-slate-100 dark:border-nog-700 ${editMode ? 'panel-drag-handle cursor-move' : ''}`}>
         <div className="flex items-center gap-2 min-w-0 flex-1">
           {editMode && <Move className="w-4 h-4 text-slate-400 dark:text-nog-400 flex-shrink-0" />}
@@ -330,6 +334,11 @@ function PanelCard({
           </div>
         </div>
         <div className={`flex items-center gap-1 ${editMode ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}>
+          {onFullscreen && (
+            <button onClick={onFullscreen} className="p-1.5 text-slate-400 dark:text-nog-400 hover:text-slate-600 dark:hover:text-nog-200 hover:bg-nog-100 dark:hover:bg-nog-700 rounded" title="Fullscreen">
+              <Maximize2 className="w-3.5 h-3.5" />
+            </button>
+          )}
           <button onClick={onRefresh} className="p-1.5 text-slate-400 dark:text-nog-400 hover:text-slate-600 dark:hover:text-nog-200 hover:bg-nog-100 dark:hover:bg-nog-700 rounded" title="Refresh">
             <RefreshCw className="w-3.5 h-3.5" />
           </button>
@@ -608,6 +617,7 @@ export default function DashboardViewPage() {
   const [showPageEditor, setShowPageEditor] = useState(false);
   const [editingPage, setEditingPage] = useState<DashboardPage | null>(null);
   const [showAIInsights, setShowAIInsights] = useState(false);
+  const [fullscreenPanel, setFullscreenPanel] = useState<string | null>(null);
 
   const { data: dashboard, isLoading, error } = useQuery({
     queryKey: ['dashboard', id],
@@ -1178,6 +1188,7 @@ export default function DashboardViewPage() {
                   onDuplicate={() => duplicatePanelMutation.mutate(panel)}
                   onRefresh={() => fetchPanelData(panel)}
                   onDrilldown={handleDrilldown}
+                  onFullscreen={() => setFullscreenPanel(panel.id)}
                   editMode={editMode}
                 />
               </div>
@@ -1284,6 +1295,59 @@ export default function DashboardViewPage() {
           }}
         />
       )}
+
+      {/* Fullscreen Panel Modal */}
+      {fullscreenPanel && (() => {
+        const panel = dashboard?.panels.find(p => p.id === fullscreenPanel);
+        if (!panel) return null;
+        const data = panelData[panel.id] || { results: [], loading: true, error: null };
+        const vizOption = VISUALIZATION_OPTIONS.find(v => v.value === panel.visualization) || VISUALIZATION_OPTIONS[0];
+        const VizIcon = vizOption.icon;
+
+        return (
+          <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" onClick={() => setFullscreenPanel(null)}>
+            <div className="bg-white dark:bg-nog-800 rounded-xl shadow-2xl w-full h-full max-w-[95vw] max-h-[95vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+              {/* Header */}
+              <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-nog-700">
+                <div className="flex items-center gap-3">
+                  <VizIcon className="w-5 h-5 text-slate-400 dark:text-nog-400" />
+                  <div>
+                    <h2 className="text-lg font-semibold text-slate-900 dark:text-nog-100">{panel.title}</h2>
+                    {panel.description && (
+                      <p className="text-sm text-slate-500 dark:text-nog-400">{panel.description}</p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => fetchPanelData(panel)}
+                    className="btn-ghost p-2"
+                    title="Refresh"
+                  >
+                    <RefreshCw className="w-5 h-5" />
+                  </button>
+                  <button
+                    onClick={() => setFullscreenPanel(null)}
+                    className="btn-ghost p-2"
+                    title="Exit fullscreen"
+                  >
+                    <Minimize2 className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+              {/* Content */}
+              <div className="flex-1 p-4 min-h-0 overflow-auto">
+                <PanelVisualization
+                  panel={panel}
+                  data={data}
+                  onRefresh={() => fetchPanelData(panel)}
+                  onDrilldown={handleDrilldown}
+                />
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
