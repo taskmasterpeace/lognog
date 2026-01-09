@@ -10,6 +10,8 @@ import {
   AlertCircle,
   Maximize2,
   X,
+  Code,
+  List,
 } from 'lucide-react';
 import { AnnotatedValue, useSourceAnnotationsOptional } from './SourceAnnotations';
 import { useDateFormat } from '../contexts/DateFormatContext';
@@ -239,8 +241,21 @@ const LogRow: React.FC<LogRowProps> = ({
   searchTerms,
 }) => {
   const { formatDate } = useDateFormat();
+  const [showJson, setShowJson] = useState(false);
+  const [copied, setCopied] = useState(false);
   const severity = typeof log.severity === 'number' ? log.severity : 6;
   const severityConfig = SEVERITY_CONFIG[severity as keyof typeof SEVERITY_CONFIG] || SEVERITY_CONFIG[6];
+
+  // Copy JSON to clipboard
+  const copyJson = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(log, null, 2));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  }, [log]);
 
   // Parse structured_data if it's a JSON string
   const parsedStructuredData = useMemo(() => {
@@ -327,6 +342,58 @@ const LogRow: React.FC<LogRowProps> = ({
           {/* Expanded View - All Fields */}
           {isExpanded && (
             <div className="space-y-2">
+              {/* View Toggle */}
+              <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-nog-700">
+                <div className="flex items-center gap-1 bg-nog-100 dark:bg-nog-700 rounded-lg p-0.5">
+                  <button
+                    onClick={() => setShowJson(false)}
+                    className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium transition-colors ${
+                      !showJson
+                        ? 'bg-white dark:bg-nog-600 text-slate-900 dark:text-nog-100 shadow-sm'
+                        : 'text-slate-600 dark:text-nog-400 hover:text-slate-900 dark:hover:text-nog-100'
+                    }`}
+                  >
+                    <List className="w-3 h-3" />
+                    Fields
+                  </button>
+                  <button
+                    onClick={() => setShowJson(true)}
+                    className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium transition-colors ${
+                      showJson
+                        ? 'bg-white dark:bg-nog-600 text-slate-900 dark:text-nog-100 shadow-sm'
+                        : 'text-slate-600 dark:text-nog-400 hover:text-slate-900 dark:hover:text-nog-100'
+                    }`}
+                  >
+                    <Code className="w-3 h-3" />
+                    JSON
+                  </button>
+                </div>
+                <button
+                  onClick={copyJson}
+                  className="flex items-center gap-1 px-2 py-1 text-xs text-slate-500 dark:text-nog-400 hover:text-slate-700 dark:hover:text-nog-200 hover:bg-nog-100 dark:hover:bg-nog-700 rounded transition-colors"
+                  title="Copy as JSON"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="w-3 h-3 text-green-500" />
+                      <span className="text-green-500">Copied!</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3 h-3" />
+                      <span>Copy JSON</span>
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {/* JSON View */}
+              {showJson ? (
+                <pre className="text-xs font-mono text-slate-700 dark:text-nog-300 bg-slate-50 dark:bg-nog-900 p-3 rounded-lg overflow-x-auto whitespace-pre-wrap break-words max-h-96 overflow-y-auto">
+                  {JSON.stringify(log, null, 2)}
+                </pre>
+              ) : (
+                <>
               {/* Primary Fields */}
               <div className="grid grid-cols-1 gap-2">
                 {primaryFields.map((field) => {
@@ -413,6 +480,8 @@ const LogRow: React.FC<LogRowProps> = ({
                       </div>
                     ))}
                   </div>
+                </>
+              )}
                 </>
               )}
             </div>
