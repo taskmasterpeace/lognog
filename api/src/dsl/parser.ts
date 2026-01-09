@@ -20,6 +20,7 @@ import {
   TimechartNode,
   RexNode,
   FilldownNode,
+  TransactionNode,
   Condition,
   SimpleCondition,
   LogicGroup,
@@ -110,6 +111,8 @@ export class Parser {
         return this.parseRex();
       case TokenType.FILLDOWN:
         return this.parseFilldown();
+      case TokenType.TRANSACTION:
+        return this.parseTransaction();
       case TokenType.IDENTIFIER:
         // Implicit search with field=value
         return this.parseImplicitSearch();
@@ -844,6 +847,61 @@ export class Parser {
     }
 
     return { type: 'filldown', fields };
+  }
+
+  private parseTransaction(): TransactionNode {
+    this.consume(TokenType.TRANSACTION, 'Expected "transaction"');
+    const fields: string[] = [];
+    let maxspan: string | undefined;
+    let maxpause: string | undefined;
+
+    // Parse field(s) to group by and optional parameters
+    while (!this.isAtEnd() && !this.check(TokenType.PIPE)) {
+      if (this.match(TokenType.MAXSPAN)) {
+        this.consume(TokenType.EQUALS, 'Expected "="');
+        // Parse time value (e.g., "30m", "1h")
+        if (this.check(TokenType.NUMBER)) {
+          const numStr = this.advance().value;
+          if (this.check(TokenType.IDENTIFIER)) {
+            const unit = this.peek().value;
+            if (/^[smhd]$/.test(unit)) {
+              maxspan = numStr + this.advance().value;
+            } else {
+              maxspan = numStr + 'm'; // default to minutes
+            }
+          } else {
+            maxspan = numStr + 'm';
+          }
+        } else if (this.check(TokenType.IDENTIFIER)) {
+          maxspan = this.advance().value;
+        }
+      } else if (this.match(TokenType.MAXPAUSE)) {
+        this.consume(TokenType.EQUALS, 'Expected "="');
+        // Parse time value
+        if (this.check(TokenType.NUMBER)) {
+          const numStr = this.advance().value;
+          if (this.check(TokenType.IDENTIFIER)) {
+            const unit = this.peek().value;
+            if (/^[smhd]$/.test(unit)) {
+              maxpause = numStr + this.advance().value;
+            } else {
+              maxpause = numStr + 'm';
+            }
+          } else {
+            maxpause = numStr + 'm';
+          }
+        } else if (this.check(TokenType.IDENTIFIER)) {
+          maxpause = this.advance().value;
+        }
+      } else if (this.check(TokenType.IDENTIFIER)) {
+        fields.push(this.advance().value);
+        this.match(TokenType.COMMA);
+      } else {
+        break;
+      }
+    }
+
+    return { type: 'transaction', fields, maxspan, maxpause };
   }
 
   // Helper methods

@@ -14,9 +14,125 @@ import {
 import { translateNaturalLanguage, getSuggestedQueries } from '../services/ai-search.js';
 import { applyFieldExtraction } from '../services/field-extractor.js';
 import { optionalAuth, rateLimit } from '../auth/middleware.js';
-import { FilldownNode } from '../dsl/types.js';
+import { FilldownNode, TransactionNode } from '../dsl/types.js';
 
 const router = Router();
+
+// Helper: Parse time string (e.g., "30m", "1h") to milliseconds
+function parseTimeToMs(timeStr: string): number {
+  const match = timeStr.match(/^(\d+)([smhd])$/);
+  if (!match) return 30 * 60 * 1000; // default 30 minutes
+  const value = parseInt(match[1], 10);
+  const unit = match[2];
+  switch (unit) {
+    case 's': return value * 1000;
+    case 'm': return value * 60 * 1000;
+    case 'h': return value * 60 * 60 * 1000;
+    case 'd': return value * 24 * 60 * 60 * 1000;
+    default: return value * 60 * 1000;
+  }
+}
+
+// Helper: Apply transaction grouping to results
+// Groups events by field values within time constraints
+function applyTransaction(
+  results: Record<string, unknown>[],
+  fields: string[],
+  maxspan?: string,
+  maxpause?: string
+): Record<string, unknown>[] {
+  if (results.length === 0 || fields.length === 0) return results;
+
+  const maxspanMs = maxspan ? parseTimeToMs(maxspan) : Infinity;
+  const maxpauseMs = maxpause ? parseTimeToMs(maxpause) : Infinity;
+
+  // Sort by timestamp first
+  const sorted = [...results].sort((a, b) => {
+    const ta = new Date(a.timestamp as string).getTime();
+    const tb = new Date(b.timestamp as string).getTime();
+    return ta - tb;
+  });
+
+  // Group into transactions
+  const transactions: Record<string, unknown>[] = [];
+  const activeTransactions: Map<string, {
+    events: Record<string, unknown>[];
+    startTime: number;
+    lastTime: number;
+  }> = new Map();
+
+  for (const event of sorted) {
+    // Build transaction key from grouping fields
+    const keyParts = fields.map(f => String(event[f] ?? ''));
+    const key = keyParts.join('|');
+    const eventTime = new Date(event.timestamp as string).getTime();
+
+    const existing = activeTransactions.get(key);
+    if (existing) {
+      const spanExceeded = (eventTime - existing.startTime) > maxspanMs;
+      const pauseExceeded = (eventTime - existing.lastTime) > maxpauseMs;
+
+      if (spanExceeded || pauseExceeded) {
+        // Close existing transaction and start new one
+        transactions.push(buildTransaction(existing.events, fields));
+        activeTransactions.set(key, {
+          events: [event],
+          startTime: eventTime,
+          lastTime: eventTime,
+        });
+      } else {
+        // Add to existing transaction
+        existing.events.push(event);
+        existing.lastTime = eventTime;
+      }
+    } else {
+      // Start new transaction
+      activeTransactions.set(key, {
+        events: [event],
+        startTime: eventTime,
+        lastTime: eventTime,
+      });
+    }
+  }
+
+  // Close remaining transactions
+  for (const tx of activeTransactions.values()) {
+    transactions.push(buildTransaction(tx.events, fields));
+  }
+
+  return transactions;
+}
+
+// Helper: Build a transaction object from events
+function buildTransaction(
+  events: Record<string, unknown>[],
+  fields: string[]
+): Record<string, unknown> {
+  if (events.length === 0) return {};
+
+  const first = events[0];
+  const last = events[events.length - 1];
+  const startTime = new Date(first.timestamp as string).getTime();
+  const endTime = new Date(last.timestamp as string).getTime();
+
+  // Build transaction with computed fields
+  const transaction: Record<string, unknown> = {
+    ...first,
+    _transaction_id: `${fields.map(f => first[f]).join('-')}-${startTime}`,
+    _event_count: events.length,
+    _duration_ms: endTime - startTime,
+    _start_time: first.timestamp,
+    _end_time: last.timestamp,
+    _events: events,
+  };
+
+  // Add grouping fields
+  for (const field of fields) {
+    transaction[field] = first[field];
+  }
+
+  return transaction;
+}
 
 // Helper: Apply filldown post-processing to results
 // Fills null/empty values with the last non-null value for specified fields
@@ -271,15 +387,28 @@ router.post('/query', rateLimit(120, 60000), async (req: Request, res: Response)
       results = await applyFieldExtraction(results, source_type);
     }
 
-    // Apply filldown post-processing if present in query
+    // Apply filldown and transaction post-processing if present in query
     try {
       const ast = parseToAST(query);
+
+      // Apply filldown
       const filldownStage = ast.stages.find(s => s.type === 'filldown') as FilldownNode | undefined;
       if (filldownStage) {
         results = applyFilldown(results as Record<string, unknown>[], filldownStage.fields);
       }
+
+      // Apply transaction grouping
+      const transactionStage = ast.stages.find(s => s.type === 'transaction') as TransactionNode | undefined;
+      if (transactionStage) {
+        results = applyTransaction(
+          results as Record<string, unknown>[],
+          transactionStage.fields,
+          transactionStage.maxspan,
+          transactionStage.maxpause
+        );
+      }
     } catch {
-      // Ignore parse errors for filldown check - main query already executed successfully
+      // Ignore parse errors for post-processing check - main query already executed successfully
     }
 
     // Calculate execution time

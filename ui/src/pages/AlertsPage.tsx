@@ -130,6 +130,7 @@ export default function AlertsPage() {
   const [selectedAlertId, setSelectedAlertId] = useState<string | null>(null);
   const [silencingAlertId, setSilencingAlertId] = useState<string | null>(null);
   const [expandedAlerts, setExpandedAlerts] = useState<Set<string>>(new Set());
+  const [selectedAlerts, setSelectedAlerts] = useState<Set<string>>(new Set());
   const [appScope, setAppScope] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'name' | 'severity' | 'trigger_count' | 'created_at'>('name');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
@@ -298,6 +299,44 @@ export default function AlertsPage() {
       toast.error('Evaluation Failed', error instanceof Error ? error.message : 'Unknown error');
     },
   });
+
+  // Bulk operations
+  const bulkToggleMutation = useMutation({
+    mutationFn: async ({ alertIds, enable }: { alertIds: string[]; enable: boolean }) => {
+      const enableValue = enable ? 1 : 0;
+      const alertsToToggle = alerts?.filter(a => alertIds.includes(a.id) && a.enabled !== enableValue) || [];
+      await Promise.all(alertsToToggle.map(a => toggleAlert(a.id)));
+      return alertsToToggle.length;
+    },
+    onSuccess: (count, { enable }) => {
+      queryClient.invalidateQueries({ queryKey: ['alerts'] });
+      setSelectedAlerts(new Set());
+      toast.success('Bulk Update', `${count} alert(s) ${enable ? 'enabled' : 'disabled'}`);
+    },
+    onError: (error) => {
+      toast.error('Bulk Update Failed', error instanceof Error ? error.message : 'Unknown error');
+    },
+  });
+
+  const handleSelectAlert = (alertId: string, selected: boolean) => {
+    setSelectedAlerts(prev => {
+      const next = new Set(prev);
+      if (selected) {
+        next.add(alertId);
+      } else {
+        next.delete(alertId);
+      }
+      return next;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedAlerts.size === sortedAlerts.length) {
+      setSelectedAlerts(new Set());
+    } else {
+      setSelectedAlerts(new Set(sortedAlerts.map(a => a.id)));
+    }
+  };
 
   const resetForm = () => {
     setFormData({
@@ -526,6 +565,47 @@ export default function AlertsPage() {
         </div>
       </div>
 
+      {/* Bulk Actions Bar */}
+      {selectedAlerts.size > 0 && (
+        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              checked={selectedAlerts.size === sortedAlerts.length}
+              onChange={handleSelectAll}
+              className="w-4 h-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500"
+            />
+            <span className="text-sm font-medium text-amber-800 dark:text-amber-300">
+              {selectedAlerts.size} alert{selectedAlerts.size !== 1 ? 's' : ''} selected
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => bulkToggleMutation.mutate({ alertIds: Array.from(selectedAlerts), enable: true })}
+              disabled={bulkToggleMutation.isPending}
+              className="px-3 py-1.5 text-sm bg-green-600 hover:bg-green-700 text-white rounded-lg flex items-center gap-1.5 disabled:opacity-50"
+            >
+              <CheckCircle2 className="w-4 h-4" />
+              Enable
+            </button>
+            <button
+              onClick={() => bulkToggleMutation.mutate({ alertIds: Array.from(selectedAlerts), enable: false })}
+              disabled={bulkToggleMutation.isPending}
+              className="px-3 py-1.5 text-sm bg-slate-600 hover:bg-slate-700 text-white rounded-lg flex items-center gap-1.5 disabled:opacity-50"
+            >
+              <Pause className="w-4 h-4" />
+              Disable
+            </button>
+            <button
+              onClick={() => setSelectedAlerts(new Set())}
+              className="px-3 py-1.5 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg"
+            >
+              Clear
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Alerts List */}
       {sortedAlerts && sortedAlerts.length > 0 ? (
         <div className="space-y-4">
@@ -543,8 +623,15 @@ export default function AlertsPage() {
               >
                 {/* Alert Header */}
                 <div className="p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-                  {/* Top row on mobile: expand button, severity, title */}
+                  {/* Top row on mobile: checkbox, expand button, severity, title */}
                   <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+                    <input
+                      type="checkbox"
+                      checked={selectedAlerts.has(alert.id)}
+                      onChange={(e) => handleSelectAlert(alert.id, e.target.checked)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-amber-600 focus:ring-amber-500 flex-shrink-0"
+                    />
                     <button
                       onClick={() => toggleExpand(alert.id)}
                       className="text-slate-400 hover:text-slate-600 flex-shrink-0"

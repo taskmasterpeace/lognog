@@ -29,6 +29,9 @@ export enum TokenType {
   SPAN = 'SPAN',
   FIELD = 'FIELD',
   FILLDOWN = 'FILLDOWN',
+  TRANSACTION = 'TRANSACTION',
+  MAXSPAN = 'MAXSPAN',
+  MAXPAUSE = 'MAXPAUSE',
 
   // Aggregation functions
   COUNT = 'COUNT',
@@ -110,7 +113,8 @@ export type ASTNode =
   | BinNode
   | TimechartNode
   | RexNode
-  | FilldownNode;
+  | FilldownNode
+  | TransactionNode;
 
 export interface SearchNode {
   type: 'search';
@@ -302,6 +306,13 @@ export interface RexNode {
 export interface FilldownNode {
   type: 'filldown';
   fields: string[]; // Fields to fill down (empty = all fields)
+}
+
+export interface TransactionNode {
+  type: 'transaction';
+  fields: string[]; // Fields to group transactions by
+  maxspan?: string; // Maximum time span for a transaction (e.g., "30m")
+  maxpause?: string; // Maximum pause between events (e.g., "5m")
 }
 
 // Query AST

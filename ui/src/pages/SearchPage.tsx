@@ -25,6 +25,7 @@ import {
   Check,
   Bell,
   FileText,
+  BookTemplate,
 } from 'lucide-react';
 import { executeSearch, getSavedSearches, createSavedSearch, aiSearch, getAISuggestions, SavedSearchCreateRequest } from '../api/client';
 import { useMute } from '../contexts/MuteContext';
@@ -46,6 +47,45 @@ const EXAMPLE_QUERIES = [
   { name: 'Errors Only', query: 'search severity<=3', desc: 'Emergency, Alert, Critical, Error' },
   { name: 'By Host', query: 'search host=myserver', desc: 'Filter by hostname' },
   { name: 'Count by Host', query: 'search * | stats count by hostname', desc: 'Aggregate logs per host' },
+];
+
+// Comprehensive query templates for common patterns
+const QUERY_TEMPLATES = [
+  { category: 'Basic', templates: [
+    { name: 'All logs', query: 'search *', desc: 'Show all logs' },
+    { name: 'Filter by field', query: 'search field=value', desc: 'Basic field filter' },
+    { name: 'Multiple conditions', query: 'search field1=value1 AND field2=value2', desc: 'AND conditions' },
+    { name: 'OR conditions', query: 'search field=value1 OR field=value2', desc: 'OR conditions' },
+    { name: 'Not equals', query: 'search field!=value', desc: 'Exclude values' },
+    { name: 'Contains text', query: 'search message~"error"', desc: 'Text search' },
+    { name: 'IN list', query: 'search severity IN (0, 1, 2, 3)', desc: 'Match multiple values' },
+  ]},
+  { category: 'Statistics', templates: [
+    { name: 'Count all', query: 'search * | stats count', desc: 'Total count' },
+    { name: 'Count by field', query: 'search * | stats count by hostname', desc: 'Group by field' },
+    { name: 'Multiple stats', query: 'search * | stats count, avg(response_time), max(bytes)', desc: 'Multiple aggregations' },
+    { name: 'Distinct count', query: 'search * | stats dc(hostname) as unique_hosts', desc: 'Count unique values' },
+    { name: 'Top values', query: 'search * | top 10 hostname', desc: 'Most common values' },
+    { name: 'Rare values', query: 'search * | rare 10 hostname', desc: 'Least common values' },
+  ]},
+  { category: 'Time Series', templates: [
+    { name: 'Timechart count', query: 'search * | timechart span=1h count', desc: 'Count over time' },
+    { name: 'Timechart by field', query: 'search * | timechart span=1h count by severity', desc: 'Split by field' },
+    { name: 'Bucket time', query: 'search * | bucket span=1h timestamp | stats count by timestamp', desc: 'Time buckets' },
+  ]},
+  { category: 'Data Shaping', templates: [
+    { name: 'Select fields', query: 'search * | table timestamp, hostname, message', desc: 'Show specific fields' },
+    { name: 'Rename field', query: 'search * | rename hostname as host', desc: 'Rename columns' },
+    { name: 'Remove duplicates', query: 'search * | dedup hostname', desc: 'Unique values only' },
+    { name: 'Sort results', query: 'search * | sort desc timestamp', desc: 'Order results' },
+    { name: 'Limit results', query: 'search * | head 100', desc: 'First N results' },
+    { name: 'Fill nulls', query: 'search * | filldown hostname', desc: 'Fill empty values' },
+  ]},
+  { category: 'Advanced', templates: [
+    { name: 'Extract fields', query: 'search * | rex field=message "user=(?<username>\\w+)"', desc: 'Regex extraction' },
+    { name: 'Eval expression', query: 'search * | eval duration_ms = duration * 1000', desc: 'Calculated field' },
+    { name: 'Chain commands', query: 'search severity<=3 | stats count by hostname | sort desc count | head 10', desc: 'Pipeline' },
+  ]},
 ];
 
 export default function SearchPage() {
@@ -87,23 +127,28 @@ export default function SearchPage() {
     return [];
   });
   const [showHistory, setShowHistory] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
   const [jsonCopied, setJsonCopied] = useState(false);
 
   const historyDropdownRef = useRef<HTMLDivElement>(null);
+  const templatesDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Close history dropdown when clicking outside
+  // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (historyDropdownRef.current && !historyDropdownRef.current.contains(event.target as Node)) {
         setShowHistory(false);
       }
+      if (templatesDropdownRef.current && !templatesDropdownRef.current.contains(event.target as Node)) {
+        setShowTemplates(false);
+      }
     };
 
-    if (showHistory) {
+    if (showHistory || showTemplates) {
       document.addEventListener('mousedown', handleClickOutside);
       return () => document.removeEventListener('mousedown', handleClickOutside);
     }
-  }, [showHistory]);
+  }, [showHistory, showTemplates]);
 
   // Persist sidebar state to localStorage
   useEffect(() => {
@@ -633,6 +678,52 @@ export default function SearchPage() {
                             </button>
                           </div>
                         )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Query Templates Dropdown - visible on sm+ */}
+              {searchMode === 'dsl' && (
+                <div className="relative hidden sm:block" ref={templatesDropdownRef}>
+                  <button
+                    onClick={() => setShowTemplates(!showTemplates)}
+                    className="btn-secondary h-11 sm:h-12 group"
+                    title="Query templates"
+                  >
+                    <BookTemplate className="w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-all duration-200 group-hover:scale-110" />
+                  </button>
+
+                  {/* Templates Dropdown Menu */}
+                  {showTemplates && (
+                    <div className="dropdown right-0 w-96 max-h-[70vh] overflow-y-auto animate-fade-in">
+                      <div className="py-2">
+                        <div className="px-4 py-2 border-b border-slate-100 dark:border-nog-700">
+                          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                            Query Templates
+                          </p>
+                        </div>
+                        {QUERY_TEMPLATES.map((category, catIndex) => (
+                          <div key={category.category}>
+                            <div className="px-4 py-2 text-xs font-semibold text-amber-600 dark:text-amber-400 bg-nog-50 dark:bg-nog-800/50">
+                              {category.category}
+                            </div>
+                            {category.templates.map((template, index) => (
+                              <button
+                                key={`${catIndex}-${index}`}
+                                onClick={() => {
+                                  setQuery(template.query);
+                                  setShowTemplates(false);
+                                }}
+                                className="dropdown-item flex flex-col gap-0.5 text-left transition-all duration-150 text-slate-700 dark:text-nog-300 hover:bg-nog-50 dark:hover:bg-nog-700 w-full"
+                              >
+                                <span className="font-medium text-sm">{template.name}</span>
+                                <span className="font-mono text-xs text-slate-500 dark:text-nog-400 truncate">{template.query}</span>
+                              </button>
+                            ))}
+                          </div>
+                        ))}
                       </div>
                     </div>
                   )}

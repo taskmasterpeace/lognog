@@ -200,6 +200,11 @@ export class SQLiteCompiler {
           // Filldown is handled post-query in JavaScript
           // Store the fields to fill down for post-processing
           break;
+
+        case 'transaction':
+          // Transaction is handled post-query in JavaScript
+          // Groups events by field values within time constraints
+          break;
       }
     }
 

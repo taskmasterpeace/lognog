@@ -31,6 +31,9 @@ const KEYWORDS: Record<string, TokenType> = {
   'span': TokenType.SPAN,
   'field': TokenType.FIELD,
   'filldown': TokenType.FILLDOWN,
+  'transaction': TokenType.TRANSACTION,
+  'maxspan': TokenType.MAXSPAN,
+  'maxpause': TokenType.MAXPAUSE,
   // Aggregation functions
   'count': TokenType.COUNT,
   'sum': TokenType.SUM,

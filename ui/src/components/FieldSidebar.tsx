@@ -1,8 +1,19 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { ChevronDown, ChevronRight, Pin, Search, Loader2, VolumeX, Volume2, Database } from 'lucide-react';
+import { ChevronDown, ChevronRight, Pin, Search, Loader2, VolumeX, Volume2, Database, BarChart3, Hash, Percent, TrendingUp, TrendingDown } from 'lucide-react';
 import { discoverFields, getFieldPreferences, pinField, getFieldValues, DiscoveredField } from '../api/client';
 import { useMute } from '../contexts/MuteContext';
 import FieldBrowserModal from './FieldBrowserModal';
+
+// Stats for a field
+interface FieldStats {
+  totalValues: number;        // Total count of values in results
+  uniqueValues: number;       // Number of unique values
+  coverage: number;           // Percentage of results with this field (0-100)
+  isNumeric: boolean;         // Whether values are numeric
+  min?: number;              // Minimum value (for numeric fields)
+  max?: number;              // Maximum value (for numeric fields)
+  avg?: number;              // Average value (for numeric fields)
+}
 
 export interface FacetValue {
   value: string;
@@ -101,6 +112,61 @@ export default function FieldSidebar({
       .sort((a, b) => b[1] - a[1])
       .slice(0, 10)
       .map(([value, count]) => ({ value, count }));
+  }, [results]);
+
+  // Calculate field statistics from results
+  const calculateFieldStats = useCallback((field: string): FieldStats => {
+    if (!results || results.length === 0) {
+      return { totalValues: 0, uniqueValues: 0, coverage: 0, isNumeric: false };
+    }
+
+    const values: unknown[] = [];
+    let presentCount = 0;
+    const uniqueSet = new Set<string>();
+
+    results.forEach((row) => {
+      let value: unknown;
+
+      // Check if it's a core field
+      if (field in row && field !== 'structured_data') {
+        value = row[field];
+      } else {
+        // Try to get from structured_data
+        try {
+          const sd = JSON.parse((row.structured_data as string) || '{}');
+          value = sd[field];
+        } catch {
+          // Ignore parse errors
+        }
+      }
+
+      if (value !== undefined && value !== null && value !== '') {
+        values.push(value);
+        presentCount++;
+        uniqueSet.add(String(value));
+      }
+    });
+
+    const stats: FieldStats = {
+      totalValues: values.length,
+      uniqueValues: uniqueSet.size,
+      coverage: (presentCount / results.length) * 100,
+      isNumeric: false,
+    };
+
+    // Check if values are numeric
+    const numericValues = values
+      .map((v) => parseFloat(String(v)))
+      .filter((n) => !isNaN(n));
+
+    if (numericValues.length > 0 && numericValues.length === values.length) {
+      stats.isNumeric = true;
+      stats.min = Math.min(...numericValues);
+      stats.max = Math.max(...numericValues);
+      stats.avg = numericValues.reduce((a, b) => a + b, 0) / numericValues.length;
+    }
+
+    return stats;
   }, [results]);
 
   // Build facets for pinned and discovered fields
@@ -290,6 +356,9 @@ export default function FieldSidebar({
     // Calculate total count for percentage display
     const fieldTotal = facet.values.reduce((sum, v) => sum + v.count, 0);
 
+    // Calculate field statistics
+    const fieldStats = calculateFieldStats(facet.field);
+
     return (
       <div key={facet.field} className="border-b border-slate-200 dark:border-nog-700">
         {/* Panel Header */}
@@ -338,6 +407,47 @@ export default function FieldSidebar({
         {/* Panel Content */}
         {!isCollapsed && (
           <div className="px-4 py-2 bg-nog-50/50 dark:bg-nog-900/30">
+            {/* Quick Stats */}
+            {fieldStats.totalValues > 0 && (
+              <div className="mb-2 pb-2 border-b border-slate-200 dark:border-nog-700">
+                <div className="grid grid-cols-3 gap-1 text-xs">
+                  <div className="flex items-center gap-1 text-slate-500 dark:text-nog-400" title="Number of unique values">
+                    <Hash className="w-3 h-3" />
+                    <span className="font-medium text-slate-700 dark:text-nog-300">{fieldStats.uniqueValues}</span>
+                    <span className="hidden sm:inline">unique</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-slate-500 dark:text-nog-400" title="Coverage: percentage of results with this field">
+                    <Percent className="w-3 h-3" />
+                    <span className="font-medium text-slate-700 dark:text-nog-300">{fieldStats.coverage.toFixed(0)}%</span>
+                    <span className="hidden sm:inline">coverage</span>
+                  </div>
+                  <div className="flex items-center gap-1 text-slate-500 dark:text-nog-400" title="Total values in results">
+                    <BarChart3 className="w-3 h-3" />
+                    <span className="font-medium text-slate-700 dark:text-nog-300">{fieldStats.totalValues.toLocaleString()}</span>
+                  </div>
+                </div>
+                {/* Numeric stats row */}
+                {fieldStats.isNumeric && fieldStats.min !== undefined && fieldStats.max !== undefined && (
+                  <div className="grid grid-cols-3 gap-1 mt-1 text-xs">
+                    <div className="flex items-center gap-1 text-slate-500 dark:text-nog-400" title="Minimum value">
+                      <TrendingDown className="w-3 h-3 text-blue-500" />
+                      <span className="font-medium text-slate-700 dark:text-nog-300">{fieldStats.min.toLocaleString()}</span>
+                      <span className="hidden sm:inline">min</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-slate-500 dark:text-nog-400" title="Average value">
+                      <BarChart3 className="w-3 h-3 text-green-500" />
+                      <span className="font-medium text-slate-700 dark:text-nog-300">{fieldStats.avg?.toFixed(1)}</span>
+                      <span className="hidden sm:inline">avg</span>
+                    </div>
+                    <div className="flex items-center gap-1 text-slate-500 dark:text-nog-400" title="Maximum value">
+                      <TrendingUp className="w-3 h-3 text-red-500" />
+                      <span className="font-medium text-slate-700 dark:text-nog-300">{fieldStats.max.toLocaleString()}</span>
+                      <span className="hidden sm:inline">max</span>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
             {facet.values.length === 0 ? (
               <p className="text-xs text-slate-500 py-2">No values</p>
             ) : (
