@@ -178,6 +178,7 @@ export function SearchAutocomplete({
         disabled={disabled}
         autoComplete="off"
         spellCheck={false}
+        data-search-input
         className="
           w-full h-11 sm:h-12
           pl-10 sm:pl-12 pr-4

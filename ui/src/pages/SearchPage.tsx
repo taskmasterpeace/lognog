@@ -272,6 +272,44 @@ export default function SearchPage() {
     };
   }, [searchMutation.data, aiSearchMutation.data]);
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      const modKey = isMac ? e.metaKey : e.ctrlKey;
+
+      // Ctrl/Cmd+Enter: Run search (works from anywhere)
+      if (modKey && e.key === 'Enter') {
+        e.preventDefault();
+        if (searchMode === 'ai' && aiQuestion.trim()) {
+          aiSearchMutation.mutate(aiQuestion);
+        } else if (query.trim()) {
+          searchMutation.mutate();
+        }
+        return;
+      }
+
+      // Ctrl/Cmd+K: Focus search input
+      if (modKey && e.key === 'k') {
+        e.preventDefault();
+        const searchInput = document.querySelector('[data-search-input]') as HTMLInputElement | HTMLTextAreaElement;
+        searchInput?.focus();
+        return;
+      }
+
+      // Escape: Close modals/dropdowns
+      if (e.key === 'Escape') {
+        setShowSaveModal(false);
+        setShowSqlPreview(false);
+        setShowTemplates(false);
+        return;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [searchMode, aiQuestion, query, searchMutation, aiSearchMutation]);
+
   const saveMutation = useMutation({
     mutationFn: () => {
       const data: SavedSearchCreateRequest = {
@@ -588,6 +626,7 @@ export default function SearchPage() {
                     placeholder="Show me all errors..."
                     className="input-search h-11 sm:h-12 pl-10 sm:pl-12 pr-10 sm:pr-24 border-amber-200 focus:border-amber-400 focus:ring-amber-200 text-sm sm:text-base"
                     autoFocus
+                    data-search-input
                   />
                   <div className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
                     {aiQuestion && (
@@ -599,8 +638,8 @@ export default function SearchPage() {
                         <X className="w-4 h-4" />
                       </button>
                     )}
-                    <kbd className="hidden lg:inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-slate-400 bg-nog-100 rounded">
-                      <span>Ctrl+Enter</span>
+                    <kbd className="hidden lg:inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-slate-400 bg-nog-100 dark:bg-nog-700 rounded" title="Ctrl/Cmd+Enter to run, Ctrl/Cmd+K to focus">
+                      <span>⌘↵</span>
                     </kbd>
                   </div>
                 </div>
