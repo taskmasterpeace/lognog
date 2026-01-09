@@ -1,4 +1,6 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -30,8 +32,11 @@ import {
   Cloud,
   Maximize2,
   Minimize2,
+  Circle,
+  GitMerge,
+  LayoutGrid,
 } from 'lucide-react';
-import { AreaChart, BarChart, PieChart } from '../components/charts';
+import { AreaChart, BarChart, PieChart, ScatterChart, FunnelChart, TreemapChart } from '../components/charts';
 import {
   getDashboard,
   executeSearch,
@@ -80,6 +85,9 @@ const VISUALIZATION_OPTIONS = [
   { value: 'heatmap', label: 'Heatmap', icon: Grid3X3 },
   { value: 'gauge', label: 'Gauge', icon: Gauge },
   { value: 'wordcloud', label: 'Word Cloud', icon: Cloud },
+  { value: 'scatter', label: 'Scatter Plot', icon: Circle },
+  { value: 'funnel', label: 'Funnel Chart', icon: GitMerge },
+  { value: 'treemap', label: 'Treemap', icon: LayoutGrid },
 ];
 
 const AUTO_REFRESH_OPTIONS = [
@@ -274,6 +282,80 @@ function PanelVisualization({
           />
         </div>
       );
+
+    case 'scatter': {
+      // Scatter plot: needs x, y values. Look for numeric columns
+      const numericKeys = keys.filter(k => typeof results[0][k] === 'number');
+      const xKey = numericKeys[0] || keys[0];
+      const yKey = numericKeys[1] || numericKeys[0] || keys[1] || keys[0];
+      const nameKey = keys.find(k => !numericKeys.includes(k)) || keys[0];
+
+      const scatterData = results.map(row => ({
+        x: Number(row[xKey]) || 0,
+        y: Number(row[yKey]) || 0,
+        name: String(row[nameKey] || ''),
+      }));
+
+      return (
+        <div className="h-full w-full">
+          <ScatterChart
+            data={scatterData}
+            height={220}
+            xAxisLabel={xKey}
+            yAxisLabel={yKey}
+            onPointClick={(point) => {
+              if (onDrilldown && nameKey && point.name) {
+                onDrilldown(nameKey, point.name);
+              }
+            }}
+          />
+        </div>
+      );
+    }
+
+    case 'funnel': {
+      // Funnel: first column = stage name, second column = value
+      const funnelData = results.map(row => ({
+        name: String(row[labelKey] || ''),
+        value: Number(row[valueKey]) || 0,
+      })).filter(item => item.name);
+
+      return (
+        <div className="h-full w-full">
+          <FunnelChart
+            data={funnelData}
+            height={220}
+            onStageClick={(name) => {
+              if (onDrilldown && labelKey) {
+                onDrilldown(labelKey, name);
+              }
+            }}
+          />
+        </div>
+      );
+    }
+
+    case 'treemap': {
+      // Treemap: first column = name, second column = value
+      const treemapData = results.map(row => ({
+        name: String(row[labelKey] || ''),
+        value: Number(row[valueKey]) || 0,
+      })).filter(item => item.name && item.value > 0);
+
+      return (
+        <div className="h-full w-full">
+          <TreemapChart
+            data={treemapData}
+            height={220}
+            onNodeClick={(node) => {
+              if (onDrilldown && labelKey) {
+                onDrilldown(labelKey, node.name);
+              }
+            }}
+          />
+        </div>
+      );
+    }
 
     case 'table':
     default:
@@ -617,6 +699,8 @@ export default function DashboardViewPage() {
   const [showPageEditor, setShowPageEditor] = useState(false);
   const [editingPage, setEditingPage] = useState<DashboardPage | null>(null);
   const [showAIInsights, setShowAIInsights] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const dashboardGridRef = useRef<HTMLDivElement>(null);
   const [fullscreenPanel, setFullscreenPanel] = useState<string | null>(null);
 
   const { data: dashboard, isLoading, error } = useQuery({
@@ -849,6 +933,91 @@ export default function DashboardViewPage() {
     }
   };
 
+  const handleExportPdf = async () => {
+    if (!dashboardGridRef.current || !dashboard) return;
+
+    setIsExportingPdf(true);
+
+    try {
+      // Wait for any animations to complete
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      const element = dashboardGridRef.current;
+
+      // Capture the dashboard as canvas
+      const canvas = await html2canvas(element, {
+        scale: 2, // Higher resolution
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: document.documentElement.classList.contains('dark') ? '#1a1b26' : '#ffffff',
+        logging: false,
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+
+      // Calculate PDF dimensions (A4 landscape or portrait based on aspect ratio)
+      const aspectRatio = imgWidth / imgHeight;
+      const isLandscape = aspectRatio > 1;
+
+      const pdf = new jsPDF({
+        orientation: isLandscape ? 'landscape' : 'portrait',
+        unit: 'mm',
+      });
+
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+
+      // Add header with dashboard name and export date
+      const headerHeight = 15;
+      pdf.setFontSize(18);
+      pdf.setTextColor(40);
+      pdf.text(dashboard.name, 10, 12);
+
+      pdf.setFontSize(10);
+      pdf.setTextColor(120);
+      pdf.text(`Exported: ${new Date().toLocaleString()}`, 10, 18);
+      pdf.text(`Time Range: ${timeRange}`, pageWidth - 50, 18);
+
+      // Draw a separator line
+      pdf.setDrawColor(200);
+      pdf.line(10, headerHeight + 5, pageWidth - 10, headerHeight + 5);
+
+      // Calculate image dimensions to fit page
+      const availableHeight = pageHeight - headerHeight - 20; // 20mm for margins
+      const availableWidth = pageWidth - 20; // 10mm margin on each side
+
+      let finalWidth = availableWidth;
+      let finalHeight = (imgHeight / imgWidth) * finalWidth;
+
+      if (finalHeight > availableHeight) {
+        finalHeight = availableHeight;
+        finalWidth = (imgWidth / imgHeight) * finalHeight;
+      }
+
+      // Center the image
+      const xOffset = (pageWidth - finalWidth) / 2;
+      const yOffset = headerHeight + 10;
+
+      // Add the dashboard image
+      pdf.addImage(imgData, 'PNG', xOffset, yOffset, finalWidth, finalHeight);
+
+      // Add footer with page number
+      pdf.setFontSize(8);
+      pdf.setTextColor(150);
+      pdf.text(`Generated by LogNog`, 10, pageHeight - 5);
+      pdf.text(`Page 1 of 1`, pageWidth - 25, pageHeight - 5);
+
+      // Save the PDF
+      pdf.save(`${dashboard.name.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}.pdf`);
+    } catch (err) {
+      console.error('PDF export failed:', err);
+    } finally {
+      setIsExportingPdf(false);
+    }
+  };
+
   // Convert panels to layout format (filtered by selected page)
   const panelLayouts: PanelLayout[] = useMemo(() => {
     if (!dashboard?.panels) return [];
@@ -1009,7 +1178,19 @@ export default function DashboardViewPage() {
                     className="dropdown-item"
                   >
                     <Download className="w-4 h-4" />
-                    Export
+                    Export JSON
+                  </button>
+                  <button
+                    onClick={() => { handleExportPdf(); setShowActionsDropdown(false); }}
+                    disabled={isExportingPdf}
+                    className="dropdown-item"
+                  >
+                    {isExportingPdf ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Download className="w-4 h-4" />
+                    )}
+                    {isExportingPdf ? 'Generating PDF...' : 'Export PDF'}
                   </button>
                   <button
                     onClick={() => { duplicateMutation.mutate(); setShowActionsDropdown(false); }}
@@ -1149,7 +1330,7 @@ export default function DashboardViewPage() {
       )}
 
       {/* Panels Grid */}
-      <div className="flex-1 p-4 overflow-auto">
+      <div ref={dashboardGridRef} className="flex-1 p-4 overflow-auto">
         {dashboard.panels.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full py-20">
             <div className="w-16 h-16 bg-nog-100 dark:bg-nog-800 rounded-full flex items-center justify-center mb-4">

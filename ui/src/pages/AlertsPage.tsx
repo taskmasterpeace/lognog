@@ -29,6 +29,7 @@ import {
   LogIn,
   Filter,
   ArrowUpDown,
+  Timer,
 } from 'lucide-react';
 import {
   getAlerts,
@@ -677,16 +678,14 @@ export default function AlertsPage() {
                     >
                       <Play className="w-4 h-4" />
                     </button>
-                    <button
-                      onClick={() => {
+                    <SnoozeDropdown
+                      alertId={alert.id}
+                      alertName={alert.name}
+                      onFullSilence={() => {
                         setSilencingAlertId(alert.id);
                         setShowSilenceModal(true);
                       }}
-                      className="p-1.5 sm:p-2 text-slate-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg flex-shrink-0"
-                      title="Silence this alert"
-                    >
-                      <BellOff className="w-4 h-4" />
-                    </button>
+                    />
                     <button
                       onClick={() => toggleMutation.mutate(alert.id)}
                       className={`p-1.5 sm:p-2 rounded-lg flex-shrink-0 ${
@@ -1626,6 +1625,104 @@ export default function AlertsPage() {
             setSilencingAlertId(null);
           }}
         />
+      )}
+    </div>
+  );
+}
+
+// Snooze dropdown component
+interface SnoozeDropdownProps {
+  alertId: string;
+  alertName: string;
+  onFullSilence: () => void;
+}
+
+function SnoozeDropdown({ alertId, alertName, onFullSilence }: SnoozeDropdownProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const queryClient = useQueryClient();
+  const toast = useToast();
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close on click outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [isOpen]);
+
+  const snoozeMutation = useMutation({
+    mutationFn: (duration: string) =>
+      createSilence({
+        level: 'alert',
+        target_id: alertId,
+        duration,
+        reason: `Quick snooze for ${duration}`,
+      }),
+    onSuccess: (_, duration) => {
+      queryClient.invalidateQueries({ queryKey: ['silences'] });
+      toast.success('Alert Snoozed', `${alertName} snoozed for ${duration}`);
+      setIsOpen(false);
+    },
+    onError: (error) => {
+      toast.error('Snooze Failed', error instanceof Error ? error.message : 'Unknown error');
+    },
+  });
+
+  const snoozeOptions = [
+    { label: '15 min', value: '15m' },
+    { label: '30 min', value: '30m' },
+    { label: '1 hour', value: '1h' },
+    { label: '4 hours', value: '4h' },
+    { label: '8 hours', value: '8h' },
+    { label: '24 hours', value: '24h' },
+  ];
+
+  return (
+    <div ref={dropdownRef} className="relative">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="p-1.5 sm:p-2 text-slate-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded-lg flex-shrink-0 flex items-center gap-0.5"
+        title="Snooze this alert"
+      >
+        <Timer className="w-4 h-4" />
+        <ChevronDown className="w-3 h-3" />
+      </button>
+
+      {isOpen && (
+        <div className="absolute right-0 top-full mt-1 z-20 bg-white dark:bg-nog-800 border border-slate-200 dark:border-nog-700 rounded-lg shadow-lg py-1 min-w-[140px]">
+          <div className="px-3 py-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase border-b border-slate-100 dark:border-nog-700">
+            Quick Snooze
+          </div>
+          {snoozeOptions.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => snoozeMutation.mutate(opt.value)}
+              disabled={snoozeMutation.isPending}
+              className="w-full px-3 py-2 text-left text-sm text-slate-700 dark:text-slate-300 hover:bg-amber-50 dark:hover:bg-amber-900/30 flex items-center gap-2 disabled:opacity-50"
+            >
+              <Timer className="w-3 h-3 text-amber-500" />
+              {opt.label}
+            </button>
+          ))}
+          <div className="border-t border-slate-100 dark:border-nog-700 mt-1 pt-1">
+            <button
+              onClick={() => {
+                setIsOpen(false);
+                onFullSilence();
+              }}
+              className="w-full px-3 py-2 text-left text-sm text-slate-500 dark:text-slate-400 hover:bg-nog-50 dark:hover:bg-nog-700 flex items-center gap-2"
+            >
+              <BellOff className="w-3 h-3" />
+              More options...
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );

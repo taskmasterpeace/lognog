@@ -32,6 +32,9 @@ export enum TokenType {
   TRANSACTION = 'TRANSACTION',
   MAXSPAN = 'MAXSPAN',
   MAXPAUSE = 'MAXPAUSE',
+  LOOKUP = 'LOOKUP',
+  CHART = 'CHART',
+  OUTPUT = 'OUTPUT',
 
   // Aggregation functions
   COUNT = 'COUNT',
@@ -114,7 +117,9 @@ export type ASTNode =
   | TimechartNode
   | RexNode
   | FilldownNode
-  | TransactionNode;
+  | TransactionNode
+  | LookupNode
+  | ChartNode;
 
 export interface SearchNode {
   type: 'search';
@@ -313,6 +318,24 @@ export interface TransactionNode {
   fields: string[]; // Fields to group transactions by
   maxspan?: string; // Maximum time span for a transaction (e.g., "30m")
   maxpause?: string; // Maximum pause between events (e.g., "5m")
+}
+
+export interface LookupNode {
+  type: 'lookup';
+  lookupTable: string; // Name of the lookup table
+  field: string; // Field in the data to match
+  matchField?: string; // Field in lookup table to match against (defaults to field)
+  outputFields: string[]; // Fields to add from lookup table (empty = all)
+}
+
+export interface ChartNode {
+  type: 'chart';
+  chartType: 'line' | 'bar' | 'pie' | 'scatter' | 'area' | 'table';
+  xField?: string;
+  yField?: string;
+  aggregation?: AggregationFunction;
+  groupBy?: string;
+  limit?: number;
 }
 
 // Query AST

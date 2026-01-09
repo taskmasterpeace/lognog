@@ -833,6 +833,10 @@ function initializeSchema(): void {
     database.exec("ALTER TABLE saved_searches ADD COLUMN app_scope TEXT DEFAULT 'default'");
   }
 
+  if (!ssColumnNames.includes('folder')) {
+    database.exec("ALTER TABLE saved_searches ADD COLUMN folder TEXT DEFAULT 'Uncategorized'");
+  }
+
   // Create indexes for app_scope filtering
   database.exec(`
     CREATE INDEX IF NOT EXISTS idx_dashboards_app_scope ON dashboards(app_scope);
@@ -853,6 +857,7 @@ export interface SavedSearch {
   time_range: string;
   schedule?: string;
   schedule_enabled: number;
+  folder: string;
   cache_ttl_seconds: number;
   cached_results?: string;
   cached_at?: string;
@@ -875,6 +880,7 @@ export interface SavedSearchFilters {
   tags?: string[];
   schedule_enabled?: boolean;
   search?: string;
+  folder?: string;
 }
 
 export interface SavedSearchCreateOptions {
@@ -886,6 +892,7 @@ export interface SavedSearchCreateOptions {
   schedule_enabled?: boolean;
   cache_ttl_seconds?: number;
   tags?: string[];
+  folder?: string;
 }
 
 export interface SavedSearchUpdateOptions {
@@ -898,6 +905,7 @@ export interface SavedSearchUpdateOptions {
   schedule_enabled?: boolean;
   cache_ttl_seconds?: number;
   tags?: string[];
+  folder?: string | null;
 }
 
 export function getSavedSearches(filters?: SavedSearchFilters): SavedSearch[] {
@@ -930,9 +938,13 @@ export function getSavedSearches(filters?: SavedSearchFilters): SavedSearch[] {
       sql += ` AND (${tagConditions})`;
       filters.tags.forEach(tag => params.push(`%"${tag}"%`));
     }
+    if (filters.folder) {
+      sql += ' AND folder = ?';
+      params.push(filters.folder);
+    }
   }
 
-  sql += ' ORDER BY updated_at DESC';
+  sql += ' ORDER BY folder ASC NULLS LAST, updated_at DESC';
   return database.prepare(sql).all(...params) as SavedSearch[];
 }
 
@@ -959,8 +971,8 @@ export function createSavedSearch(
   database.prepare(`
     INSERT INTO saved_searches (
       id, name, query, description, owner_id, is_shared, time_range,
-      schedule, schedule_enabled, cache_ttl_seconds, tags
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      schedule, schedule_enabled, cache_ttl_seconds, tags, folder
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
     name,
@@ -972,7 +984,8 @@ export function createSavedSearch(
     options?.schedule || null,
     options?.schedule_enabled ? 1 : 0,
     options?.cache_ttl_seconds || 3600,
-    JSON.stringify(options?.tags || [])
+    JSON.stringify(options?.tags || []),
+    options?.folder || 'Uncategorized'
   );
 
   return getSavedSearch(id)!;
@@ -1042,6 +1055,10 @@ export function updateSavedSearch(
   if (updates.tags !== undefined) {
     fields.push('tags = ?');
     values.push(JSON.stringify(updates.tags));
+  }
+  if (updates.folder !== undefined) {
+    fields.push('folder = ?');
+    values.push(updates.folder);
   }
 
   values.push(id);
@@ -1144,6 +1161,15 @@ export function getSavedSearchTags(): string[] {
   });
 
   return Array.from(allTags).sort();
+}
+
+export function getSavedSearchFolders(): string[] {
+  const database = getSQLiteDB();
+  const folders = database.prepare(
+    `SELECT DISTINCT folder FROM saved_searches WHERE folder IS NOT NULL ORDER BY folder`
+  ).all() as { folder: string }[];
+
+  return folders.map(f => f.folder);
 }
 
 export function duplicateSavedSearch(id: string, newOwnerId?: string): SavedSearch | undefined {

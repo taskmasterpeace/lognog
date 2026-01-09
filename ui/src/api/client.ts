@@ -46,6 +46,7 @@ export interface SavedSearch {
   last_error?: string;
   run_count: number;
   tags: string[];
+  folder?: string;
   version: number;
   previous_versions?: Array<{ version: number; query: string; time_range: string; changed_at: string }>;
   is_cache_valid?: boolean;
@@ -61,6 +62,7 @@ export interface SavedSearchFilters {
   scheduled?: boolean;
   tags?: string[];
   search?: string;
+  folder?: string;
 }
 
 export interface SavedSearchCreateRequest {
@@ -73,6 +75,7 @@ export interface SavedSearchCreateRequest {
   cache_ttl_seconds?: number;
   is_shared?: boolean;
   tags?: string[];
+  folder?: string;
 }
 
 export interface SavedSearchUpdateRequest {
@@ -85,6 +88,7 @@ export interface SavedSearchUpdateRequest {
   cache_ttl_seconds?: number;
   is_shared?: boolean;
   tags?: string[];
+  folder?: string | null;
 }
 
 export interface SavedSearchRunResult {
@@ -2287,6 +2291,28 @@ export interface FullMessageResponse {
 
 export async function getFullMessage(logId: string): Promise<FullMessageResponse> {
   return request(`/search/logs/${encodeURIComponent(logId)}/full-message`);
+}
+
+export interface LogContextResponse {
+  targetId: string;
+  target: Record<string, unknown>;
+  before: Record<string, unknown>[];
+  after: Record<string, unknown>[];
+  hostname: string;
+  beforeCount: number;
+  afterCount: number;
+}
+
+export async function getLogContext(
+  logId: string,
+  options?: { before?: number; after?: number }
+): Promise<LogContextResponse> {
+  const params = new URLSearchParams();
+  if (options?.before !== undefined) params.set('before', String(options.before));
+  if (options?.after !== undefined) params.set('after', String(options.after));
+  const queryString = params.toString();
+  const url = `/search/logs/${encodeURIComponent(logId)}/context${queryString ? `?${queryString}` : ''}`;
+  return request(url);
 }
 
 // ============ Source Configs API ============

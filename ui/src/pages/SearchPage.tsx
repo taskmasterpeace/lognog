@@ -101,6 +101,7 @@ export default function SearchPage() {
   const [saveName, setSaveName] = useState('');
   const [saveDescription, setSaveDescription] = useState('');
   const [saveTags, setSaveTags] = useState('');
+  const [saveFolder, setSaveFolder] = useState('');
   const [saveScheduleEnabled, setSaveScheduleEnabled] = useState(false);
   const [saveSchedule, setSaveSchedule] = useState('0 * * * *');
   const [searchMode, setSearchMode] = useState<'dsl' | 'ai'>('dsl');
@@ -318,6 +319,7 @@ export default function SearchPage() {
         description: saveDescription || undefined,
         time_range: timeRange,
         tags: saveTags ? saveTags.split(',').map(t => t.trim()).filter(t => t) : undefined,
+        folder: saveFolder || undefined,
         schedule_enabled: saveScheduleEnabled,
         schedule: saveScheduleEnabled ? saveSchedule : undefined,
       };
@@ -328,6 +330,7 @@ export default function SearchPage() {
       setSaveName('');
       setSaveDescription('');
       setSaveTags('');
+      setSaveFolder('');
       setSaveScheduleEnabled(false);
       setSaveSchedule('0 * * * *');
     },
@@ -1419,17 +1422,36 @@ export default function SearchPage() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-slate-700 dark:text-nog-300 mb-1.5">
-                    Tags
+                    Folder
                   </label>
                   <input
                     type="text"
-                    value={saveTags}
-                    onChange={(e) => setSaveTags(e.target.value)}
-                    placeholder="security, errors, network"
+                    value={saveFolder}
+                    onChange={(e) => setSaveFolder(e.target.value)}
+                    placeholder="Security, Network, Applications..."
                     className="input"
+                    list="folder-suggestions"
                   />
-                  <p className="text-xs text-slate-500 mt-1">Comma-separated</p>
+                  <datalist id="folder-suggestions">
+                    {savedSearches?.map(s => s.folder).filter((f, i, arr) => f && arr.indexOf(f) === i).map(folder => (
+                      <option key={folder} value={folder} />
+                    ))}
+                  </datalist>
+                  <p className="text-xs text-slate-500 mt-1">Organize searches by folder</p>
                 </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 dark:text-nog-300 mb-1.5">
+                  Tags
+                </label>
+                <input
+                  type="text"
+                  value={saveTags}
+                  onChange={(e) => setSaveTags(e.target.value)}
+                  placeholder="security, errors, network"
+                  className="input"
+                />
+                <p className="text-xs text-slate-500 mt-1">Comma-separated</p>
               </div>
               <div className="border-t border-slate-200 dark:border-nog-700 pt-4">
                 <div className="flex items-center justify-between mb-3">

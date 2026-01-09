@@ -10,6 +10,7 @@ import {
   updateSavedSearchError,
   clearSavedSearchCache,
   getSavedSearchTags,
+  getSavedSearchFolders,
   duplicateSavedSearch,
   SavedSearchFilters,
 } from '../db/sqlite.js';
@@ -34,6 +35,7 @@ const createSchema = z.object({
   cache_ttl_seconds: z.number().min(60).max(86400 * 7).optional(), // 1 min to 7 days
   is_shared: z.boolean().optional(),
   tags: z.array(z.string().max(50)).max(20).optional(),
+  folder: z.string().max(100).optional(),
 });
 
 const updateSchema = z.object({
@@ -46,6 +48,7 @@ const updateSchema = z.object({
   cache_ttl_seconds: z.number().min(60).max(86400 * 7).optional(),
   is_shared: z.boolean().optional(),
   tags: z.array(z.string().max(50)).max(20).optional(),
+  folder: z.string().max(100).nullable().optional(),
 });
 
 const runSchema = z.object({
@@ -134,6 +137,9 @@ router.get('/', optionalAuth, (req: Request, res: Response) => {
       const tagsParam = req.query.tags as string;
       filters.tags = tagsParam.split(',').map(t => t.trim()).filter(Boolean);
     }
+    if (req.query.folder) {
+      filters.folder = req.query.folder as string;
+    }
 
     const searches = getSavedSearches(filters);
 
@@ -165,6 +171,17 @@ router.get('/tags', optionalAuth, (_req: Request, res: Response) => {
   } catch (error) {
     console.error('Error fetching tags:', error);
     return res.status(500).json({ error: 'Failed to fetch tags' });
+  }
+});
+
+// GET /saved-searches/folders - Get all unique folders
+router.get('/folders', optionalAuth, (_req: Request, res: Response) => {
+  try {
+    const folders = getSavedSearchFolders();
+    return res.json({ folders });
+  } catch (error) {
+    console.error('Error fetching folders:', error);
+    return res.status(500).json({ error: 'Failed to fetch folders' });
   }
 });
 
@@ -220,6 +237,7 @@ router.post('/', authenticate, (req: Request, res: Response) => {
       schedule_enabled: data.schedule_enabled,
       cache_ttl_seconds: data.cache_ttl_seconds,
       tags: data.tags,
+      folder: data.folder,
     });
 
     return res.status(201).json({

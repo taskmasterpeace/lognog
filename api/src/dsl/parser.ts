@@ -21,6 +21,8 @@ import {
   RexNode,
   FilldownNode,
   TransactionNode,
+  LookupNode,
+  ChartNode,
   Condition,
   SimpleCondition,
   LogicGroup,
@@ -113,6 +115,10 @@ export class Parser {
         return this.parseFilldown();
       case TokenType.TRANSACTION:
         return this.parseTransaction();
+      case TokenType.LOOKUP:
+        return this.parseLookup();
+      case TokenType.CHART:
+        return this.parseChart();
       case TokenType.IDENTIFIER:
         // Implicit search with field=value
         return this.parseImplicitSearch();
@@ -902,6 +908,133 @@ export class Parser {
     }
 
     return { type: 'transaction', fields, maxspan, maxpause };
+  }
+
+  /**
+   * Parse lookup command
+   * Syntax: lookup <table> field=<field> [match=<match_field>] [output <field1>, <field2>, ...]
+   * Examples:
+   *   lookup geoip field=source_ip output country, city
+   *   lookup http_status field=status_code
+   *   lookup users field=user_id match=id output name, email
+   */
+  private parseLookup(): LookupNode {
+    this.consume(TokenType.LOOKUP, 'Expected "lookup"');
+
+    // Parse lookup table name
+    const lookupTable = this.consume(TokenType.IDENTIFIER, 'Expected lookup table name').value;
+
+    let field: string | null = null;
+    let matchField: string | undefined;
+    const outputFields: string[] = [];
+
+    // Parse options: field=xxx, match=xxx, output xxx,xxx
+    while (!this.isAtEnd() && !this.check(TokenType.PIPE)) {
+      if (this.check(TokenType.FIELD) || (this.check(TokenType.IDENTIFIER) && this.peek().value.toLowerCase() === 'field')) {
+        this.advance();
+        this.consume(TokenType.EQUALS, 'Expected "="');
+        field = this.consume(TokenType.IDENTIFIER, 'Expected field name').value;
+      } else if (this.check(TokenType.IDENTIFIER) && this.peek().value.toLowerCase() === 'match') {
+        this.advance();
+        this.consume(TokenType.EQUALS, 'Expected "="');
+        matchField = this.consume(TokenType.IDENTIFIER, 'Expected match field name').value;
+      } else if (this.check(TokenType.OUTPUT) || (this.check(TokenType.IDENTIFIER) && this.peek().value.toLowerCase() === 'output')) {
+        this.advance();
+        // Parse comma-separated output fields
+        while (!this.isAtEnd() && !this.check(TokenType.PIPE) &&
+               !this.check(TokenType.FIELD) && !(this.check(TokenType.IDENTIFIER) && this.peek().value.toLowerCase() === 'field') &&
+               !(this.check(TokenType.IDENTIFIER) && this.peek().value.toLowerCase() === 'match')) {
+          outputFields.push(this.consume(TokenType.IDENTIFIER, 'Expected output field name').value);
+          this.match(TokenType.COMMA);
+        }
+      } else {
+        break;
+      }
+    }
+
+    if (!field) {
+      throw new ParseError('lookup requires field= parameter', this.peek().line, this.peek().column);
+    }
+
+    return {
+      type: 'lookup',
+      lookupTable,
+      field,
+      matchField,
+      outputFields,
+    };
+  }
+
+  /**
+   * Parse chart command (visualization hint)
+   * Syntax: chart type=<type> [x=<field>] [y=<field>] [agg=<func>] [by=<field>] [limit=<n>]
+   * Examples:
+   *   chart type=line x=timestamp y=latency agg=avg
+   *   chart type=pie x=hostname agg=count
+   *   chart type=bar x=status y=count
+   */
+  private parseChart(): ChartNode {
+    this.consume(TokenType.CHART, 'Expected "chart"');
+
+    let chartType: 'line' | 'bar' | 'pie' | 'scatter' | 'area' | 'table' = 'table';
+    let xField: string | undefined;
+    let yField: string | undefined;
+    let aggregation: AggregationFunction | undefined;
+    let groupBy: string | undefined;
+    let limit: number | undefined;
+
+    // Parse options
+    while (!this.isAtEnd() && !this.check(TokenType.PIPE)) {
+      if (this.check(TokenType.IDENTIFIER)) {
+        const key = this.peek().value.toLowerCase();
+
+        if (key === 'type') {
+          this.advance();
+          this.consume(TokenType.EQUALS, 'Expected "="');
+          const typeValue = this.consume(TokenType.IDENTIFIER, 'Expected chart type').value.toLowerCase();
+          if (['line', 'bar', 'pie', 'scatter', 'area', 'table'].includes(typeValue)) {
+            chartType = typeValue as typeof chartType;
+          }
+        } else if (key === 'x' || key === 'xfield') {
+          this.advance();
+          this.consume(TokenType.EQUALS, 'Expected "="');
+          xField = this.consume(TokenType.IDENTIFIER, 'Expected x field').value;
+        } else if (key === 'y' || key === 'yfield') {
+          this.advance();
+          this.consume(TokenType.EQUALS, 'Expected "="');
+          yField = this.consume(TokenType.IDENTIFIER, 'Expected y field').value;
+        } else if (key === 'agg' || key === 'aggregation') {
+          this.advance();
+          this.consume(TokenType.EQUALS, 'Expected "="');
+          const aggValue = this.advance().value.toLowerCase();
+          if (['count', 'sum', 'avg', 'min', 'max', 'dc'].includes(aggValue)) {
+            aggregation = aggValue as AggregationFunction;
+          }
+        } else if (key === 'by' || key === 'groupby') {
+          this.advance();
+          this.consume(TokenType.EQUALS, 'Expected "="');
+          groupBy = this.consume(TokenType.IDENTIFIER, 'Expected group by field').value;
+        } else if (key === 'limit') {
+          this.advance();
+          this.consume(TokenType.EQUALS, 'Expected "="');
+          limit = parseInt(this.consume(TokenType.NUMBER, 'Expected limit number').value, 10);
+        } else {
+          break;
+        }
+      } else {
+        break;
+      }
+    }
+
+    return {
+      type: 'chart',
+      chartType,
+      xField,
+      yField,
+      aggregation,
+      groupBy,
+      limit,
+    };
   }
 
   // Helper methods

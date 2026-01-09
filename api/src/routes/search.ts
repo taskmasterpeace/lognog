@@ -14,7 +14,8 @@ import {
 import { translateNaturalLanguage, getSuggestedQueries } from '../services/ai-search.js';
 import { applyFieldExtraction } from '../services/field-extractor.js';
 import { optionalAuth, rateLimit } from '../auth/middleware.js';
-import { FilldownNode, TransactionNode } from '../dsl/types.js';
+import { FilldownNode, TransactionNode, LookupNode, ChartNode } from '../dsl/types.js';
+import { applyLookup, listLookupTables } from '../services/lookup-tables.js';
 
 const router = Router();
 
@@ -407,6 +408,19 @@ router.post('/query', rateLimit(120, 60000), async (req: Request, res: Response)
           transactionStage.maxpause
         );
       }
+
+      // Apply lookup enrichment
+      const lookupStages = ast.stages.filter(s => s.type === 'lookup') as LookupNode[];
+      for (const lookupStage of lookupStages) {
+        results = applyLookup(
+          results as Record<string, unknown>[],
+          lookupStage.lookupTable,
+          lookupStage.field,
+          lookupStage.matchField,
+          lookupStage.outputFields.length > 0 ? lookupStage.outputFields : undefined
+        );
+      }
+
     } catch {
       // Ignore parse errors for post-processing check - main query already executed successfully
     }
@@ -731,6 +745,21 @@ router.get('/backend', (_req: Request, res: Response) => {
   return res.json(getBackendInfo());
 });
 
+// List available lookup tables
+router.get('/lookup-tables', (_req: Request, res: Response) => {
+  const tables = listLookupTables();
+  return res.json({
+    tables,
+    usage: 'Use in DSL: search * | lookup <table> field=<field> [output <fields>]',
+    examples: [
+      'search status_code=500 | lookup http_status field=status_code output status_name, status_category',
+      'search * | lookup severity field=severity output severity_name, severity_level',
+      'search * | lookup ports field=dest_port output service, category',
+      'search * | lookup countries field=country_code output country_name, region',
+    ],
+  });
+});
+
 // Saved Searches CRUD
 
 router.get('/saved', (_req: Request, res: Response) => {
@@ -838,6 +867,76 @@ router.get('/logs/:id/full-message', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error fetching full message:', error);
     return res.status(500).json({ error: 'Failed to fetch full message' });
+  }
+});
+
+/**
+ * GET /api/search/logs/:id/context
+ * Fetch surrounding log entries for context (like grep -C)
+ */
+router.get('/logs/:id/context', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { before = '5', after = '5' } = req.query;
+
+    if (!id || typeof id !== 'string') {
+      return res.status(400).json({ error: 'Invalid log ID' });
+    }
+
+    const beforeCount = Math.min(parseInt(before as string, 10) || 5, 50);
+    const afterCount = Math.min(parseInt(after as string, 10) || 5, 50);
+
+    // First, get the target log to find its timestamp and hostname
+    const targetLog = await getLogById(id, ['id', 'timestamp', 'hostname', 'app_name']);
+
+    if (!targetLog) {
+      return res.status(404).json({ error: 'Log not found' });
+    }
+
+    const timestamp = targetLog.timestamp as string;
+    const hostname = targetLog.hostname as string;
+
+    // Get logs before the target (same host, earlier timestamp)
+    const beforeQuery = `
+      search hostname="${hostname}"
+      | where timestamp < "${timestamp}"
+      | sort desc timestamp
+      | limit ${beforeCount}
+    `;
+
+    // Get logs after the target (same host, later timestamp)
+    const afterQuery = `
+      search hostname="${hostname}"
+      | where timestamp > "${timestamp}"
+      | sort asc timestamp
+      | limit ${afterCount}
+    `;
+
+    // Execute both queries in parallel
+    const [beforeResult, afterResult] = await Promise.all([
+      executeDSLQuery(beforeQuery, {}),
+      executeDSLQuery(afterQuery, {}),
+    ]);
+
+    // Reverse the before results to get chronological order
+    const beforeLogs = (beforeResult.results as Record<string, unknown>[]).reverse();
+    const afterLogs = afterResult.results as Record<string, unknown>[];
+
+    // Get the full target log
+    const fullTargetLog = await getLogById(id);
+
+    return res.json({
+      targetId: id,
+      target: fullTargetLog,
+      before: beforeLogs,
+      after: afterLogs,
+      hostname,
+      beforeCount: beforeLogs.length,
+      afterCount: afterLogs.length,
+    });
+  } catch (error) {
+    console.error('Error fetching log context:', error);
+    return res.status(500).json({ error: 'Failed to fetch log context' });
   }
 });
 

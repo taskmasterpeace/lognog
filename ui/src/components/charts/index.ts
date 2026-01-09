@@ -21,3 +21,12 @@ export type { WordCloudChartProps, WordCloudData } from './WordCloudChart';
 
 export { AreaChart } from './AreaChart';
 export type { AreaChartProps, AreaChartSeries } from './AreaChart';
+
+export { ScatterChart } from './ScatterChart';
+export type { ScatterChartProps, ScatterChartData } from './ScatterChart';
+
+export { FunnelChart } from './FunnelChart';
+export type { FunnelChartProps, FunnelChartData } from './FunnelChart';
+
+export { TreemapChart } from './TreemapChart';
+export type { TreemapChartProps, TreemapNode } from './TreemapChart';

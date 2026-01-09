@@ -12,10 +12,11 @@ import {
   X,
   Code,
   List,
+  Layers,
 } from 'lucide-react';
 import { AnnotatedValue, useSourceAnnotationsOptional } from './SourceAnnotations';
 import { useDateFormat } from '../contexts/DateFormatContext';
-import { getFullMessage } from '../api/client';
+import { getFullMessage, getLogContext, LogContextResponse } from '../api/client';
 
 // Types
 export interface LogEntry {
@@ -227,6 +228,7 @@ interface LogRowProps {
   onToggleExpand: (index: number) => void;
   onAddFilter?: (field: string, value: string, exclude?: boolean) => void;
   onLoadFullMessage?: (logId: string) => void;
+  onViewContext?: (logId: string) => void;
   searchTerms?: string[];
 }
 
@@ -238,6 +240,7 @@ const LogRow: React.FC<LogRowProps> = ({
   onToggleExpand,
   onAddFilter,
   onLoadFullMessage,
+  onViewContext,
   searchTerms,
 }) => {
   const { formatDate } = useDateFormat();
@@ -416,16 +419,29 @@ const LogRow: React.FC<LogRowProps> = ({
                 })}
               </div>
 
-              {/* Show Full Message button for truncated logs */}
-              {log.message_truncated && log.id && onLoadFullMessage && (
-                <button
-                  onClick={() => onLoadFullMessage(log.id!)}
-                  className="mt-2 text-xs text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 flex items-center gap-1 font-medium"
-                >
-                  <Maximize2 className="w-3 h-3" />
-                  Show full message
-                </button>
-              )}
+              {/* Action buttons row */}
+              <div className="mt-2 flex items-center gap-4">
+                {/* Show Full Message button for truncated logs */}
+                {log.message_truncated && log.id && onLoadFullMessage && (
+                  <button
+                    onClick={() => onLoadFullMessage(log.id!)}
+                    className="text-xs text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 flex items-center gap-1 font-medium"
+                  >
+                    <Maximize2 className="w-3 h-3" />
+                    Show full message
+                  </button>
+                )}
+                {/* View Context button */}
+                {log.id && onViewContext && (
+                  <button
+                    onClick={() => onViewContext(log.id!)}
+                    className="text-xs text-slate-600 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 flex items-center gap-1 font-medium"
+                  >
+                    <Layers className="w-3 h-3" />
+                    View context
+                  </button>
+                )}
+              </div>
 
               {/* Structured Data Fields (parsed from JSON) */}
               {structuredFields.length > 0 && (
@@ -512,6 +528,15 @@ export default function LogViewer({
     loading: boolean;
   }>({ isOpen: false, logId: null, content: null, loading: false });
 
+  // State for context modal
+  const [contextModal, setContextModal] = useState<{
+    isOpen: boolean;
+    logId: string | null;
+    data: LogContextResponse | null;
+    loading: boolean;
+    contextSize: number;
+  }>({ isOpen: false, logId: null, data: null, loading: false, contextSize: 5 });
+
   // Load full message handler
   const loadFullMessage = useCallback(async (logId: string) => {
     setFullMessageModal({ isOpen: true, logId, content: null, loading: true });
@@ -523,6 +548,19 @@ export default function LogViewer({
       setFullMessageModal(prev => ({ ...prev, content: 'Failed to load full message', loading: false }));
     }
   }, []);
+
+  // View context handler
+  const viewContext = useCallback(async (logId: string, size?: number) => {
+    const contextSize = size ?? contextModal.contextSize;
+    setContextModal(prev => ({ ...prev, isOpen: true, logId, data: null, loading: true, contextSize }));
+    try {
+      const data = await getLogContext(logId, { before: contextSize, after: contextSize });
+      setContextModal(prev => ({ ...prev, data, loading: false }));
+    } catch (err) {
+      console.error('Failed to load log context:', err);
+      setContextModal(prev => ({ ...prev, loading: false }));
+    }
+  }, [contextModal.contextSize]);
 
   // Copy to clipboard helper
   const copyToClipboard = async (text: string | null) => {
@@ -659,6 +697,7 @@ export default function LogViewer({
               onToggleExpand={handleToggleExpand}
               onAddFilter={onAddFilter}
               onLoadFullMessage={loadFullMessage}
+              onViewContext={viewContext}
               searchTerms={searchTerms}
             />
           );
@@ -715,6 +754,167 @@ export default function LogViewer({
           </div>
         </div>
       )}
+
+      {/* Log Context Modal */}
+      {contextModal.isOpen && (
+        <LogContextModal
+          data={contextModal.data}
+          loading={contextModal.loading}
+          contextSize={contextModal.contextSize}
+          onClose={() => setContextModal({ isOpen: false, logId: null, data: null, loading: false, contextSize: 5 })}
+          onChangeSize={(size) => contextModal.logId && viewContext(contextModal.logId, size)}
+        />
+      )}
+    </div>
+  );
+}
+
+// Log Context Modal Component
+interface LogContextModalProps {
+  data: LogContextResponse | null;
+  loading: boolean;
+  contextSize: number;
+  onClose: () => void;
+  onChangeSize: (size: number) => void;
+}
+
+function LogContextModal({ data, loading, contextSize, onClose, onChangeSize }: LogContextModalProps) {
+  const { formatDate } = useDateFormat();
+  const contextSizeOptions = [5, 10, 25];
+
+  const renderLogEntry = (log: Record<string, unknown>, isTarget: boolean = false) => {
+    const severity = typeof log.severity === 'number' ? log.severity : 6;
+    const severityConfig = SEVERITY_CONFIG[severity as keyof typeof SEVERITY_CONFIG] || SEVERITY_CONFIG[6];
+
+    return (
+      <div
+        className={`px-4 py-2 border-b border-slate-100 dark:border-nog-700 ${
+          isTarget
+            ? 'bg-amber-50 dark:bg-amber-900/30 border-l-4 border-l-amber-500'
+            : 'hover:bg-nog-50 dark:hover:bg-nog-800'
+        }`}
+      >
+        <div className="flex items-start gap-3 text-sm">
+          <span className="text-slate-500 dark:text-nog-400 font-mono text-xs whitespace-nowrap flex-shrink-0 w-36">
+            {log.timestamp ? formatDate(log.timestamp as string) : '—'}
+          </span>
+
+          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ring-1 flex-shrink-0 ${severityConfig.color}`}>
+            {severityConfig.name}
+          </span>
+
+          {log.app_name ? (
+            <span className="text-amber-600 dark:text-amber-400 font-mono text-xs flex-shrink-0">
+              {String(log.app_name)}
+            </span>
+          ) : null}
+
+          <span className="text-slate-700 dark:text-nog-200 font-mono text-xs truncate flex-1">
+            {String(log.message ?? '—')}
+          </span>
+
+          {isTarget && (
+            <span className="text-amber-600 dark:text-amber-400 text-xs font-semibold flex-shrink-0">
+              ← Target
+            </span>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+      <div className="bg-white dark:bg-nog-800 rounded-lg shadow-xl max-w-5xl w-full max-h-[85vh] flex flex-col mx-4">
+        <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-nog-700">
+          <div className="flex items-center gap-4">
+            <h3 className="font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <Layers className="w-5 h-5 text-amber-500" />
+              Log Context
+            </h3>
+            {data && (
+              <span className="text-sm text-slate-500 dark:text-slate-400">
+                {data.hostname} • {data.beforeCount} before, {data.afterCount} after
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-500 dark:text-slate-400">Context:</span>
+              <select
+                value={contextSize}
+                onChange={(e) => onChangeSize(parseInt(e.target.value, 10))}
+                className="text-sm px-2 py-1 border border-slate-200 dark:border-nog-700 rounded bg-white dark:bg-nog-700 text-slate-700 dark:text-slate-300"
+              >
+                {contextSizeOptions.map(size => (
+                  <option key={size} value={size}>±{size} logs</option>
+                ))}
+              </select>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-1 hover:bg-slate-100 dark:hover:bg-nog-700 rounded transition-colors"
+            >
+              <X className="w-5 h-5 text-slate-500 dark:text-nog-400" />
+            </button>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-auto">
+          {loading ? (
+            <div className="flex items-center justify-center py-16">
+              <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
+            </div>
+          ) : data ? (
+            <div className="divide-y divide-slate-100 dark:divide-nog-700">
+              {/* Logs before */}
+              {data.before.length > 0 && (
+                <div>
+                  <div className="px-4 py-2 bg-slate-50 dark:bg-nog-900 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">
+                    {data.before.length} logs before
+                  </div>
+                  {data.before.map((log, i) => (
+                    <div key={`before-${i}`}>{renderLogEntry(log)}</div>
+                  ))}
+                </div>
+              )}
+
+              {/* Target log */}
+              <div>
+                <div className="px-4 py-2 bg-amber-100 dark:bg-amber-900/50 text-xs font-semibold text-amber-700 dark:text-amber-300 uppercase">
+                  Target Log
+                </div>
+                {renderLogEntry(data.target, true)}
+              </div>
+
+              {/* Logs after */}
+              {data.after.length > 0 && (
+                <div>
+                  <div className="px-4 py-2 bg-slate-50 dark:bg-nog-900 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">
+                    {data.after.length} logs after
+                  </div>
+                  {data.after.map((log, i) => (
+                    <div key={`after-${i}`}>{renderLogEntry(log)}</div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center justify-center py-16 text-slate-500">
+              No context data available
+            </div>
+          )}
+        </div>
+
+        <div className="p-4 border-t border-slate-200 dark:border-nog-700 flex justify-end">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 rounded transition-colors"
+          >
+            Close
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

@@ -34,6 +34,9 @@ const KEYWORDS: Record<string, TokenType> = {
   'transaction': TokenType.TRANSACTION,
   'maxspan': TokenType.MAXSPAN,
   'maxpause': TokenType.MAXPAUSE,
+  'lookup': TokenType.LOOKUP,
+  'chart': TokenType.CHART,
+  'output': TokenType.OUTPUT,
   // Aggregation functions
   'count': TokenType.COUNT,
   'sum': TokenType.SUM,
