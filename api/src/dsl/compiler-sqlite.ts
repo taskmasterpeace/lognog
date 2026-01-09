@@ -195,6 +195,11 @@ export class SQLiteCompiler {
           const rexExtractions = this.compileRex(stage);
           selectFields.push(...rexExtractions);
           break;
+
+        case 'filldown':
+          // Filldown is handled post-query in JavaScript
+          // Store the fields to fill down for post-processing
+          break;
       }
     }
 

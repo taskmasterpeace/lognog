@@ -14,8 +14,36 @@ import {
 import { translateNaturalLanguage, getSuggestedQueries } from '../services/ai-search.js';
 import { applyFieldExtraction } from '../services/field-extractor.js';
 import { optionalAuth, rateLimit } from '../auth/middleware.js';
+import { FilldownNode } from '../dsl/types.js';
 
 const router = Router();
+
+// Helper: Apply filldown post-processing to results
+// Fills null/empty values with the last non-null value for specified fields
+function applyFilldown(results: Record<string, unknown>[], fields: string[]): Record<string, unknown>[] {
+  if (results.length === 0) return results;
+
+  // If no fields specified, use all fields that have null/undefined values
+  const fieldsToFill = fields.length > 0 ? fields : Object.keys(results[0]);
+  const lastValues: Record<string, unknown> = {};
+
+  return results.map((row) => {
+    const newRow = { ...row };
+    for (const field of fieldsToFill) {
+      const value = newRow[field];
+      if (value === null || value === undefined || value === '') {
+        // Use last known value
+        if (lastValues[field] !== undefined) {
+          newRow[field] = lastValues[field];
+        }
+      } else {
+        // Update last known value
+        lastValues[field] = value;
+      }
+    }
+    return newRow;
+  });
+}
 
 // Helper: Calculate histogram interval based on time range
 function calculateHistogramInterval(startMs: number, endMs: number): {
@@ -241,6 +269,17 @@ router.post('/query', rateLimit(120, 60000), async (req: Request, res: Response)
     let results = rawResults;
     if (extract_fields) {
       results = await applyFieldExtraction(results, source_type);
+    }
+
+    // Apply filldown post-processing if present in query
+    try {
+      const ast = parseToAST(query);
+      const filldownStage = ast.stages.find(s => s.type === 'filldown') as FilldownNode | undefined;
+      if (filldownStage) {
+        results = applyFilldown(results as Record<string, unknown>[], filldownStage.fields);
+      }
+    } catch {
+      // Ignore parse errors for filldown check - main query already executed successfully
     }
 
     // Calculate execution time

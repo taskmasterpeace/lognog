@@ -28,6 +28,7 @@ export enum TokenType {
   REX = 'REX',
   SPAN = 'SPAN',
   FIELD = 'FIELD',
+  FILLDOWN = 'FILLDOWN',
 
   // Aggregation functions
   COUNT = 'COUNT',
@@ -108,7 +109,8 @@ export type ASTNode =
   | RareNode
   | BinNode
   | TimechartNode
-  | RexNode;
+  | RexNode
+  | FilldownNode;
 
 export interface SearchNode {
   type: 'search';
@@ -295,6 +297,11 @@ export interface RexNode {
   type: 'rex';
   field: string;
   pattern: string; // regex with named groups
+}
+
+export interface FilldownNode {
+  type: 'filldown';
+  fields: string[]; // Fields to fill down (empty = all fields)
 }
 
 // Query AST

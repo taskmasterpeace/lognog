@@ -25,10 +25,12 @@ const KEYWORDS: Record<string, TokenType> = {
   'top': TokenType.TOP,
   'rare': TokenType.RARE,
   'bin': TokenType.BIN,
+  'bucket': TokenType.BIN,  // Alias for bin
   'timechart': TokenType.TIMECHART,
   'rex': TokenType.REX,
   'span': TokenType.SPAN,
   'field': TokenType.FIELD,
+  'filldown': TokenType.FILLDOWN,
   // Aggregation functions
   'count': TokenType.COUNT,
   'sum': TokenType.SUM,

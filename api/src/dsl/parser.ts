@@ -19,6 +19,7 @@ import {
   BinNode,
   TimechartNode,
   RexNode,
+  FilldownNode,
   Condition,
   SimpleCondition,
   LogicGroup,
@@ -107,6 +108,8 @@ export class Parser {
         return this.parseTimechart();
       case TokenType.REX:
         return this.parseRex();
+      case TokenType.FILLDOWN:
+        return this.parseFilldown();
       case TokenType.IDENTIFIER:
         // Implicit search with field=value
         return this.parseImplicitSearch();
@@ -827,6 +830,20 @@ export class Parser {
     }
 
     return { type: 'rex', field, pattern };
+  }
+
+  private parseFilldown(): FilldownNode {
+    this.consume(TokenType.FILLDOWN, 'Expected "filldown"');
+    const fields: string[] = [];
+
+    // Parse optional field list (if empty, fills all fields)
+    while (!this.isAtEnd() && !this.check(TokenType.PIPE)) {
+      const field = this.consume(TokenType.IDENTIFIER, 'Expected field name').value;
+      fields.push(field);
+      this.match(TokenType.COMMA);
+    }
+
+    return { type: 'filldown', fields };
   }
 
   // Helper methods

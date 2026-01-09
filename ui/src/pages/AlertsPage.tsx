@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import {
@@ -28,6 +28,7 @@ import {
   Terminal,
   LogIn,
   Filter,
+  ArrowUpDown,
 } from 'lucide-react';
 import {
   getAlerts,
@@ -130,6 +131,8 @@ export default function AlertsPage() {
   const [silencingAlertId, setSilencingAlertId] = useState<string | null>(null);
   const [expandedAlerts, setExpandedAlerts] = useState<Set<string>>(new Set());
   const [appScope, setAppScope] = useState<string>('all');
+  const [sortBy, setSortBy] = useState<'name' | 'severity' | 'trigger_count' | 'created_at'>('name');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
 
   // Refs for action inputs (for variable insertion)
   const emailSubjectRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -162,7 +165,9 @@ export default function AlertsPage() {
     wouldTrigger: boolean;
     resultCount: number;
     message: string;
+    sampleResults?: Record<string, unknown>[];
   } | null>(null);
+  const [showSampleResults, setShowSampleResults] = useState(false);
   const [testing, setTesting] = useState(false);
 
   const queryClient = useQueryClient();
@@ -194,6 +199,31 @@ export default function AlertsPage() {
     queryKey: ['alerts', appScope],
     queryFn: () => getAlerts(appScope === 'all' ? undefined : appScope),
   });
+
+  // Sort alerts
+  const sortedAlerts = useMemo(() => {
+    if (!alerts) return [];
+    const severityOrder = { critical: 0, high: 1, medium: 2, low: 3, info: 4 };
+    return [...alerts].sort((a, b) => {
+      let cmp = 0;
+      switch (sortBy) {
+        case 'name':
+          cmp = a.name.localeCompare(b.name);
+          break;
+        case 'severity':
+          cmp = (severityOrder[a.severity as keyof typeof severityOrder] ?? 5) -
+                (severityOrder[b.severity as keyof typeof severityOrder] ?? 5);
+          break;
+        case 'trigger_count':
+          cmp = (a.trigger_count ?? 0) - (b.trigger_count ?? 0);
+          break;
+        case 'created_at':
+          cmp = (a.created_at ?? '').localeCompare(b.created_at ?? '');
+          break;
+      }
+      return sortDir === 'desc' ? -cmp : cmp;
+    });
+  }, [alerts, sortBy, sortDir]);
 
   const { data: alertHistory } = useQuery<LocalAlertHistory[]>({
     queryKey: ['alertHistory', selectedAlertId],
@@ -449,6 +479,27 @@ export default function AlertsPage() {
             <Filter className="w-4 h-4 text-slate-400" />
             <AppScopeFilter value={appScope} onChange={setAppScope} />
           </div>
+          <div className="flex items-center gap-1">
+            <ArrowUpDown className="w-4 h-4 text-slate-400" />
+            <select
+              value={`${sortBy}-${sortDir}`}
+              onChange={(e) => {
+                const [field, dir] = e.target.value.split('-') as [typeof sortBy, typeof sortDir];
+                setSortBy(field);
+                setSortDir(dir);
+              }}
+              className="px-2 py-1.5 text-sm bg-white dark:bg-nog-800 border border-slate-200 dark:border-nog-700 rounded-lg text-slate-700 dark:text-slate-300"
+            >
+              <option value="name-asc">Name (A-Z)</option>
+              <option value="name-desc">Name (Z-A)</option>
+              <option value="severity-asc">Severity (High first)</option>
+              <option value="severity-desc">Severity (Low first)</option>
+              <option value="trigger_count-desc">Most triggered</option>
+              <option value="trigger_count-asc">Least triggered</option>
+              <option value="created_at-desc">Newest</option>
+              <option value="created_at-asc">Oldest</option>
+            </select>
+          </div>
           <button
             onClick={() => {
               setSelectedAlertId(null);
@@ -476,9 +527,9 @@ export default function AlertsPage() {
       </div>
 
       {/* Alerts List */}
-      {alerts && alerts.length > 0 ? (
+      {sortedAlerts && sortedAlerts.length > 0 ? (
         <div className="space-y-4">
-          {alerts.map((alert) => {
+          {sortedAlerts.map((alert) => {
             const severity = getSeverityConfig(alert.severity);
             const SeverityIcon = severity.icon;
             const isExpanded = expandedAlerts.has(alert.id);
@@ -1311,14 +1362,54 @@ export default function AlertsPage() {
 
               {/* Test Result */}
               {testResult && (
-                <div className={`p-4 rounded-lg ${testResult.wouldTrigger ? 'bg-orange-50 text-orange-800' : 'bg-green-50 text-green-800'}`}>
-                  <div className="font-medium flex items-center gap-2">
-                    {testResult.wouldTrigger ? <AlertTriangle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
-                    {testResult.wouldTrigger ? 'Alert Would Trigger' : 'Alert Would Not Trigger'}
+                <div className={`rounded-lg overflow-hidden ${testResult.wouldTrigger ? 'bg-orange-50 dark:bg-orange-900/20' : 'bg-green-50 dark:bg-green-900/20'}`}>
+                  <div className={`p-4 ${testResult.wouldTrigger ? 'text-orange-800 dark:text-orange-300' : 'text-green-800 dark:text-green-300'}`}>
+                    <div className="font-medium flex items-center gap-2">
+                      {testResult.wouldTrigger ? <AlertTriangle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
+                      {testResult.wouldTrigger ? 'Alert Would Trigger' : 'Alert Would Not Trigger'}
+                    </div>
+                    <div className="text-sm mt-1">
+                      {testResult.resultCount} results found. {testResult.message}
+                    </div>
                   </div>
-                  <div className="text-sm mt-1">
-                    {testResult.resultCount} results found. {testResult.message}
-                  </div>
+                  {testResult.sampleResults && testResult.sampleResults.length > 0 && (
+                    <div className="border-t border-orange-200 dark:border-orange-800">
+                      <button
+                        type="button"
+                        onClick={() => setShowSampleResults(!showSampleResults)}
+                        className={`w-full px-4 py-2 text-sm flex items-center justify-between ${testResult.wouldTrigger ? 'text-orange-700 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/30' : 'text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30'}`}
+                      >
+                        <span>View Sample Results ({Math.min(testResult.sampleResults.length, 10)} of {testResult.resultCount})</span>
+                        <ChevronDown className={`w-4 h-4 transition-transform ${showSampleResults ? 'rotate-180' : ''}`} />
+                      </button>
+                      {showSampleResults && (
+                        <div className="px-4 pb-4 max-h-64 overflow-auto">
+                          <div className="bg-white dark:bg-nog-800 rounded border border-slate-200 dark:border-nog-700 overflow-x-auto">
+                            <table className="w-full text-xs">
+                              <thead className="bg-slate-50 dark:bg-nog-700 text-slate-600 dark:text-nog-300">
+                                <tr>
+                                  {Object.keys(testResult.sampleResults[0]).slice(0, 5).map((key) => (
+                                    <th key={key} className="px-3 py-2 text-left font-medium">{key}</th>
+                                  ))}
+                                </tr>
+                              </thead>
+                              <tbody className="text-slate-700 dark:text-nog-200">
+                                {testResult.sampleResults.slice(0, 5).map((row, i) => (
+                                  <tr key={i} className="border-t border-slate-100 dark:border-nog-700">
+                                    {Object.keys(testResult.sampleResults![0]).slice(0, 5).map((key) => (
+                                      <td key={key} className="px-3 py-2 truncate max-w-[200px]" title={String(row[key] ?? '')}>
+                                        {String(row[key] ?? '')}
+                                      </td>
+                                    ))}
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>

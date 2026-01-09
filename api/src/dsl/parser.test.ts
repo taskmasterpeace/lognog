@@ -268,6 +268,37 @@ describe('Parser', () => {
     expect(bin.field).toBe('bytes');
   });
 
+  it('parses bucket as alias for bin', () => {
+    const ast = parse('search * | bucket span=1h timestamp');
+
+    expect(ast.stages).toHaveLength(2);
+    expect(ast.stages[1].type).toBe('bin');
+
+    const bin = ast.stages[1] as { type: 'bin'; span: string | number; field: string };
+    expect(bin.span).toBe('1h');
+    expect(bin.field).toBe('timestamp');
+  });
+
+  it('parses filldown command with fields', () => {
+    const ast = parse('search * | filldown hostname, app_name');
+
+    expect(ast.stages).toHaveLength(2);
+    expect(ast.stages[1].type).toBe('filldown');
+
+    const filldown = ast.stages[1] as { type: 'filldown'; fields: string[] };
+    expect(filldown.fields).toEqual(['hostname', 'app_name']);
+  });
+
+  it('parses filldown command without fields', () => {
+    const ast = parse('search * | filldown');
+
+    expect(ast.stages).toHaveLength(2);
+    expect(ast.stages[1].type).toBe('filldown');
+
+    const filldown = ast.stages[1] as { type: 'filldown'; fields: string[] };
+    expect(filldown.fields).toEqual([]);
+  });
+
   it('parses timechart command', () => {
     const ast = parse('search * | timechart span=1h count');
 

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -14,6 +14,7 @@ import {
   Wand2,
   Filter,
   Upload,
+  ArrowUpDown,
 } from 'lucide-react';
 import { getDashboards, createDashboard, deleteDashboard, duplicateDashboard, importDashboard, Dashboard, DashboardExport } from '../api/client';
 import DashboardBuilderWizard from '../components/DashboardBuilderWizard';
@@ -61,6 +62,8 @@ export default function DashboardsPage() {
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
   const [appScope, setAppScope] = useState<string>('all');
   const [showImportModal, setShowImportModal] = useState(false);
+  const [sortBy, setSortBy] = useState<'name' | 'panel_count' | 'created_at' | 'updated_at'>('name');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
 
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -69,6 +72,29 @@ export default function DashboardsPage() {
     queryKey: ['dashboards', appScope],
     queryFn: () => getDashboards(appScope === 'all' ? undefined : appScope),
   });
+
+  // Sort dashboards
+  const sortedDashboards = useMemo(() => {
+    if (!dashboards) return [];
+    return [...dashboards].sort((a, b) => {
+      let cmp = 0;
+      switch (sortBy) {
+        case 'name':
+          cmp = a.name.localeCompare(b.name);
+          break;
+        case 'panel_count':
+          cmp = (a.panel_count ?? 0) - (b.panel_count ?? 0);
+          break;
+        case 'created_at':
+          cmp = (a.created_at ?? '').localeCompare(b.created_at ?? '');
+          break;
+        case 'updated_at':
+          cmp = (a.updated_at ?? '').localeCompare(b.updated_at ?? '');
+          break;
+      }
+      return sortDir === 'desc' ? -cmp : cmp;
+    });
+  }, [dashboards, sortBy, sortDir]);
 
   const createMutation = useMutation({
     mutationFn: () => createDashboard(newDashboardName, newDashboardDescription, appScope === 'all' ? 'default' : appScope),
@@ -159,6 +185,27 @@ export default function DashboardsPage() {
                 <Filter className="w-4 h-4 text-slate-400" />
                 <AppScopeFilter value={appScope} onChange={setAppScope} />
               </div>
+              <div className="flex items-center gap-1">
+                <ArrowUpDown className="w-4 h-4 text-slate-400" />
+                <select
+                  value={`${sortBy}-${sortDir}`}
+                  onChange={(e) => {
+                    const [field, dir] = e.target.value.split('-') as [typeof sortBy, typeof sortDir];
+                    setSortBy(field);
+                    setSortDir(dir);
+                  }}
+                  className="px-2 py-1.5 text-sm bg-white dark:bg-nog-800 border border-slate-200 dark:border-nog-700 rounded-lg text-slate-700 dark:text-slate-300"
+                >
+                  <option value="name-asc">Name (A-Z)</option>
+                  <option value="name-desc">Name (Z-A)</option>
+                  <option value="panel_count-desc">Most panels</option>
+                  <option value="panel_count-asc">Least panels</option>
+                  <option value="updated_at-desc">Recently updated</option>
+                  <option value="updated_at-asc">Oldest updated</option>
+                  <option value="created_at-desc">Newest</option>
+                  <option value="created_at-asc">Oldest</option>
+                </select>
+              </div>
               <button
                 onClick={() => setShowWizard(true)}
                 className="btn-primary flex-1 sm:flex-initial justify-center"
@@ -187,11 +234,11 @@ export default function DashboardsPage() {
 
       <div className="p-4 sm:p-6 space-y-6 sm:space-y-8">
         {/* User Dashboards */}
-        {dashboards && dashboards.length > 0 && (
+        {sortedDashboards && sortedDashboards.length > 0 && (
           <section>
             <h2 className="text-base sm:text-lg font-semibold text-slate-900 dark:text-slate-100 mb-3 sm:mb-4">Your Dashboards</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-              {dashboards.map((dashboard: Dashboard) => (
+              {sortedDashboards.map((dashboard: Dashboard) => (
                 <div key={dashboard.id} className="card-hover group">
                   <div className="p-4 sm:p-5">
                     <div className="flex items-start justify-between mb-3 gap-2">
@@ -265,7 +312,7 @@ export default function DashboardsPage() {
         )}
 
         {/* Empty State */}
-        {(!dashboards || dashboards.length === 0) && (
+        {(!isLoading && sortedDashboards.length === 0) && (
           <div className="text-center py-12">
             <div className="w-16 h-16 bg-nog-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <LayoutDashboard className="w-8 h-8 text-slate-400" />

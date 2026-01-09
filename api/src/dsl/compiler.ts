@@ -16,6 +16,7 @@ import {
   BinNode,
   TimechartNode,
   RexNode,
+  FilldownNode,
   Condition,
   SimpleCondition,
   LogicGroup,
@@ -193,6 +194,11 @@ export class Compiler {
           // Rex extracts fields using regex - add to select
           const rexExtractions = this.compileRex(stage);
           selectFields.push(...rexExtractions);
+          break;
+
+        case 'filldown':
+          // Filldown is handled post-query in JavaScript
+          // Store the fields to fill down for post-processing
           break;
       }
     }

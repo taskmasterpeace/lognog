@@ -297,6 +297,7 @@ function PanelCard({
   data,
   onEdit,
   onDelete,
+  onDuplicate,
   onRefresh,
   onDrilldown,
   editMode,
@@ -305,6 +306,7 @@ function PanelCard({
   data: PanelData;
   onEdit: () => void;
   onDelete: () => void;
+  onDuplicate: () => void;
   onRefresh: () => void;
   onDrilldown?: (field: string, value: string) => void;
   editMode?: boolean;
@@ -328,13 +330,16 @@ function PanelCard({
           </div>
         </div>
         <div className={`flex items-center gap-1 ${editMode ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}>
-          <button onClick={onRefresh} className="p-1.5 text-slate-400 dark:text-nog-400 hover:text-slate-600 dark:hover:text-nog-200 hover:bg-nog-100 dark:hover:bg-nog-700 rounded">
+          <button onClick={onRefresh} className="p-1.5 text-slate-400 dark:text-nog-400 hover:text-slate-600 dark:hover:text-nog-200 hover:bg-nog-100 dark:hover:bg-nog-700 rounded" title="Refresh">
             <RefreshCw className="w-3.5 h-3.5" />
           </button>
-          <button onClick={onEdit} className="p-1.5 text-slate-400 dark:text-nog-400 hover:text-slate-600 dark:hover:text-nog-200 hover:bg-nog-100 dark:hover:bg-nog-700 rounded">
+          <button onClick={onEdit} className="p-1.5 text-slate-400 dark:text-nog-400 hover:text-slate-600 dark:hover:text-nog-200 hover:bg-nog-100 dark:hover:bg-nog-700 rounded" title="Edit">
             <Edit3 className="w-3.5 h-3.5" />
           </button>
-          <button onClick={onDelete} className="p-1.5 text-slate-400 dark:text-nog-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded">
+          <button onClick={onDuplicate} className="p-1.5 text-slate-400 dark:text-nog-400 hover:text-slate-600 dark:hover:text-nog-200 hover:bg-nog-100 dark:hover:bg-nog-700 rounded" title="Duplicate">
+            <Copy className="w-3.5 h-3.5" />
+          </button>
+          <button onClick={onDelete} className="p-1.5 text-slate-400 dark:text-nog-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded" title="Delete">
             <Trash2 className="w-3.5 h-3.5" />
           </button>
         </div>
@@ -674,6 +679,24 @@ export default function DashboardViewPage() {
 
   const deletePanelMutation = useMutation({
     mutationFn: (panelId: string) => deleteDashboardPanel(id!, panelId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['dashboard', id] });
+    },
+  });
+
+  const duplicatePanelMutation = useMutation({
+    mutationFn: (panel: DashboardPanel) =>
+      createDashboardPanel(id!, {
+        title: `${panel.title} (Copy)`,
+        query: panel.query,
+        visualization: panel.visualization,
+        position: {
+          x: (panel.position_x ?? 0) + 1,
+          y: panel.position_y ?? 0,
+          width: panel.width ?? 4,
+          height: panel.height ?? 4,
+        },
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dashboard', id] });
     },
@@ -1152,6 +1175,7 @@ export default function DashboardViewPage() {
                   data={panelData[panel.id] || { results: [], loading: true, error: null }}
                   onEdit={() => handleEditPanel(panel)}
                   onDelete={() => deletePanelMutation.mutate(panel.id)}
+                  onDuplicate={() => duplicatePanelMutation.mutate(panel)}
                   onRefresh={() => fetchPanelData(panel)}
                   onDrilldown={handleDrilldown}
                   editMode={editMode}
