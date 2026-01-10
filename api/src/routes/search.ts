@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { parseToAST, validateQuery, ParseError, isSimpleCondition } from '../dsl/index.js';
+import { parseToAST, validateQuery, ParseError, isSimpleCondition, FIELD_MAP } from '../dsl/index.js';
 import { executeDSLQuery, executeRawQuery, getFields, getFieldValues, getBackendInfo, discoverStructuredDataFields, DiscoveredField, isLiteMode, getLogById } from '../db/backend.js';
 import {
   getSavedSearches,
@@ -305,7 +305,10 @@ router.post('/query', rateLimit(120, 60000), async (req: Request, res: Response)
                 }
 
                 let field: string;
-                if (cond.field === 'message' || cond.field === '*' || cond.field === '_all') {
+                // Apply field mapping (e.g., 'index' -> 'index_name')
+                const mappedField = FIELD_MAP[cond.field.toLowerCase()] || cond.field;
+
+                if (mappedField === 'message' || cond.field === '*' || cond.field === '_all') {
                   field = 'message';
                 } else if (cond.field.includes('.')) {
                   // Handle nested fields differently for SQLite vs ClickHouse
@@ -313,7 +316,7 @@ router.post('/query', rateLimit(120, 60000), async (req: Request, res: Response)
                     ? `json_extract(structured_data, '$.${cond.field}')`
                     : `structured_data['${cond.field}']`;
                 } else {
-                  field = cond.field;
+                  field = mappedField;
                 }
 
                 if (cond.operator === '~') {

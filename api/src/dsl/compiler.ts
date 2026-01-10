@@ -38,7 +38,8 @@ const DEFAULT_FIELDS = [
 ];
 
 // Map DSL field names to ClickHouse column names
-const FIELD_MAP: Record<string, string> = {
+// Exported for use in search route histogram builder
+export const FIELD_MAP: Record<string, string> = {
   'host': 'hostname',
   'source': 'hostname',
   'sourcetype': 'app_name',

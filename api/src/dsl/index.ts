@@ -6,7 +6,7 @@ import { QueryAST, CompiledQuery, ParseError } from './types.js';
 export * from './types.js';
 export { Lexer } from './lexer.js';
 export { Parser } from './parser.js';
-export { Compiler, compileDSL } from './compiler.js';
+export { Compiler, compileDSL, FIELD_MAP } from './compiler.js';
 
 /**
  * Parse and compile a DSL query to ClickHouse SQL
