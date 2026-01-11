@@ -807,6 +807,11 @@ export function compileDSLToSQLite(ast: QueryAST): CompiledQuery {
 export function parseRelativeTimeSQLite(timeStr: string): string | null {
   if (!timeStr) return null;
 
+  // Handle "now" for latest time bound
+  if (timeStr.toLowerCase() === 'now') {
+    return `datetime('now')`;
+  }
+
   // Match patterns like -24h, -15m, -7d, -1w
   const match = timeStr.match(/^-(\d+)([mhdw])$/i);
   if (match) {

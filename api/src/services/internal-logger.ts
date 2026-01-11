@@ -445,7 +445,7 @@ export function logIngestionStats(data: {
  * Log AI provider usage
  */
 export function logAIRequest(data: {
-  provider: 'ollama' | 'openrouter';
+  provider: 'ollama' | 'openrouter' | 'none' | 'unknown';
   model: string;
   duration_ms: number;
   tokens?: number;

@@ -77,17 +77,21 @@ export async function executeDSLQuery<T = Record<string, unknown>>(
       let sql = compiled.sql;
 
       // Add time range conditions
-      if (options?.earliest || options?.latest) {
+      // Default latest to 'now' if earliest is provided but latest is not
+      const sqliteEarliest = options?.earliest;
+      const sqliteLatest = options?.latest || (sqliteEarliest ? 'now' : undefined);
+
+      if (sqliteEarliest || sqliteLatest) {
         const timeConditions: string[] = [];
 
-        if (options.earliest) {
-          const timeExpr = parseRelativeTimeSQLite(options.earliest);
+        if (sqliteEarliest) {
+          const timeExpr = parseRelativeTimeSQLite(sqliteEarliest);
           if (timeExpr) {
             timeConditions.push(`timestamp >= ${timeExpr}`);
           }
         }
-        if (options.latest) {
-          const timeExpr = parseRelativeTimeSQLite(options.latest);
+        if (sqliteLatest) {
+          const timeExpr = parseRelativeTimeSQLite(sqliteLatest);
           if (timeExpr) {
             timeConditions.push(`timestamp <= ${timeExpr}`);
           }
@@ -119,11 +123,15 @@ export async function executeDSLQuery<T = Record<string, unknown>>(
       let sql = compiled.sql;
 
       // Add time range conditions (ClickHouse format)
-      if (options?.earliest || options?.latest) {
+      // Default latest to 'now' if earliest is provided but latest is not
+      const earliest = options?.earliest;
+      const latest = options?.latest || (earliest ? 'now' : undefined);
+
+      if (earliest || latest) {
         const timeConditions: string[] = [];
 
-        if (options.earliest) {
-          const match = options.earliest.match(/^-(\d+)([mhdw])$/i);
+        if (earliest) {
+          const match = earliest.match(/^-(\d+)([mhdw])$/i);
           if (match) {
             const value = parseInt(match[1], 10);
             const unit = match[2].toLowerCase();
@@ -136,17 +144,22 @@ export async function executeDSLQuery<T = Record<string, unknown>>(
             }
           }
         }
-        if (options.latest) {
-          const match = options.latest.match(/^-(\d+)([mhdw])$/i);
-          if (match) {
-            const value = parseInt(match[1], 10);
-            const unit = match[2].toLowerCase();
-            const unitMap: Record<string, string> = {
-              'm': 'MINUTE', 'h': 'HOUR', 'd': 'DAY', 'w': 'WEEK',
-            };
-            const clickhouseUnit = unitMap[unit];
-            if (clickhouseUnit) {
-              timeConditions.push(`timestamp <= now() - INTERVAL ${value} ${clickhouseUnit}`);
+        if (latest) {
+          // Handle "now" for latest time bound
+          if (latest.toLowerCase() === 'now') {
+            timeConditions.push(`timestamp <= now()`);
+          } else {
+            const match = latest.match(/^-(\d+)([mhdw])$/i);
+            if (match) {
+              const value = parseInt(match[1], 10);
+              const unit = match[2].toLowerCase();
+              const unitMap: Record<string, string> = {
+                'm': 'MINUTE', 'h': 'HOUR', 'd': 'DAY', 'w': 'WEEK',
+              };
+              const clickhouseUnit = unitMap[unit];
+              if (clickhouseUnit) {
+                timeConditions.push(`timestamp <= now() - INTERVAL ${value} ${clickhouseUnit}`);
+              }
             }
           }
         }

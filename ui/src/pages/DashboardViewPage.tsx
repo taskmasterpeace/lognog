@@ -95,6 +95,7 @@ const AUTO_REFRESH_OPTIONS = [
   { label: '30 seconds', value: 30000 },
   { label: '1 minute', value: 60000 },
   { label: '5 minutes', value: 300000 },
+  { label: '15 minutes', value: 900000 },
 ];
 
 interface PanelData {
@@ -687,6 +688,9 @@ export default function DashboardViewPage() {
   const [editingPanel, setEditingPanel] = useState<DashboardPanel | undefined>();
   const [panelData, setPanelData] = useState<Record<string, PanelData>>({});
   const [refreshKey, setRefreshKey] = useState(0);
+  const [countdownSeconds, setCountdownSeconds] = useState(0);
+  const [isRefreshPaused, setIsRefreshPaused] = useState(false);
+  const countdownIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // New state for enhanced features
   const [editMode, setEditMode] = useState(false);
@@ -874,15 +878,52 @@ export default function DashboardViewPage() {
     setRefreshKey((k) => k + 1);
   };
 
-  // Auto-refresh effect
+  // Auto-refresh effect with countdown
   useEffect(() => {
-    if (autoRefreshInterval > 0) {
-      const interval = setInterval(() => {
-        setRefreshKey((k) => k + 1);
-      }, autoRefreshInterval);
-      return () => clearInterval(interval);
+    // Clear any existing countdown interval
+    if (countdownIntervalRef.current) {
+      clearInterval(countdownIntervalRef.current);
+      countdownIntervalRef.current = null;
     }
-  }, [autoRefreshInterval]);
+
+    if (autoRefreshInterval > 0 && !isRefreshPaused) {
+      // Initialize countdown
+      const totalSeconds = Math.floor(autoRefreshInterval / 1000);
+      setCountdownSeconds(totalSeconds);
+
+      // Countdown ticker - runs every second
+      countdownIntervalRef.current = setInterval(() => {
+        setCountdownSeconds((prev) => {
+          if (prev <= 1) {
+            // Time to refresh
+            setRefreshKey((k) => k + 1);
+            return totalSeconds; // Reset countdown
+          }
+          return prev - 1;
+        });
+      }, 1000);
+
+      return () => {
+        if (countdownIntervalRef.current) {
+          clearInterval(countdownIntervalRef.current);
+          countdownIntervalRef.current = null;
+        }
+      };
+    } else {
+      setCountdownSeconds(0);
+    }
+  }, [autoRefreshInterval, isRefreshPaused]);
+
+  // Pause auto-refresh on user interaction with dashboard
+  const handleDashboardInteraction = useCallback(() => {
+    if (autoRefreshInterval > 0 && !isRefreshPaused) {
+      setIsRefreshPaused(true);
+      // Resume after 30 seconds of no interaction
+      setTimeout(() => {
+        setIsRefreshPaused(false);
+      }, 30000);
+    }
+  }, [autoRefreshInterval, isRefreshPaused]);
 
   const handleEditPanel = (panel: DashboardPanel) => {
     setEditingPanel(panel);
@@ -1089,45 +1130,80 @@ export default function DashboardViewPage() {
               defaultRange={timeRange}
             />
 
-            {/* Auto-Refresh Selector */}
+            {/* Auto-Refresh Selector with Countdown */}
             <div className="relative">
               <button
                 onClick={() => setShowAutoRefreshDropdown(!showAutoRefreshDropdown)}
-                className={`btn-secondary ${autoRefreshInterval > 0 ? 'text-green-600 border-green-300' : ''}`}
+                className={`btn-secondary ${autoRefreshInterval > 0 ? (isRefreshPaused ? 'text-amber-600 border-amber-300' : 'text-green-600 border-green-300') : ''}`}
               >
                 {autoRefreshInterval > 0 ? (
-                  <Play className="w-4 h-4 text-green-500" />
+                  isRefreshPaused ? (
+                    <Pause className="w-4 h-4 text-amber-500" />
+                  ) : (
+                    <Play className="w-4 h-4 text-green-500" />
+                  )
                 ) : (
                   <Pause className="w-4 h-4 text-slate-400" />
                 )}
                 <span className="hidden sm:inline">
-                  {AUTO_REFRESH_OPTIONS.find(o => o.value === autoRefreshInterval)?.label || 'Auto-refresh'}
+                  {autoRefreshInterval > 0 && countdownSeconds > 0 ? (
+                    <span className="tabular-nums">
+                      {isRefreshPaused ? 'Paused' : `${countdownSeconds}s`}
+                    </span>
+                  ) : (
+                    AUTO_REFRESH_OPTIONS.find(o => o.value === autoRefreshInterval)?.label || 'Auto-refresh'
+                  )}
                 </span>
                 <ChevronDown className="w-4 h-4 text-slate-400" />
               </button>
 
               {showAutoRefreshDropdown && (
-                <div className="dropdown right-0 w-36 animate-fade-in">
+                <div className="dropdown right-0 w-44 animate-fade-in">
                   {AUTO_REFRESH_OPTIONS.map((option) => (
                     <button
                       key={option.value}
                       onClick={() => {
                         setAutoRefreshInterval(option.value);
+                        setIsRefreshPaused(false);
                         setShowAutoRefreshDropdown(false);
                       }}
                       className={`dropdown-item ${
-                        autoRefreshInterval === option.value ? 'bg-amber-50 text-amber-600 font-medium' : ''
+                        autoRefreshInterval === option.value ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 font-medium' : ''
                       }`}
                     >
                       {option.label}
                     </button>
                   ))}
+                  {autoRefreshInterval > 0 && (
+                    <>
+                      <div className="border-t border-slate-100 dark:border-nog-700 my-1" />
+                      <button
+                        onClick={() => {
+                          setIsRefreshPaused(!isRefreshPaused);
+                          setShowAutoRefreshDropdown(false);
+                        }}
+                        className="dropdown-item"
+                      >
+                        {isRefreshPaused ? (
+                          <>
+                            <Play className="w-4 h-4 text-green-500" />
+                            Resume
+                          </>
+                        ) : (
+                          <>
+                            <Pause className="w-4 h-4 text-amber-500" />
+                            Pause
+                          </>
+                        )}
+                      </button>
+                    </>
+                  )}
                 </div>
               )}
             </div>
 
             <button onClick={handleRefreshAll} className="btn-secondary">
-              <RefreshCw className={`w-4 h-4 ${autoRefreshInterval > 0 ? 'animate-spin' : ''}`} />
+              <RefreshCw className="w-4 h-4" />
               <span className="hidden sm:inline">Refresh</span>
             </button>
 
@@ -1330,7 +1406,7 @@ export default function DashboardViewPage() {
       )}
 
       {/* Panels Grid */}
-      <div ref={dashboardGridRef} className="flex-1 p-4 overflow-auto">
+      <div ref={dashboardGridRef} className="flex-1 p-4 overflow-auto" onClick={handleDashboardInteraction} onScroll={handleDashboardInteraction}>
         {dashboard.panels.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full py-20">
             <div className="w-16 h-16 bg-nog-100 dark:bg-nog-800 rounded-full flex items-center justify-center mb-4">

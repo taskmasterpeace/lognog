@@ -1064,6 +1064,25 @@ export default function SettingsPage() {
               Number of recent queries to remember (1-100)
             </p>
           </div>
+
+          {/* Welcome Wizard Reset */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              Welcome Wizard
+            </label>
+            <button
+              onClick={() => {
+                localStorage.removeItem('lognog_wizard_dont_show');
+                window.location.reload();
+              }}
+              className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-medium transition-colors"
+            >
+              Show Welcome Wizard Again
+            </button>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+              Reset the welcome wizard to see it on next page load
+            </p>
+          </div>
         </div>
       )}
     </section>

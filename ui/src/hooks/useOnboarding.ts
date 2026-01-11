@@ -1,6 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { authFetch } from '../contexts/AuthContext';
 
+const DONT_SHOW_WIZARD_KEY = 'lognog_wizard_dont_show';
+
 export interface OnboardingStatus {
   completed: boolean;
   completed_at: string | null;
@@ -21,6 +23,14 @@ export function useOnboarding(): UseOnboardingReturn {
   // Fetch onboarding status on mount
   useEffect(() => {
     const fetchStatus = async () => {
+      // Check localStorage first - if user chose "Don't show again", respect that
+      const dontShow = localStorage.getItem(DONT_SHOW_WIZARD_KEY);
+      if (dontShow === 'true') {
+        setStatus('complete');
+        setIsLoading(false);
+        return;
+      }
+
       try {
         const response = await authFetch('/onboarding/status');
         if (response.ok) {
@@ -44,6 +54,9 @@ export function useOnboarding(): UseOnboardingReturn {
 
   const completeOnboarding = useCallback(async () => {
     try {
+      // Set localStorage as backup to ensure wizard doesn't show again
+      localStorage.setItem(DONT_SHOW_WIZARD_KEY, 'true');
+
       const response = await authFetch('/onboarding/complete', {
         method: 'POST',
       });
@@ -52,6 +65,8 @@ export function useOnboarding(): UseOnboardingReturn {
       }
     } catch (error) {
       console.error('Error completing onboarding:', error);
+      // Even if API fails, mark as complete locally
+      setStatus('complete');
     }
   }, []);
 

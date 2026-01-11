@@ -13,10 +13,11 @@ import {
   Code,
   List,
   Layers,
+  Sparkles,
 } from 'lucide-react';
 import { AnnotatedValue, useSourceAnnotationsOptional } from './SourceAnnotations';
 import { useDateFormat } from '../contexts/DateFormatContext';
-import { getFullMessage, getLogContext, LogContextResponse } from '../api/client';
+import { getFullMessage, getLogContext, LogContextResponse, diagnoseError, ErrorDiagnosisResponse } from '../api/client';
 
 // Types
 export interface LogEntry {
@@ -121,8 +122,25 @@ const ANNOTATABLE_FIELDS = ['hostname', 'app_name', 'source', 'host', 'service',
 const FieldValue: React.FC<FieldValueProps> = ({ field, value, onAddFilter, searchTerms }) => {
   const [showActions, setShowActions] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [hideTimeout, setHideTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
   const annotationContext = useSourceAnnotationsOptional();
   const { formatDate } = useDateFormat();
+
+  const handleMouseEnter = () => {
+    if (hideTimeout) {
+      clearTimeout(hideTimeout);
+      setHideTimeout(null);
+    }
+    setShowActions(true);
+  };
+
+  const handleMouseLeave = () => {
+    // Delay hiding to allow mouse to move to popup
+    const timeout = setTimeout(() => {
+      setShowActions(false);
+    }, 150);
+    setHideTimeout(timeout);
+  };
 
   const handleCopy = async () => {
     try {
@@ -170,49 +188,55 @@ const FieldValue: React.FC<FieldValueProps> = ({ field, value, onAddFilter, sear
   return (
     <div
       className="group relative inline-block"
-      onMouseEnter={() => setShowActions(true)}
-      onMouseLeave={() => setShowActions(false)}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
     >
       <span className={`font-mono text-sm ${hasAnnotation ? 'cursor-help' : ''}`}>
         {valueElement}
       </span>
 
-      {/* Quick Actions Popup */}
+      {/* Quick Actions Popup - positioned with no gap and handles its own hover */}
       {showActions && onAddFilter && field !== 'timestamp' && (
-        <div className="absolute left-0 top-full mt-1 z-10 bg-white dark:bg-nog-800 border border-slate-200 dark:border-nog-700 rounded-lg shadow-lg p-1 flex gap-1 whitespace-nowrap animate-fade-in">
-          <button
-            onClick={() => onAddFilter(field, valueStr, false)}
-            className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 rounded transition-colors"
-            title="Add to filter"
-          >
-            <Plus className="w-3 h-3" />
-            Include
-          </button>
-          <button
-            onClick={() => onAddFilter(field, valueStr, true)}
-            className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
-            title="Exclude from filter"
-          >
-            <Minus className="w-3 h-3" />
-            Exclude
-          </button>
-          <button
-            onClick={handleCopy}
-            className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-slate-700 dark:text-nog-300 hover:bg-nog-50 dark:hover:bg-nog-700 rounded transition-colors"
-            title="Copy value"
-          >
-            {copied ? (
-              <>
-                <Check className="w-3 h-3" />
-                Copied
-              </>
-            ) : (
-              <>
-                <Copy className="w-3 h-3" />
-                Copy
-              </>
-            )}
-          </button>
+        <div
+          className="absolute left-0 top-full pt-1 z-10"
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+        >
+          <div className="bg-white dark:bg-nog-800 border border-slate-200 dark:border-nog-700 rounded-lg shadow-lg p-1 flex gap-1 whitespace-nowrap animate-fade-in">
+            <button
+              onClick={() => onAddFilter(field, valueStr, false)}
+              className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 rounded transition-colors"
+              title="Add to filter"
+            >
+              <Plus className="w-3 h-3" />
+              Include
+            </button>
+            <button
+              onClick={() => onAddFilter(field, valueStr, true)}
+              className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-red-700 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
+              title="Exclude from filter"
+            >
+              <Minus className="w-3 h-3" />
+              Exclude
+            </button>
+            <button
+              onClick={handleCopy}
+              className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-slate-700 dark:text-nog-300 hover:bg-nog-50 dark:hover:bg-nog-700 rounded transition-colors"
+              title="Copy value"
+            >
+              {copied ? (
+                <>
+                  <Check className="w-3 h-3" />
+                  Copied
+                </>
+              ) : (
+                <>
+                  <Copy className="w-3 h-3" />
+                  Copy
+                </>
+              )}
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -246,8 +270,30 @@ const LogRow: React.FC<LogRowProps> = ({
   const { formatDate } = useDateFormat();
   const [showJson, setShowJson] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [aiDiagnosis, setAiDiagnosis] = useState<{
+    loading: boolean;
+    data: ErrorDiagnosisResponse | null;
+    error: string | null;
+  }>({ loading: false, data: null, error: null });
   const severity = typeof log.severity === 'number' ? log.severity : 6;
   const severityConfig = SEVERITY_CONFIG[severity as keyof typeof SEVERITY_CONFIG] || SEVERITY_CONFIG[6];
+
+  // AI Error Diagnosis handler
+  const handleAiDiagnosis = useCallback(async () => {
+    setAiDiagnosis({ loading: true, data: null, error: null });
+    try {
+      const result = await diagnoseError({
+        timestamp: log.timestamp,
+        severity: log.severity,
+        message: log.message,
+        hostname: log.hostname,
+        app_name: log.app_name,
+      });
+      setAiDiagnosis({ loading: false, data: result, error: null });
+    } catch (err) {
+      setAiDiagnosis({ loading: false, data: null, error: err instanceof Error ? err.message : 'Failed to analyze error' });
+    }
+  }, [log]);
 
   // Copy JSON to clipboard
   const copyJson = useCallback(async () => {
@@ -441,7 +487,119 @@ const LogRow: React.FC<LogRowProps> = ({
                     View context
                   </button>
                 )}
+                {/* AI Error Diagnosis button for error logs (severity <= 3) */}
+                {severity <= 3 && !aiDiagnosis.data && (
+                  <button
+                    onClick={handleAiDiagnosis}
+                    disabled={aiDiagnosis.loading}
+                    className="text-xs text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 flex items-center gap-1 font-medium disabled:opacity-50"
+                  >
+                    {aiDiagnosis.loading ? (
+                      <>
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        Analyzing...
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles className="w-3 h-3" />
+                        Analyze with AI
+                      </>
+                    )}
+                  </button>
+                )}
               </div>
+
+              {/* AI Diagnosis Results */}
+              {aiDiagnosis.error && (
+                <div className="mt-3 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg">
+                  <div className="flex items-center gap-2 text-red-700 dark:text-red-400 text-sm">
+                    <AlertCircle className="w-4 h-4" />
+                    <span>{aiDiagnosis.error}</span>
+                  </div>
+                </div>
+              )}
+
+              {aiDiagnosis.data && (
+                <div className="mt-3 p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-purple-700 dark:text-purple-400">
+                      <Sparkles className="w-4 h-4" />
+                      <span className="font-semibold text-sm">AI Error Analysis</span>
+                      {aiDiagnosis.data.model && (
+                        <span className="text-xs text-purple-500 dark:text-purple-500">
+                          ({aiDiagnosis.data.model})
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => setAiDiagnosis({ loading: false, data: null, error: null })}
+                      className="p-1 hover:bg-purple-100 dark:hover:bg-purple-900/50 rounded"
+                      title="Dismiss"
+                    >
+                      <X className="w-3 h-3 text-purple-500" />
+                    </button>
+                  </div>
+
+                  {/* Summary */}
+                  <div>
+                    <h4 className="text-xs font-semibold text-purple-700 dark:text-purple-400 uppercase mb-1">Summary</h4>
+                    <p className="text-sm text-slate-700 dark:text-slate-300">{aiDiagnosis.data.diagnosis.summary}</p>
+                  </div>
+
+                  {/* Root Cause */}
+                  <div>
+                    <h4 className="text-xs font-semibold text-purple-700 dark:text-purple-400 uppercase mb-1">Root Cause</h4>
+                    <p className="text-sm text-slate-700 dark:text-slate-300">{aiDiagnosis.data.diagnosis.root_cause}</p>
+                  </div>
+
+                  {/* Severity Assessment */}
+                  <div className="flex items-center gap-2">
+                    <h4 className="text-xs font-semibold text-purple-700 dark:text-purple-400 uppercase">Severity:</h4>
+                    <span className="text-sm text-slate-700 dark:text-slate-300">{aiDiagnosis.data.diagnosis.severity_assessment}</span>
+                    <span className="text-xs text-purple-500">
+                      ({Math.round(aiDiagnosis.data.diagnosis.confidence * 100)}% confidence)
+                    </span>
+                  </div>
+
+                  {/* Suggested Fixes */}
+                  {aiDiagnosis.data.diagnosis.suggested_fixes.length > 0 && (
+                    <div>
+                      <h4 className="text-xs font-semibold text-purple-700 dark:text-purple-400 uppercase mb-1">Suggested Fixes</h4>
+                      <ul className="list-disc list-inside space-y-1">
+                        {aiDiagnosis.data.diagnosis.suggested_fixes.map((fix, i) => (
+                          <li key={i} className="text-sm text-slate-700 dark:text-slate-300">{fix}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Related Patterns */}
+                  {aiDiagnosis.data.diagnosis.related_patterns.length > 0 && (
+                    <div>
+                      <h4 className="text-xs font-semibold text-purple-700 dark:text-purple-400 uppercase mb-1">Related Patterns</h4>
+                      <div className="flex flex-wrap gap-1">
+                        {aiDiagnosis.data.diagnosis.related_patterns.map((pattern, i) => (
+                          <span key={i} className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 rounded text-xs">
+                            {pattern}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Follow-up Questions */}
+                  {aiDiagnosis.data.diagnosis.follow_up_questions.length > 0 && (
+                    <div>
+                      <h4 className="text-xs font-semibold text-purple-700 dark:text-purple-400 uppercase mb-1">Questions to Investigate</h4>
+                      <ul className="list-decimal list-inside space-y-1">
+                        {aiDiagnosis.data.diagnosis.follow_up_questions.map((q, i) => (
+                          <li key={i} className="text-sm text-slate-600 dark:text-slate-400">{q}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Structured Data Fields (parsed from JSON) */}
               {structuredFields.length > 0 && (

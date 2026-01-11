@@ -20,9 +20,6 @@ const FIELD_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 const VALUE_CACHE_TTL = 2 * 60 * 1000; // 2 minutes
 const DEBOUNCE_MS = 300;
 
-// Fields that have fetchable values
-const VALUE_FIELDS = ['hostname', 'app_name', 'severity', 'facility', 'index_name', 'protocol', 'source_ip'];
-
 export function useFieldSuggestions() {
   const [fields, setFields] = useState<Suggestion[]>([]);
   const [fieldValues, setFieldValues] = useState<Record<string, Suggestion[]>>({});
@@ -96,8 +93,9 @@ export function useFieldSuggestions() {
     // Normalize field name
     const normalizedField = fieldName.toLowerCase();
 
-    // Check if this field has fetchable values
-    if (!VALUE_FIELDS.includes(normalizedField)) {
+    // Skip fields that are known to not have useful values (timestamps, messages, etc)
+    const skipFields = ['timestamp', 'message', 'raw', '_time', '_raw'];
+    if (skipFields.includes(normalizedField)) {
       return;
     }
 
@@ -147,7 +145,15 @@ export function useFieldSuggestions() {
 
         setFieldValues((prev) => ({ ...prev, [normalizedField]: valueSuggestions }));
       } catch (err) {
-        console.error(`Failed to fetch values for ${normalizedField}:`, err);
+        // Cache empty result to avoid repeated failed API calls
+        valueCacheRef.current[normalizedField] = {
+          values: [],
+          timestamp: Date.now(),
+        };
+        // Only log error if it's not a 404 (field doesn't have values endpoint)
+        if (err && (err as { status?: number }).status !== 404) {
+          console.error(`Failed to fetch values for ${normalizedField}:`, err);
+        }
       } finally {
         setLoading(false);
         pendingFieldRef.current = null;

@@ -2522,3 +2522,42 @@ export async function evaluateRoutingRules(data: {
     body: JSON.stringify(data),
   });
 }
+
+// ============ AI Error Diagnosis API ============
+
+export interface ErrorDiagnosis {
+  summary: string;
+  root_cause: string;
+  suggested_fixes: string[];
+  related_patterns: string[];
+  follow_up_questions: string[];
+  severity_assessment: string;
+  confidence: number;
+}
+
+export interface ErrorDiagnosisResponse {
+  diagnosis: ErrorDiagnosis;
+  provider: string;
+  model: string;
+}
+
+export async function diagnoseError(
+  log: {
+    timestamp?: string;
+    severity?: number;
+    hostname?: string;
+    app_name?: string;
+    message?: string;
+    structured_data?: unknown;
+    [key: string]: unknown;
+  },
+  context?: {
+    before: Array<{ timestamp?: string; message?: string; severity?: number }>;
+    after: Array<{ timestamp?: string; message?: string; severity?: number }>;
+  }
+): Promise<ErrorDiagnosisResponse> {
+  return request('/ai/diagnose-error', {
+    method: 'POST',
+    body: JSON.stringify({ log, context }),
+  });
+}

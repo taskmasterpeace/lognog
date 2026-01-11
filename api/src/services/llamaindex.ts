@@ -5,6 +5,7 @@ import {
   Settings,
 } from 'llamaindex';
 import { Ollama, OllamaEmbedding } from '@llamaindex/ollama';
+import { OpenAI, OpenAIEmbedding } from '@llamaindex/openai';
 import path from 'path';
 import fs from 'fs';
 import { createRAGDocument, getSystemSetting } from '../db/sqlite.js';
@@ -23,46 +24,119 @@ function getOllamaEmbedModel(): string {
   return getSystemSetting('ai_ollama_embed_model') || process.env.OLLAMA_EMBED_MODEL || 'nomic-embed-text';
 }
 
+// OpenRouter configuration
+function getOpenRouterApiKey(): string {
+  return getSystemSetting('ai_openrouter_api_key') || process.env.OPENROUTER_API_KEY || '';
+}
+function getOpenRouterModel(): string {
+  return getSystemSetting('ai_openrouter_model') || process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini';
+}
+
 const PERSIST_DIR = process.env.LLAMAINDEX_PERSIST_DIR || '/data/llamaindex';
 
-// Initialize Ollama LLM and Embedding
-let llm: Ollama | null = null;
-let reasoningLlm: Ollama | null = null;
-let embedModel: OllamaEmbedding | null = null;
+// Provider tracking
+let currentProvider: 'ollama' | 'openrouter' | null = null;
+
+// Initialize LLM and Embedding (supports Ollama or OpenRouter)
+let llm: Ollama | OpenAI | null = null;
+let reasoningLlm: Ollama | OpenAI | null = null;
+let embedModel: OllamaEmbedding | OpenAIEmbedding | null = null;
 let vectorIndex: VectorStoreIndex | null = null;
 
-export function initializeLlamaIndex(): void {
+// Check if Ollama is available
+async function isOllamaAvailable(): Promise<boolean> {
+  try {
+    const response = await fetch(`${getOllamaUrl()}/api/tags`, {
+      method: 'GET',
+      signal: AbortSignal.timeout(3000),
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+export async function initializeLlamaIndex(): Promise<void> {
   const ollamaUrl = getOllamaUrl();
-  const ollamaModel = getOllamaModel();
-  const reasoningModel = getOllamaReasoningModel();
-  const embedModelName = getOllamaEmbedModel();
+  const openRouterKey = getOpenRouterApiKey();
 
-  // Configure the default LLM (fast model for general queries)
-  llm = new Ollama({
-    model: ollamaModel,
-    config: { host: ollamaUrl },
-  });
+  // Try Ollama first
+  const ollamaAvailable = await isOllamaAvailable();
 
-  // Configure reasoning LLM (for complex analysis)
-  reasoningLlm = new Ollama({
-    model: reasoningModel,
-    config: { host: ollamaUrl },
-  });
+  if (ollamaAvailable) {
+    // Use Ollama
+    const ollamaModel = getOllamaModel();
+    const reasoningModel = getOllamaReasoningModel();
+    const embedModelName = getOllamaEmbedModel();
 
-  // Configure embedding model
-  embedModel = new OllamaEmbedding({
-    model: embedModelName,
-    config: { host: ollamaUrl },
-  });
+    llm = new Ollama({
+      model: ollamaModel,
+      config: { host: ollamaUrl },
+    });
 
-  // Set global settings
-  Settings.llm = llm;
-  Settings.embedModel = embedModel;
+    reasoningLlm = new Ollama({
+      model: reasoningModel,
+      config: { host: ollamaUrl },
+    });
 
-  console.log(`LlamaIndex initialized with Ollama (${ollamaUrl})`);
-  console.log(`  LLM: ${ollamaModel}`);
-  console.log(`  Reasoning: ${reasoningModel}`);
-  console.log(`  Embeddings: ${embedModelName}`);
+    embedModel = new OllamaEmbedding({
+      model: embedModelName,
+      config: { host: ollamaUrl },
+    });
+
+    currentProvider = 'ollama';
+    Settings.llm = llm;
+    Settings.embedModel = embedModel;
+
+    console.log(`LlamaIndex initialized with Ollama (${ollamaUrl})`);
+    console.log(`  LLM: ${ollamaModel}`);
+    console.log(`  Reasoning: ${reasoningModel}`);
+    console.log(`  Embeddings: ${embedModelName}`);
+  } else if (openRouterKey) {
+    // Fall back to OpenRouter with OpenAI embeddings
+    const openRouterModel = getOpenRouterModel();
+
+    // OpenRouter uses OpenAI-compatible API
+    llm = new OpenAI({
+      apiKey: openRouterKey,
+      additionalSessionOptions: {
+        baseURL: 'https://openrouter.ai/api/v1',
+      },
+      model: openRouterModel,
+    });
+
+    reasoningLlm = new OpenAI({
+      apiKey: openRouterKey,
+      additionalSessionOptions: {
+        baseURL: 'https://openrouter.ai/api/v1',
+      },
+      model: openRouterModel,
+    });
+
+    // Use OpenAI embeddings (text-embedding-3-small is good and cheap)
+    embedModel = new OpenAIEmbedding({
+      apiKey: openRouterKey,
+      additionalSessionOptions: {
+        baseURL: 'https://openrouter.ai/api/v1',
+      },
+      model: 'openai/text-embedding-3-small',
+    });
+
+    currentProvider = 'openrouter';
+    Settings.llm = llm;
+    Settings.embedModel = embedModel;
+
+    console.log(`LlamaIndex initialized with OpenRouter`);
+    console.log(`  LLM: ${openRouterModel}`);
+    console.log(`  Embeddings: openai/text-embedding-3-small`);
+  } else {
+    console.warn('LlamaIndex: No AI provider available (Ollama offline, no OpenRouter key)');
+    currentProvider = null;
+  }
+}
+
+export function getLlamaIndexProvider(): 'ollama' | 'openrouter' | null {
+  return currentProvider;
 }
 
 export async function loadOrCreateIndex(): Promise<VectorStoreIndex> {
@@ -191,10 +265,18 @@ export async function queryIndex(options: QueryOptions): Promise<QueryResult> {
     };
   });
 
+  // Determine model name based on provider
+  let modelName: string;
+  if (currentProvider === 'openrouter') {
+    modelName = getOpenRouterModel();
+  } else {
+    modelName = options.useReasoning ? getOllamaReasoningModel() : getOllamaModel();
+  }
+
   return {
     response: response.response,
     sourceNodes,
-    model: options.useReasoning ? getOllamaReasoningModel() : getOllamaModel(),
+    model: modelName,
   };
 }
 

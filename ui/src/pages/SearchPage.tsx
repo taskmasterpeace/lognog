@@ -26,6 +26,10 @@ import {
   Bell,
   FileText,
   BookTemplate,
+  Radio,
+  Pause,
+  Square,
+  Zap,
 } from 'lucide-react';
 import { executeSearch, getSavedSearches, createSavedSearch, aiSearch, getAISuggestions, SavedSearchCreateRequest } from '../api/client';
 import { useMute } from '../contexts/MuteContext';
@@ -38,6 +42,7 @@ import { SearchAutocomplete } from '../components/search';
 import { SourceAnnotationProvider } from '../components/SourceAnnotations';
 import { InfoIcon } from '../components/ui/InfoTip';
 import NewSourceBanner from '../components/NewSourceBanner';
+import { useLiveTail } from '../hooks/useLiveTail';
 
 const SEVERITY_NAMES = ['Emergency', 'Alert', 'Critical', 'Error', 'Warning', 'Notice', 'Info', 'Debug'];
 
@@ -93,7 +98,9 @@ export default function SearchPage() {
   const { mutedValues } = useMute();
   const [query, setQuery] = useState('search *');
   const [timeRange, setTimeRange] = useState(() => {
-    return localStorage.getItem('lognog_default_time_range') || '-24h';
+    // Use lognog_time_range (TimePicker's key) as primary, fall back to default
+    return localStorage.getItem('lognog_time_range') ||
+           localStorage.getItem('lognog_default_time_range') || '-24h';
   });
   const [timeRangeLatest, setTimeRangeLatest] = useState<string | undefined>(undefined);
   const [showSaveModal, setShowSaveModal] = useState(false);
@@ -133,6 +140,53 @@ export default function SearchPage() {
 
   const historyDropdownRef = useRef<HTMLDivElement>(null);
   const templatesDropdownRef = useRef<HTMLDivElement>(null);
+  const logViewerRef = useRef<HTMLDivElement>(null);
+
+  // Live tail state
+  const [liveTailEnabled, setLiveTailEnabled] = useState(false);
+  const liveTail = useLiveTail({
+    query: query,
+    maxLogs: 500,
+  });
+
+  // Auto-pause live tail on scroll
+  useEffect(() => {
+    const logViewer = logViewerRef.current;
+    if (!logViewer || !liveTailEnabled || !liveTail.isStreaming) return;
+
+    let scrollTimeout: ReturnType<typeof setTimeout>;
+    const handleScroll = () => {
+      // Pause when user scrolls
+      if (!liveTail.isPaused) {
+        liveTail.pause();
+      }
+      // Resume after 5 seconds of no scrolling
+      clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(() => {
+        if (liveTailEnabled && liveTail.isStreaming) {
+          liveTail.resume();
+        }
+      }, 5000);
+    };
+
+    logViewer.addEventListener('scroll', handleScroll);
+    return () => {
+      logViewer.removeEventListener('scroll', handleScroll);
+      clearTimeout(scrollTimeout);
+    };
+  }, [liveTailEnabled, liveTail]);
+
+  // Toggle live tail
+  const handleLiveTailToggle = useCallback(() => {
+    if (liveTailEnabled) {
+      liveTail.stop();
+      setLiveTailEnabled(false);
+    } else {
+      liveTail.clear();
+      liveTail.start();
+      setLiveTailEnabled(true);
+    }
+  }, [liveTailEnabled, liveTail]);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -174,7 +228,8 @@ export default function SearchPage() {
 
           // Apply preferences if not already manually set in this session
           if (!preferencesLoaded) {
-            if (data.default_time_range) {
+            // Only apply default time range if user hasn't saved a selection
+            if (data.default_time_range && !localStorage.getItem('lognog_time_range')) {
               setTimeRange(data.default_time_range);
               localStorage.setItem('lognog_default_time_range', data.default_time_range);
             }
@@ -812,6 +867,46 @@ export default function SearchPage() {
                   <span className="hidden sm:inline ml-2">Search</span>
                 </button>
               )}
+
+              {/* Live Tail Toggle Button */}
+              {searchMode === 'dsl' && (
+                <Tooltip
+                  content={liveTailEnabled ? 'Stop live tail' : 'Start live tail - watch logs arrive in real-time'}
+                  placement="bottom"
+                >
+                  <button
+                    onClick={handleLiveTailToggle}
+                    className={`h-11 sm:h-12 px-3 sm:px-4 rounded-lg font-medium transition-all flex items-center gap-2 flex-shrink-0 ${
+                      liveTailEnabled
+                        ? liveTail.isPaused
+                          ? 'bg-amber-100 text-amber-700 border-2 border-amber-300 hover:bg-amber-200'
+                          : 'bg-green-100 text-green-700 border-2 border-green-300 hover:bg-green-200 animate-pulse'
+                        : 'btn-secondary'
+                    }`}
+                  >
+                    {liveTailEnabled ? (
+                      liveTail.isPaused ? (
+                        <>
+                          <Pause className="w-4 sm:w-5 h-4 sm:h-5" />
+                          <span className="hidden sm:inline">Paused</span>
+                        </>
+                      ) : (
+                        <>
+                          <Radio className="w-4 sm:w-5 h-4 sm:h-5" />
+                          <span className="hidden sm:inline tabular-nums">
+                            {liveTail.logsPerSecond > 0 ? `${liveTail.logsPerSecond}/s` : 'Live'}
+                          </span>
+                        </>
+                      )
+                    ) : (
+                      <>
+                        <Radio className="w-4 sm:w-5 h-4 sm:h-5" />
+                        <span className="hidden sm:inline">Live</span>
+                      </>
+                    )}
+                  </button>
+                </Tooltip>
+              )}
             </div>
           </div>
 
@@ -982,6 +1077,80 @@ export default function SearchPage() {
             >
               Clear All
             </button>
+          </div>
+        )}
+
+        {/* Live Tail Status Bar */}
+        {liveTailEnabled && (
+          <div className={`mb-4 p-3 rounded-lg border-2 flex items-center justify-between animate-fade-in ${
+            liveTail.isPaused
+              ? 'bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-700'
+              : 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-700'
+          }`}>
+            <div className="flex items-center gap-3">
+              <div className={`flex items-center gap-2 ${liveTail.isPaused ? 'text-amber-700' : 'text-green-700'}`}>
+                {liveTail.isPaused ? (
+                  <Pause className="w-5 h-5" />
+                ) : (
+                  <Radio className="w-5 h-5 animate-pulse" />
+                )}
+                <span className="font-medium">
+                  {liveTail.isPaused ? 'Live tail paused' : 'Live tail active'}
+                </span>
+              </div>
+              <div className="flex items-center gap-4 text-sm text-slate-600 dark:text-slate-300">
+                <span className="tabular-nums">
+                  <Zap className="w-4 h-4 inline mr-1" />
+                  {liveTail.logsPerSecond}/s
+                </span>
+                <span className="tabular-nums">
+                  Total: {liveTail.totalReceived.toLocaleString()}
+                </span>
+                <span className="tabular-nums">
+                  Buffer: {liveTail.logs.length.toLocaleString()}
+                </span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              {liveTail.isPaused ? (
+                <button
+                  onClick={() => liveTail.resume()}
+                  className="btn-secondary text-sm bg-white"
+                >
+                  <Play className="w-4 h-4" />
+                  Resume
+                </button>
+              ) : (
+                <button
+                  onClick={() => liveTail.pause()}
+                  className="btn-secondary text-sm bg-white"
+                >
+                  <Pause className="w-4 h-4" />
+                  Pause
+                </button>
+              )}
+              <button
+                onClick={() => liveTail.clear()}
+                className="btn-secondary text-sm bg-white"
+              >
+                Clear
+              </button>
+              <button
+                onClick={handleLiveTailToggle}
+                className="btn-secondary text-sm bg-white text-red-600 hover:bg-red-50"
+              >
+                <Square className="w-4 h-4" />
+                Stop
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Live Tail Error */}
+        {liveTailEnabled && liveTail.error && (
+          <div className="card border-amber-200 bg-amber-50 p-3 mb-4 flex items-center gap-3 animate-fade-in">
+            <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0" />
+            <span className="text-sm text-amber-700">{liveTail.error}</span>
           </div>
         )}
 
@@ -1216,7 +1385,7 @@ export default function SearchPage() {
               {/* Results View */}
               <SourceAnnotationProvider>
               {viewMode === 'log' ? (
-                <div className="card overflow-hidden" style={{ height: '600px' }}>
+                <div ref={logViewerRef} className="card overflow-hidden" style={{ height: '600px' }}>
                   <LogViewer
                     logs={results as any[]}
                     onAddFilter={handleAddFilter}
@@ -1281,8 +1450,37 @@ export default function SearchPage() {
           );
         })()}
 
+        {/* Live Tail Results View */}
+        {liveTailEnabled && liveTail.logs.length > 0 && (
+          <div className="animate-slide-up">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-4">
+                <p className="text-sm font-medium text-slate-700 dark:text-nog-300">
+                  <span className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-nog-100">
+                    {liveTail.logs.length.toLocaleString()}
+                  </span>
+                  {' '}live logs
+                </p>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-slate-500">
+                <span>Scroll to pause • Auto-resumes in 5s</span>
+              </div>
+            </div>
+            <div ref={logViewerRef} className="card overflow-hidden" style={{ height: '600px' }}>
+              <SourceAnnotationProvider>
+                <LogViewer
+                  logs={liveTail.logs as any[]}
+                  onAddFilter={handleAddFilter}
+                  searchTerms={extractSearchTerms(query)}
+                  isLoading={false}
+                />
+              </SourceAnnotationProvider>
+            </div>
+          </div>
+        )}
+
         {/* Empty State */}
-        {!searchMutation.data && !aiSearchMutation.data && !searchMutation.isPending && !aiSearchMutation.isPending && !searchMutation.isError && !aiSearchMutation.isError && (
+        {!searchMutation.data && !aiSearchMutation.data && !searchMutation.isPending && !aiSearchMutation.isPending && !searchMutation.isError && !aiSearchMutation.isError && !liveTailEnabled && (
           <div className="flex flex-col items-center justify-center py-20">
             <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 ${
               searchMode === 'ai' ? 'bg-amber-100' : 'bg-nog-100'

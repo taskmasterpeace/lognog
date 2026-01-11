@@ -812,6 +812,116 @@ export const DASHBOARD_TEMPLATES: DashboardTemplateData[] = [
       ],
     },
   },
+
+  // Log Ingestion Health Dashboard - Built-in monitoring
+  {
+    name: 'Log Ingestion Health',
+    description: 'Monitor log ingestion rates, volume by index, top sources, and identify potential issues with your log pipeline',
+    category: 'system',
+    required_sources: [],
+    template: {
+      name: 'Log Ingestion Health',
+      description: 'Real-time monitoring of log ingestion pipeline health',
+      accent_color: '#10B981',
+      panels: [
+        // Row 1: Key Stats
+        {
+          title: 'Total Logs (24h)',
+          query: 'search * | stats count',
+          visualization: 'stat',
+          position_x: 0, position_y: 0, width: 3, height: 2,
+        },
+        {
+          title: 'Logs Per Hour (avg)',
+          query: 'search * | timechart span=1h count | stats avg(count)',
+          visualization: 'stat',
+          position_x: 3, position_y: 0, width: 3, height: 2,
+        },
+        {
+          title: 'Unique Sources',
+          query: 'search * | stats dc(hostname)',
+          visualization: 'stat',
+          position_x: 6, position_y: 0, width: 3, height: 2,
+        },
+        {
+          title: 'Active Indexes',
+          query: 'search * | stats dc(index_name)',
+          visualization: 'stat',
+          position_x: 9, position_y: 0, width: 3, height: 2,
+        },
+        // Row 2: Ingestion Over Time
+        {
+          title: 'Ingestion Rate Over Time',
+          query: 'search * | timechart span=15m count',
+          visualization: 'area',
+          position_x: 0, position_y: 2, width: 8, height: 4,
+        },
+        {
+          title: 'Logs by Index',
+          query: 'search * | stats count by index_name | sort desc count | limit 10',
+          visualization: 'pie',
+          position_x: 8, position_y: 2, width: 4, height: 4,
+        },
+        // Row 3: Source Distribution
+        {
+          title: 'Top 10 Sources by Volume',
+          query: 'search * | stats count by hostname | sort desc count | limit 10',
+          visualization: 'bar',
+          position_x: 0, position_y: 6, width: 6, height: 4,
+        },
+        {
+          title: 'Severity Distribution',
+          query: 'search * | stats count by severity | sort asc severity',
+          visualization: 'pie',
+          position_x: 6, position_y: 6, width: 3, height: 4,
+        },
+        {
+          title: 'Error Rate',
+          query: 'search severity<=3 | timechart span=1h count',
+          visualization: 'line',
+          position_x: 9, position_y: 6, width: 3, height: 4,
+        },
+        // Row 4: App Analysis
+        {
+          title: 'Top Applications',
+          query: 'search * | stats count by app_name | sort desc count | limit 15',
+          visualization: 'bar',
+          position_x: 0, position_y: 10, width: 6, height: 4,
+        },
+        {
+          title: 'Ingestion by Hour of Day',
+          query: 'search * | eval hour=strftime(timestamp, "%H") | stats count by hour | sort asc hour',
+          visualization: 'bar',
+          position_x: 6, position_y: 10, width: 6, height: 4,
+        },
+        // Row 5: Recent Logs & Potential Issues
+        {
+          title: 'Recent Critical/Error Logs',
+          query: 'search severity<=3 | table timestamp hostname app_name severity message | sort desc timestamp | limit 20',
+          visualization: 'table',
+          position_x: 0, position_y: 14, width: 12, height: 4,
+        },
+      ],
+      variables: [
+        {
+          name: 'index_name',
+          label: 'Index',
+          type: 'query',
+          query: 'search * | stats count by index_name | table index_name',
+          include_all: true,
+          multi_select: true,
+        },
+        {
+          name: 'hostname',
+          label: 'Source Host',
+          type: 'query',
+          query: 'search * | stats count by hostname | table hostname',
+          include_all: true,
+          multi_select: true,
+        },
+      ],
+    },
+  },
 ];
 
 export default DASHBOARD_TEMPLATES;

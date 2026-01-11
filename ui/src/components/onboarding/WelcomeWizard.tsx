@@ -50,10 +50,13 @@ type WizardStep = 'welcome' | 'data-source' | 'dashboards' | 'alerts';
 
 const STEPS: WizardStep[] = ['welcome', 'data-source', 'dashboards', 'alerts'];
 
+const DONT_SHOW_WIZARD_KEY = 'lognog_wizard_dont_show';
+
 export default function WelcomeWizard({ onComplete, onSkip }: WelcomeWizardProps) {
   const [currentStep, setCurrentStep] = useState<WizardStep>('welcome');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [dontShowAgain, setDontShowAgain] = useState(false);
 
   // Data source step
   const [dataSourceChoice, setDataSourceChoice] = useState<'demo' | 'real' | null>(null);
@@ -152,7 +155,7 @@ export default function WelcomeWizard({ onComplete, onSkip }: WelcomeWizardProps
 
   const handleCreateAlerts = async () => {
     if (selectedAlerts.size === 0) {
-      onComplete();
+      handleComplete();
       return;
     }
 
@@ -163,7 +166,7 @@ export default function WelcomeWizard({ onComplete, onSkip }: WelcomeWizardProps
         await createAlertFromTemplate(templateId);
       }
       setAlertsCreated(true);
-      onComplete();
+      handleComplete();
     } catch (err) {
       setError('Failed to create alerts. Please try again.');
     } finally {
@@ -210,6 +213,19 @@ export default function WelcomeWizard({ onComplete, onSkip }: WelcomeWizardProps
       case 'low': return 'text-amber-500 bg-amber-50 dark:bg-amber-900/20';
       default: return 'text-slate-500 bg-nog-50 dark:bg-nog-700';
     }
+  };
+
+  const handleSkip = () => {
+    if (dontShowAgain) {
+      localStorage.setItem(DONT_SHOW_WIZARD_KEY, 'true');
+    }
+    onSkip();
+  };
+
+  const handleComplete = () => {
+    // Always set localStorage on complete to prevent showing again
+    localStorage.setItem(DONT_SHOW_WIZARD_KEY, 'true');
+    onComplete();
   };
 
   return (
@@ -563,8 +579,20 @@ export default function WelcomeWizard({ onComplete, onSkip }: WelcomeWizardProps
         </div>
 
         {/* Footer */}
-        <div className="p-3 sm:p-6 border-t border-slate-200 dark:border-nog-700 flex items-center justify-between bg-nog-50 dark:bg-nog-900 gap-2">
-          <div className="flex-shrink-0">
+        <div className="p-3 sm:p-6 border-t border-slate-200 dark:border-nog-700 flex flex-col sm:flex-row sm:items-center sm:justify-between bg-nog-50 dark:bg-nog-900 gap-2">
+          {/* Don't show again checkbox */}
+          <label className="flex items-center gap-2 cursor-pointer order-2 sm:order-1">
+            <input
+              type="checkbox"
+              checked={dontShowAgain}
+              onChange={(e) => setDontShowAgain(e.target.checked)}
+              className="w-4 h-4 rounded border-slate-300 dark:border-nog-600 text-amber-500 focus:ring-amber-500 focus:ring-offset-0 dark:bg-nog-700"
+            />
+            <span className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+              Don't show this again
+            </span>
+          </label>
+          <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-3 order-1 sm:order-2">
             {currentStep !== 'welcome' && (
               <button
                 onClick={goToPreviousStep}
@@ -575,10 +603,8 @@ export default function WelcomeWizard({ onComplete, onSkip }: WelcomeWizardProps
                 <span className="hidden sm:inline">Back</span>
               </button>
             )}
-          </div>
-          <div className="flex items-center gap-2 sm:gap-3">
             <button
-              onClick={onSkip}
+              onClick={handleSkip}
               className="px-2 sm:px-4 py-2 text-xs sm:text-base text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
             >
               <span className="hidden sm:inline">Skip Setup</span>
