@@ -35,6 +35,7 @@ import {
   Circle,
   GitMerge,
   LayoutGrid,
+  Folder,
 } from 'lucide-react';
 import { AreaChart, BarChart, PieChart, ScatterChart, FunnelChart, TreemapChart } from '../components/charts';
 import {
@@ -73,6 +74,8 @@ import {
 } from '../components/dashboard';
 import { InfoTip } from '../components/ui/InfoTip';
 import { Tooltip as FloatingTooltip } from '../components/ui/Tooltip';
+import PanelCopyModal from '../components/PanelCopyModal';
+import PanelProvenanceModal from '../components/PanelProvenanceModal';
 
 const CHART_COLORS = ['#0ea5e9', '#8b5cf6', '#22c55e', '#f59e0b', '#ef4444', '#ec4899', '#06b6d4', '#84cc16'];
 
@@ -386,6 +389,7 @@ function PanelCard({
   onRefresh,
   onDrilldown,
   onFullscreen,
+  onViewOrigin,
   editMode,
 }: {
   panel: DashboardPanel;
@@ -396,6 +400,7 @@ function PanelCard({
   onRefresh: () => void;
   onDrilldown?: (field: string, value: string) => void;
   onFullscreen?: () => void;
+  onViewOrigin?: () => void;
   editMode?: boolean;
 }) {
   const vizOption = VISUALIZATION_OPTIONS.find(v => v.value === panel.visualization) || VISUALIZATION_OPTIONS[0];
@@ -420,6 +425,11 @@ function PanelCard({
           {onFullscreen && (
             <button onClick={onFullscreen} className="p-1.5 text-slate-400 dark:text-nog-400 hover:text-slate-600 dark:hover:text-nog-200 hover:bg-nog-100 dark:hover:bg-nog-700 rounded" title="Fullscreen">
               <Maximize2 className="w-3.5 h-3.5" />
+            </button>
+          )}
+          {onViewOrigin && (
+            <button onClick={onViewOrigin} className="p-1.5 text-slate-400 dark:text-nog-400 hover:text-slate-600 dark:hover:text-nog-200 hover:bg-nog-100 dark:hover:bg-nog-700 rounded" title="View Origin">
+              <GitMerge className="w-3.5 h-3.5" />
             </button>
           )}
           <button onClick={onRefresh} className="p-1.5 text-slate-400 dark:text-nog-400 hover:text-slate-600 dark:hover:text-nog-200 hover:bg-nog-100 dark:hover:bg-nog-700 rounded" title="Refresh">
@@ -706,6 +716,8 @@ export default function DashboardViewPage() {
   const [isExportingPdf, setIsExportingPdf] = useState(false);
   const dashboardGridRef = useRef<HTMLDivElement>(null);
   const [fullscreenPanel, setFullscreenPanel] = useState<string | null>(null);
+  const [showPanelCopyModal, setShowPanelCopyModal] = useState(false);
+  const [provenancePanel, setProvenancePanel] = useState<{ id: string; title: string } | null>(null);
 
   const { data: dashboard, isLoading, error } = useQuery({
     queryKey: ['dashboard', id],
@@ -1288,6 +1300,15 @@ export default function DashboardViewPage() {
             </div>
 
             <button
+              onClick={() => setShowPanelCopyModal(true)}
+              className="btn-secondary"
+              title="Copy existing panel from another dashboard"
+            >
+              <Folder className="w-4 h-4" />
+              <span className="hidden sm:inline">Copy Panel</span>
+            </button>
+
+            <button
               onClick={() => {
                 setEditingPanel(undefined);
                 setShowPanelEditor(true);
@@ -1446,6 +1467,7 @@ export default function DashboardViewPage() {
                   onRefresh={() => fetchPanelData(panel)}
                   onDrilldown={handleDrilldown}
                   onFullscreen={() => setFullscreenPanel(panel.id)}
+                  onViewOrigin={() => setProvenancePanel({ id: panel.id, title: panel.title })}
                   editMode={editMode}
                 />
               </div>
@@ -1605,6 +1627,27 @@ export default function DashboardViewPage() {
           </div>
         );
       })()}
+
+      {/* Panel Copy Modal */}
+      {showPanelCopyModal && (
+        <PanelCopyModal
+          onClose={() => setShowPanelCopyModal(false)}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['dashboard', id] });
+            setShowPanelCopyModal(false);
+          }}
+        />
+      )}
+
+      {/* Panel Provenance Modal */}
+      {provenancePanel && (
+        <PanelProvenanceModal
+          dashboardId={id!}
+          panelId={provenancePanel.id}
+          panelTitle={provenancePanel.title}
+          onClose={() => setProvenancePanel(null)}
+        />
+      )}
     </div>
   );
 }

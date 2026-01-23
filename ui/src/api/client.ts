@@ -2561,3 +2561,91 @@ export async function diagnoseError(
     body: JSON.stringify({ log, context }),
   });
 }
+
+// ============================================================================
+// Projects API
+// ============================================================================
+
+export interface Project {
+  id: string;
+  name: string;
+  description?: string;
+  logo_url?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProjectDashboard {
+  dashboard_id: string;
+  dashboard_name: string;
+  description?: string;
+  panel_count?: number;
+}
+
+export interface PanelInfo {
+  id: string;
+  title: string;
+  dashboard_id: string;
+  dashboard_name: string;
+  project_id?: string;
+  project_name?: string;
+  query: string;
+  visualization: string;
+}
+
+export interface PanelProvenance {
+  panel_id: string;
+  title: string;
+  source_panel_id?: string;
+  source_dashboard_id?: string;
+  source_dashboard_name?: string;
+  source_project_id?: string;
+  source_project_name?: string;
+  copied_at?: string;
+}
+
+export async function getProjects(): Promise<Project[]> {
+  return request('/projects');
+}
+
+export async function createProject(name: string, description?: string, logoUrl?: string): Promise<Project> {
+  return request('/projects', {
+    method: 'POST',
+    body: JSON.stringify({ name, description, logo_url: logoUrl }),
+  });
+}
+
+export async function updateProject(id: string, updates: Partial<Project>): Promise<Project> {
+  return request(`/projects/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(updates),
+  });
+}
+
+export async function deleteProject(id: string): Promise<void> {
+  await request(`/projects/${id}`, { method: 'DELETE' });
+}
+
+export async function getProjectDashboards(projectId: string): Promise<ProjectDashboard[]> {
+  return request(`/projects/${projectId}/dashboards`);
+}
+
+export async function getAllPanels(): Promise<PanelInfo[]> {
+  return request('/dashboards/all-panels');
+}
+
+export async function copyPanelToDashboard(
+  dashboardId: string,
+  sourcePanelId: string,
+  title?: string,
+  position?: { x?: number; y?: number; width?: number; height?: number }
+): Promise<DashboardPanel> {
+  return request(`/dashboards/${dashboardId}/panels/copy`, {
+    method: 'POST',
+    body: JSON.stringify({ sourcePanelId, title, position }),
+  });
+}
+
+export async function getPanelProvenance(dashboardId: string, panelId: string): Promise<PanelProvenance> {
+  return request(`/dashboards/${dashboardId}/panels/${panelId}/provenance`);
+}
