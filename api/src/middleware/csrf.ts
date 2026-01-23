@@ -53,6 +53,27 @@ function isExemptPath(path: string): boolean {
 }
 
 /**
+ * Check if request has API key authentication
+ * API key requests are exempt from CSRF as they use a different auth mechanism
+ */
+function hasApiKeyAuth(req: Request): boolean {
+  const authHeader = req.headers.authorization;
+  const apiKeyHeader = req.headers['x-api-key'];
+
+  // Check for ApiKey in Authorization header
+  if (authHeader?.startsWith('ApiKey ')) {
+    return true;
+  }
+
+  // Check for X-API-Key header
+  if (apiKeyHeader) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
  * CSRF protection middleware
  *
  * Usage:
@@ -66,6 +87,12 @@ export function csrfProtection(
 ): void {
   // Skip exempt paths (API key authenticated)
   if (isExemptPath(req.path)) {
+    return next();
+  }
+
+  // Skip CSRF for API key authenticated requests
+  // API keys are validated by the auth middleware, CSRF is not needed
+  if (hasApiKeyAuth(req)) {
     return next();
   }
 
