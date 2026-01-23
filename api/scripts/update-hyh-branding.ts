@@ -15,6 +15,7 @@ const HYH_BRANDING = {
   logo_url: 'https://www.heyyourehired.com/logo.png',
   accent_color: '#00bcd4',  // HYH cyan
   header_color: '#001f3f',  // HYH navy
+  app_scope: 'hey-youre-hired',
 };
 
 function getAuthHeaders(): Record<string, string> {
@@ -30,7 +31,7 @@ function getAuthHeaders(): Record<string, string> {
 }
 
 async function getAllDashboards() {
-  const response = await fetch(`${CLOUD_URL}/api/dashboards`, {
+  const response = await fetch(`${CLOUD_URL}/dashboards`, {
     headers: getAuthHeaders(),
   });
   if (!response.ok) {
@@ -40,7 +41,7 @@ async function getAllDashboards() {
 }
 
 async function updateDashboardBranding(dashboardId: string, branding: typeof HYH_BRANDING) {
-  const response = await fetch(`${CLOUD_URL}/api/dashboards/${dashboardId}/branding`, {
+  const response = await fetch(`${CLOUD_URL}/dashboards/${dashboardId}/branding`, {
     method: 'PUT',
     headers: getAuthHeaders(),
     body: JSON.stringify(branding),

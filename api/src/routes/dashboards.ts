@@ -344,12 +344,13 @@ router.put('/:id/branding', (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Dashboard not found' });
     }
 
-    const { logo_url, accent_color, header_color, description } = req.body;
+    const { logo_url, accent_color, header_color, description, app_scope } = req.body;
     const updated = updateDashboard(req.params.id, {
       logo_url,
       accent_color,
       header_color,
       description,
+      app_scope,
     });
 
     return res.json(updated);
