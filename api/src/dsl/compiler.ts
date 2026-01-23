@@ -372,7 +372,9 @@ export class Compiler {
       // Use 'number' type for numeric aggregations, 'string' for count/dc/values/list
       const isNumericAgg = ['sum', 'avg', 'min', 'max', 'median', 'stddev', 'variance', 'range', 'p50', 'p90', 'p95', 'p99'].includes(agg.function);
       const field = agg.field ? this.mapFieldForSelect(agg.field, isNumericAgg ? 'number' : 'string') : null;
-      const alias = agg.alias || `${agg.function}_${agg.field || 'all'}`;
+      // For count() without a field, default alias to just 'count' (not 'count_all')
+      // This matches user expectations with "stats count | sort -count"
+      const alias = agg.alias || (agg.function === 'count' && !agg.field ? 'count' : `${agg.function}_${agg.field || 'all'}`);
 
       switch (agg.function) {
         case 'count':
