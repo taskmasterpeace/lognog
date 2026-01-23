@@ -124,7 +124,7 @@ describe('Compiler', () => {
 
     expect(result.sql).toContain('WHERE');
     expect(result.sql).toContain("hostname = 'web1'");
-    expect(result.sql).toContain("severity = 'error'");
+    expect(result.sql).toContain("severity = 3");  // error = 3 (numeric)
     expect(result.sql).toContain(' AND ');
   });
 
@@ -133,7 +133,7 @@ describe('Compiler', () => {
 
     expect(result.sql).toContain('WHERE');
     expect(result.sql).toContain("hostname = 'web1'");
-    expect(result.sql).toContain("severity = 'error'");
+    expect(result.sql).toContain("severity = 3");  // error = 3 (numeric)
     expect(result.sql).toContain(' AND ');
   });
 
@@ -161,9 +161,9 @@ describe('Compiler', () => {
     const result = parseAndCompile('search severity=error OR severity=warning OR severity=critical');
 
     expect(result.sql).toContain('WHERE');
-    expect(result.sql).toContain("severity = 'error'");
-    expect(result.sql).toContain("severity = 'warning'");
-    expect(result.sql).toContain("severity = 'critical'");
+    expect(result.sql).toContain("severity = 3");  // error = 3 (numeric)
+    expect(result.sql).toContain("severity = 4");  // warning = 4 (numeric)
+    expect(result.sql).toContain("severity = 2");  // critical = 2 (numeric)
     // Count OR occurrences - should be 2 (for 3 terms)
     const orCount = (result.sql.match(/ OR /g) || []).length;
     expect(orCount).toBe(2);

@@ -285,6 +285,9 @@ export class Compiler {
       case '=':
         if (cond.value === '*') {
           expr = isKnownColumn ? `${field} != ''` : `${field} IS NOT NULL`;
+        } else if (mappedField === 'severity') {
+          // Severity is numeric - convert string levels to numbers
+          expr = `${field} = ${this.severityToNumber(cond.value)}`;
         } else if (typeof cond.value === 'string') {
           expr = `${field} = '${this.escape(cond.value)}'`;
         } else {
@@ -293,7 +296,10 @@ export class Compiler {
         break;
 
       case '!=':
-        if (typeof cond.value === 'string') {
+        if (mappedField === 'severity') {
+          // Severity is numeric - convert string levels to numbers
+          expr = `${field} != ${this.severityToNumber(cond.value)}`;
+        } else if (typeof cond.value === 'string') {
           expr = `${field} != '${this.escape(cond.value)}'`;
         } else {
           expr = `${field} != ${cond.value}`;
