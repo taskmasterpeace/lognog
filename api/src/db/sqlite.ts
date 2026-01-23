@@ -844,6 +844,66 @@ function initializeSchema(): void {
     CREATE INDEX IF NOT EXISTS idx_reports_app_scope ON scheduled_reports(app_scope);
     CREATE INDEX IF NOT EXISTS idx_saved_searches_app_scope ON saved_searches(app_scope);
   `);
+
+  // Projects system - organize dashboards, alerts, and reports by project
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS projects (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL UNIQUE,
+      slug TEXT NOT NULL UNIQUE,
+      description TEXT,
+      logo_url TEXT,
+      accent_color TEXT,
+      sort_order INTEGER DEFAULT 0,
+      is_archived INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_projects_slug ON projects(slug);
+    CREATE INDEX IF NOT EXISTS idx_projects_archived ON projects(is_archived);
+  `);
+
+  // Dashboard logos - support multiple logos per dashboard
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS dashboard_logos (
+      id TEXT PRIMARY KEY,
+      dashboard_id TEXT NOT NULL,
+      logo_url TEXT NOT NULL,
+      label TEXT,
+      position INTEGER DEFAULT 0,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (dashboard_id) REFERENCES dashboards(id) ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_dashboard_logos_dashboard ON dashboard_logos(dashboard_id);
+  `);
+
+  // Add project_id to dashboards
+  if (!columnNames.includes('project_id')) {
+    database.exec('ALTER TABLE dashboards ADD COLUMN project_id TEXT REFERENCES projects(id) ON DELETE SET NULL');
+    database.exec('CREATE INDEX IF NOT EXISTS idx_dashboards_project ON dashboards(project_id)');
+  }
+
+  // Add provenance tracking to dashboard_panels for copied panels
+  const panelProvenanceColumns = database.pragma('table_info(dashboard_panels)') as Array<{ name: string }>;
+  const panelProvenanceColumnNames = panelProvenanceColumns.map((col) => col.name);
+
+  if (!panelProvenanceColumnNames.includes('source_panel_id')) {
+    database.exec('ALTER TABLE dashboard_panels ADD COLUMN source_panel_id TEXT');
+  }
+  if (!panelProvenanceColumnNames.includes('source_dashboard_id')) {
+    database.exec('ALTER TABLE dashboard_panels ADD COLUMN source_dashboard_id TEXT');
+  }
+  if (!panelProvenanceColumnNames.includes('source_project_id')) {
+    database.exec('ALTER TABLE dashboard_panels ADD COLUMN source_project_id TEXT');
+  }
+  if (!panelProvenanceColumnNames.includes('copied_at')) {
+    database.exec('ALTER TABLE dashboard_panels ADD COLUMN copied_at TEXT');
+  }
+  if (!panelProvenanceColumnNames.includes('copy_generation')) {
+    database.exec('ALTER TABLE dashboard_panels ADD COLUMN copy_generation INTEGER DEFAULT 0');
+  }
 }
 
 // Saved Searches
@@ -1192,6 +1252,193 @@ export function duplicateSavedSearch(id: string, newOwnerId?: string): SavedSear
   );
 }
 
+// Projects
+export interface Project {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  logo_url?: string;
+  accent_color?: string;
+  sort_order: number;
+  is_archived: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DashboardLogo {
+  id: string;
+  dashboard_id: string;
+  logo_url: string;
+  label?: string;
+  position: number;
+  created_at: string;
+}
+
+export function createProject(
+  name: string,
+  slug: string,
+  options: {
+    description?: string;
+    logo_url?: string;
+    accent_color?: string;
+    sort_order?: number;
+  } = {}
+): Project {
+  const database = getSQLiteDB();
+  const id = uuidv4();
+  const now = new Date().toISOString();
+
+  database.prepare(`
+    INSERT INTO projects (id, name, slug, description, logo_url, accent_color, sort_order, created_at, updated_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    id,
+    name,
+    slug,
+    options.description || null,
+    options.logo_url || null,
+    options.accent_color || null,
+    options.sort_order || 0,
+    now,
+    now
+  );
+
+  return database.prepare('SELECT * FROM projects WHERE id = ?').get(id) as Project;
+}
+
+export function getProjects(): Project[] {
+  const database = getSQLiteDB();
+  return database.prepare('SELECT * FROM projects WHERE is_archived = 0 ORDER BY sort_order, name').all() as Project[];
+}
+
+export function getProject(id: string): Project | undefined {
+  const database = getSQLiteDB();
+  return database.prepare('SELECT * FROM projects WHERE id = ?').get(id) as Project | undefined;
+}
+
+export function getProjectBySlug(slug: string): Project | undefined {
+  const database = getSQLiteDB();
+  return database.prepare('SELECT * FROM projects WHERE slug = ?').get(slug) as Project | undefined;
+}
+
+export function updateProject(
+  id: string,
+  updates: {
+    name?: string;
+    slug?: string;
+    description?: string;
+    logo_url?: string;
+    accent_color?: string;
+    sort_order?: number;
+    is_archived?: number;
+  }
+): Project | undefined {
+  const database = getSQLiteDB();
+  const now = new Date().toISOString();
+
+  const fields: string[] = [];
+  const values: unknown[] = [];
+
+  if (updates.name !== undefined) {
+    fields.push('name = ?');
+    values.push(updates.name);
+  }
+  if (updates.slug !== undefined) {
+    fields.push('slug = ?');
+    values.push(updates.slug);
+  }
+  if (updates.description !== undefined) {
+    fields.push('description = ?');
+    values.push(updates.description);
+  }
+  if (updates.logo_url !== undefined) {
+    fields.push('logo_url = ?');
+    values.push(updates.logo_url);
+  }
+  if (updates.accent_color !== undefined) {
+    fields.push('accent_color = ?');
+    values.push(updates.accent_color);
+  }
+  if (updates.sort_order !== undefined) {
+    fields.push('sort_order = ?');
+    values.push(updates.sort_order);
+  }
+  if (updates.is_archived !== undefined) {
+    fields.push('is_archived = ?');
+    values.push(updates.is_archived);
+  }
+
+  if (fields.length > 0) {
+    fields.push('updated_at = ?');
+    values.push(now);
+    values.push(id);
+
+    database.prepare(`UPDATE projects SET ${fields.join(', ')} WHERE id = ?`).run(...values);
+  }
+
+  return database.prepare('SELECT * FROM projects WHERE id = ?').get(id) as Project | undefined;
+}
+
+export function deleteProject(id: string): boolean {
+  const database = getSQLiteDB();
+  const result = database.prepare('DELETE FROM projects WHERE id = ?').run(id);
+  return result.changes > 0;
+}
+
+export function getDashboardsByProject(projectId: string): Dashboard[] {
+  const database = getSQLiteDB();
+  return database.prepare('SELECT * FROM dashboards WHERE project_id = ? ORDER BY updated_at DESC').all(projectId) as Dashboard[];
+}
+
+// Dashboard Logos
+export function addDashboardLogo(
+  dashboardId: string,
+  logoUrl: string,
+  options: {
+    label?: string;
+    position?: number;
+  } = {}
+): DashboardLogo {
+  const database = getSQLiteDB();
+  const id = uuidv4();
+  const now = new Date().toISOString();
+
+  database.prepare(`
+    INSERT INTO dashboard_logos (id, dashboard_id, logo_url, label, position, created_at)
+    VALUES (?, ?, ?, ?, ?, ?)
+  `).run(
+    id,
+    dashboardId,
+    logoUrl,
+    options.label || null,
+    options.position || 0,
+    now
+  );
+
+  return database.prepare('SELECT * FROM dashboard_logos WHERE id = ?').get(id) as DashboardLogo;
+}
+
+export function getDashboardLogos(dashboardId: string): DashboardLogo[] {
+  const database = getSQLiteDB();
+  return database.prepare('SELECT * FROM dashboard_logos WHERE dashboard_id = ? ORDER BY position').all(dashboardId) as DashboardLogo[];
+}
+
+export function removeDashboardLogo(id: string): boolean {
+  const database = getSQLiteDB();
+  const result = database.prepare('DELETE FROM dashboard_logos WHERE id = ?').run(id);
+  return result.changes > 0;
+}
+
+export function reorderDashboardLogos(dashboardId: string, logoIds: string[]): void {
+  const database = getSQLiteDB();
+  const stmt = database.prepare('UPDATE dashboard_logos SET position = ? WHERE id = ? AND dashboard_id = ?');
+
+  logoIds.forEach((logoId, index) => {
+    stmt.run(index, logoId, dashboardId);
+  });
+}
+
 // Dashboards
 export interface Dashboard {
   id: string;
@@ -1206,6 +1453,7 @@ export interface Dashboard {
   public_password?: string;
   app_scope?: string;
   category?: string;
+  project_id?: string;
   created_at: string;
   updated_at: string;
 }
@@ -1217,6 +1465,11 @@ export interface DashboardPanel {
   query: string;
   visualization: string;
   options: string;
+  source_panel_id?: string;
+  source_dashboard_id?: string;
+  source_project_id?: string;
+  copied_at?: string;
+  copy_generation?: number;
   position_x: number;
   position_y: number;
   width: number;
@@ -1272,12 +1525,18 @@ export function getDashboardPanels(dashboardId: string): DashboardPanel[] {
   return database.prepare('SELECT * FROM dashboard_panels WHERE dashboard_id = ?').all(dashboardId) as DashboardPanel[];
 }
 
-export function createDashboard(name: string, description?: string, appScope?: string, category?: string): Dashboard {
+export function createDashboard(
+  name: string,
+  description?: string,
+  appScope?: string,
+  category?: string,
+  projectId?: string
+): Dashboard {
   const database = getSQLiteDB();
   const id = uuidv4();
   database.prepare(
-    'INSERT INTO dashboards (id, name, description, app_scope, category) VALUES (?, ?, ?, ?, ?)'
-  ).run(id, name, description || null, appScope || 'default', category || 'general');
+    'INSERT INTO dashboards (id, name, description, app_scope, category, project_id) VALUES (?, ?, ?, ?, ?, ?)'
+  ).run(id, name, description || null, appScope || 'default', category || 'general', projectId || null);
   return getDashboard(id)!;
 }
 
@@ -1360,6 +1619,122 @@ export function deleteDashboardPanel(id: string): boolean {
   const database = getSQLiteDB();
   const result = database.prepare('DELETE FROM dashboard_panels WHERE id = ?').run(id);
   return result.changes > 0;
+}
+
+export function getDashboardPanel(id: string): DashboardPanel | undefined {
+  const database = getSQLiteDB();
+  return database.prepare('SELECT * FROM dashboard_panels WHERE id = ?').get(id) as DashboardPanel | undefined;
+}
+
+export function copyDashboardPanel(
+  sourcePanelId: string,
+  targetDashboardId: string,
+  options: {
+    title?: string;
+    position?: { x: number; y: number; width: number; height: number };
+  } = {}
+): DashboardPanel | undefined {
+  const database = getSQLiteDB();
+
+  // Get the source panel
+  const sourcePanel = getDashboardPanel(sourcePanelId);
+  if (!sourcePanel) {
+    return undefined;
+  }
+
+  // Get the source dashboard to track provenance
+  const sourceDashboard = getDashboard(sourcePanel.dashboard_id);
+  const sourceProjectId = sourceDashboard?.project_id || null;
+
+  // Calculate copy generation (if copying a copy, increment generation)
+  const copyGeneration = (sourcePanel.copy_generation || 0) + 1;
+
+  // Generate new panel ID
+  const id = uuidv4();
+  const now = new Date().toISOString();
+
+  // Use provided title or generate "Copy of X"
+  const title = options.title || `Copy of ${sourcePanel.title}`;
+
+  // Use provided position or default
+  const position = options.position || {
+    x: sourcePanel.position_x || 0,
+    y: sourcePanel.position_y || 0,
+    width: sourcePanel.width || 6,
+    height: sourcePanel.height || 4,
+  };
+
+  // Insert the new panel with provenance tracking
+  database.prepare(`
+    INSERT INTO dashboard_panels (
+      id, dashboard_id, title, query, visualization, options,
+      position_x, position_y, width, height,
+      source_panel_id, source_dashboard_id, source_project_id,
+      copied_at, copy_generation
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    id,
+    targetDashboardId,
+    title,
+    sourcePanel.query,
+    sourcePanel.visualization,
+    sourcePanel.options,
+    position.x,
+    position.y,
+    position.width,
+    position.height,
+    sourcePanelId,
+    sourcePanel.dashboard_id,
+    sourceProjectId,
+    now,
+    copyGeneration
+  );
+
+  return getDashboardPanel(id);
+}
+
+export function getPanelProvenance(panelId: string): {
+  sourcePanel: { id: string; title: string } | null;
+  sourceDashboard: { id: string; name: string } | null;
+  sourceProject: { id: string; name: string } | null;
+  copiedAt: string | null;
+  generation: number;
+} | null {
+  const panel = getDashboardPanel(panelId);
+  if (!panel) return null;
+
+  let sourcePanel = null;
+  let sourceDashboard = null;
+  let sourceProject = null;
+
+  if (panel.source_panel_id) {
+    const sp = getDashboardPanel(panel.source_panel_id);
+    if (sp) {
+      sourcePanel = { id: sp.id, title: sp.title };
+    }
+  }
+
+  if (panel.source_dashboard_id) {
+    const sd = getDashboard(panel.source_dashboard_id);
+    if (sd) {
+      sourceDashboard = { id: sd.id, name: sd.name };
+    }
+  }
+
+  if (panel.source_project_id) {
+    const sproj = getProject(panel.source_project_id);
+    if (sproj) {
+      sourceProject = { id: sproj.id, name: sproj.name };
+    }
+  }
+
+  return {
+    sourcePanel,
+    sourceDashboard,
+    sourceProject,
+    copiedAt: panel.copied_at || null,
+    generation: panel.copy_generation || 0,
+  };
 }
 
 export function deleteDashboard(id: string): boolean {
@@ -2997,6 +3372,7 @@ export function updateDashboard(
     public_expires_at?: string;
     app_scope?: string;
     category?: string;
+    project_id?: string;
   }
 ): Dashboard | undefined {
   const database = getSQLiteDB();
@@ -3046,6 +3422,10 @@ export function updateDashboard(
   if (updates.category !== undefined) {
     fields.push('category = ?');
     values.push(updates.category);
+  }
+  if (updates.project_id !== undefined) {
+    fields.push('project_id = ?');
+    values.push(updates.project_id);
   }
 
   if (fields.length === 0) {

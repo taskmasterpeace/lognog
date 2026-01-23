@@ -8,6 +8,7 @@ import fs from 'fs';
 
 import searchRouter from './routes/search.js';
 import dashboardsRouter from './routes/dashboards.js';
+import projectsRouter from './routes/projects.js';
 import statsRouter from './routes/stats.js';
 import reportsRouter from './routes/reports.js';
 import knowledgeRouter from './routes/knowledge.js';
@@ -88,6 +89,7 @@ app.use('/auth', authRouter);
 app.use('/ingest', ingestRouter);
 app.use('/search', searchRouter);
 app.use('/dashboards', dashboardsRouter);
+app.use('/projects', projectsRouter);
 app.use('/stats', statsRouter);
 app.use('/reports', reportsRouter);
 app.use('/knowledge', knowledgeRouter);
@@ -149,10 +151,19 @@ app.ws('/ws/tail', (ws: WebSocket) => {
 // Poll for new logs and broadcast to connected clients
 let lastTimestamp = new Date().toISOString();
 
+// Validate ISO timestamp format to prevent SQL injection
+function isValidISOTimestamp(ts: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})?$/.test(ts);
+}
+
 async function pollNewLogs(): Promise<void> {
   if (liveTailClients.size === 0) return;
 
   try {
+    // Validate timestamp before using in query
+    if (!isValidISOTimestamp(lastTimestamp)) {
+      lastTimestamp = new Date().toISOString();
+    }
     const logs = await executeQuery<Record<string, unknown>>(
       `SELECT * FROM lognog.logs
        WHERE timestamp > parseDateTimeBestEffort('${lastTimestamp}')
@@ -291,6 +302,7 @@ if (uiDistPath) {
         req.path.startsWith('/ingest') ||
         req.path.startsWith('/search') ||
         req.path.startsWith('/dashboards') ||
+        req.path.startsWith('/projects') ||
         req.path.startsWith('/stats') ||
         req.path.startsWith('/reports') ||
         req.path.startsWith('/knowledge') ||

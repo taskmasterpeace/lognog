@@ -16,6 +16,9 @@ import {
   createDashboardPanel,
   updateDashboardPanel,
   deleteDashboardPanel,
+  getDashboardPanel,
+  copyDashboardPanel,
+  getPanelProvenance,
   deleteDashboard,
   updateDashboard,
   getDashboardByToken,
@@ -38,6 +41,11 @@ import {
   updateDashboardPage,
   deleteDashboardPage,
   reorderDashboardPages,
+  addDashboardLogo,
+  getDashboardLogos,
+  removeDashboardLogo,
+  reorderDashboardLogos,
+  getProjects,
 } from '../db/sqlite.js';
 
 const router = Router();
@@ -62,6 +70,41 @@ router.get('/', (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error fetching dashboards:', error);
     return res.status(500).json({ error: 'Failed to fetch dashboards' });
+  }
+});
+
+// Get all panels from all dashboards (for panel picker)
+// NOTE: This route MUST be before /:id to avoid path matching issues
+router.get('/all-panels', (_req: Request, res: Response) => {
+  try {
+    const dashboards = getDashboards();
+    const projects = getProjects();
+
+    const projectMap = new Map(projects.map(p => [p.id, p]));
+
+    const result = dashboards.map(dashboard => {
+      const panels = getDashboardPanels(dashboard.id);
+      const project = dashboard.project_id ? projectMap.get(dashboard.project_id) : null;
+
+      return {
+        dashboard: {
+          id: dashboard.id,
+          name: dashboard.name,
+          project: project ? { id: project.id, name: project.name } : null,
+        },
+        panels: panels.map(panel => ({
+          id: panel.id,
+          title: panel.title,
+          visualization: panel.visualization,
+          query: panel.query,
+        })),
+      };
+    });
+
+    return res.json(result);
+  } catch (error) {
+    console.error('Error fetching all panels:', error);
+    return res.status(500).json({ error: 'Failed to fetch panels' });
   }
 });
 
@@ -93,13 +136,13 @@ router.get('/:id', (req: Request, res: Response) => {
 // Create a new dashboard
 router.post('/', (req: Request, res: Response) => {
   try {
-    const { name, description, app_scope, category } = req.body;
+    const { name, description, app_scope, category, project_id } = req.body;
 
     if (!name) {
       return res.status(400).json({ error: 'Name is required' });
     }
 
-    const dashboard = createDashboard(name, description, app_scope, category);
+    const dashboard = createDashboard(name, description, app_scope, category, project_id);
     return res.status(201).json(dashboard);
   } catch (error) {
     console.error('Error creating dashboard:', error);
@@ -297,6 +340,65 @@ router.delete('/:id/panels/:panelId', (req: Request, res: Response) => {
   }
 });
 
+// Copy a panel from another dashboard
+router.post('/:id/panels/copy', (req: Request, res: Response) => {
+  try {
+    const targetDashboard = getDashboard(req.params.id);
+    if (!targetDashboard) {
+      return res.status(404).json({ error: 'Target dashboard not found' });
+    }
+
+    const { sourcePanelId, title, position } = req.body;
+
+    if (!sourcePanelId) {
+      return res.status(400).json({ error: 'sourcePanelId is required' });
+    }
+
+    // Verify source panel exists
+    const sourcePanel = getDashboardPanel(sourcePanelId);
+    if (!sourcePanel) {
+      return res.status(404).json({ error: 'Source panel not found' });
+    }
+
+    // Copy the panel
+    const copiedPanel = copyDashboardPanel(sourcePanelId, req.params.id, {
+      title,
+      position,
+    });
+
+    if (!copiedPanel) {
+      return res.status(500).json({ error: 'Failed to copy panel' });
+    }
+
+    // Get provenance info for the response
+    const provenance = getPanelProvenance(copiedPanel.id);
+
+    return res.status(201).json({
+      panel: copiedPanel,
+      provenance,
+    });
+  } catch (error) {
+    console.error('Error copying panel:', error);
+    return res.status(500).json({ error: 'Failed to copy panel' });
+  }
+});
+
+// Get panel provenance (origin tracking)
+router.get('/:id/panels/:panelId/provenance', (req: Request, res: Response) => {
+  try {
+    const panel = getDashboardPanel(req.params.panelId);
+    if (!panel) {
+      return res.status(404).json({ error: 'Panel not found' });
+    }
+
+    const provenance = getPanelProvenance(req.params.panelId);
+    return res.json(provenance);
+  } catch (error) {
+    console.error('Error fetching panel provenance:', error);
+    return res.status(500).json({ error: 'Failed to fetch panel provenance' });
+  }
+});
+
 // Delete a dashboard
 router.delete('/:id', (req: Request, res: Response) => {
   try {
@@ -319,7 +421,7 @@ router.put('/:id', (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Dashboard not found' });
     }
 
-    const { name, description, logo_url, accent_color, header_color, category } = req.body;
+    const { name, description, logo_url, accent_color, header_color, category, project_id } = req.body;
     const updated = updateDashboard(req.params.id, {
       name,
       description,
@@ -327,6 +429,7 @@ router.put('/:id', (req: Request, res: Response) => {
       accent_color,
       header_color,
       category,
+      project_id,
     });
 
     return res.json(updated);
@@ -1042,6 +1145,77 @@ router.post('/templates/:templateId/create', (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error creating from template:', error);
     return res.status(500).json({ error: 'Failed to create from template' });
+  }
+});
+
+// Dashboard Logos
+router.get('/:id/logos', (req: Request, res: Response) => {
+  try {
+    const dashboard = getDashboard(req.params.id);
+    if (!dashboard) {
+      return res.status(404).json({ error: 'Dashboard not found' });
+    }
+
+    const logos = getDashboardLogos(req.params.id);
+    return res.json(logos);
+  } catch (error) {
+    console.error('Error fetching dashboard logos:', error);
+    return res.status(500).json({ error: 'Failed to fetch dashboard logos' });
+  }
+});
+
+router.post('/:id/logos', (req: Request, res: Response) => {
+  try {
+    const dashboard = getDashboard(req.params.id);
+    if (!dashboard) {
+      return res.status(404).json({ error: 'Dashboard not found' });
+    }
+
+    const { logo_url, label, position } = req.body;
+
+    if (!logo_url) {
+      return res.status(400).json({ error: 'logo_url is required' });
+    }
+
+    const logo = addDashboardLogo(req.params.id, logo_url, { label, position });
+    return res.status(201).json(logo);
+  } catch (error) {
+    console.error('Error adding dashboard logo:', error);
+    return res.status(500).json({ error: 'Failed to add dashboard logo' });
+  }
+});
+
+router.delete('/:id/logos/:logoId', (req: Request, res: Response) => {
+  try {
+    const deleted = removeDashboardLogo(req.params.logoId);
+    if (!deleted) {
+      return res.status(404).json({ error: 'Logo not found' });
+    }
+    return res.status(204).send();
+  } catch (error) {
+    console.error('Error deleting dashboard logo:', error);
+    return res.status(500).json({ error: 'Failed to delete dashboard logo' });
+  }
+});
+
+router.put('/:id/logos/reorder', (req: Request, res: Response) => {
+  try {
+    const dashboard = getDashboard(req.params.id);
+    if (!dashboard) {
+      return res.status(404).json({ error: 'Dashboard not found' });
+    }
+
+    const { logoIds } = req.body;
+
+    if (!Array.isArray(logoIds)) {
+      return res.status(400).json({ error: 'logoIds array is required' });
+    }
+
+    reorderDashboardLogos(req.params.id, logoIds);
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('Error reordering dashboard logos:', error);
+    return res.status(500).json({ error: 'Failed to reorder dashboard logos' });
   }
 });
 
