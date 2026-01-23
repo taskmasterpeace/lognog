@@ -1,0 +1,462 @@
+[
+  {
+    "name": "HYH: API & System Health",
+    "description": "Monitor API performance, errors, and external service health for Hey You're Hired",
+    "app_scope": "hey-youre-hired",
+    "logo_url": null,
+    "accent_color": null,
+    "header_color": null,
+    "panels": [
+      {
+        "title": "Error Events",
+        "query": "search app_name=hey-youre-hired severity=3 | timechart span=1h count",
+        "visualization": "line",
+        "options": {},
+        "position_x": 0,
+        "position_y": 0,
+        "width": 6,
+        "height": 4
+      },
+      {
+        "title": "Errors by Type",
+        "query": "search app_name=hey-youre-hired severity=3 | stats count as error_count by message | sort -error_count | head 10",
+        "visualization": "bar",
+        "options": {},
+        "position_x": 6,
+        "position_y": 0,
+        "width": 6,
+        "height": 4
+      },
+      {
+        "title": "Stripe Webhook Errors",
+        "query": "search app_name=hey-youre-hired message=\"Stripe webhook error\" | timechart span=1h count",
+        "visualization": "line",
+        "options": {},
+        "position_x": 0,
+        "position_y": 4,
+        "width": 6,
+        "height": 4
+      },
+      {
+        "title": "Feature Failures",
+        "query": "search app_name=hey-youre-hired message=\"Feature failed*\" | stats count by message",
+        "visualization": "bar",
+        "options": {},
+        "position_x": 6,
+        "position_y": 4,
+        "width": 6,
+        "height": 4
+      },
+      {
+        "title": "Recent Errors",
+        "query": "search app_name=hey-youre-hired severity=3 | table timestamp hostname message | head 20",
+        "visualization": "table",
+        "options": {},
+        "position_x": 0,
+        "position_y": 8,
+        "width": 12,
+        "height": 4
+      }
+    ]
+  },
+  {
+    "name": "HYH: Blog Performance",
+    "description": "Track blog engagement, read completion, and content performance for Hey You're Hired",
+    "app_scope": "hey-youre-hired",
+    "logo_url": null,
+    "accent_color": null,
+    "header_color": null,
+    "panels": [
+      {
+        "title": "Blog Views Over Time",
+        "query": "search app_name=hey-youre-hired message=\"Blog article viewed\" | timechart span=1d count",
+        "visualization": "line",
+        "options": {},
+        "position_x": 0,
+        "position_y": 0,
+        "width": 6,
+        "height": 4
+      },
+      {
+        "title": "Views by Article",
+        "query": "search app_name=hey-youre-hired message=\"Blog article viewed\" | stats count as view_count by blog_title | sort -view_count | head 10",
+        "visualization": "bar",
+        "options": {},
+        "position_x": 6,
+        "position_y": 0,
+        "width": 6,
+        "height": 4
+      },
+      {
+        "title": "Views by Category",
+        "query": "search app_name=hey-youre-hired message=\"Blog article viewed\" | stats count by blog_category",
+        "visualization": "pie",
+        "options": {},
+        "position_x": 0,
+        "position_y": 4,
+        "width": 6,
+        "height": 4
+      },
+      {
+        "title": "Articles Read to Completion",
+        "query": "search app_name=hey-youre-hired message=\"Blog article read completed\" | timechart span=1d count",
+        "visualization": "line",
+        "options": {},
+        "position_x": 6,
+        "position_y": 4,
+        "width": 6,
+        "height": 4
+      },
+      {
+        "title": "Avg Scroll Depth by Article",
+        "query": "search app_name=hey-youre-hired message=\"Blog engagement\" | stats avg(scroll_depth) as avg_scroll by blog_title | sort -avg_scroll",
+        "visualization": "bar",
+        "options": {},
+        "position_x": 0,
+        "position_y": 8,
+        "width": 6,
+        "height": 4
+      },
+      {
+        "title": "Avg Time on Page",
+        "query": "search app_name=hey-youre-hired message=\"Blog engagement\" | stats avg(time_on_page) as avg_time by blog_title | sort -avg_time",
+        "visualization": "bar",
+        "options": {},
+        "position_x": 6,
+        "position_y": 8,
+        "width": 6,
+        "height": 4
+      }
+    ]
+  },
+  {
+    "name": "HYH: Conversion Funnel",
+    "description": "Track the complete user journey from visit to paid subscription",
+    "app_scope": "hey-youre-hired",
+    "logo_url": null,
+    "accent_color": null,
+    "header_color": null,
+    "panels": [
+      {
+        "title": "Full Funnel",
+        "query": "search app_name=hey-youre-hired | eval stage=case(message=\"User signup completed\", \"1. Signup\", message=\"Checkout started\", \"2. Checkout\", message=\"Payment conversion tracked\", \"3. Paid\") | stats count by stage | sort stage",
+        "visualization": "funnel",
+        "options": {},
+        "position_x": 0,
+        "position_y": 0,
+        "width": 12,
+        "height": 6
+      },
+      {
+        "title": "Signups to Checkout Rate",
+        "query": "search app_name=hey-youre-hired message=\"User signup completed\" OR message=\"Checkout started\" | stats count as event_count by message | sort -event_count",
+        "visualization": "bar",
+        "options": {},
+        "position_x": 0,
+        "position_y": 6,
+        "width": 6,
+        "height": 4
+      },
+      {
+        "title": "Checkout to Paid Rate",
+        "query": "search app_name=hey-youre-hired message=\"Checkout started\" OR message=\"Payment conversion tracked\" | stats count as event_count by message | sort -event_count",
+        "visualization": "bar",
+        "options": {},
+        "position_x": 6,
+        "position_y": 6,
+        "width": 6,
+        "height": 4
+      },
+      {
+        "title": "Daily Conversion Events",
+        "query": "search app_name=hey-youre-hired message=\"User signup completed\" OR message=\"Checkout started\" OR message=\"Payment conversion tracked\" | timechart span=1d count by message",
+        "visualization": "line",
+        "options": {},
+        "position_x": 0,
+        "position_y": 10,
+        "width": 12,
+        "height": 4
+      }
+    ]
+  },
+  {
+    "name": "HYH: Feature Usage",
+    "description": "Track which features are being used in Hey You're Hired",
+    "app_scope": "hey-youre-hired",
+    "logo_url": null,
+    "accent_color": null,
+    "header_color": null,
+    "panels": [
+      {
+        "title": "Cover Letters Generated",
+        "query": "search app_name=hey-youre-hired message=\"Feature completed: cover_letter\" | timechart span=1d count",
+        "visualization": "line",
+        "options": {},
+        "position_x": 0,
+        "position_y": 0,
+        "width": 6,
+        "height": 4
+      },
+      {
+        "title": "Career Coach Sessions",
+        "query": "search app_name=hey-youre-hired message=\"Feature used: career_coach\" | timechart span=1d count",
+        "visualization": "line",
+        "options": {},
+        "position_x": 6,
+        "position_y": 0,
+        "width": 6,
+        "height": 4
+      },
+      {
+        "title": "Job Recommendations Requests",
+        "query": "search app_name=hey-youre-hired message=\"Feature used: job_recommendations\" | timechart span=1d count",
+        "visualization": "line",
+        "options": {},
+        "position_x": 0,
+        "position_y": 4,
+        "width": 6,
+        "height": 4
+      },
+      {
+        "title": "Job Searches by Title",
+        "query": "search app_name=hey-youre-hired message=\"Feature used: job_recommendations\" | stats count as search_count by job_titles | sort -search_count | head 10",
+        "visualization": "bar",
+        "options": {},
+        "position_x": 6,
+        "position_y": 4,
+        "width": 6,
+        "height": 4
+      },
+      {
+        "title": "Resume Tailoring",
+        "query": "search app_name=hey-youre-hired message=\"Feature used: resume_tailoring\" | timechart span=1d count",
+        "visualization": "line",
+        "options": {},
+        "position_x": 0,
+        "position_y": 8,
+        "width": 6,
+        "height": 4
+      },
+      {
+        "title": "Resume Uploads",
+        "query": "search app_name=hey-youre-hired message=\"Feature used: resume_upload\" | timechart span=1d count",
+        "visualization": "line",
+        "options": {},
+        "position_x": 6,
+        "position_y": 8,
+        "width": 6,
+        "height": 4
+      }
+    ]
+  },
+  {
+    "name": "HYH: Job Search Performance",
+    "description": "Monitor job API performance, fallbacks, and search quality for Hey You're Hired",
+    "app_scope": "hey-youre-hired",
+    "logo_url": null,
+    "accent_color": null,
+    "header_color": null,
+    "panels": [
+      {
+        "title": "External API Requests",
+        "query": "search app_name=hey-youre-hired message=\"External API*request\" | timechart span=1h count",
+        "visualization": "line",
+        "options": {},
+        "position_x": 0,
+        "position_y": 0,
+        "width": 12,
+        "height": 4
+      },
+      {
+        "title": "Active Jobs DB API",
+        "query": "search app_name=hey-youre-hired message=\"External API: Active Jobs DB*\" | stats count by message",
+        "visualization": "bar",
+        "options": {},
+        "position_x": 0,
+        "position_y": 4,
+        "width": 4,
+        "height": 4
+      },
+      {
+        "title": "JobSpy API Activity",
+        "query": "search app_name=hey-youre-hired message=\"External API: JobSpy*\" OR message=\"JobSpy*\" | stats count by message",
+        "visualization": "bar",
+        "options": {},
+        "position_x": 4,
+        "position_y": 4,
+        "width": 4,
+        "height": 4
+      },
+      {
+        "title": "Job Orchestrator Events",
+        "query": "search app_name=hey-youre-hired message=\"Job orchestrator*\" | stats count by message",
+        "visualization": "bar",
+        "options": {},
+        "position_x": 8,
+        "position_y": 4,
+        "width": 4,
+        "height": 4
+      },
+      {
+        "title": "Orchestrator Fallback Chain",
+        "query": "search app_name=hey-youre-hired message=\"Job orchestrator: Fallback*\" OR message=\"Job orchestrator: Primary*\" | timechart span=1d count by message",
+        "visualization": "line",
+        "options": {},
+        "position_x": 0,
+        "position_y": 8,
+        "width": 6,
+        "height": 4
+      },
+      {
+        "title": "Deduplication Stats",
+        "query": "search app_name=hey-youre-hired message=\"Job orchestrator: Deduplication complete\" | timechart span=1d count",
+        "visualization": "line",
+        "options": {},
+        "position_x": 6,
+        "position_y": 8,
+        "width": 6,
+        "height": 4
+      },
+      {
+        "title": "Jobs Found per Search",
+        "query": "search app_name=hey-youre-hired message=\"Feature completed: job_recommendations\" | timechart span=1d avg(jobs_found)",
+        "visualization": "line",
+        "options": {},
+        "position_x": 0,
+        "position_y": 12,
+        "width": 12,
+        "height": 4
+      }
+    ]
+  },
+  {
+    "name": "HYH: Revenue & Subscriptions",
+    "description": "Track subscriptions, revenue, and churn for Hey You're Hired",
+    "app_scope": "hey-youre-hired",
+    "logo_url": null,
+    "accent_color": null,
+    "header_color": null,
+    "panels": [
+      {
+        "title": "New Subscriptions",
+        "query": "search app_name=hey-youre-hired message=\"Subscription synced\" status=\"active\" | timechart span=1d count",
+        "visualization": "line",
+        "options": {},
+        "position_x": 0,
+        "position_y": 0,
+        "width": 6,
+        "height": 4
+      },
+      {
+        "title": "Subscriptions by Plan",
+        "query": "search app_name=hey-youre-hired message=\"Subscription synced\" | stats count by plan_name",
+        "visualization": "pie",
+        "options": {},
+        "position_x": 6,
+        "position_y": 0,
+        "width": 6,
+        "height": 4
+      },
+      {
+        "title": "Stripe Webhook Events",
+        "query": "search app_name=hey-youre-hired message=\"Stripe webhook received\" | stats count by event_type",
+        "visualization": "bar",
+        "options": {},
+        "position_x": 0,
+        "position_y": 4,
+        "width": 6,
+        "height": 4
+      },
+      {
+        "title": "Subscription Status",
+        "query": "search app_name=hey-youre-hired message=\"Subscription synced\" | stats count by status",
+        "visualization": "pie",
+        "options": {},
+        "position_x": 6,
+        "position_y": 4,
+        "width": 6,
+        "height": 4
+      },
+      {
+        "title": "Recent Subscription Events",
+        "query": "search app_name=hey-youre-hired message=\"Subscription synced\" | table timestamp user_id plan_name status | head 20",
+        "visualization": "table",
+        "options": {},
+        "position_x": 0,
+        "position_y": 8,
+        "width": 12,
+        "height": 4
+      }
+    ]
+  },
+  {
+    "name": "HYH: User Acquisition & Funnel",
+    "description": "Track signups, conversions, and user sources for Hey You're Hired",
+    "app_scope": "hey-youre-hired",
+    "logo_url": null,
+    "accent_color": null,
+    "header_color": null,
+    "panels": [
+      {
+        "title": "Signups Over Time",
+        "query": "search app_name=hey-youre-hired message=\"User signup completed\" | timechart span=1d count",
+        "visualization": "line",
+        "options": {},
+        "position_x": 0,
+        "position_y": 0,
+        "width": 6,
+        "height": 4
+      },
+      {
+        "title": "Signups by Source",
+        "query": "search app_name=hey-youre-hired message=\"User signup completed\" | stats count by utm_source",
+        "visualization": "pie",
+        "options": {},
+        "position_x": 6,
+        "position_y": 0,
+        "width": 6,
+        "height": 4
+      },
+      {
+        "title": "Signups by Auth Method",
+        "query": "search app_name=hey-youre-hired message=\"Signup conversion\" | stats count by method",
+        "visualization": "pie",
+        "options": {},
+        "position_x": 0,
+        "position_y": 4,
+        "width": 6,
+        "height": 4
+      },
+      {
+        "title": "Daily Active Users",
+        "query": "search app_name=hey-youre-hired message=\"User login\" OR message=\"User signup completed\" | timechart span=1d dc(user_id)",
+        "visualization": "line",
+        "options": {},
+        "position_x": 6,
+        "position_y": 4,
+        "width": 6,
+        "height": 4
+      },
+      {
+        "title": "Checkout Started",
+        "query": "search app_name=hey-youre-hired message=\"Checkout started\" | timechart span=1d count",
+        "visualization": "line",
+        "options": {},
+        "position_x": 0,
+        "position_y": 8,
+        "width": 6,
+        "height": 4
+      },
+      {
+        "title": "Payment Conversions",
+        "query": "search app_name=hey-youre-hired message=\"Payment conversion\" OR message=\"Payment conversion tracked\" | timechart span=1d count",
+        "visualization": "line",
+        "options": {},
+        "position_x": 6,
+        "position_y": 8,
+        "width": 6,
+        "height": 4
+      }
+    ]
+  }
+]
