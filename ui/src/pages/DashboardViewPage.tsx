@@ -36,8 +36,12 @@ import {
   GitMerge,
   LayoutGrid,
   Folder,
+  Star,
+  ArrowLeft,
+  MoreVertical,
 } from 'lucide-react';
 import { AreaChart, BarChart, PieChart, ScatterChart, FunnelChart, TreemapChart } from '../components/charts';
+import { useTheme } from '../contexts/ThemeContext';
 import {
   getDashboard,
   executeSearch,
@@ -76,8 +80,10 @@ import { InfoTip } from '../components/ui/InfoTip';
 import { Tooltip as FloatingTooltip } from '../components/ui/Tooltip';
 import PanelCopyModal from '../components/PanelCopyModal';
 import PanelProvenanceModal from '../components/PanelProvenanceModal';
+import { getDefaultDashboard, setDefaultDashboard } from './DashboardsPage';
 
-const CHART_COLORS = ['#0ea5e9', '#8b5cf6', '#22c55e', '#f59e0b', '#ef4444', '#ec4899', '#06b6d4', '#84cc16'];
+// LogNog brand colors - amber/orange theme
+const CHART_COLORS = ['#f59e0b', '#d97706', '#fbbf24', '#b45309', '#f97316', '#ea580c', '#fcd34d', '#c2410c'];
 
 const VISUALIZATION_OPTIONS = [
   { value: 'table', label: 'Table', icon: Table2 },
@@ -118,6 +124,9 @@ function PanelVisualization({
   onRefresh: () => void;
   onDrilldown?: (field: string, value: string) => void;
 }) {
+  const { resolvedTheme } = useTheme();
+  const isDarkMode = resolvedTheme === 'dark';
+
   if (data.loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -168,6 +177,7 @@ function PanelVisualization({
           height={200}
           horizontal={true}
           barColor="#f59e0b"
+          darkMode={isDarkMode}
           showValues={false}
           onBarClick={(category) => {
             const item = results.find((r) => String(r[labelKey]) === category);
@@ -189,6 +199,7 @@ function PanelVisualization({
               height={200}
               donut={true}
               showLegend={false}
+              darkMode={isDarkMode}
               colors={CHART_COLORS}
               onItemClick={(name) => {
                 const index = pieData.findIndex((p) => p.name === name);
@@ -216,6 +227,7 @@ function PanelVisualization({
           series={[{ name: valueKey, dataKey: valueKey, color: '#f59e0b' }]}
           xAxisKey={labelKey}
           height={200}
+          darkMode={isDarkMode}
           xAxisFormatter={(v) => {
             if (String(v).match(/\d{4}-\d{2}-\d{2}/)) {
               return new Date(v).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -246,20 +258,32 @@ function PanelVisualization({
       });
       return (
         <div className="h-full w-full">
-          <HeatmapChart data={heatmapData} height={240} />
+          <HeatmapChart data={heatmapData} height={240} darkMode={isDarkMode} />
         </div>
       );
 
     case 'gauge':
-      const gaugeValue = results[0] ? Number(Object.values(results[0]).find(v => typeof v === 'number') || 0) : 0;
-      const maxGaugeValue = Math.max(gaugeValue * 1.2, 100);
+      // Handle both number and string values from API (ClickHouse returns strings)
+      const gaugeValue = results[0]
+        ? Number(Object.values(results[0]).find(v => v !== null && v !== '' && !isNaN(Number(v))) || 0)
+        : 0;
+      // Use custom max from options, or calculate based on value
+      const gaugeOptions = (panel as any).options || {};
+      const maxGaugeValue = gaugeOptions.max ?? Math.max(gaugeValue * 1.2, 100);
+      // Use custom thresholds if provided, otherwise default to proportional
+      const gaugeThresholds = gaugeOptions.thresholds
+        ? { low: gaugeOptions.thresholds.low, medium: gaugeOptions.thresholds.medium, high: gaugeOptions.thresholds.high ?? maxGaugeValue }
+        : { low: maxGaugeValue * 0.33, medium: maxGaugeValue * 0.66, high: maxGaugeValue };
       return (
-        <div className="h-full w-full flex items-center justify-center">
+        <div className="h-full w-full flex flex-col items-center justify-center">
           <GaugeChart
             value={gaugeValue}
             max={maxGaugeValue}
             height={200}
-            thresholds={{ low: maxGaugeValue * 0.33, medium: maxGaugeValue * 0.66, high: maxGaugeValue }}
+            darkMode={isDarkMode}
+            thresholds={gaugeThresholds}
+            unit={gaugeOptions.unit || ''}
+            title={gaugeOptions.subtitle}
           />
         </div>
       );
@@ -278,6 +302,7 @@ function PanelVisualization({
           <WordCloudChart
             data={wordCloudData}
             height={240}
+            darkMode={isDarkMode}
             onWordClick={(word) => {
               if (onDrilldown && keys.length > 0) {
                 onDrilldown(keys[0], word);
@@ -305,6 +330,7 @@ function PanelVisualization({
           <ScatterChart
             data={scatterData}
             height={220}
+            darkMode={isDarkMode}
             xAxisLabel={xKey}
             yAxisLabel={yKey}
             onPointClick={(point) => {
@@ -329,6 +355,7 @@ function PanelVisualization({
           <FunnelChart
             data={funnelData}
             height={220}
+            darkMode={isDarkMode}
             onStageClick={(name) => {
               if (onDrilldown && labelKey) {
                 onDrilldown(labelKey, name);
@@ -351,6 +378,7 @@ function PanelVisualization({
           <TreemapChart
             data={treemapData}
             height={220}
+            darkMode={isDarkMode}
             onNodeClick={(node) => {
               if (onDrilldown && labelKey) {
                 onDrilldown(labelKey, node.name);
@@ -403,17 +431,32 @@ function PanelCard({
   onViewOrigin?: () => void;
   editMode?: boolean;
 }) {
+  const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   const vizOption = VISUALIZATION_OPTIONS.find(v => v.value === panel.visualization) || VISUALIZATION_OPTIONS[0];
   const VizIcon = vizOption.icon;
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowMenu(false);
+      }
+    };
+    if (showMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showMenu]);
 
   return (
     <div className="card flex flex-col h-full group">
       <div className={`flex items-center justify-between p-3 border-b border-slate-100 dark:border-nog-700 ${editMode ? 'panel-drag-handle cursor-move' : ''}`}>
-        <div className="flex items-center gap-2 min-w-0 flex-1">
+        <div className="flex items-center gap-2 min-w-0 flex-1 mr-2">
           {editMode && <Move className="w-4 h-4 text-slate-400 dark:text-nog-400 flex-shrink-0" />}
           <VizIcon className="w-4 h-4 text-slate-400 dark:text-nog-400 flex-shrink-0" />
           <div className="min-w-0 flex-1">
-            <h3 className="font-medium text-slate-900 dark:text-nog-100 truncate">{panel.title}</h3>
+            <h3 className="font-medium text-slate-900 dark:text-nog-100 text-sm leading-tight break-words" title={panel.title}>{panel.title}</h3>
             {panel.description && (
               <p className="text-xs text-slate-500 dark:text-nog-400 truncate" title={panel.description}>
                 {panel.description}
@@ -421,29 +464,63 @@ function PanelCard({
             )}
           </div>
         </div>
-        <div className={`flex items-center gap-1 ${editMode ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`}>
-          {onFullscreen && (
-            <button onClick={onFullscreen} className="p-1.5 text-slate-400 dark:text-nog-400 hover:text-slate-600 dark:hover:text-nog-200 hover:bg-nog-100 dark:hover:bg-nog-700 rounded" title="Fullscreen">
-              <Maximize2 className="w-3.5 h-3.5" />
-            </button>
-          )}
-          {onViewOrigin && (
-            <button onClick={onViewOrigin} className="p-1.5 text-slate-400 dark:text-nog-400 hover:text-slate-600 dark:hover:text-nog-200 hover:bg-nog-100 dark:hover:bg-nog-700 rounded" title="View Origin">
-              <GitMerge className="w-3.5 h-3.5" />
-            </button>
-          )}
+        <div className={`flex items-center gap-1 flex-shrink-0 ${editMode ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`} ref={menuRef}>
           <button onClick={onRefresh} className="p-1.5 text-slate-400 dark:text-nog-400 hover:text-slate-600 dark:hover:text-nog-200 hover:bg-nog-100 dark:hover:bg-nog-700 rounded" title="Refresh">
             <RefreshCw className="w-3.5 h-3.5" />
           </button>
-          <button onClick={onEdit} className="p-1.5 text-slate-400 dark:text-nog-400 hover:text-slate-600 dark:hover:text-nog-200 hover:bg-nog-100 dark:hover:bg-nog-700 rounded" title="Edit">
-            <Edit3 className="w-3.5 h-3.5" />
-          </button>
-          <button onClick={onDuplicate} className="p-1.5 text-slate-400 dark:text-nog-400 hover:text-slate-600 dark:hover:text-nog-200 hover:bg-nog-100 dark:hover:bg-nog-700 rounded" title="Duplicate">
-            <Copy className="w-3.5 h-3.5" />
-          </button>
-          <button onClick={onDelete} className="p-1.5 text-slate-400 dark:text-nog-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded" title="Delete">
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => setShowMenu(!showMenu)}
+              className="p-1.5 text-slate-400 dark:text-nog-400 hover:text-slate-600 dark:hover:text-nog-200 hover:bg-nog-100 dark:hover:bg-nog-700 rounded"
+              title="More actions"
+            >
+              <MoreVertical className="w-3.5 h-3.5" />
+            </button>
+            {showMenu && (
+              <div className="absolute right-0 top-full mt-1 w-40 bg-white dark:bg-nog-800 border border-slate-200 dark:border-nog-600 rounded-lg shadow-lg z-50 py-1 animate-fade-in">
+                {onFullscreen && (
+                  <button
+                    onClick={() => { onFullscreen(); setShowMenu(false); }}
+                    className="w-full px-3 py-2 text-left text-sm text-slate-700 dark:text-nog-200 hover:bg-slate-100 dark:hover:bg-nog-700 flex items-center gap-2"
+                  >
+                    <Maximize2 className="w-4 h-4" />
+                    Fullscreen
+                  </button>
+                )}
+                {onViewOrigin && (
+                  <button
+                    onClick={() => { onViewOrigin(); setShowMenu(false); }}
+                    className="w-full px-3 py-2 text-left text-sm text-slate-700 dark:text-nog-200 hover:bg-slate-100 dark:hover:bg-nog-700 flex items-center gap-2"
+                  >
+                    <GitMerge className="w-4 h-4" />
+                    View Origin
+                  </button>
+                )}
+                <button
+                  onClick={() => { onEdit(); setShowMenu(false); }}
+                  className="w-full px-3 py-2 text-left text-sm text-slate-700 dark:text-nog-200 hover:bg-slate-100 dark:hover:bg-nog-700 flex items-center gap-2"
+                >
+                  <Edit3 className="w-4 h-4" />
+                  Edit
+                </button>
+                <button
+                  onClick={() => { onDuplicate(); setShowMenu(false); }}
+                  className="w-full px-3 py-2 text-left text-sm text-slate-700 dark:text-nog-200 hover:bg-slate-100 dark:hover:bg-nog-700 flex items-center gap-2"
+                >
+                  <Copy className="w-4 h-4" />
+                  Duplicate
+                </button>
+                <div className="border-t border-slate-200 dark:border-nog-600 my-1" />
+                <button
+                  onClick={() => { onDelete(); setShowMenu(false); }}
+                  className="w-full px-3 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 flex items-center gap-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Delete
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       </div>
       <div className="flex-1 p-3 min-h-0">
@@ -1111,8 +1188,38 @@ export default function DashboardViewPage() {
 
   // selectedPreset moved to TimePickerEnhanced component
 
+  const isDefaultDashboard = getDefaultDashboard() === id;
+
   return (
     <div className="min-h-full bg-nog-50 dark:bg-nog-900 flex flex-col">
+      {/* Default Dashboard Banner */}
+      {isDefaultDashboard && (
+        <div className="bg-gradient-to-r from-amber-500 to-amber-600 text-white px-4 py-2 flex items-center justify-between text-sm">
+          <div className="flex items-center gap-2">
+            <Star className="w-4 h-4 fill-current" />
+            <span>This is your default dashboard</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <Link
+              to="/dashboards?all=true"
+              className="flex items-center gap-1 hover:underline"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              View all dashboards
+            </Link>
+            <button
+              onClick={() => {
+                setDefaultDashboard(null);
+                queryClient.invalidateQueries({ queryKey: ['dashboard', id] });
+              }}
+              className="px-2 py-0.5 bg-white/20 hover:bg-white/30 rounded text-xs"
+            >
+              Remove default
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <DashboardHeader
         name={dashboard.name}
@@ -1287,6 +1394,21 @@ export default function DashboardViewPage() {
                   >
                     <Copy className="w-4 h-4" />
                     {duplicateMutation.isPending ? 'Duplicating...' : 'Duplicate'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (isDefaultDashboard) {
+                        setDefaultDashboard(null);
+                      } else {
+                        setDefaultDashboard(id!);
+                      }
+                      setShowActionsDropdown(false);
+                      queryClient.invalidateQueries({ queryKey: ['dashboard', id] });
+                    }}
+                    className="dropdown-item"
+                  >
+                    <Star className={`w-4 h-4 ${isDefaultDashboard ? 'fill-amber-500 text-amber-500' : ''}`} />
+                    {isDefaultDashboard ? 'Remove Default' : 'Set as Default'}
                   </button>
                   <button
                     onClick={() => { setShowAIInsights(!showAIInsights); setShowActionsDropdown(false); }}
@@ -1631,6 +1753,7 @@ export default function DashboardViewPage() {
       {/* Panel Copy Modal */}
       {showPanelCopyModal && (
         <PanelCopyModal
+          targetDashboardId={id!}
           onClose={() => setShowPanelCopyModal(false)}
           onSuccess={() => {
             queryClient.invalidateQueries({ queryKey: ['dashboard', id] });

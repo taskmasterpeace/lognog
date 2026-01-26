@@ -7,7 +7,7 @@ export interface DashboardTemplateData {
   required_sources: string[];
   template: {
     name: string;
-    description: string;
+    description?: string;
     logo_url?: string;
     accent_color?: string;
     panels: Array<{
@@ -18,14 +18,17 @@ export interface DashboardTemplateData {
       position_y: number;
       width: number;
       height: number;
+      options?: Record<string, any>;  // Panel-specific options (gauge thresholds, units, etc.)
     }>;
     variables?: Array<{
       name: string;
       label: string;
       type: 'query' | 'custom';
       query?: string;
-      include_all: boolean;
-      multi_select: boolean;
+      default_value?: string;
+      options?: string[];
+      include_all?: boolean;
+      multi_select?: boolean;
     }>;
   };
 }
@@ -918,6 +921,114 @@ export const DASHBOARD_TEMPLATES: DashboardTemplateData[] = [
           query: 'search * | stats count by hostname | table hostname',
           include_all: true,
           multi_select: true,
+        },
+      ],
+    },
+  },
+
+  // ============================================
+  // HYH Activation Metrics Dashboard
+  // ============================================
+  {
+    name: 'HYH Activation Metrics',
+    description: 'Track user activation for Hey You\'re Hired - signup to first value within 48 hours',
+    category: 'application',
+    required_sources: ['hey-youre-hired'],
+    template: {
+      name: 'HYH Activation Metrics',
+      logo_url: '/hey-youre-hired-logo.png',
+      accent_color: '#3B82F6',
+      panels: [
+        // Row 1: Key Counts and Comparison
+        {
+          title: 'Signups (7 days)',
+          query: 'search index=hey-youre-hired event_type="signup" earliest=-7d | stats dc(user_id) as count',
+          visualization: 'stat',
+          position_x: 0, position_y: 0, width: 3, height: 2,
+        },
+        {
+          title: 'Activated (7 days)',
+          query: 'search index=hey-youre-hired event_type="activated" earliest=-7d | stats dc(user_id) as count',
+          visualization: 'stat',
+          position_x: 3, position_y: 0, width: 3, height: 2,
+        },
+        {
+          title: 'Signups (30 days)',
+          query: 'search index=hey-youre-hired event_type="signup" earliest=-30d | stats dc(user_id) as count',
+          visualization: 'stat',
+          position_x: 6, position_y: 0, width: 3, height: 2,
+        },
+        {
+          title: 'Activated (30 days)',
+          query: 'search index=hey-youre-hired event_type="activated" earliest=-30d | stats dc(user_id) as count',
+          visualization: 'stat',
+          position_x: 9, position_y: 0, width: 3, height: 2,
+        },
+        {
+          title: 'Signups vs Activated (7d)',
+          query: 'search index=hey-youre-hired (event_type="signup" OR event_type="activated") earliest=-7d | stats dc(user_id) by event_type',
+          visualization: 'bar',
+          position_x: 0, position_y: 2, width: 6, height: 3,
+        },
+        {
+          title: 'Signups vs Activated (30d)',
+          query: 'search index=hey-youre-hired (event_type="signup" OR event_type="activated") earliest=-30d | stats dc(user_id) by event_type',
+          visualization: 'bar',
+          position_x: 6, position_y: 2, width: 6, height: 3,
+        },
+        // Row 3: First Smart Jobs Stats
+        {
+          title: 'First Smart Jobs Today',
+          query: 'search index=hey-youre-hired event_type="first_smart_jobs" earliest=-1d | stats dc(user_id) as count',
+          visualization: 'stat',
+          position_x: 0, position_y: 5, width: 3, height: 2,
+        },
+        {
+          title: 'First Smart Jobs (7d)',
+          query: 'search index=hey-youre-hired event_type="first_smart_jobs" earliest=-7d | stats dc(user_id) as count',
+          visualization: 'stat',
+          position_x: 3, position_y: 5, width: 3, height: 2,
+        },
+        {
+          title: 'First Smart Jobs (All Time)',
+          query: 'search index=hey-youre-hired event_type="first_smart_jobs" | stats dc(user_id) as count',
+          visualization: 'stat',
+          position_x: 6, position_y: 5, width: 3, height: 2,
+        },
+        {
+          title: 'Hours to Activation',
+          query: 'search index=hey-youre-hired event_type="activated" | eval bucket=case(hours_to_activation < 1, "<1h", hours_to_activation < 6, "1-6h", hours_to_activation < 12, "6-12h", hours_to_activation < 24, "12-24h", hours_to_activation < 48, "24-48h") | stats count by bucket',
+          visualization: 'pie',
+          position_x: 9, position_y: 5, width: 3, height: 2,
+        },
+        // Row 4: Daily Activations Trend
+        {
+          title: 'Daily Activations (30d)',
+          query: 'search index=hey-youre-hired event_type="activated" earliest=-30d | timechart span=1d dc(user_id) as activations',
+          visualization: 'area',
+          position_x: 0, position_y: 7, width: 12, height: 3,
+        },
+        // Row 5: Profile & Smart Jobs Trends
+        {
+          title: 'Profile Completions (30d)',
+          query: 'search index=hey-youre-hired event_type="profile_complete" earliest=-30d | timechart span=1d dc(user_id) as completions',
+          visualization: 'area',
+          position_x: 0, position_y: 10, width: 6, height: 3,
+        },
+        {
+          title: 'First Smart Jobs Runs (30d)',
+          query: 'search index=hey-youre-hired event_type="first_smart_jobs" earliest=-30d | timechart span=1d dc(user_id) as first_runs',
+          visualization: 'area',
+          position_x: 6, position_y: 10, width: 6, height: 3,
+        },
+      ],
+      variables: [
+        {
+          name: 'timerange',
+          label: 'Time Range',
+          type: 'custom',
+          default_value: '-7d',
+          options: ['-1d', '-7d', '-30d', '-90d'],
         },
       ],
     },
