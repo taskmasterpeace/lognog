@@ -282,6 +282,24 @@ export const ALERT_TEMPLATES: AlertTemplateData[] = [
     throttle_window_seconds: 3600,
   },
 
+  // Heartbeat Dead Man's Switch
+  {
+    id: 'saas-heartbeat-missing',
+    name: 'Heartbeat Missing (Dead Man\'s Switch)',
+    description: 'Alert when no heartbeat received from app - indicates app may be down or not sending logs',
+    category: 'availability',
+    search_query: 'search message="Heartbeat" | stats count',
+    trigger_type: 'number_of_results',
+    trigger_condition: 'less_than',
+    trigger_threshold: 1,
+    schedule_type: 'cron',
+    cron_expression: '*/10 * * * *',
+    time_range: '-10m',
+    severity: 'critical',
+    throttle_enabled: true,
+    throttle_window_seconds: 1800,
+  },
+
   // ============================================
   // LogNog Self-Monitoring Alerts (Disabled by Default)
   // ============================================

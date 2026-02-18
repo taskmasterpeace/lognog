@@ -31,7 +31,7 @@ export const BarChart: React.FC<BarChartProps> = ({
   topN,
   sortOrder = 'desc',
   showValues = true,
-  barColor = '#5470c6',
+  barColor = '#f59e0b',
   onBarClick,
   xAxisLabel,
   yAxisLabel,
