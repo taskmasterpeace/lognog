@@ -1,5 +1,5 @@
 import nodemailer from 'nodemailer';
-import { getSQLiteDB, getAlerts, Alert, getScheduledSavedSearches, updateSavedSearchCache, updateSavedSearchError, cleanupExpiredSearchCache, SavedSearch, getSystemSetting } from '../db/sqlite.js';
+import { getSQLiteDB, getAlerts, Alert, getScheduledSavedSearches, updateSavedSearchCache, updateSavedSearchError, cleanupExpiredSearchCache, SavedSearch, getSystemSetting, getProjectBySlug } from '../db/sqlite.js';
 import { executeDSLQuery } from '../db/backend.js';
 import { parseAndCompile } from '../dsl/index.js';
 import { evaluateAlert } from './alerts.js';
@@ -196,9 +196,18 @@ async function runReport(report: ScheduledReport): Promise<void> {
       return;
     }
 
-    // Get branding from system settings
-    const accentColor = getSystemSetting('branding_accent_color') || '#0ea5e9';
-    const logoUrl = getSystemSetting('branding_logo_url') || undefined;
+    // Get branding from project first, then fall back to system settings
+    let accentColor = getSystemSetting('branding_accent_color') || '#5A3F24'; // LogNog chocolate
+    let logoUrl = getSystemSetting('branding_logo_url') || undefined;
+
+    // If report has an app_scope (project), use project's branding
+    if (report.app_scope && report.app_scope !== 'default') {
+      const project = getProjectBySlug(report.app_scope);
+      if (project) {
+        if (project.accent_color) accentColor = project.accent_color;
+        if (project.logo_url) logoUrl = project.logo_url;
+      }
+    }
 
     // Build report data for renderer
     const reportData: ReportData = {

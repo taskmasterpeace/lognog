@@ -10,7 +10,7 @@ import { processTemplate, ReportContext } from './template-engine.js';
 // Configuration constants
 const MAX_TABLE_ROWS = 500;
 const MAX_SUMMARY_STATS = 2;
-const DEFAULT_ACCENT_COLOR = '#0ea5e9';
+const DEFAULT_ACCENT_COLOR = '#5A3F24'; // LogNog chocolate brown
 
 export interface ReportData {
   report: {
