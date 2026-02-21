@@ -403,4 +403,56 @@ describe('Parser', () => {
     expect(search.conditions[0].operator).toBe('~');
     expect(search.conditions[0].value).toBe('error');
   });
+
+  // Compare command tests
+  it('parses compare with offset', () => {
+    const ast = parse('search * | timechart span=1h count | compare 1d');
+
+    expect(ast.stages).toHaveLength(3);
+    expect(ast.stages[2].type).toBe('compare');
+
+    const compare = ast.stages[2] as { type: 'compare'; offset: string };
+    expect(compare.offset).toBe('1d');
+  });
+
+  it('parses compare with week offset', () => {
+    const ast = parse('search * | stats count by hostname | compare 1w');
+
+    expect(ast.stages).toHaveLength(3);
+    expect(ast.stages[2].type).toBe('compare');
+
+    const compare = ast.stages[2] as { type: 'compare'; offset: string };
+    expect(compare.offset).toBe('1w');
+  });
+
+  it('parses compare with month offset', () => {
+    const ast = parse('search * | stats count | compare 1mo');
+
+    expect(ast.stages).toHaveLength(3);
+    expect(ast.stages[2].type).toBe('compare');
+
+    const compare = ast.stages[2] as { type: 'compare'; offset: string };
+    expect(compare.offset).toBe('1mo');
+  });
+
+  // Timewrap command tests
+  it('parses timewrap with span', () => {
+    const ast = parse('search * | timechart span=1h count | timewrap 1d');
+
+    expect(ast.stages).toHaveLength(3);
+    expect(ast.stages[2].type).toBe('timewrap');
+
+    const timewrap = ast.stages[2] as { type: 'timewrap'; span: string };
+    expect(timewrap.span).toBe('1d');
+  });
+
+  it('parses timewrap with week span', () => {
+    const ast = parse('search * | timechart span=1h count | timewrap 1w');
+
+    expect(ast.stages).toHaveLength(3);
+    expect(ast.stages[2].type).toBe('timewrap');
+
+    const timewrap = ast.stages[2] as { type: 'timewrap'; span: string };
+    expect(timewrap.span).toBe('1w');
+  });
 });

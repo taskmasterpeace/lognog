@@ -37,6 +37,8 @@ const KEYWORDS: Record<string, TokenType> = {
   'lookup': TokenType.LOOKUP,
   'chart': TokenType.CHART,
   'output': TokenType.OUTPUT,
+  'compare': TokenType.COMPARE,
+  'timewrap': TokenType.TIMEWRAP,
   // Aggregation functions
   'count': TokenType.COUNT,
   'sum': TokenType.SUM,

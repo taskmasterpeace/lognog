@@ -14,7 +14,7 @@ import {
 import { translateNaturalLanguage, getSuggestedQueries } from '../services/ai-search.js';
 import { applyFieldExtraction } from '../services/field-extractor.js';
 import { optionalAuth, rateLimit } from '../auth/middleware.js';
-import { FilldownNode, TransactionNode, LookupNode, ChartNode } from '../dsl/types.js';
+import { FilldownNode, TransactionNode, LookupNode, ChartNode, CompareNode, TimewrapNode } from '../dsl/types.js';
 import { applyLookup, listLookupTables } from '../services/lookup-tables.js';
 
 const router = Router();
@@ -133,6 +133,216 @@ function buildTransaction(
   }
 
   return transaction;
+}
+
+// Time unit multipliers in milliseconds
+const TIME_UNITS_MS: Record<string, number> = {
+  s: 1000,
+  m: 60 * 1000,
+  h: 60 * 60 * 1000,
+  d: 24 * 60 * 60 * 1000,
+  w: 7 * 24 * 60 * 60 * 1000,
+  mo: 30 * 24 * 60 * 60 * 1000,
+  y: 365 * 24 * 60 * 60 * 1000,
+};
+
+const DEFAULT_OFFSET_MS = TIME_UNITS_MS.d; // 1 day
+const MAX_TIMEWRAP_PERIODS = 7;
+
+/**
+ * Parse offset/span string to milliseconds
+ * Supports: 1s, 5m, 1h, 1d, 1w, 1mo, 1y
+ */
+function parseOffsetToMs(offset: string): number {
+  const match = offset.match(/^(\d+)(s|m|h|d|w|mo|y)$/i);
+  if (!match) return DEFAULT_OFFSET_MS;
+
+  const value = parseInt(match[1], 10);
+  const unit = match[2].toLowerCase();
+
+  return value * (TIME_UNITS_MS[unit] || TIME_UNITS_MS.d);
+}
+
+/**
+ * Apply compare post-processing to query results.
+ * Executes the same query with an offset time range, then joins and calculates deltas.
+ *
+ * Adds to each row:
+ * - _previous_{field}: Value from the offset period
+ * - _change_{field}: Absolute change (current - previous)
+ * - _change_pct_{field}: Percentage change
+ */
+async function applyCompare(
+  currentResults: Record<string, unknown>[],
+  query: string,
+  earliest: string | undefined,
+  latest: string | undefined,
+  offset: string,
+  compareFields?: string[]
+): Promise<Record<string, unknown>[]> {
+  if (currentResults.length === 0) return currentResults;
+
+  const offsetMs = parseOffsetToMs(offset);
+  const now = Date.now();
+  const currentStartMs = parseRelativeTime(earliest || '-24h', now);
+  const currentEndMs = parseRelativeTime(latest || 'now', now);
+
+  // Strip compare command from query using word boundary for safety
+  const queryWithoutCompare = query
+    .replace(/\|\s*compare\s+[\w]+(\s+[\w,]+)*/gi, '')
+    .trim();
+
+  try {
+    const { results: previousResults } = await executeDSLQuery(queryWithoutCompare, {
+      earliest: new Date(currentStartMs - offsetMs).toISOString(),
+      latest: new Date(currentEndMs - offsetMs).toISOString(),
+    });
+
+    const numericFields = compareFields?.length
+      ? compareFields
+      : detectNumericFields(currentResults);
+
+    // Index previous results by join key for O(1) lookup
+    const previousMap = new Map<string, Record<string, unknown>>();
+    for (const row of previousResults as Record<string, unknown>[]) {
+      previousMap.set(getJoinKey(row), row);
+    }
+
+    return currentResults.map(currentRow => {
+      const previousRow = previousMap.get(getJoinKey(currentRow));
+      const result: Record<string, unknown> = { ...currentRow };
+
+      for (const field of numericFields) {
+        const currentVal = Number(currentRow[field]) || 0;
+        const previousVal = previousRow ? Number(previousRow[field]) || 0 : 0;
+        const change = currentVal - previousVal;
+        const changePct = calculatePercentChange(previousVal, currentVal);
+
+        result[`_previous_${field}`] = previousVal;
+        result[`_change_${field}`] = change;
+        result[`_change_pct_${field}`] = changePct;
+      }
+
+      return result;
+    });
+  } catch (error) {
+    console.error('Compare query failed:', error);
+    // Return original results if compare fails
+    return currentResults;
+  }
+}
+
+/**
+ * Calculate percentage change between two values.
+ * Returns 0 if both values are 0, 100 if only previous is 0.
+ */
+function calculatePercentChange(previous: number, current: number): number {
+  if (previous === 0) {
+    return current === 0 ? 0 : 100;
+  }
+  const pct = ((current - previous) / previous) * 100;
+  return Math.round(pct * 100) / 100;
+}
+
+/**
+ * Detect numeric fields in query results for comparison.
+ * Excludes time_bucket and internal fields (prefixed with _).
+ */
+function detectNumericFields(results: Record<string, unknown>[]): string[] {
+  if (results.length === 0) return [];
+
+  const first = results[0];
+  return Object.entries(first)
+    .filter(([key, value]) => {
+      if (key === 'time_bucket' || key.startsWith('_')) return false;
+      return typeof value === 'number' ||
+        (typeof value === 'string' && !isNaN(Number(value)) && value !== '');
+    })
+    .map(([key]) => key);
+}
+
+/**
+ * Generate a join key for matching rows between time periods.
+ *
+ * Priority:
+ * 1. time_bucket (for timechart results)
+ * 2. First non-numeric string field (for stats by X results)
+ * 3. Concatenation of all string fields (for multi-field grouping)
+ */
+function getJoinKey(row: Record<string, unknown>): string {
+  // Prefer time_bucket for timechart results
+  if (row.time_bucket !== undefined) {
+    return String(row.time_bucket);
+  }
+
+  // Collect potential key fields (non-numeric, non-internal)
+  const keyParts: string[] = [];
+  for (const [key, value] of Object.entries(row)) {
+    if (key.startsWith('_')) continue;
+    if (typeof value === 'string' && !/^\d+(\.\d+)?$/.test(value)) {
+      keyParts.push(value);
+    }
+  }
+
+  return keyParts.length > 0 ? keyParts.join('|') : '_default';
+}
+
+/**
+ * Apply timewrap post-processing to overlay multiple time periods.
+ * Splits the time range into periods of the given span and executes
+ * the query for each period in parallel.
+ *
+ * Adds to each row:
+ * - _period: Human-readable period label
+ * - _period_index: Zero-based period index
+ */
+async function applyTimewrap(
+  _currentResults: Record<string, unknown>[],
+  query: string,
+  earliest: string | undefined,
+  latest: string | undefined,
+  span: string,
+  series: 'relative' | 'exact' = 'relative'
+): Promise<Record<string, unknown>[]> {
+  const spanMs = parseOffsetToMs(span);
+  const now = Date.now();
+  const currentStartMs = parseRelativeTime(earliest || '-24h', now);
+  const currentEndMs = parseRelativeTime(latest || 'now', now);
+  const rangeMs = currentEndMs - currentStartMs;
+
+  const periodCount = Math.min(
+    Math.ceil(rangeMs / spanMs),
+    MAX_TIMEWRAP_PERIODS
+  );
+
+  if (periodCount === 0) return [];
+
+  // Strip timewrap command from query
+  const queryWithoutTimewrap = query
+    .replace(/\|\s*timewrap\s+[\w]+(\s+series=\w+)?/gi, '')
+    .trim();
+
+  try {
+    // Execute query for each period in parallel
+    const periodPromises = Array.from({ length: periodCount }, (_, i) => {
+      const periodStart = currentStartMs + (i * spanMs);
+      const periodEnd = Math.min(periodStart + spanMs, currentEndMs);
+
+      return executeDSLQuery(queryWithoutTimewrap, {
+        earliest: new Date(periodStart).toISOString(),
+        latest: new Date(periodEnd).toISOString(),
+      }).then(({ results }) => ({
+        period: i,
+        periodStart,
+        results: results as Record<string, unknown>[],
+      }));
+    });
+
+    return combined;
+  } catch (error) {
+    console.error('Timewrap query failed:', error);
+    return [];
+  }
 }
 
 // Helper: Apply filldown post-processing to results
@@ -421,6 +631,32 @@ router.post('/query', rateLimit(120, 60000), async (req: Request, res: Response)
           lookupStage.field,
           lookupStage.matchField,
           lookupStage.outputFields.length > 0 ? lookupStage.outputFields : undefined
+        );
+      }
+
+      // Apply compare post-processing (executes query with offset time range)
+      const compareStage = ast.stages.find(s => s.type === 'compare') as CompareNode | undefined;
+      if (compareStage) {
+        results = await applyCompare(
+          results as Record<string, unknown>[],
+          query,
+          earliest,
+          latest,
+          compareStage.offset,
+          compareStage.fields
+        );
+      }
+
+      // Apply timewrap post-processing (overlays multiple time periods)
+      const timewrapStage = ast.stages.find(s => s.type === 'timewrap') as TimewrapNode | undefined;
+      if (timewrapStage) {
+        results = await applyTimewrap(
+          results as Record<string, unknown>[],
+          query,
+          earliest,
+          latest,
+          timewrapStage.span,
+          timewrapStage.series
         );
       }
 

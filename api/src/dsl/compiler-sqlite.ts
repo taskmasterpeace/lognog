@@ -24,7 +24,23 @@ import {
   isSimpleCondition,
   CompiledQuery,
   EvalExpression,
+  CompareNode,
+  TimewrapNode,
 } from './types.js';
+
+// Extended compiled query with metadata for post-processing
+export interface CompiledQueryWithMeta extends CompiledQuery {
+  metadata?: {
+    compare?: {
+      offset: string;
+      fields?: string[];
+    };
+    timewrap?: {
+      span: string;
+      series?: 'relative' | 'exact';
+    };
+  };
+}
 
 // Default fields to select (including structured_data for custom fields)
 const DEFAULT_FIELDS = [
@@ -72,7 +88,7 @@ export class SQLiteCompiler {
     this.ast = ast;
   }
 
-  compile(): CompiledQuery {
+  compile(): CompiledQueryWithMeta {
     const stages = this.ast.stages;
 
     if (stages.length === 0) {
@@ -91,6 +107,10 @@ export class SQLiteCompiler {
     let limitCount: number | null = null;
     let isAggregation = false;
     let aggregationSelect: string[] = [];
+
+    // Metadata for post-processing (compare, timewrap)
+    let compareMetadata: { offset: string; fields?: string[] } | undefined;
+    let timewrapMetadata: { span: string; series?: 'relative' | 'exact' } | undefined;
 
     for (const stage of stages) {
       switch (stage.type) {
@@ -205,6 +225,22 @@ export class SQLiteCompiler {
           // Transaction is handled post-query in JavaScript
           // Groups events by field values within time constraints
           break;
+
+        case 'compare':
+          // Compare is handled post-query - executes query twice with offset
+          compareMetadata = {
+            offset: (stage as CompareNode).offset,
+            fields: (stage as CompareNode).fields,
+          };
+          break;
+
+        case 'timewrap':
+          // Timewrap is handled post-query - overlays multiple time periods
+          timewrapMetadata = {
+            span: (stage as TimewrapNode).span,
+            series: (stage as TimewrapNode).series,
+          };
+          break;
       }
     }
 
@@ -241,7 +277,20 @@ export class SQLiteCompiler {
       sql += ' LIMIT 1000'; // Default limit
     }
 
-    return { sql, params: this.params };
+    // Build result with optional metadata
+    const result: CompiledQueryWithMeta = { sql, params: this.params };
+
+    if (compareMetadata || timewrapMetadata) {
+      result.metadata = {};
+      if (compareMetadata) {
+        result.metadata.compare = compareMetadata;
+      }
+      if (timewrapMetadata) {
+        result.metadata.timewrap = timewrapMetadata;
+      }
+    }
+
+    return result;
   }
 
   private compileConditions(conditions: Condition[]): string[] {
@@ -795,7 +844,7 @@ export class SQLiteCompiler {
 }
 
 // Helper function to compile DSL to SQLite SQL
-export function compileDSLToSQLite(ast: QueryAST): CompiledQuery {
+export function compileDSLToSQLite(ast: QueryAST): CompiledQueryWithMeta {
   const compiler = new SQLiteCompiler(ast);
   return compiler.compile();
 }

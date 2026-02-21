@@ -5,21 +5,156 @@ import { executeQuery } from '../db/clickhouse.js';
 import { compileDSL, parseAndCompile } from '../dsl/index.js';
 import { triggerReport } from '../services/scheduler.js';
 import { rateLimit } from '../auth/middleware.js';
+import { getReportTemplates, getTemplateById, getTemplatesByCategory, getTemplateCategories } from '../data/report-templates.js';
+import { getAvailableReportTokens } from '../services/template-engine.js';
 
 const router = Router();
 
 interface ScheduledReport {
   id: string;
   name: string;
+  description?: string;
   query: string;
   schedule: string;
   recipients: string;
   format: string;
+  attachment_format?: string;
+  subject_template?: string;
+  message_template?: string;
+  send_condition?: string;
+  condition_threshold?: number;
+  compare_offset?: string;
   enabled: number;
   last_run: string | null;
+  last_result_count?: number;
   app_scope?: string;
   created_at: string;
+  updated_at?: string;
 }
+
+// ==================== Report Templates ====================
+
+// Get all report templates
+router.get('/templates', (_req: Request, res: Response) => {
+  try {
+    const templates = getReportTemplates();
+    return res.json(templates);
+  } catch (error) {
+    console.error('Error fetching templates:', error);
+    return res.status(500).json({ error: 'Failed to fetch templates' });
+  }
+});
+
+// Get templates grouped by category
+router.get('/templates/by-category', (_req: Request, res: Response) => {
+  try {
+    const byCategory = getTemplatesByCategory();
+    return res.json(byCategory);
+  } catch (error) {
+    console.error('Error fetching templates:', error);
+    return res.status(500).json({ error: 'Failed to fetch templates' });
+  }
+});
+
+// Get template categories
+router.get('/templates/categories', (_req: Request, res: Response) => {
+  try {
+    const categories = getTemplateCategories();
+    return res.json(categories);
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    return res.status(500).json({ error: 'Failed to fetch categories' });
+  }
+});
+
+// Get a specific template
+router.get('/templates/:id', (req: Request, res: Response) => {
+  try {
+    const template = getTemplateById(req.params.id);
+    if (!template) {
+      return res.status(404).json({ error: 'Template not found' });
+    }
+    return res.json(template);
+  } catch (error) {
+    console.error('Error fetching template:', error);
+    return res.status(500).json({ error: 'Failed to fetch template' });
+  }
+});
+
+// Create a report from a template
+router.post('/from-template/:templateId', (req: Request, res: Response) => {
+  try {
+    const template = getTemplateById(req.params.templateId);
+    if (!template) {
+      return res.status(404).json({ error: 'Template not found' });
+    }
+
+    // Allow overrides from request body
+    const {
+      name = template.name,
+      description = template.description,
+      recipients,
+      schedule = template.schedule,
+      app_scope = req.body.app_scope || 'default',
+      ...overrides
+    } = req.body;
+
+    if (!recipients) {
+      return res.status(400).json({ error: 'recipients is required' });
+    }
+
+    const db = getSQLiteDB();
+    const id = uuidv4();
+
+    db.prepare(`
+      INSERT INTO scheduled_reports (
+        id, name, description, query, schedule, recipients, format,
+        attachment_format, subject_template, message_template,
+        send_condition, condition_threshold, compare_offset, app_scope
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      id,
+      name,
+      description,
+      overrides.query || template.query,
+      schedule,
+      recipients,
+      overrides.format || template.format,
+      overrides.attachment_format || template.attachment_format,
+      overrides.subject_template || template.subject_template || null,
+      overrides.message_template || template.message_template || null,
+      overrides.send_condition || template.send_condition,
+      overrides.condition_threshold ?? template.condition_threshold ?? null,
+      overrides.compare_offset || template.compare_offset || null,
+      app_scope
+    );
+
+    const report = db.prepare('SELECT * FROM scheduled_reports WHERE id = ?').get(id);
+    return res.status(201).json({
+      report,
+      template_id: template.id,
+      message: `Report created from template "${template.name}"`,
+    });
+  } catch (error) {
+    console.error('Error creating report from template:', error);
+    return res.status(500).json({ error: 'Failed to create report from template' });
+  }
+});
+
+// ==================== Token Documentation ====================
+
+// Get available report tokens for UI token picker
+router.get('/tokens', (_req: Request, res: Response) => {
+  try {
+    const tokens = getAvailableReportTokens();
+    return res.json(tokens);
+  } catch (error) {
+    console.error('Error fetching tokens:', error);
+    return res.status(500).json({ error: 'Failed to fetch tokens' });
+  }
+});
+
+// ==================== Scheduled Reports CRUD ====================
 
 // Get all scheduled reports (optionally filtered by app_scope)
 router.get('/', (req: Request, res: Response) => {
@@ -43,7 +178,21 @@ router.get('/', (req: Request, res: Response) => {
 // Create a scheduled report
 router.post('/', (req: Request, res: Response) => {
   try {
-    const { name, query, schedule, recipients, format = 'html', app_scope = 'default' } = req.body;
+    const {
+      name,
+      description,
+      query,
+      schedule,
+      recipients,
+      format = 'html',
+      attachment_format = 'none',
+      subject_template,
+      message_template,
+      send_condition = 'always',
+      condition_threshold,
+      compare_offset,
+      app_scope = 'default'
+    } = req.body;
 
     if (!name || !query || !schedule || !recipients) {
       return res.status(400).json({ error: 'Name, query, schedule, and recipients are required' });
@@ -51,9 +200,17 @@ router.post('/', (req: Request, res: Response) => {
 
     const db = getSQLiteDB();
     const id = uuidv4();
-    db.prepare(
-      'INSERT INTO scheduled_reports (id, name, query, schedule, recipients, format, app_scope) VALUES (?, ?, ?, ?, ?, ?, ?)'
-    ).run(id, name, query, schedule, recipients, format, app_scope);
+    db.prepare(`
+      INSERT INTO scheduled_reports (
+        id, name, description, query, schedule, recipients, format,
+        attachment_format, subject_template, message_template,
+        send_condition, condition_threshold, compare_offset, app_scope
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(
+      id, name, description || null, query, schedule, recipients, format,
+      attachment_format, subject_template || null, message_template || null,
+      send_condition, condition_threshold ?? null, compare_offset || null, app_scope
+    );
 
     const report = db.prepare('SELECT * FROM scheduled_reports WHERE id = ?').get(id);
     return res.status(201).json(report);
@@ -66,23 +223,38 @@ router.post('/', (req: Request, res: Response) => {
 // Update a scheduled report
 router.put('/:id', (req: Request, res: Response) => {
   try {
-    const { name, query, schedule, recipients, format, enabled, app_scope } = req.body;
+    const {
+      name, description, query, schedule, recipients, format,
+      attachment_format, subject_template, message_template,
+      send_condition, condition_threshold, compare_offset,
+      enabled, app_scope
+    } = req.body;
     const db = getSQLiteDB();
 
     const fields: string[] = [];
     const values: unknown[] = [];
 
     if (name !== undefined) { fields.push('name = ?'); values.push(name); }
+    if (description !== undefined) { fields.push('description = ?'); values.push(description); }
     if (query !== undefined) { fields.push('query = ?'); values.push(query); }
     if (schedule !== undefined) { fields.push('schedule = ?'); values.push(schedule); }
     if (recipients !== undefined) { fields.push('recipients = ?'); values.push(recipients); }
     if (format !== undefined) { fields.push('format = ?'); values.push(format); }
+    if (attachment_format !== undefined) { fields.push('attachment_format = ?'); values.push(attachment_format); }
+    if (subject_template !== undefined) { fields.push('subject_template = ?'); values.push(subject_template); }
+    if (message_template !== undefined) { fields.push('message_template = ?'); values.push(message_template); }
+    if (send_condition !== undefined) { fields.push('send_condition = ?'); values.push(send_condition); }
+    if (condition_threshold !== undefined) { fields.push('condition_threshold = ?'); values.push(condition_threshold); }
+    if (compare_offset !== undefined) { fields.push('compare_offset = ?'); values.push(compare_offset); }
     if (enabled !== undefined) { fields.push('enabled = ?'); values.push(enabled ? 1 : 0); }
     if (app_scope !== undefined) { fields.push('app_scope = ?'); values.push(app_scope); }
 
     if (fields.length === 0) {
       return res.status(400).json({ error: 'No fields to update' });
     }
+
+    // Always update updated_at
+    fields.push("updated_at = datetime('now')");
 
     values.push(req.params.id);
     db.prepare(`UPDATE scheduled_reports SET ${fields.join(', ')} WHERE id = ?`).run(...values);

@@ -822,11 +822,45 @@ function initializeSchema(): void {
   if (!alertColumnNames.includes('app_scope')) {
     database.exec("ALTER TABLE alerts ADD COLUMN app_scope TEXT DEFAULT 'default'");
   }
+  if (!alertColumnNames.includes('playbook')) {
+    database.exec("ALTER TABLE alerts ADD COLUMN playbook TEXT");
+  }
 
   const reportColumns = database.pragma('table_info(scheduled_reports)') as Array<{ name: string }>;
   const reportColumnNames = reportColumns.map((col) => col.name);
   if (!reportColumnNames.includes('app_scope')) {
     database.exec("ALTER TABLE scheduled_reports ADD COLUMN app_scope TEXT DEFAULT 'default'");
+  }
+  // Phase 1: Token system for reports
+  if (!reportColumnNames.includes('description')) {
+    database.exec("ALTER TABLE scheduled_reports ADD COLUMN description TEXT");
+  }
+  if (!reportColumnNames.includes('subject_template')) {
+    database.exec("ALTER TABLE scheduled_reports ADD COLUMN subject_template TEXT DEFAULT '[LogNog Report] {{report_name}}'");
+  }
+  if (!reportColumnNames.includes('message_template')) {
+    database.exec("ALTER TABLE scheduled_reports ADD COLUMN message_template TEXT");
+  }
+  // Phase 3: Multiple output formats
+  if (!reportColumnNames.includes('attachment_format')) {
+    database.exec("ALTER TABLE scheduled_reports ADD COLUMN attachment_format TEXT DEFAULT 'none'");
+  }
+  // Phase 4: Compare offset for auto-comparison
+  if (!reportColumnNames.includes('compare_offset')) {
+    database.exec("ALTER TABLE scheduled_reports ADD COLUMN compare_offset TEXT");
+  }
+  // Phase 5: Smart reports
+  if (!reportColumnNames.includes('send_condition')) {
+    database.exec("ALTER TABLE scheduled_reports ADD COLUMN send_condition TEXT DEFAULT 'always'");
+  }
+  if (!reportColumnNames.includes('condition_threshold')) {
+    database.exec("ALTER TABLE scheduled_reports ADD COLUMN condition_threshold INTEGER");
+  }
+  if (!reportColumnNames.includes('last_result_count')) {
+    database.exec("ALTER TABLE scheduled_reports ADD COLUMN last_result_count INTEGER");
+  }
+  if (!reportColumnNames.includes('updated_at')) {
+    database.exec("ALTER TABLE scheduled_reports ADD COLUMN updated_at TEXT DEFAULT (datetime('now'))");
   }
 
   if (!ssColumnNames.includes('app_scope')) {
@@ -2228,6 +2262,7 @@ export interface Alert {
   last_triggered?: string;
   trigger_count: number;
   app_scope?: string;
+  playbook?: string;  // Markdown runbook/instructions for when alert fires
   created_at: string;
   updated_at: string;
 }
@@ -2283,6 +2318,7 @@ export function createAlert(
     severity?: AlertSeverity;
     enabled?: boolean;
     app_scope?: string;
+    playbook?: string;
   } = {}
 ): Alert {
   const database = getSQLiteDB();
@@ -2294,8 +2330,8 @@ export function createAlert(
       trigger_type, trigger_condition, trigger_threshold,
       schedule_type, cron_expression, time_range,
       actions, throttle_enabled, throttle_window_seconds,
-      severity, enabled, app_scope
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      severity, enabled, app_scope, playbook
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
     name,
@@ -2312,7 +2348,8 @@ export function createAlert(
     options.throttle_window_seconds || 300,
     options.severity || 'medium',
     options.enabled !== false ? 1 : 0,
-    options.app_scope || 'default'
+    options.app_scope || 'default',
+    options.playbook || null
   );
 
   return getAlert(id)!;
@@ -2339,6 +2376,7 @@ export function updateAlert(
     last_triggered?: string;
     trigger_count?: number;
     app_scope?: string;
+    playbook?: string;
   }
 ): Alert | undefined {
   const database = getSQLiteDB();
@@ -2416,6 +2454,10 @@ export function updateAlert(
   if (updates.app_scope !== undefined) {
     fields.push('app_scope = ?');
     values.push(updates.app_scope);
+  }
+  if (updates.playbook !== undefined) {
+    fields.push('playbook = ?');
+    values.push(updates.playbook);
   }
 
   if (fields.length === 0) {

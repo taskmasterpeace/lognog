@@ -1,20 +1,37 @@
 import nodemailer from 'nodemailer';
-import { getSQLiteDB, getAlerts, Alert, getScheduledSavedSearches, updateSavedSearchCache, updateSavedSearchError, cleanupExpiredSearchCache, SavedSearch } from '../db/sqlite.js';
+import { getSQLiteDB, getAlerts, Alert, getScheduledSavedSearches, updateSavedSearchCache, updateSavedSearchError, cleanupExpiredSearchCache, SavedSearch, getSystemSetting } from '../db/sqlite.js';
 import { executeQuery } from '../db/clickhouse.js';
 import { parseAndCompile } from '../dsl/index.js';
 import { evaluateAlert } from './alerts.js';
 import { executeDSLQuery } from '../db/backend.js';
 import { logReportGenerated } from './internal-logger.js';
+import {
+  renderHtml,
+  renderSubject,
+  buildReportContext,
+  generateAttachment,
+  ReportData,
+  RenderOptions,
+} from './report-renderer.js';
 
 interface ScheduledReport {
   id: string;
   name: string;
+  description?: string;
   query: string;
   schedule: string;
   recipients: string;
   format: string;
+  attachment_format?: string;
+  subject_template?: string;
+  message_template?: string;
+  send_condition?: string;
+  condition_threshold?: number;
+  compare_offset?: string;
   enabled: number;
   last_run: string | null;
+  last_result_count?: number;
+  app_scope?: string;
   created_at: string;
 }
 
@@ -119,74 +136,36 @@ function getMinimumInterval(schedule: string): number {
   return 60 * 60 * 1000; // Hourly
 }
 
-async function generateReportHtml(
-  title: string,
-  query: string,
-  results: Record<string, unknown>[]
-): Promise<string> {
-  const columns = results.length > 0 ? Object.keys(results[0]) : [];
-  const generatedAt = new Date().toLocaleString();
+/**
+ * Check if report should be sent based on send_condition
+ */
+function shouldSendReport(
+  report: ScheduledReport,
+  results: Record<string, unknown>[],
+  previousCount: number | null
+): boolean {
+  const condition = report.send_condition || 'always';
 
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>${escapeHtml(title)} - LogNog Report</title>
-  <style>
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; padding: 20px; background: #f8fafc; }
-    .header { background: linear-gradient(135deg, #0ea5e9, #0284c7); color: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-    .header h1 { margin: 0 0 5px 0; font-size: 24px; }
-    .header p { margin: 0; opacity: 0.9; font-size: 14px; }
-    .meta { margin-top: 10px; font-size: 12px; opacity: 0.8; }
-    .query { background: #1e293b; color: #e2e8f0; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 13px; margin-bottom: 20px; overflow-x: auto; }
-    .stats { display: flex; gap: 15px; margin-bottom: 20px; }
-    .stat { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-    .stat-value { font-size: 24px; font-weight: bold; color: #0ea5e9; }
-    .stat-label { font-size: 12px; color: #64748b; text-transform: uppercase; }
-    table { width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
-    th { background: #f1f5f9; padding: 12px; text-align: left; font-size: 12px; font-weight: 600; text-transform: uppercase; color: #475569; border-bottom: 2px solid #e2e8f0; }
-    td { padding: 10px 12px; border-bottom: 1px solid #f1f5f9; font-size: 14px; }
-    tr:hover td { background: #f8fafc; }
-  </style>
-</head>
-<body>
-  <div class="header">
-    <h1>${escapeHtml(title)}</h1>
-    <p>Scheduled Report from LogNog Log Analytics</p>
-    <div class="meta">Generated: ${escapeHtml(generatedAt)}</div>
-  </div>
-  <div class="query">${escapeHtml(query)}</div>
-  <div class="stats">
-    <div class="stat">
-      <div class="stat-value">${results.length.toLocaleString()}</div>
-      <div class="stat-label">Results</div>
-    </div>
-    <div class="stat">
-      <div class="stat-value">${columns.length}</div>
-      <div class="stat-label">Columns</div>
-    </div>
-  </div>
-  <table>
-    <thead>
-      <tr>${columns.map(c => `<th>${escapeHtml(c)}</th>`).join('')}</tr>
-    </thead>
-    <tbody>
-      ${results.slice(0, 500).map(row => `
-        <tr>${columns.map(c => `<td>${escapeHtml(String(row[c] ?? ''))}</td>`).join('')}</tr>
-      `).join('')}
-    </tbody>
-  </table>
-  ${results.length > 500 ? `<p style="text-align:center;color:#64748b;margin-top:15px;">Showing 500 of ${results.length} results</p>` : ''}
-</body>
-</html>`;
-}
+  switch (condition) {
+    case 'always':
+      return true;
 
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+    case 'if_results':
+      return results.length > 0;
+
+    case 'if_change':
+      // Send only if result count changed from last run
+      if (previousCount === null) return true; // First run
+      return results.length !== previousCount;
+
+    case 'threshold':
+      // Send if result count exceeds threshold
+      const threshold = report.condition_threshold || 0;
+      return results.length > threshold;
+
+    default:
+      return true;
+  }
 }
 
 async function runReport(report: ScheduledReport): Promise<void> {
@@ -198,6 +177,12 @@ async function runReport(report: ScheduledReport): Promise<void> {
     const compiled = parseAndCompile(report.query);
     let sql = compiled.sql;
 
+    // Calculate time range (last 24 hours by default)
+    const now = new Date();
+    const earliest = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const latestIso = now.toISOString();
+    const earliestIso = earliest.toISOString();
+
     // Add time range for last 24 hours
     const timeCondition = `timestamp >= now() - INTERVAL 24 HOUR`;
     if (sql.includes('WHERE')) {
@@ -207,27 +192,83 @@ async function runReport(report: ScheduledReport): Promise<void> {
     }
 
     const results = await executeQuery(sql);
+    const executionTimeMs = Math.round(performance.now() - startTime);
 
-    // Generate HTML report
-    const html = await generateReportHtml(report.name, report.query, results);
+    // Check send condition (Phase 5: Smart Reports)
+    const previousCount = report.last_result_count ?? null;
+    if (!shouldSendReport(report, results, previousCount)) {
+      console.log(`Report "${report.name}" skipped - condition not met (${report.send_condition})`);
+      // Still update last_run and last_result_count
+      const db = getSQLiteDB();
+      db.prepare("UPDATE scheduled_reports SET last_run = datetime('now'), last_result_count = ? WHERE id = ?")
+        .run(results.length, report.id);
+      return;
+    }
+
+    // Get branding from system settings
+    const accentColor = getSystemSetting('branding_accent_color') || '#0ea5e9';
+    const logoUrl = getSystemSetting('branding_logo_url') || undefined;
+
+    // Build report data for renderer
+    const reportData: ReportData = {
+      report: {
+        id: report.id,
+        name: report.name,
+        description: report.description,
+        query: report.query,
+        schedule: report.schedule,
+        app_scope: report.app_scope,
+      },
+      results,
+      executionTimeMs,
+      earliest: earliestIso,
+      latest: latestIso,
+      baseUrl: process.env.BASE_URL || 'http://localhost:3000',
+    };
+
+    // Build context and render
+    const context = buildReportContext(reportData);
+    const renderOptions: RenderOptions = {
+      format: (report.format as 'html' | 'csv' | 'json') || 'html',
+      attachmentFormat: (report.attachment_format as 'none' | 'html' | 'csv' | 'json') || 'none',
+      subjectTemplate: report.subject_template,
+      messageTemplate: report.message_template,
+      accentColor,
+      logoUrl,
+    };
+
+    // Render subject with token substitution
+    const subject = renderSubject(report.subject_template || '[LogNog Report] {{report_name}}', context);
+
+    // Render HTML body
+    const html = renderHtml(reportData, renderOptions);
+
+    // Generate attachment if requested
+    const attachment = generateAttachment(reportData, renderOptions.attachmentFormat || 'none');
 
     // Send email
     if (transporter) {
       const recipients = report.recipients.split(',').map(e => e.trim());
 
-      await transporter.sendMail({
+      const mailOptions: nodemailer.SendMailOptions = {
         from: SMTP_FROM,
         to: recipients.join(', '),
-        subject: `[LogNog Report] ${report.name}`,
+        subject,
         html,
-        attachments: [
+      };
+
+      // Add attachment if generated
+      if (attachment) {
+        mailOptions.attachments = [
           {
-            filename: `${report.name.replace(/[^a-z0-9]/gi, '_')}_${Date.now()}.html`,
-            content: html,
-            contentType: 'text/html',
+            filename: attachment.filename,
+            content: attachment.content,
+            contentType: attachment.contentType,
           },
-        ],
-      });
+        ];
+      }
+
+      await transporter.sendMail(mailOptions);
 
       const duration_ms = Math.round(performance.now() - startTime);
       logReportGenerated({
@@ -251,9 +292,10 @@ async function runReport(report: ScheduledReport): Promise<void> {
       console.log(`Report "${report.name}" generated but SMTP not configured`);
     }
 
-    // Update last_run
+    // Update last_run and last_result_count
     const db = getSQLiteDB();
-    db.prepare("UPDATE scheduled_reports SET last_run = datetime('now') WHERE id = ?").run(report.id);
+    db.prepare("UPDATE scheduled_reports SET last_run = datetime('now'), last_result_count = ? WHERE id = ?")
+      .run(results.length, report.id);
   } catch (error) {
     const duration_ms = Math.round(performance.now() - startTime);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';

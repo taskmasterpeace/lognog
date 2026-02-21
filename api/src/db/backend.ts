@@ -131,10 +131,11 @@ export async function executeDSLQuery<T = Record<string, unknown>>(
         const timeConditions: string[] = [];
 
         if (earliest) {
-          const match = earliest.match(/^-(\d+)([mhdw])$/i);
-          if (match) {
-            const value = parseInt(match[1], 10);
-            const unit = match[2].toLowerCase();
+          const relativeMatch = earliest.match(/^-(\d+)([mhdw])$/i);
+          if (relativeMatch) {
+            // Relative time like -5m, -1h, -7d
+            const value = parseInt(relativeMatch[1], 10);
+            const unit = relativeMatch[2].toLowerCase();
             const unitMap: Record<string, string> = {
               'm': 'MINUTE', 'h': 'HOUR', 'd': 'DAY', 'w': 'WEEK',
             };
@@ -142,6 +143,10 @@ export async function executeDSLQuery<T = Record<string, unknown>>(
             if (clickhouseUnit) {
               timeConditions.push(`timestamp >= now() - INTERVAL ${value} ${clickhouseUnit}`);
             }
+          } else if (/^\d{4}-\d{2}-\d{2}/.test(earliest)) {
+            // ISO timestamp like 2026-02-21T01:45:26.465Z - convert to ClickHouse format
+            const chFormat = earliest.replace('T', ' ').replace('Z', '').replace(/'/g, "''");
+            timeConditions.push(`timestamp >= '${chFormat}'`);
           }
         }
         if (latest) {
@@ -149,10 +154,11 @@ export async function executeDSLQuery<T = Record<string, unknown>>(
           if (latest.toLowerCase() === 'now') {
             timeConditions.push(`timestamp <= now()`);
           } else {
-            const match = latest.match(/^-(\d+)([mhdw])$/i);
-            if (match) {
-              const value = parseInt(match[1], 10);
-              const unit = match[2].toLowerCase();
+            const relativeMatch = latest.match(/^-(\d+)([mhdw])$/i);
+            if (relativeMatch) {
+              // Relative time like -5m, -1h
+              const value = parseInt(relativeMatch[1], 10);
+              const unit = relativeMatch[2].toLowerCase();
               const unitMap: Record<string, string> = {
                 'm': 'MINUTE', 'h': 'HOUR', 'd': 'DAY', 'w': 'WEEK',
               };
@@ -160,6 +166,10 @@ export async function executeDSLQuery<T = Record<string, unknown>>(
               if (clickhouseUnit) {
                 timeConditions.push(`timestamp <= now() - INTERVAL ${value} ${clickhouseUnit}`);
               }
+            } else if (/^\d{4}-\d{2}-\d{2}/.test(latest)) {
+              // ISO timestamp like 2026-02-21T01:45:26.465Z - convert to ClickHouse format
+              const chFormat = latest.replace('T', ' ').replace('Z', '').replace(/'/g, "''");
+              timeConditions.push(`timestamp <= '${chFormat}'`);
             }
           }
         }

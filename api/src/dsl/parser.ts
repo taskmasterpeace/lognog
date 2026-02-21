@@ -23,6 +23,8 @@ import {
   TransactionNode,
   LookupNode,
   ChartNode,
+  CompareNode,
+  TimewrapNode,
   Condition,
   SimpleCondition,
   LogicGroup,
@@ -119,6 +121,10 @@ export class Parser {
         return this.parseLookup();
       case TokenType.CHART:
         return this.parseChart();
+      case TokenType.COMPARE:
+        return this.parseCompare();
+      case TokenType.TIMEWRAP:
+        return this.parseTimewrap();
       case TokenType.IDENTIFIER:
         // Implicit search with field=value
         return this.parseImplicitSearch();
@@ -1034,6 +1040,115 @@ export class Parser {
       aggregation,
       groupBy,
       limit,
+    };
+  }
+
+  /**
+   * Parse compare command
+   * Syntax: compare <offset>
+   * Examples:
+   *   | compare 1d    (compare to 1 day ago)
+   *   | compare 1w    (compare to 1 week ago)
+   *   | compare 1mo   (compare to 1 month ago)
+   */
+  private parseCompare(): CompareNode {
+    this.consume(TokenType.COMPARE, 'Expected "compare"');
+
+    // Parse offset value (e.g., "1d", "1w", "1mo", "1y")
+    let offset: string;
+    if (this.check(TokenType.NUMBER)) {
+      const numStr = this.advance().value;
+      // Check if followed by a time unit identifier
+      if (this.check(TokenType.IDENTIFIER)) {
+        const unit = this.peek().value.toLowerCase();
+        if (/^[smhdwmoy]|mo$/.test(unit)) {
+          offset = numStr + this.advance().value;
+        } else {
+          offset = numStr + 'd'; // default to days
+        }
+      } else {
+        offset = numStr + 'd'; // default to days
+      }
+    } else if (this.check(TokenType.IDENTIFIER)) {
+      // Could be something like "1d" parsed as identifier
+      offset = this.advance().value;
+    } else if (this.check(TokenType.STRING)) {
+      offset = this.advance().value;
+    } else {
+      throw new ParseError('Expected offset value (e.g., 1d, 1w, 1mo)', this.peek().line, this.peek().column);
+    }
+
+    // Parse optional field list to compare
+    const fields: string[] = [];
+    while (!this.isAtEnd() && !this.check(TokenType.PIPE)) {
+      if (this.check(TokenType.IDENTIFIER)) {
+        fields.push(this.advance().value);
+        this.match(TokenType.COMMA);
+      } else {
+        break;
+      }
+    }
+
+    return {
+      type: 'compare',
+      offset,
+      fields: fields.length > 0 ? fields : undefined,
+    };
+  }
+
+  /**
+   * Parse timewrap command
+   * Syntax: timewrap <span> [series=relative|exact]
+   * Examples:
+   *   | timewrap 1d           (show each day as separate series)
+   *   | timewrap 1w           (show each week as separate series)
+   *   | timewrap 1d series=exact
+   */
+  private parseTimewrap(): TimewrapNode {
+    this.consume(TokenType.TIMEWRAP, 'Expected "timewrap"');
+
+    // Parse span value (e.g., "1d", "1w")
+    let span: string;
+    if (this.check(TokenType.NUMBER)) {
+      const numStr = this.advance().value;
+      // Check if followed by a time unit identifier
+      if (this.check(TokenType.IDENTIFIER)) {
+        const unit = this.peek().value.toLowerCase();
+        if (/^[smhdwmoy]|mo$/.test(unit)) {
+          span = numStr + this.advance().value;
+        } else {
+          span = numStr + 'd'; // default to days
+        }
+      } else {
+        span = numStr + 'd'; // default to days
+      }
+    } else if (this.check(TokenType.IDENTIFIER)) {
+      span = this.advance().value;
+    } else if (this.check(TokenType.STRING)) {
+      span = this.advance().value;
+    } else {
+      throw new ParseError('Expected span value (e.g., 1d, 1w)', this.peek().line, this.peek().column);
+    }
+
+    // Parse optional series style
+    let series: 'relative' | 'exact' | undefined;
+    while (!this.isAtEnd() && !this.check(TokenType.PIPE)) {
+      if (this.check(TokenType.IDENTIFIER) && this.peek().value.toLowerCase() === 'series') {
+        this.advance();
+        this.consume(TokenType.EQUALS, 'Expected "="');
+        const seriesValue = this.consume(TokenType.IDENTIFIER, 'Expected series value').value.toLowerCase();
+        if (seriesValue === 'relative' || seriesValue === 'exact') {
+          series = seriesValue;
+        }
+      } else {
+        break;
+      }
+    }
+
+    return {
+      type: 'timewrap',
+      span,
+      series,
     };
   }
 

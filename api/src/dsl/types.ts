@@ -35,6 +35,8 @@ export enum TokenType {
   LOOKUP = 'LOOKUP',
   CHART = 'CHART',
   OUTPUT = 'OUTPUT',
+  COMPARE = 'COMPARE',
+  TIMEWRAP = 'TIMEWRAP',
 
   // Aggregation functions
   COUNT = 'COUNT',
@@ -119,7 +121,9 @@ export type ASTNode =
   | FilldownNode
   | TransactionNode
   | LookupNode
-  | ChartNode;
+  | ChartNode
+  | CompareNode
+  | TimewrapNode;
 
 export interface SearchNode {
   type: 'search';
@@ -336,6 +340,31 @@ export interface ChartNode {
   aggregation?: AggregationFunction;
   groupBy?: string;
   limit?: number;
+}
+
+/**
+ * Compare command - compare current period results to an offset period
+ * Syntax: | compare 1d   (compare to yesterday)
+ *         | compare 1w   (compare to last week)
+ *         | compare 1mo  (compare to last month)
+ * Output adds columns: _previous_<field>, _change_<field>, _change_pct_<field>
+ */
+export interface CompareNode {
+  type: 'compare';
+  offset: string;       // "1d", "1w", "1mo", "1y"
+  fields?: string[];    // Which fields to compare (default: all numeric)
+}
+
+/**
+ * Timewrap command - overlay multiple time periods for comparison
+ * Syntax: | timewrap 1d   (show each day as separate series)
+ *         | timewrap 1w   (show each week as separate series)
+ * Output groups results by period with _timewrap_period column
+ */
+export interface TimewrapNode {
+  type: 'timewrap';
+  span: string;         // "1d", "1w", "1mo"
+  series?: 'relative' | 'exact';  // Naming style for period labels
 }
 
 // Query AST

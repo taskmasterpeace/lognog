@@ -27,7 +27,7 @@ function getOpenRouterModel(): string {
   return getSystemSetting('ai_openrouter_model') || process.env.OPENROUTER_MODEL || 'anthropic/claude-3-haiku-20240307';
 }
 
-// Type for context passed to template engine
+// Type for context passed to template engine (alerts)
 export interface TemplateContext {
   // Alert metadata
   alert_name: string;
@@ -40,8 +40,48 @@ export interface TemplateContext {
   results: Record<string, unknown>[];
   result?: Record<string, unknown>;
 
+  // Playbook/runbook instructions
+  playbook?: string;
+  alert_url?: string;
+
   // AI-generated content (optional, populated on demand)
   ai_summary?: string;
+}
+
+// Type for context passed to template engine (reports)
+export interface ReportContext {
+  // Report metadata
+  report_name: string;
+  report_id: string;
+  report_description?: string;
+  report_schedule?: string;
+
+  // Execution info
+  run_time: string;             // ISO timestamp
+  execution_time_ms: number;    // Query duration
+  time_range: string;           // Human readable (e.g., "Last 24 hours")
+  earliest: string;             // Start timestamp
+  latest: string;               // End timestamp
+
+  // Results
+  results: Record<string, unknown>[];
+  result?: Record<string, unknown>;
+  result_count: number;
+  column_count: number;
+  columns: string[];
+
+  // Links
+  results_link?: string;
+  dashboard_link?: string;
+
+  // Branding
+  app_name?: string;
+  app_scope?: string;
+  logo_url?: string;
+  accent_color?: string;
+
+  // Query info
+  search_query?: string;
 }
 
 // Filter functions
@@ -236,7 +276,7 @@ function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
 }
 
 // Parse a simple math expression
-function evaluateMath(expr: string, context: TemplateContext): number | null {
+function evaluateMath(expr: string, context: TemplateContext | ReportContext): number | null {
   // Replace variable references with values
   const resolvedExpr = expr.replace(/([a-zA-Z_][\w.]*)/g, (match) => {
     const value = resolveVariable(match, context);
@@ -260,15 +300,42 @@ function evaluateMath(expr: string, context: TemplateContext): number | null {
 }
 
 // Resolve a variable path to its value
-function resolveVariable(path: string, context: TemplateContext): unknown {
-  // Handle special variables
-  if (path === 'alert_name') return context.alert_name;
-  if (path === 'alert_severity') return context.alert_severity;
+function resolveVariable(path: string, context: TemplateContext | ReportContext): unknown {
+  // Handle alert-specific variables
+  if ('alert_name' in context) {
+    if (path === 'alert_name') return context.alert_name;
+    if (path === 'alert_severity') return context.alert_severity;
+    if (path === 'ai_summary') return context.ai_summary || '[AI summary not available]';
+    if (path === 'playbook') return context.playbook || '';
+    if (path === 'alert_url') return context.alert_url || '';
+  }
+
+  // Handle report-specific variables
+  if ('report_name' in context) {
+    if (path === 'report_name') return context.report_name;
+    if (path === 'report_id') return context.report_id;
+    if (path === 'report_description') return context.report_description || '';
+    if (path === 'report_schedule') return context.report_schedule || '';
+    if (path === 'run_time') return context.run_time;
+    if (path === 'execution_time_ms') return context.execution_time_ms;
+    if (path === 'time_range') return context.time_range;
+    if (path === 'earliest') return context.earliest;
+    if (path === 'latest') return context.latest;
+    if (path === 'column_count') return context.column_count;
+    if (path === 'columns') return context.columns;
+    if (path === 'results_link') return context.results_link || '';
+    if (path === 'dashboard_link') return context.dashboard_link || '';
+    if (path === 'app_name') return context.app_name || 'LogNog';
+    if (path === 'app_scope') return context.app_scope || 'default';
+    if (path === 'logo_url') return context.logo_url || '';
+    if (path === 'accent_color') return context.accent_color || '#0ea5e9';
+  }
+
+  // Handle common variables
   if (path === 'result_count') return context.result_count;
-  if (path === 'timestamp') return context.timestamp;
+  if (path === 'timestamp') return 'run_time' in context ? context.run_time : (context as TemplateContext).timestamp;
   if (path === 'search_query') return context.search_query || '';
   if (path === 'results') return context.results;
-  if (path === 'ai_summary') return context.ai_summary || '[AI summary not available]';
 
   // Handle result.field
   if (path.startsWith('result.')) {
@@ -289,6 +356,32 @@ function resolveVariable(path: string, context: TemplateContext): unknown {
     return undefined;
   }
 
+  // Handle aggregate tokens: total.fieldname, avg.fieldname, etc.
+  const aggregateMatch = path.match(/^(total|avg|min|max|first|last)\.(.+)$/);
+  if (aggregateMatch) {
+    const [, aggType, fieldName] = aggregateMatch;
+    if (aggType === 'total') {
+      return context.results.reduce((sum, item) => sum + (Number(item[fieldName]) || 0), 0);
+    }
+    if (aggType === 'avg' && context.results.length > 0) {
+      const sum = context.results.reduce((s, item) => s + (Number(item[fieldName]) || 0), 0);
+      return sum / context.results.length;
+    }
+    if (aggType === 'min') {
+      return Math.min(...context.results.map(item => Number(item[fieldName]) || Infinity));
+    }
+    if (aggType === 'max') {
+      return Math.max(...context.results.map(item => Number(item[fieldName]) || -Infinity));
+    }
+    if (aggType === 'first' && context.results.length > 0) {
+      return context.results[0][fieldName];
+    }
+    if (aggType === 'last' && context.results.length > 0) {
+      return context.results[context.results.length - 1][fieldName];
+    }
+    return undefined;
+  }
+
   // Handle results:aggregate:field
   if (path.startsWith('results:')) {
     return handleAggregate(path, context);
@@ -304,7 +397,7 @@ function resolveVariable(path: string, context: TemplateContext): unknown {
 }
 
 // Handle aggregate expressions like results:sum:bytes
-function handleAggregate(expr: string, context: TemplateContext): unknown {
+function handleAggregate(expr: string, context: TemplateContext | ReportContext): unknown {
   const parts = expr.split(':');
   if (parts.length < 2) return undefined;
 
@@ -360,7 +453,7 @@ function applyFilters(value: unknown, filterChain: string): string {
 }
 
 // Process conditional blocks: {{#if condition}}...{{/if}}
-function processConditionals(template: string, context: TemplateContext): string {
+function processConditionals(template: string, context: TemplateContext | ReportContext): string {
   // Handle {{#if}}...{{#else}}...{{/if}}
   const ifPattern = /\{\{#if\s+(.+?)\}\}([\s\S]*?)\{\{\/if\}\}/g;
 
@@ -394,7 +487,7 @@ function processConditionals(template: string, context: TemplateContext): string
 }
 
 // Evaluate a condition expression
-function evaluateCondition(condition: string, context: TemplateContext): boolean {
+function evaluateCondition(condition: string, context: TemplateContext | ReportContext): boolean {
   // Parse conditions like: severity == "critical", result_count > 100
   const operators = ['==', '!=', '>=', '<=', '>', '<'];
   let op = '';
@@ -447,7 +540,7 @@ function evaluateCondition(condition: string, context: TemplateContext): boolean
 }
 
 // Process loop blocks: {{#each results limit=5}}...{{/each}}
-function processLoops(template: string, context: TemplateContext): string {
+function processLoops(template: string, context: TemplateContext | ReportContext): string {
   const eachPattern = /\{\{#each\s+(\w+)(?:\s+limit=(\d+))?\}\}([\s\S]*?)\{\{\/each\}\}/g;
 
   return template.replace(eachPattern, (_, arrayName, limitStr, itemTemplate) => {
@@ -468,7 +561,7 @@ function processLoops(template: string, context: TemplateContext): string {
     // Process each item
     return items.map((item: Record<string, unknown>, index: number) => {
       // Create item context
-      const itemContext: TemplateContext = {
+      const itemContext: TemplateContext | ReportContext = {
         ...context,
         result: item,
       };
@@ -487,7 +580,7 @@ function processLoops(template: string, context: TemplateContext): string {
 }
 
 // Process a single expression: {{variable:filter:args}}
-function processExpression(template: string, context: TemplateContext): string {
+function processExpression(template: string, context: TemplateContext | ReportContext): string {
   return template.replace(/\{\{([^}]+)\}\}/g, (match, expr) => {
     const trimmedExpr = expr.trim();
 
@@ -566,7 +659,7 @@ function processExpression(template: string, context: TemplateContext): string {
 /**
  * Main template processing function
  */
-export function processTemplate(template: string, context: TemplateContext): string {
+export function processTemplate(template: string, context: TemplateContext | ReportContext): string {
   if (!template) return template;
 
   let result = template;
@@ -704,5 +797,47 @@ export function getAvailableAggregates(): Array<{ name: string; description: str
     { name: 'pluck', description: 'Extract field values', example: '{{results:pluck:hostname}}' },
     { name: 'unique', description: 'Unique values', example: '{{results:unique:hostname}}' },
     { name: 'join', description: 'Join array', example: '{{results:pluck:hostname:join:", "}}' },
+  ];
+}
+
+// Export report token list for UI
+export function getAvailableReportTokens(): Array<{ name: string; description: string; example: string; category: string }> {
+  return [
+    // Report Metadata
+    { name: 'report_name', description: 'Report name', example: '{{report_name}}', category: 'metadata' },
+    { name: 'report_description', description: 'Report description', example: '{{report_description}}', category: 'metadata' },
+    { name: 'report_schedule', description: 'Cron schedule (human readable)', example: '{{report_schedule}}', category: 'metadata' },
+    { name: 'report_id', description: 'Report UUID', example: '{{report_id}}', category: 'metadata' },
+
+    // Execution Info
+    { name: 'run_time', description: 'When report ran (ISO)', example: '{{run_time}}', category: 'execution' },
+    { name: 'run_time:date', description: 'Formatted date', example: '{{run_time:date}}', category: 'execution' },
+    { name: 'run_time:relative', description: 'Relative time', example: '{{run_time:relative}}', category: 'execution' },
+    { name: 'execution_time_ms', description: 'Query duration in ms', example: '{{execution_time_ms}}', category: 'execution' },
+    { name: 'time_range', description: 'Human readable range', example: '{{time_range}}', category: 'execution' },
+    { name: 'earliest', description: 'Start timestamp', example: '{{earliest}}', category: 'execution' },
+    { name: 'latest', description: 'End timestamp', example: '{{latest}}', category: 'execution' },
+
+    // Results
+    { name: 'result_count', description: 'Number of rows', example: '{{result_count}}', category: 'results' },
+    { name: 'result_count:comma', description: 'Formatted count', example: '{{result_count:comma}} → 1,234', category: 'results' },
+    { name: 'column_count', description: 'Number of columns', example: '{{column_count}}', category: 'results' },
+    { name: 'columns', description: 'Column names list', example: '{{columns}}', category: 'results' },
+
+    // Aggregates
+    { name: 'total.fieldname', description: 'Sum of numeric field', example: '{{total.count}}', category: 'aggregates' },
+    { name: 'avg.fieldname', description: 'Average of field', example: '{{avg.latency}}', category: 'aggregates' },
+    { name: 'min.fieldname', description: 'Minimum value', example: '{{min.size}}', category: 'aggregates' },
+    { name: 'max.fieldname', description: 'Maximum value', example: '{{max.cpu}}', category: 'aggregates' },
+    { name: 'first.fieldname', description: 'First row value', example: '{{first.hostname}}', category: 'aggregates' },
+
+    // Links
+    { name: 'results_link', description: 'URL to view in LogNog UI', example: '{{results_link}}', category: 'links' },
+    { name: 'dashboard_link', description: 'Related dashboard URL', example: '{{dashboard_link}}', category: 'links' },
+
+    // Branding
+    { name: 'app_name', description: 'App scope name', example: '{{app_name}}', category: 'branding' },
+    { name: 'logo_url', description: 'Logo from branding config', example: '{{logo_url}}', category: 'branding' },
+    { name: 'accent_color', description: 'Brand accent color', example: '{{accent_color}}', category: 'branding' },
   ];
 }
