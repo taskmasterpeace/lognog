@@ -323,38 +323,86 @@ Then the environment variables are not set correctly.
 ### Step 8.1: Navigate to Reports
 
 1. Click **Reports** in the left sidebar
-2. You should see the 6 HYH reports (all disabled)
+2. You should see the HYH weekly reports (created by the setup script)
 
-### Step 8.2: Configure Each Report
+### Step 8.2: HYH Weekly Reports
 
-For each report:
+These reports run every **Sunday at 9am EST** and exclude test accounts:
 
-1. Click **Edit** (pencil icon)
-2. Set **Recipients**: `you@example.com, team@example.com`
-   - Comma-separated list of email addresses
-3. Verify **Schedule**:
-   - Daily reports: `0 8 * * *` (8am daily)
-   - Weekly reports: `0 9 * * 1` (Monday 9am)
+| Report | Description |
+|--------|-------------|
+| **Weekly Executive Summary** | High-level metrics with week-over-week comparison |
+| **Weekly Active Users** | All non-test accounts that logged in |
+| **Weekly Error Report** | Most common errors with examples |
+| **Weekly Signups & Conversions** | New signups, trials, and subscriptions |
+| **Weekly Feature Usage** | Which features are being used |
+| **Weekly API Health** | Response times and error rates by endpoint |
+
+### Step 8.3: Configure Recipients
+
+1. Click **Edit** (pencil icon) on each report
+2. Set **Recipients**: Your team email addresses (comma-separated)
+3. Verify **Schedule**: `0 14 * * 0` (Sunday 9am EST / 2pm UTC)
 4. Ensure **Enabled** is ON
 5. Click **Save**
 
-### Step 8.3: Reports to Enable
+### Step 8.4: Report Features
 
-| Report | Schedule | Recipients |
-|--------|----------|------------|
-| Daily Signups by Source | 8am daily | team@hyh.com |
-| Daily Feature Usage | 8am daily | team@hyh.com |
-| Daily Error Summary | 8am daily | team@hyh.com |
-| Weekly Conversion | Monday 9am | team@hyh.com |
-| Weekly Job Search Trends | Monday 9am | team@hyh.com |
-| Weekly API Health | Monday 9am | team@hyh.com |
+The new report system includes:
 
-### Step 8.4: Test a Report
+**Smart Conditions:**
+- `if_results` - Only send if data exists
+- `threshold` - Only send if count exceeds threshold
+- `always` - Send regardless of results
 
-1. Find a report in the list
-2. Click **Trigger Now** or **Send Now** button
+**Time Comparisons:**
+- Week-over-week comparison with `| compare 1w`
+- Shows `_change` and `_change_pct` for trend analysis
+
+**Output Formats:**
+- HTML email body with formatted tables
+- CSV attachment for spreadsheet import
+- JSON attachment for programmatic access
+
+**Template Tokens:**
+- `{{report_name}}` - Report name
+- `{{result_count}}` - Number of results
+- `{{time_range}}` - Query time period
+- `{{date:week_of}}` - Week start date
+- `{{value:comma}}` - Format numbers with commas
+- `{{value:percent}}` - Format as percentage
+
+### Step 8.5: Test a Report
+
+1. Find the "Weekly Executive Summary" report
+2. Click **Trigger Now** button (or use API):
+   ```bash
+   curl -X POST http://localhost:4000/api/reports/{report_id}/trigger
+   ```
 3. Check your email for the report
-4. Verify the data looks correct
+4. Verify the data and formatting look correct
+
+### Step 8.6: Create Custom Reports
+
+Use the DSL to create custom reports:
+
+```
+# Active users excluding test accounts
+search index=hey-youre-hired event_type="login"
+| where NOT user_email LIKE "taskmasterpeace+%"
+| stats count, dc(user_email) as unique_users by user_email
+| sort desc count
+```
+
+**Compare to previous period:**
+```
+search index=hey-youre-hired | stats count by hostname | compare 1w
+```
+
+**Overlay time periods:**
+```
+search index=hey-youre-hired | timechart span=1h count | timewrap 1d
+```
 
 ---
 
@@ -461,4 +509,41 @@ Full list: https://github.com/caronc/apprise/wiki
 | Every hour | `0 * * * *` |
 | 8am daily | `0 8 * * *` |
 | Monday 9am | `0 9 * * 1` |
+| Sunday 9am EST | `0 14 * * 0` |
 | 1st of month | `0 0 1 * *` |
+
+### Report Template Tokens
+
+| Token | Description | Example Output |
+|-------|-------------|----------------|
+| `{{report_name}}` | Report name | "Weekly Error Report" |
+| `{{result_count}}` | Number of results | "42" |
+| `{{result_count:comma}}` | Formatted count | "1,234" |
+| `{{time_range}}` | Query time period | "Last 7 days" |
+| `{{date:week_of}}` | Week start date | "Feb 17, 2026" |
+| `{{date:now}}` | Current date/time | "Feb 21, 2026 9:00 AM" |
+| `{{field:truncate:100}}` | Truncate to 100 chars | "Error message..." |
+| `{{field:percent}}` | As percentage | "23.5%" |
+| `{{_change:+}}` | Change with +/- | "+15" or "-3" |
+| `{{_change_pct:percent}}` | % change | "+12.3%" |
+
+### DSL Commands for Reports
+
+**Compare (week-over-week):**
+```
+search * | stats count by hostname | compare 1w
+```
+Adds `_previous`, `_change`, `_change_pct` columns.
+
+**Timewrap (overlay periods):**
+```
+search * | timechart span=1h count | timewrap 1d
+```
+Shows multiple days overlaid for pattern comparison.
+
+### Test Account Exclusion Pattern
+
+To exclude test accounts in queries:
+```
+| where NOT user_email LIKE "taskmasterpeace+%" AND NOT user_email LIKE "automation-test@%"
+```

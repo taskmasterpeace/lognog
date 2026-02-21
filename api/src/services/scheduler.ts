@@ -1,9 +1,8 @@
 import nodemailer from 'nodemailer';
 import { getSQLiteDB, getAlerts, Alert, getScheduledSavedSearches, updateSavedSearchCache, updateSavedSearchError, cleanupExpiredSearchCache, SavedSearch, getSystemSetting } from '../db/sqlite.js';
-import { executeQuery } from '../db/clickhouse.js';
+import { executeDSLQuery } from '../db/backend.js';
 import { parseAndCompile } from '../dsl/index.js';
 import { evaluateAlert } from './alerts.js';
-import { executeDSLQuery } from '../db/backend.js';
 import { logReportGenerated } from './internal-logger.js';
 import {
   renderHtml,
@@ -173,25 +172,17 @@ async function runReport(report: ScheduledReport): Promise<void> {
   const startTime = performance.now();
 
   try {
-    // Compile and execute query
-    const compiled = parseAndCompile(report.query);
-    let sql = compiled.sql;
-
-    // Calculate time range (last 24 hours by default)
+    // Calculate time range (last 7 days for weekly reports)
     const now = new Date();
-    const earliest = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const earliest = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const latestIso = now.toISOString();
     const earliestIso = earliest.toISOString();
 
-    // Add time range for last 24 hours
-    const timeCondition = `timestamp >= now() - INTERVAL 24 HOUR`;
-    if (sql.includes('WHERE')) {
-      sql = sql.replace('WHERE', `WHERE ${timeCondition} AND`);
-    } else if (sql.includes('FROM lognog.logs')) {
-      sql = sql.replace('FROM lognog.logs', `FROM lognog.logs WHERE ${timeCondition}`);
-    }
-
-    const results = await executeQuery(sql);
+    // Execute DSL query using backend abstraction (handles ClickHouse vs SQLite)
+    const { sql, results } = await executeDSLQuery(report.query, {
+      earliest: '-7d',
+      latest: 'now',
+    });
     const executionTimeMs = Math.round(performance.now() - startTime);
 
     // Check send condition (Phase 5: Smart Reports)
