@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
 import { testPattern } from '../services/field-extractor.js';
+import { loadCustomLookups } from '../services/lookup-tables.js';
 import {
   // Field Extractions
   getFieldExtractions,
@@ -347,9 +348,13 @@ router.get('/lookups/by-name/:name', (req: Request, res: Response) => {
 // POST /knowledge/lookups - Create lookup
 router.post('/lookups', (req: Request, res: Response) => {
   try {
-    const { name, type = 'manual', key_field, output_fields, data, file_path } = req.body;
+    const { name, key_field, file_path } = req.body;
+    // Accept both API field names and UI field names
+    const type = (req.body.type || req.body.lookup_type || 'manual').toLowerCase() as 'csv' | 'manual';
+    const rawData = req.body.data || req.body.lookup_data;
+    const rawOutputFields = req.body.output_fields;
 
-    if (!name || !key_field || !output_fields) {
+    if (!name || !key_field || !rawOutputFields) {
       return res.status(400).json({ error: 'Name, key_field, and output_fields are required' });
     }
 
@@ -357,9 +362,13 @@ router.post('/lookups', (req: Request, res: Response) => {
       return res.status(400).json({ error: 'type must be either "csv" or "manual"' });
     }
 
-    if (!Array.isArray(output_fields)) {
-      return res.status(400).json({ error: 'output_fields must be an array' });
-    }
+    // Accept output_fields as array or comma-separated string
+    const output_fields = Array.isArray(rawOutputFields)
+      ? rawOutputFields
+      : rawOutputFields.split(',').map((f: string) => f.trim()).filter(Boolean);
+
+    // Parse data if it's a string (from UI JSON textarea)
+    const data = typeof rawData === 'string' ? JSON.parse(rawData) : rawData;
 
     if (type === 'manual' && !data) {
       return res.status(400).json({ error: 'data is required for manual lookups' });
@@ -370,6 +379,7 @@ router.post('/lookups', (req: Request, res: Response) => {
     }
 
     const lookup = createLookup(name, type, key_field, output_fields, data, file_path);
+    loadCustomLookups(); // Refresh in-memory tables
     return res.status(201).json(lookup);
   } catch (error) {
     console.error('Error creating lookup:', error);
@@ -411,6 +421,7 @@ router.put('/lookups/:id', (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Lookup not found' });
     }
 
+    loadCustomLookups(); // Refresh in-memory tables
     return res.json(lookup);
   } catch (error) {
     console.error('Error updating lookup:', error);
@@ -425,6 +436,7 @@ router.delete('/lookups/:id', (req: Request, res: Response) => {
     if (!deleted) {
       return res.status(404).json({ error: 'Lookup not found' });
     }
+    loadCustomLookups(); // Refresh in-memory tables
     return res.status(204).send();
   } catch (error) {
     console.error('Error deleting lookup:', error);

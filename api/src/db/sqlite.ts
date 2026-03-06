@@ -860,7 +860,7 @@ function initializeSchema(): void {
     database.exec("ALTER TABLE scheduled_reports ADD COLUMN last_result_count INTEGER");
   }
   if (!reportColumnNames.includes('updated_at')) {
-    database.exec("ALTER TABLE scheduled_reports ADD COLUMN updated_at TEXT DEFAULT (datetime('now'))");
+    database.exec("ALTER TABLE scheduled_reports ADD COLUMN updated_at TEXT");
   }
 
   if (!ssColumnNames.includes('app_scope')) {

@@ -1033,6 +1033,145 @@ export const DASHBOARD_TEMPLATES: DashboardTemplateData[] = [
       ],
     },
   },
+  // ============================================
+  // HYH Landing Page Scroll Depth & Bot Detection
+  // ============================================
+  {
+    name: 'HYH Landing Page & Bot Detection',
+    description: 'Monitor landing page scroll depth, section engagement, and detect bot traffic for Hey You\'re Hired',
+    category: 'application',
+    required_sources: ['hey-youre-hired'],
+    template: {
+      name: 'HYH Landing Page & Bot Detection',
+      description: 'Scroll depth tracking, section drop-off analysis, and bot vs human traffic classification',
+      logo_url: '/hey-youre-hired-logo.png',
+      accent_color: '#3B82F6',
+      panels: [
+        // Row 1: Key Stats
+        {
+          title: 'Total Page Views',
+          query: 'search index=hey-youre-hired message="landing_page_engagement" | stats count',
+          visualization: 'stat',
+          position_x: 0, position_y: 0, width: 2, height: 2,
+        },
+        {
+          title: 'Likely Bots',
+          query: 'search index=hey-youre-hired message="landing_page_engagement" sections_seen_count=0 time_on_page_seconds<3 | stats count',
+          visualization: 'stat',
+          position_x: 2, position_y: 0, width: 2, height: 2,
+          options: { color: '#EF4444' },
+        },
+        {
+          title: 'Likely Humans',
+          query: 'search index=hey-youre-hired message="landing_page_engagement" sections_seen_count>=1 | stats count',
+          visualization: 'stat',
+          position_x: 4, position_y: 0, width: 2, height: 2,
+          options: { color: '#10B981' },
+        },
+        {
+          title: 'Avg Scroll Depth',
+          query: 'search index=hey-youre-hired message="landing_page_engagement" sections_seen_count>=1 | stats avg(scroll_depth_max)',
+          visualization: 'stat',
+          position_x: 6, position_y: 0, width: 2, height: 2,
+          options: { unit: '%' },
+        },
+        {
+          title: 'Avg Time on Page',
+          query: 'search index=hey-youre-hired message="landing_page_engagement" sections_seen_count>=1 | stats avg(time_on_page_seconds)',
+          visualization: 'stat',
+          position_x: 8, position_y: 0, width: 2, height: 2,
+          options: { unit: 's' },
+        },
+        {
+          title: 'Avg Sections Seen',
+          query: 'search index=hey-youre-hired message="landing_page_engagement" sections_seen_count>=1 | stats avg(sections_seen_count)',
+          visualization: 'stat',
+          position_x: 10, position_y: 0, width: 2, height: 2,
+        },
+
+        // Row 2: Bot vs Human Pie + Bot Traffic Over Time
+        {
+          title: 'Bot vs Human Traffic',
+          query: 'search index=hey-youre-hired message="landing_page_engagement" | eval traffic_type=case(sections_seen_count=0 AND time_on_page_seconds<3, "Likely Bot", sections_seen_count>=1, "Likely Human", sections_seen_count=0 AND time_on_page_seconds>=3, "Ambiguous") | stats count by traffic_type',
+          visualization: 'pie',
+          position_x: 0, position_y: 2, width: 4, height: 4,
+        },
+        {
+          title: 'Bot Traffic Over Time',
+          query: 'search index=hey-youre-hired message="landing_page_engagement" sections_seen_count=0 time_on_page_seconds<3 | timechart span=1h count',
+          visualization: 'line',
+          position_x: 4, position_y: 2, width: 8, height: 4,
+        },
+
+        // Row 3: Section Drop-Off Funnel + Scroll Depth Distribution
+        {
+          title: 'Section Drop-Off Funnel',
+          query: 'search index=hey-youre-hired message="landing_page_engagement" sections_seen_count>=1 | eval hero=if(sections_seen~"hero",1,0), features=if(sections_seen~"features",1,0), testimonials=if(sections_seen~"testimonials",1,0), pricing=if(sections_seen~"pricing",1,0), final_cta=if(sections_seen~"final-cta",1,0) | stats sum(hero) as "Hero", sum(features) as "Features", sum(testimonials) as "Testimonials", sum(pricing) as "Pricing", sum(final_cta) as "Final CTA"',
+          visualization: 'funnel',
+          position_x: 0, position_y: 6, width: 6, height: 4,
+        },
+        {
+          title: 'Scroll Depth Distribution',
+          query: 'search index=hey-youre-hired message="landing_page_engagement" sections_seen_count>=1 | eval depth_bucket=case(scroll_depth_max<=25, "0-25%", scroll_depth_max<=50, "26-50%", scroll_depth_max<=75, "51-75%", scroll_depth_max<=100, "76-100%") | stats count by depth_bucket',
+          visualization: 'bar',
+          position_x: 6, position_y: 6, width: 6, height: 4,
+        },
+
+        // Row 4: Time on Page Distribution + Landing Page Variant Comparison
+        {
+          title: 'Time on Page Distribution',
+          query: 'search index=hey-youre-hired message="landing_page_engagement" sections_seen_count>=1 | eval time_bucket=case(time_on_page_seconds<=10, "0-10s Bounce", time_on_page_seconds<=30, "11-30s Quick Scan", time_on_page_seconds<=60, "31-60s Engaged", time_on_page_seconds<=120, "61-120s Very Engaged", time_on_page_seconds>120, "120s+ Deep Reader") | stats count by time_bucket',
+          visualization: 'bar',
+          position_x: 0, position_y: 10, width: 6, height: 4,
+        },
+        {
+          title: 'Landing Page Variant Comparison',
+          query: 'search index=hey-youre-hired message="landing_page_engagement" sections_seen_count>=1 | stats avg(scroll_depth_max) as "Avg Scroll %", avg(time_on_page_seconds) as "Avg Time (s)", avg(sections_seen_count) as "Avg Sections", count as "Visitors" by landing_page',
+          visualization: 'table',
+          position_x: 6, position_y: 10, width: 6, height: 4,
+        },
+
+        // Row 5: Engagement Over Time + Suspicious User-Agents
+        {
+          title: 'Human Engagement Over Time',
+          query: 'search index=hey-youre-hired message="landing_page_engagement" sections_seen_count>=1 | timechart span=1h avg(scroll_depth_max) as "Avg Scroll Depth", avg(sections_seen_count) as "Avg Sections"',
+          visualization: 'line',
+          position_x: 0, position_y: 14, width: 6, height: 4,
+        },
+        {
+          title: 'Suspicious User-Agents (Bot Traffic)',
+          query: 'search index=hey-youre-hired message="landing_page_engagement" sections_seen_count=0 | stats count by user_agent | sort desc count | limit 10',
+          visualization: 'table',
+          position_x: 6, position_y: 14, width: 6, height: 4,
+        },
+
+        // Row 6: Recent Events
+        {
+          title: 'Recent Landing Page Events',
+          query: 'search index=hey-youre-hired message="landing_page_engagement" | table timestamp landing_page sections_seen_count scroll_depth_max time_on_page_seconds sections_seen user_agent | sort desc timestamp | limit 50',
+          visualization: 'table',
+          position_x: 0, position_y: 18, width: 12, height: 4,
+        },
+      ],
+      variables: [
+        {
+          name: 'landing_page',
+          label: 'Landing Page',
+          type: 'query',
+          query: 'search index=hey-youre-hired message="landing_page_engagement" | stats count by landing_page | table landing_page',
+          include_all: true,
+          multi_select: true,
+        },
+        {
+          name: 'traffic_type',
+          label: 'Traffic Type',
+          type: 'custom',
+          default_value: 'all',
+          options: ['all', 'human', 'bot'],
+        },
+      ],
+    },
+  },
 ];
 
 export default DASHBOARD_TEMPLATES;

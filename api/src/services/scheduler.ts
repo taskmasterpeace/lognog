@@ -201,11 +201,13 @@ async function runReport(report: ScheduledReport): Promise<void> {
     let logoUrl = getSystemSetting('branding_logo_url') || undefined;
 
     // If report has an app_scope (project), use project's branding
+    let appName: string | undefined;
     if (report.app_scope && report.app_scope !== 'default') {
       const project = getProjectBySlug(report.app_scope);
       if (project) {
         if (project.accent_color) accentColor = project.accent_color;
         if (project.logo_url) logoUrl = project.logo_url;
+        appName = project.name;
       }
     }
 
@@ -218,6 +220,7 @@ async function runReport(report: ScheduledReport): Promise<void> {
         query: report.query,
         schedule: report.schedule,
         app_scope: report.app_scope,
+        app_name: appName,
       },
       results,
       executionTimeMs,

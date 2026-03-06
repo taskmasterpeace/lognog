@@ -15,6 +15,9 @@ import { parseToAST } from '../dsl/index.js';
 import { compileDSL } from '../dsl/compiler.js';
 import { compileDSLToSQLite, parseRelativeTimeSQLite } from '../dsl/compiler-sqlite.js';
 import { logQueryExecution } from '../services/internal-logger.js';
+import { applyLookup } from '../services/lookup-tables.js';
+import type { ASTNode, LookupNode, Condition, SimpleCondition } from '../dsl/types.js';
+import { isLogicGroup } from '../dsl/types.js';
 
 export type Backend = 'clickhouse' | 'sqlite';
 
@@ -71,6 +74,16 @@ export async function executeDSLQuery<T = Record<string, unknown>>(
   try {
     const ast = parseToAST(dslQuery);
 
+    // Split AST at lookup stages: compile pre-lookup to SQL, post-lookup as in-memory
+    const lookupIndex = ast.stages.findIndex(s => s.type === 'lookup');
+    const hasLookup = lookupIndex !== -1;
+    let postLookupStages: ASTNode[] = [];
+
+    if (hasLookup) {
+      // Extract stages from lookup onwards for post-processing
+      postLookupStages = ast.stages.splice(lookupIndex);
+    }
+
     if (isLiteMode()) {
       // Compile to SQLite SQL
       const compiled = compileDSLToSQLite(ast);
@@ -106,7 +119,12 @@ export async function executeDSLQuery<T = Record<string, unknown>>(
         }
       }
 
-      const results = await sqliteLogs.executeQuery<T>(sql);
+      let results = await sqliteLogs.executeQuery<T>(sql);
+
+      // Apply lookup + post-lookup stages as in-memory post-processing
+      if (hasLookup) {
+        results = applyPostLookupStages(results as Record<string, unknown>[], postLookupStages) as T[];
+      }
 
       // Log query execution
       logQueryExecution({
@@ -183,7 +201,12 @@ export async function executeDSLQuery<T = Record<string, unknown>>(
         }
       }
 
-      const results = await clickhouse.executeQuery<T>(sql);
+      let results = await clickhouse.executeQuery<T>(sql);
+
+      // Apply lookup + post-lookup stages as in-memory post-processing
+      if (hasLookup) {
+        results = applyPostLookupStages(results as Record<string, unknown>[], postLookupStages) as T[];
+      }
 
       // Log query execution
       logQueryExecution({
@@ -206,6 +229,114 @@ export async function executeDSLQuery<T = Record<string, unknown>>(
     });
     throw err;
   }
+}
+
+/**
+ * Apply post-lookup stages (lookup enrichment + in-memory where/filter) to results.
+ * Called when a DSL query contains | lookup stages that can't be compiled to SQL.
+ */
+function applyPostLookupStages(
+  results: Record<string, unknown>[],
+  stages: ASTNode[]
+): Record<string, unknown>[] {
+  // Flatten structured_data JSON fields into top-level for lookup matching and template access
+  let data = results.map(row => {
+    const sd = row.structured_data;
+    if (!sd) return row;
+    const parsed = typeof sd === 'string' ? (() => { try { return JSON.parse(sd); } catch { return null; } })() : sd;
+    if (!parsed || typeof parsed !== 'object') return row;
+    // Merge structured_data fields, but don't overwrite existing top-level fields
+    const flat = { ...row };
+    for (const [k, v] of Object.entries(parsed as Record<string, unknown>)) {
+      if (!(k in flat)) flat[k] = v;
+    }
+    return flat;
+  });
+
+  for (const stage of stages) {
+    if (stage.type === 'lookup') {
+      const s = stage as LookupNode;
+      data = applyLookup(
+        data,
+        s.lookupTable,
+        s.field,
+        s.matchField,
+        s.outputFields.length > 0 ? s.outputFields : undefined
+      );
+    } else if (stage.type === 'where' || stage.type === 'filter') {
+      const conditions = (stage as unknown as { conditions: Condition[] }).conditions;
+      data = data.filter(row => evaluateConditions(row, conditions));
+    }
+  }
+
+  return data;
+}
+
+/**
+ * Evaluate DSL conditions in-memory against a result row.
+ */
+function evaluateConditions(row: Record<string, unknown>, conditions: Condition[]): boolean {
+  return conditions.every(cond => evaluateCondition(row, cond));
+}
+
+function evaluateCondition(row: Record<string, unknown>, cond: Condition): boolean {
+  if (isLogicGroup(cond)) {
+    if (cond.logic === 'AND') {
+      return cond.conditions.every(c => evaluateCondition(row, c));
+    } else {
+      return cond.conditions.some(c => evaluateCondition(row, c));
+    }
+  }
+
+  const sc = cond as SimpleCondition;
+  let fieldValue = row[sc.field];
+  // Fall back to structured_data JSON for custom fields
+  if (fieldValue === undefined || fieldValue === null) {
+    const sd = row.structured_data;
+    if (sd) {
+      const parsed = typeof sd === 'string' ? (() => { try { return JSON.parse(sd as string); } catch { return null; } })() : sd;
+      if (parsed && typeof parsed === 'object') {
+        fieldValue = (parsed as Record<string, unknown>)[sc.field];
+      }
+    }
+  }
+  const rowVal = fieldValue !== undefined && fieldValue !== null ? String(fieldValue) : '';
+  const cmpVal = sc.value !== undefined && sc.value !== null ? String(sc.value) : '';
+
+  let result: boolean;
+  switch (sc.operator) {
+    case '=':
+      result = rowVal === cmpVal;
+      break;
+    case '!=':
+      result = rowVal !== cmpVal;
+      break;
+    case '>':
+      result = Number(rowVal) > Number(cmpVal);
+      break;
+    case '<':
+      result = Number(rowVal) < Number(cmpVal);
+      break;
+    case '>=':
+      result = Number(rowVal) >= Number(cmpVal);
+      break;
+    case '<=':
+      result = Number(rowVal) <= Number(cmpVal);
+      break;
+    case '~':
+      try { result = new RegExp(cmpVal, 'i').test(rowVal); } catch { result = rowVal.includes(cmpVal); }
+      break;
+    case 'IN':
+      result = Array.isArray(sc.value) ? (sc.value as unknown[]).map(String).includes(rowVal) : rowVal === cmpVal;
+      break;
+    case 'NOT IN':
+      result = Array.isArray(sc.value) ? !(sc.value as unknown[]).map(String).includes(rowVal) : rowVal !== cmpVal;
+      break;
+    default:
+      result = rowVal === cmpVal;
+  }
+
+  return sc.negate ? !result : result;
 }
 
 /**

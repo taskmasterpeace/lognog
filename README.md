@@ -12,7 +12,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/version-1.0.0-blue" alt="Version 1.0.0">
   <img src="https://img.shields.io/badge/license-MIT-green" alt="MIT License">
-  <img src="https://img.shields.io/badge/tests-224%20passing-brightgreen" alt="224 Tests Passing">
+  <img src="https://img.shields.io/badge/tests-425%20passing-brightgreen" alt="425 Tests Passing">
   <img src="https://img.shields.io/badge/docker-ready-blue" alt="Docker Ready">
 </p>
 
@@ -275,7 +275,7 @@ LogNog includes a powerful dashboard system with 7 visualization types:
 
 **Query Language (DSL):**
 
-- 17 commands: search, filter, stats, sort, limit, dedup, table, fields, rename, top, rare, bin, timechart, rex, eval, head, tail
+- 18 commands: search, filter, stats, sort, limit, dedup, table, fields, rename, top, rare, bin, timechart, rex, eval, head, tail, lookup
 - Full boolean logic: AND, OR, NOT with parentheses
 - 25+ functions: Math, string, statistical, percentile, time
 - Field extraction with regex (rex command)
@@ -558,6 +558,7 @@ LogNog uses a Splunk-like query language that compiles to SQL.
 | `timechart` | Time stats | `timechart span=1h count by hostname` |
 | `rex` | Regex extract | `rex field=message "user=(?P<user>\w+)"` |
 | `eval` | Calculate | `eval rate=bytes/1024` |
+| `lookup` | Enrich from table | `lookup user_types field=user_email` |
 
 ### Operators
 
@@ -883,7 +884,7 @@ cd api
 npm install
 npm run dev      # Development server with hot reload
 npm run build    # Build TypeScript
-npm run test     # Run tests (224 tests)
+npm run test     # Run tests (425 tests)
 ```
 
 ### UI Development
@@ -909,7 +910,7 @@ python build.py  # Build EXE
 
 | Component | Tests | Status |
 |-----------|-------|--------|
-| API (Vitest) | 224 | ✅ |
+| API (Vitest) | 425 | ✅ |
 | Agent (pytest) | 68 | ✅ |
 
 ---
@@ -936,6 +937,8 @@ python build.py  # Build EXE
 - **Common Information Model (CIM)** - Field normalization across sources
 - **AI Agent** - Conversational log investigation
 - **Synthetic Monitoring** - Proactive uptime testing
+- **Lookup Tables** - Key-value enrichment with wildcard matching, DSL `| lookup` command
+- **Scheduled Reports** - Email reports with HTML templates, project branding, smart send conditions
 
 ### Planned
 
@@ -947,7 +950,6 @@ python build.py  # Build EXE
 
 **Medium Term:**
 - Sigma rule importer (3000+ security rules)
-- Lookup tables (CSV enrichment)
 - macOS/Linux agent packages
 
 **Long Term:**

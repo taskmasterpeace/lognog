@@ -51,6 +51,18 @@ const TEMPLATES = [
   },
 ];
 
+export function getDefaultDashboard(): string | null {
+  return localStorage.getItem('lognog_default_dashboard');
+}
+
+export function setDefaultDashboard(id: string | null): void {
+  if (id) {
+    localStorage.setItem('lognog_default_dashboard', id);
+  } else {
+    localStorage.removeItem('lognog_default_dashboard');
+  }
+}
+
 export default function DashboardsPage() {
   const { formatDatePart } = useDateFormat();
   const toast = useToast();

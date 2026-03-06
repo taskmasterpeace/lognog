@@ -10,12 +10,13 @@ import {
   ProjectDashboard,
 } from '../api/client';
 
-interface PanelCopyModalProps {
+export interface PanelCopyModalProps {
+  targetDashboardId?: string;
   onClose: () => void;
   onSuccess?: (dashboardId: string, panelId: string) => void;
 }
 
-export function PanelCopyModal({ onClose, onSuccess }: PanelCopyModalProps) {
+export function PanelCopyModal({ targetDashboardId, onClose, onSuccess }: PanelCopyModalProps) {
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [selectedDashboard, setSelectedDashboard] = useState<ProjectDashboard | null>(null);
@@ -67,7 +68,7 @@ export function PanelCopyModal({ onClose, onSuccess }: PanelCopyModalProps) {
     try {
       for (const panelId of selectedPanels) {
         await copyPanelToDashboard(
-          selectedDashboard.dashboard_id,
+          targetDashboardId || selectedDashboard.dashboard_id,
           panelId,
           customTitle || undefined
         );

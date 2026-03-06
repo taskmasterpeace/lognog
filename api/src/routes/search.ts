@@ -14,8 +14,8 @@ import {
 import { translateNaturalLanguage, getSuggestedQueries } from '../services/ai-search.js';
 import { applyFieldExtraction } from '../services/field-extractor.js';
 import { optionalAuth, rateLimit } from '../auth/middleware.js';
-import { FilldownNode, TransactionNode, LookupNode, ChartNode, CompareNode, TimewrapNode } from '../dsl/types.js';
-import { applyLookup, listLookupTables } from '../services/lookup-tables.js';
+import { FilldownNode, TransactionNode, ChartNode, CompareNode, TimewrapNode } from '../dsl/types.js';
+import { listLookupTables } from '../services/lookup-tables.js';
 
 const router = Router();
 
@@ -338,6 +338,7 @@ async function applyTimewrap(
       }));
     });
 
+    const combined = await Promise.all(periodPromises);
     return combined;
   } catch (error) {
     console.error('Timewrap query failed:', error);
@@ -622,17 +623,8 @@ router.post('/query', rateLimit(120, 60000), async (req: Request, res: Response)
         );
       }
 
-      // Apply lookup enrichment
-      const lookupStages = ast.stages.filter(s => s.type === 'lookup') as LookupNode[];
-      for (const lookupStage of lookupStages) {
-        results = applyLookup(
-          results as Record<string, unknown>[],
-          lookupStage.lookupTable,
-          lookupStage.field,
-          lookupStage.matchField,
-          lookupStage.outputFields.length > 0 ? lookupStage.outputFields : undefined
-        );
-      }
+      // Lookup enrichment is now handled by executeDSLQuery in backend.ts
+      // (which also handles post-lookup where/filter stages in-memory)
 
       // Apply compare post-processing (executes query with offset time range)
       const compareStage = ast.stages.find(s => s.type === 'compare') as CompareNode | undefined;

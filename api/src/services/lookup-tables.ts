@@ -9,6 +9,12 @@
  * - severity: Syslog severity code to name/description
  * - countries: Country code to country name
  * - ports: Port numbers to service names
+ *
+ * Custom tables created via the UI are stored in SQLite and loaded
+ * into memory on startup and after CRUD operations.
+ *
+ * Wildcard matching: Keys ending with * match any value starting
+ * with the prefix (e.g., "taskmasterpeace*" matches "taskmasterpeace+test@gmail.com").
  */
 
 export interface LookupTable {
@@ -199,6 +205,11 @@ function initializeTables(): void {
 // Initialize on module load
 initializeTables();
 
+// Load custom lookups from SQLite after a short delay (allows DB to initialize)
+setTimeout(() => {
+  loadCustomLookups();
+}, 1000);
+
 /**
  * Get a lookup table by name
  */
@@ -219,12 +230,31 @@ export function listLookupTables(): Array<{ name: string; description: string; k
 }
 
 /**
+ * Find a match in a lookup table, supporting wildcard keys (ending with *)
+ * Exact match takes priority over wildcard.
+ */
+function findMatch(data: Map<string, Record<string, unknown>>, key: string): Record<string, unknown> | undefined {
+  // Try exact match first
+  const exact = data.get(key);
+  if (exact) return exact;
+
+  // Try wildcard prefix matches (keys ending with *)
+  let match: Record<string, unknown> | undefined;
+  data.forEach((values, pattern) => {
+    if (!match && pattern.endsWith('*') && key.startsWith(pattern.slice(0, -1))) {
+      match = values;
+    }
+  });
+  return match;
+}
+
+/**
  * Perform a lookup for a single value
  */
 export function lookupValue(tableName: string, key: string): Record<string, unknown> | undefined {
   const table = lookupTables.get(tableName.toLowerCase());
   if (!table) return undefined;
-  return table.data.get(String(key));
+  return findMatch(table.data, String(key));
 }
 
 /**
@@ -248,8 +278,18 @@ export function applyLookup(
   const fieldsToOutput = outputFields && outputFields.length > 0 ? outputFields : table.fields;
 
   return results.map(row => {
-    const keyValue = String(row[field] ?? '');
-    const lookupData = table.data.get(keyValue);
+    // Check top-level field first, then fall back to structured_data JSON
+    let keyValue = row[field];
+    if (keyValue === undefined || keyValue === null) {
+      const sd = row.structured_data;
+      if (sd) {
+        const parsed = typeof sd === 'string' ? (() => { try { return JSON.parse(sd); } catch { return null; } })() : sd;
+        if (parsed && typeof parsed === 'object') {
+          keyValue = (parsed as Record<string, unknown>)[field];
+        }
+      }
+    }
+    const lookupData = findMatch(table.data, String(keyValue ?? ''));
 
     if (lookupData) {
       // Add lookup fields to the row
@@ -290,4 +330,59 @@ export function setLookupTable(
     data: dataMap,
     fields: Array.from(fields),
   });
+}
+
+/**
+ * Load custom lookup tables from SQLite into the in-memory map.
+ * Called on startup and after any CRUD operation on lookups.
+ */
+export function loadCustomLookups(): void {
+  try {
+    // Dynamic import to avoid circular dependency — sqlite.ts may import from services
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { getLookups } = require('../db/sqlite.js');
+    const dbLookups = getLookups();
+
+    for (const lookup of dbLookups) {
+      if (!lookup.data) continue;
+
+      let parsed: Record<string, Record<string, unknown>>;
+      try {
+        parsed = JSON.parse(lookup.data);
+      } catch {
+        console.warn(`[Lookup] Failed to parse data for lookup '${lookup.name}'`);
+        continue;
+      }
+
+      const entries: Array<{ key: string; values: Record<string, unknown> }> = [];
+      for (const [key, values] of Object.entries(parsed)) {
+        if (typeof values === 'object' && values !== null) {
+          entries.push({ key, values: values as Record<string, unknown> });
+        }
+      }
+
+      if (entries.length > 0) {
+        const outputFields = lookup.output_fields
+          ? JSON.parse(lookup.output_fields)
+          : [];
+
+        setLookupTable(
+          lookup.name,
+          `Custom lookup: ${lookup.name}`,
+          lookup.key_field,
+          entries
+        );
+        console.log(`[Lookup] Loaded custom table '${lookup.name}' with ${entries.length} entries`);
+      }
+    }
+  } catch (error) {
+    console.warn('[Lookup] Failed to load custom lookups from database:', error);
+  }
+}
+
+/**
+ * Remove a lookup table from the in-memory map
+ */
+export function removeLookupTable(name: string): void {
+  lookupTables.delete(name.toLowerCase());
 }

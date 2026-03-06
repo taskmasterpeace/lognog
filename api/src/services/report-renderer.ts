@@ -20,6 +20,7 @@ export interface ReportData {
     query: string;
     schedule?: string;
     app_scope?: string;
+    app_name?: string;
   };
   results: Record<string, unknown>[];
   executionTimeMs: number;
@@ -61,7 +62,7 @@ export function buildReportContext(data: ReportData): ReportContext {
     column_count: columns.length,
     columns,
     results_link: data.baseUrl ? `${data.baseUrl}/search?query=${encodeURIComponent(data.report.query)}` : undefined,
-    app_name: data.report.app_scope || 'LogNog',
+    app_name: data.report.app_name || data.report.app_scope || 'LogNog',
     app_scope: data.report.app_scope || 'default',
   };
 }
@@ -244,10 +245,10 @@ export function renderHtml(data: ReportData, options: RenderOptions = { format: 
         <div class="summary-value">${data.results.length.toLocaleString()}</div>
         <div class="summary-label">Total Results</div>
       </div>
-      <div class="summary-card">
+      ${columns.length > 0 ? `<div class="summary-card">
         <div class="summary-value">${columns.length}</div>
         <div class="summary-label">Columns</div>
-      </div>
+      </div>` : ''}
       ${summaryStats.map(stat => `
       <div class="summary-card">
         <div class="summary-value">${escapeHtml(stat.value)}</div>

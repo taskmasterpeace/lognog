@@ -70,3 +70,30 @@ take-screenshots.js
 
 # Git worktrees
 .worktrees/
+
+# Temporary Claude/test files
+tmpclaude-*
+**/tmpclaude-*
+nul
+**/nul
+cookies.txt
+temp_query*.js
+test-histogram.*
+test-results/
+
+# Dashboard exports and test scripts
+api/*-dashboard.json
+api/screenshot-*.cjs
+api/export-dashboards.js
+api/setup-dashboards.js
+api/start-lite.js
+api/test-*.js
+api/reset-password.js
+api/scripts/fix-admin-password*.ts
+api/scripts/reset-admin-password.ts
+api/scripts/test-*.ts
+
+# UI test/screenshot artifacts
+ui/*.png
+ui/*.cjs
+ui/src/components/charts/AreaChart.tsx
