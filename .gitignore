@@ -43,10 +43,12 @@ npm-debug.log*
 .DS_Store
 Thumbs.db
 
-# Docker volumes (local)
+# Docker volumes and bind mounts (local)
 clickhouse-data/
 vector-data/
 api-data/
+data/
+backups/
 
 # Test coverage
 coverage/
@@ -97,3 +99,8 @@ api/scripts/test-*.ts
 ui/*.png
 ui/*.cjs
 ui/src/components/charts/AreaChart.tsx
+
+# Playwright artifacts
+ui/e2e/screenshots/
+ui/playwright-report/
+ui/e2e/debug-*.spec.ts
