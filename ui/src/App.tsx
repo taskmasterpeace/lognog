@@ -35,6 +35,7 @@ import { ConfirmProvider } from './components/ui/ConfirmDialog';
 import ThemeToggle from './components/ThemeToggle';
 import NogChat from './components/NogChat';
 import AnimatedPage from './components/ui/AnimatedPage';
+import ErrorBoundary from './components/ErrorBoundary';
 import WelcomeWizard from './components/onboarding/WelcomeWizard';
 import { useOnboarding } from './hooks/useOnboarding';
 import SearchPage from './pages/SearchPage';
@@ -322,7 +323,9 @@ function Layout({ children }: { children: React.ReactNode }) {
 
       {/* Main content */}
       <main className="flex-1 overflow-auto pt-14 lg:pt-0">
-        {children}
+        <ErrorBoundary>
+          {children}
+        </ErrorBoundary>
       </main>
 
       {/* NogChat - Intelligent Assistant */}

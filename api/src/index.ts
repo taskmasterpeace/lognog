@@ -121,7 +121,25 @@ app.use('/routing-rules', routingRulesRouter);
 // WebSocket endpoint for live tail
 const liveTailClients: Set<WebSocket> = new Set();
 
-app.ws('/ws/tail', (ws: WebSocket) => {
+app.ws('/ws/tail', (ws: WebSocket, req: express.Request) => {
+  // Validate origin header to prevent cross-origin WebSocket hijacking
+  const origin = req.headers.origin;
+  if (origin) {
+    const allowedHost = req.headers.host;
+    try {
+      const originHost = new URL(origin).host;
+      if (allowedHost && originHost !== allowedHost) {
+        console.warn(`WebSocket connection rejected: origin ${origin} does not match host ${allowedHost}`);
+        ws.close(1008, 'Origin not allowed');
+        return;
+      }
+    } catch {
+      console.warn(`WebSocket connection rejected: invalid origin ${origin}`);
+      ws.close(1008, 'Invalid origin');
+      return;
+    }
+  }
+
   console.log('Client connected to live tail');
   liveTailClients.add(ws);
 
@@ -339,16 +357,24 @@ if (uiDistPath) {
 }
 
 // Error handling middleware
-app.use((err: Error, req: express.Request, res: express.Response, _next: express.NextFunction) => {
+app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
+  if (res.headersSent) {
+    return next(err);
+  }
+
   console.error('Unhandled error:', err);
 
   // Log error to internal logs
-  logError({
-    error_type: err.name || 'Error',
-    message: err.message,
-    stack_trace: err.stack,
-    endpoint: req.path,
-  });
+  try {
+    logError({
+      error_type: err.name || 'Error',
+      message: err.message,
+      stack_trace: err.stack,
+      endpoint: req.path,
+    });
+  } catch (logErr) {
+    console.error('Failed to log error:', logErr);
+  }
 
   res.status(500).json({
     error: 'Internal server error',

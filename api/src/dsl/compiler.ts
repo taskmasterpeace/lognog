@@ -81,6 +81,14 @@ const KNOWN_COLUMNS = new Set([
   'index_name', 'message_tokens',
 ]);
 
+// Validate field names to prevent SQL injection via JSONExtract calls
+function sanitizeFieldName(field: string): string {
+  if (!/^[a-zA-Z0-9_.\-]+$/.test(field)) {
+    throw new Error(`Invalid field name: ${field}`);
+  }
+  return field;
+}
+
 export class Compiler {
   private ast: QueryAST;
   private params: unknown[] = [];
@@ -377,12 +385,12 @@ export class Compiler {
             const pattern = cond.value.replace(/\*/g, '%');
             expr = isKnownColumn
               ? `${field} LIKE '${this.escape(pattern)}'`
-              : `JSONExtractString(structured_data, '${cond.field}') LIKE '${this.escape(pattern)}'`;
+              : `JSONExtractString(structured_data, '${sanitizeFieldName(cond.field)}') LIKE '${this.escape(pattern)}'`;
           } else {
             // Simple contains -> positionCaseInsensitive
             const searchField = isKnownColumn
               ? field
-              : `JSONExtractString(structured_data, '${cond.field}')`;
+              : `JSONExtractString(structured_data, '${sanitizeFieldName(cond.field)}')`;
             expr = `positionCaseInsensitive(${searchField}, '${this.escape(cond.value)}') > 0`;
           }
         } else {
@@ -497,9 +505,10 @@ export class Compiler {
       return mappedField;
     }
     // Unknown field - extract from structured_data JSON
+    const safeField = sanitizeFieldName(field);
     return type === 'number'
-      ? `JSONExtractFloat(structured_data, '${field}')`
-      : `JSONExtractString(structured_data, '${field}')`;
+      ? `JSONExtractFloat(structured_data, '${safeField}')`
+      : `JSONExtractString(structured_data, '${safeField}')`;
   }
 
   /**
@@ -507,12 +516,13 @@ export class Compiler {
    * Example: JSONExtractFloat(structured_data, 'credits_deducted') or JSONExtractString(...)
    */
   private jsonExtract(fieldName: string, value: string | number | null): string {
+    const safeField = sanitizeFieldName(fieldName);
     // Determine appropriate ClickHouse JSON function based on value type
     if (typeof value === 'number') {
-      return `JSONExtractFloat(structured_data, '${fieldName}')`;
+      return `JSONExtractFloat(structured_data, '${safeField}')`;
     }
     // For string values, use JSONExtractString
-    return `JSONExtractString(structured_data, '${fieldName}')`;
+    return `JSONExtractString(structured_data, '${safeField}')`;
   }
 
   private escape(value: string): string {

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { Sparkles, Send, Loader2, X, History, ArrowRight } from 'lucide-react';
+import { authFetch } from '../../api/client';
 
 interface NaturalLanguageInputProps {
   onQueryGenerated: (query: string) => void;
@@ -38,7 +39,7 @@ export function NaturalLanguageInput({
     setGeneratedQuery(null);
 
     try {
-      const response = await fetch('/api/ai/generate-query', {
+      const response = await authFetch('/ai/generate-query', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: input }),

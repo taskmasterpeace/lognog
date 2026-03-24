@@ -22,6 +22,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
     networks:
       - lognog-network
 
@@ -41,14 +42,20 @@ services:
     depends_on:
       clickhouse:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8686/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
     networks:
       - lognog-network
 
   # Node.js API
   api:
     build:
-      context: ./api
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: api/Dockerfile
     container_name: lognog-api
     ports:
       - "4000:4000"
@@ -73,7 +80,8 @@ services:
       LLAMAINDEX_PERSIST_DIR: /data/llamaindex
       APPRISE_URL: http://apprise:8000
     volumes:
-      - api-data:/data
+      - ./data:/data
+      - ./backups:/backups
       - geoip-data:/data/geoip
       - llamaindex-data:/data/llamaindex
     depends_on:
@@ -84,6 +92,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
     networks:
       - lognog-network
 
@@ -97,6 +106,7 @@ services:
     depends_on:
       api:
         condition: service_healthy
+    restart: unless-stopped
     networks:
       - lognog-network
 
@@ -111,6 +121,7 @@ services:
     depends_on:
       - api
       - ui
+    restart: unless-stopped
     networks:
       - lognog-network
 
@@ -196,7 +207,6 @@ networks:
 volumes:
   clickhouse-data:
   vector-data:
-  api-data:
   geoip-data:
   ollama-data:
   llamaindex-data:

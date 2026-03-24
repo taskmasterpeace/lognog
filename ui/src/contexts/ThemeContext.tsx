@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { authFetch } from './AuthContext';
 
 type Theme = 'light' | 'dark' | 'system';
 type ResolvedTheme = 'light' | 'dark';
@@ -45,9 +46,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       if (!token) return;
 
       try {
-        const response = await fetch('/api/settings/preferences', {
-          headers: { 'Authorization': `Bearer ${token}` },
-        });
+        const response = await authFetch('/settings/preferences');
         if (response.ok) {
           const data = await response.json();
           if (data.theme && (data.theme === 'light' || data.theme === 'dark' || data.theme === 'system')) {

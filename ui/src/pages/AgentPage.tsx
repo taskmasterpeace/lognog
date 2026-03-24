@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { authFetch } from '../api/client';
 import {
   Bot,
   Send,
@@ -117,7 +118,7 @@ export function AgentPage() {
 
   const loadConversations = async () => {
     try {
-      const response = await fetch('/api/ai/agents/conversations?limit=20');
+      const response = await authFetch('/ai/agents/conversations?limit=20');
       const data = await response.json();
       setConversations(data.conversations || []);
     } catch (error) {
@@ -127,7 +128,7 @@ export function AgentPage() {
 
   const loadConversation = async (id: string) => {
     try {
-      const response = await fetch(`/api/ai/agents/conversations/${id}`);
+      const response = await authFetch(`/ai/agents/conversations/${id}`);
       const data = await response.json();
       setCurrentConversation(data);
       setMessages(data.messages || []);
@@ -148,7 +149,7 @@ export function AgentPage() {
 
   const deleteConversation = async (id: string) => {
     try {
-      await fetch(`/api/ai/agents/conversations/${id}`, { method: 'DELETE' });
+      await authFetch(`/ai/agents/conversations/${id}`, { method: 'DELETE' });
       setConversations((prev) => prev.filter((c) => c.id !== id));
       if (currentConversation?.id === id) {
         startNewConversation();
@@ -175,7 +176,7 @@ export function AgentPage() {
     setLoading(true);
 
     try {
-      const response = await fetch('/api/ai/agents/chat', {
+      const response = await authFetch('/ai/agents/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

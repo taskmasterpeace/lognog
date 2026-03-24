@@ -462,6 +462,7 @@ export default function AlertsPage() {
   // Validate all actions have required config
   const areActionsValid = () => {
     return formData.actions.every((action) => {
+      if (!action.config) return false;
       if (action.type === 'email') {
         return isValidEmail(action.config.to || '');
       }

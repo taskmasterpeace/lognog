@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { authFetch } from '../api/client';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { useParams, Link, useNavigate } from 'react-router-dom';
@@ -768,7 +769,6 @@ export default function DashboardViewPage() {
   const { drilldown } = useDrilldown();
 
   const [timeRange, setTimeRange] = useState('-24h');
-  // const [showTimeDropdown, setShowTimeDropdown] = useState(false); // Now handled by TimePickerEnhanced
   const [showAutoRefreshDropdown, setShowAutoRefreshDropdown] = useState(false);
   const [autoRefreshInterval, setAutoRefreshInterval] = useState(0);
   const [showPanelEditor, setShowPanelEditor] = useState(false);
@@ -1648,7 +1648,7 @@ export default function DashboardViewPage() {
           }}
           onCancel={() => setShowBrandingModal(false)}
           onSave={async (branding) => {
-            await fetch(`/api/dashboards/${id}`, {
+            await authFetch(`/dashboards/${id}`, {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(branding),
@@ -1670,7 +1670,7 @@ export default function DashboardViewPage() {
           }}
           onCancel={() => setShowShareModal(false)}
           onSave={async (settings) => {
-            await fetch(`/api/dashboards/${id}/share`, {
+            await authFetch(`/dashboards/${id}/share`, {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(settings),
@@ -1686,7 +1686,7 @@ export default function DashboardViewPage() {
         <VariableEditorModal
           onCancel={() => setShowVariableEditor(false)}
           onSave={async (data) => {
-            await fetch(`/api/dashboards/${id}/variables`, {
+            await authFetch(`/dashboards/${id}/variables`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(data),

@@ -31,7 +31,7 @@ import {
   Square,
   Zap,
 } from 'lucide-react';
-import { executeSearch, getSavedSearches, createSavedSearch, aiSearch, getAISuggestions, SavedSearchCreateRequest } from '../api/client';
+import { executeSearch, getSavedSearches, createSavedSearch, aiSearch, getAISuggestions, SavedSearchCreateRequest, authFetch } from '../api/client';
 import { useMute } from '../contexts/MuteContext';
 import LogViewer from '../components/LogViewer';
 import TimePicker from '../components/TimePicker';
@@ -220,9 +220,7 @@ export default function SearchPage() {
       }
 
       try {
-        const response = await fetch('/api/settings/preferences', {
-          headers: { 'Authorization': `Bearer ${token}` },
-        });
+        const response = await authFetch('/settings/preferences');
         if (response.ok) {
           const data = await response.json();
 
