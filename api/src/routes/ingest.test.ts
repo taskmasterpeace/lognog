@@ -17,6 +17,25 @@ vi.mock('../auth/auth.js', async () => {
   };
 });
 
+// Mock the DB + processing deps the REAL ingest router pulls in, so we can mount
+// it without a database. processLogs passes records through by default; tests
+// override it to simulate routing-rule index overrides.
+vi.mock('../db/backend.js', () => ({
+  insertLogs: vi.fn(async () => {}),
+  getBackendInfo: vi.fn(() => ({ type: 'sqlite', name: 'test' })),
+}));
+// NOTE: do NOT mock ../db/sqlite.js — the real (unmocked) auth.ts initializes its
+// schema against the real SQLite DB at import time and needs getSQLiteDB.
+vi.mock('../services/internal-logger.js', () => ({
+  logIngestionStats: vi.fn(),
+}));
+vi.mock('../services/source-processor.js', () => ({
+  processLogs: vi.fn((logs: Array<Record<string, unknown>>) => logs),
+}));
+
+import ingestRouter from './ingest.js';
+import * as sourceProcessor from '../services/source-processor.js';
+
 // Mock the insertLogs function
 const mockInsertLogs = async () => {};
 
@@ -362,29 +381,21 @@ describe('ingest index scoping', () => {
     expect(isIndexAllowed(null, 'directors-palette')).toBe(true);
   });
 
-  // HTTP-level test: mirrors the real /http handler's enforcement so we exercise
-  // the full chain authenticateIngestion -> req.allowedIndexes -> isIndexAllowed -> 403.
+  // Mount the REAL ingest router (default export from ./ingest.ts) so the actual
+  // production enforcement block in routes/ingest.ts is exercised end-to-end:
+  // authenticateIngestion -> req.allowedIndexes -> isIndexAllowed -> 403.
   function createScopedIngestApp(): Express {
     const app = express();
     app.use(express.json());
-    const router = Router();
-    router.post('/http', authenticateIngestion, async (req, res) => {
-      const customIndex = (req.headers['x-index'] as string) || 'http';
-      if (!isIndexAllowed(req.allowedIndexes, customIndex)) {
-        return res.status(403).json({
-          error: 'API key not authorized for this index',
-          attempted_index: customIndex,
-        });
-      }
-      res.status(200).json({ accepted: 1 });
-    });
-    app.use('/api/ingest', router);
+    app.use('/api/ingest', ingestRouter);
     return app;
   }
 
   beforeEach(() => {
     process.env.OTLP_REQUIRE_AUTH = 'true';
     vi.clearAllMocks();
+    // Default: processLogs is a pass-through (no routing override).
+    vi.mocked(sourceProcessor.processLogs).mockImplementation((logs) => logs);
     vi.mocked(auth.getUserById).mockReturnValue({
       id: 'scoped-user-id',
       username: 'scoped-user',
@@ -431,6 +442,7 @@ describe('ingest index scoping', () => {
 
     expect(response.status).toBe(200);
     expect(response.body.accepted).toBe(1);
+    expect(response.body.index).toBe('hey-youre-hired');
   });
 
   it('allows any index for an unscoped key (backward compatible)', async () => {
@@ -449,5 +461,30 @@ describe('ingest index scoping', () => {
 
     expect(response.status).toBe(200);
     expect(response.body.accepted).toBe(1);
+  });
+
+  it('rejects when routing rules re-route a processed record to an out-of-scope index (post-routing recheck)', async () => {
+    vi.mocked(auth.validateApiKey).mockResolvedValue({
+      userId: 'scoped-user-id',
+      permissions: ['write'],
+      allowedIndexes: ['hey-youre-hired'],
+    });
+
+    // Simulate an admin routing rule overriding the index to a disallowed one
+    // AFTER the initial (in-scope) scope check passed.
+    vi.mocked(sourceProcessor.processLogs).mockImplementation((logs) =>
+      logs.map((l) => ({ ...l, index_name: 'directors-palette' })),
+    );
+
+    const app = createScopedIngestApp();
+    const response = await request(app)
+      .post('/api/ingest/http')
+      .set('X-API-Key', 'scoped-key')
+      .set('X-Index', 'hey-youre-hired') // in-scope at the pre-process check
+      .send([{ message: 'should be blocked after re-routing' }]);
+
+    expect(response.status).toBe(403);
+    expect(response.body.error).toBe('API key not authorized for this index');
+    expect(response.body.attempted_index).toBe('directors-palette');
   });
 });

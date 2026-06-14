@@ -98,6 +98,7 @@ export function initializeAuthSchema(): void {
       key_hash TEXT NOT NULL,
       key_prefix TEXT NOT NULL,
       permissions TEXT DEFAULT '["read"]',
+      allowed_indexes TEXT,
       last_used TEXT,
       expires_at TEXT,
       is_active INTEGER DEFAULT 1,
@@ -458,10 +459,21 @@ export async function validateApiKey(
         UPDATE api_keys SET last_used = datetime('now') WHERE id = ?
       `).run(key.id);
 
+      // Guard against a malformed allowed_indexes row 500-ing the auth path.
+      // An unparseable value is treated as unscoped (null = all indexes).
+      let allowedIndexes: string[] | null = null;
+      if (key.allowed_indexes) {
+        try {
+          allowedIndexes = JSON.parse(key.allowed_indexes);
+        } catch {
+          allowedIndexes = null;
+        }
+      }
+
       return {
         userId: key.user_id,
         permissions: JSON.parse(key.permissions),
-        allowedIndexes: key.allowed_indexes ? JSON.parse(key.allowed_indexes) : null,
+        allowedIndexes,
       };
     }
   }

@@ -12,5 +12,9 @@ export function isIndexAllowed(
   indexName: string,
 ): boolean {
   if (!allowedIndexes || allowedIndexes.length === 0) return true;
-  return allowedIndexes.includes(indexName);
+  // Index names are force-lowercased on ingest (sanitizeIndexName), but the
+  // allow-list is stored verbatim. Compare case-insensitively so a key scoped to
+  // e.g. "Hey-Youre-Hired" still matches its own lowercased index.
+  const target = indexName.toLowerCase();
+  return allowedIndexes.some((allowed) => allowed.toLowerCase() === target);
 }

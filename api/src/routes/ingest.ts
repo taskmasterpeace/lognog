@@ -860,6 +860,25 @@ router.post('/http', authenticateIngestion, async (req, res) => {
     // Process logs through source config pipeline (extractions, transforms, routing)
     const processedLogs = processLogs(logs);
 
+    // Re-assert scoping on the FINAL index of each record. Admin source-configs /
+    // routing rules can override index_name during processing, so a record could
+    // otherwise land in an index the key was never scope-checked against.
+    for (const rec of processedLogs) {
+      const finalIndex = rec.index_name ?? customIndex;
+      if (!isIndexAllowed(req.allowedIndexes, finalIndex)) {
+        logAuthEvent(req.user?.id ?? null, 'ingest_index_denied', req.ip, req.get('user-agent'), {
+          attempted_index: finalIndex,
+          allowed_indexes: req.allowedIndexes,
+          path: req.path,
+        });
+        return res.status(403).json({
+          error: 'API key not authorized for this index',
+          message: `This key may only write to: ${(req.allowedIndexes ?? []).join(', ') || '(all)'}`,
+          attempted_index: finalIndex,
+        });
+      }
+    }
+
     const ingestStart = Date.now();
     await insertLogs(processedLogs);
     const ingestDuration = Date.now() - ingestStart;

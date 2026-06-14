@@ -19,6 +19,11 @@ describe('isIndexAllowed', () => {
     expect(isIndexAllowed(['hey-youre-hired'], 'directors-palette')).toBe(false);
   });
 
+  it('matches case-insensitively (mixed-case allow-list vs lowercased index)', () => {
+    expect(isIndexAllowed(['Hey-Youre-Hired'], 'hey-youre-hired')).toBe(true);
+    expect(isIndexAllowed(['Hey-Youre-Hired', 'Directors-Palette'], 'directors-palette')).toBe(true);
+  });
+
   it('rejects when undefined restriction is treated as scoped-empty? No — undefined = all', () => {
     expect(isIndexAllowed(undefined, 'anything')).toBe(true);
   });
