@@ -52,6 +52,7 @@ export interface ApiKey {
   key_hash: string;
   key_prefix: string;
   permissions: string;
+  allowed_indexes: string | null; // JSON array of index names, or null = all
   last_used: string | null;
   expires_at: string | null;
   is_active: number;
@@ -134,6 +135,15 @@ export function initializeAuthSchema(): void {
     CREATE INDEX IF NOT EXISTS idx_auth_audit_user ON auth_audit_log(user_id);
     CREATE INDEX IF NOT EXISTS idx_auth_audit_created ON auth_audit_log(created_at);
   `);
+
+  // Migration: add allowed_indexes to api_keys if missing (SQLite has no
+  // ADD COLUMN IF NOT EXISTS). NULL = unscoped (all indexes).
+  const apiKeyCols = db
+    .prepare("PRAGMA table_info(api_keys)")
+    .all() as Array<{ name: string }>;
+  if (!apiKeyCols.some((c) => c.name === 'allowed_indexes')) {
+    db.exec('ALTER TABLE api_keys ADD COLUMN allowed_indexes TEXT');
+  }
 }
 
 // User management
