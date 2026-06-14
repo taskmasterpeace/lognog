@@ -12,6 +12,7 @@ declare global {
       };
       authMethod?: 'jwt' | 'apikey';
       apiKeyPermissions?: string[];
+      allowedIndexes?: string[] | null;
     }
   }
 }
@@ -72,6 +73,7 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
       };
       req.authMethod = 'apikey';
       req.apiKeyPermissions = result.permissions;
+      req.allowedIndexes = result.allowedIndexes;
       next();
     } catch {
       res.status(500).json({ error: 'Authentication error' });
@@ -126,6 +128,7 @@ export async function optionalAuth(req: Request, res: Response, next: NextFuncti
           };
           req.authMethod = 'apikey';
           req.apiKeyPermissions = result.permissions;
+          req.allowedIndexes = result.allowedIndexes;
         }
       }
     } catch {
@@ -351,6 +354,7 @@ export async function authenticateIngestion(req: Request, res: Response, next: N
     };
     req.authMethod = 'apikey';
     req.apiKeyPermissions = result.permissions;
+    req.allowedIndexes = result.allowedIndexes;
 
     // Log successful authentication
     logAuthEvent(user.id, 'otlp_ingest_auth', req.ip, req.get('user-agent'), {
