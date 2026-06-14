@@ -472,7 +472,7 @@ export async function validateApiKey(
 export function getApiKeys(userId: string): Omit<ApiKey, 'key_hash'>[] {
   const db = getSQLiteDB();
   return db.prepare(`
-    SELECT id, user_id, name, key_prefix, permissions, last_used, expires_at, is_active, created_at
+    SELECT id, user_id, name, key_prefix, permissions, allowed_indexes, last_used, expires_at, is_active, created_at
     FROM api_keys WHERE user_id = ? ORDER BY created_at DESC
   `).all(userId) as Omit<ApiKey, 'key_hash'>[];
 }

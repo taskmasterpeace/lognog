@@ -50,6 +50,7 @@ const createApiKeySchema = z.object({
   name: z.string().min(1).max(100),
   permissions: z.array(z.string()).optional(),
   expiresInDays: z.number().positive().optional(),
+  allowed_indexes: z.array(z.string()).optional(),
 });
 
 // Check if setup is needed (no users exist)
@@ -241,7 +242,8 @@ router.post('/api-keys', authenticate, async (req, res) => {
       req.user!.id,
       data.name,
       data.permissions || ['read'],
-      data.expiresInDays
+      data.expiresInDays,
+      data.allowed_indexes
     );
 
     logAuthEvent(req.user!.id, 'api_key_created', req.ip, req.get('user-agent'), {
