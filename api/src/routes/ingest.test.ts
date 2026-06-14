@@ -132,6 +132,7 @@ describe('OTLP Authentication', () => {
       vi.mocked(auth.validateApiKey).mockResolvedValue({
         userId: 'test-user-id',
         permissions: ['write'],
+        allowedIndexes: null,
       });
 
       vi.mocked(auth.getUserById).mockReturnValue({
@@ -158,6 +159,7 @@ describe('OTLP Authentication', () => {
       vi.mocked(auth.validateApiKey).mockResolvedValue({
         userId: 'test-user-id',
         permissions: ['write'],
+        allowedIndexes: null,
       });
 
       vi.mocked(auth.getUserById).mockReturnValue({
@@ -184,6 +186,7 @@ describe('OTLP Authentication', () => {
       vi.mocked(auth.validateApiKey).mockResolvedValue({
         userId: 'test-user-id',
         permissions: ['read'],
+        allowedIndexes: null,
       });
 
       vi.mocked(auth.getUserById).mockReturnValue({
@@ -209,6 +212,7 @@ describe('OTLP Authentication', () => {
       vi.mocked(auth.validateApiKey).mockResolvedValue({
         userId: 'admin-user-id',
         permissions: ['*'],
+        allowedIndexes: null,
       });
 
       vi.mocked(auth.getUserById).mockReturnValue({
@@ -234,6 +238,7 @@ describe('OTLP Authentication', () => {
       vi.mocked(auth.validateApiKey).mockResolvedValue({
         userId: 'disabled-user-id',
         permissions: ['write'],
+        allowedIndexes: null,
       });
 
       vi.mocked(auth.getUserById).mockReturnValue({
@@ -286,6 +291,7 @@ describe('OTLP Authentication', () => {
       vi.mocked(auth.validateApiKey).mockResolvedValue({
         userId: 'test-user-id',
         permissions: ['write'],
+        allowedIndexes: null,
       });
 
       vi.mocked(auth.getUserById).mockReturnValue({

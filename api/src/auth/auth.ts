@@ -404,7 +404,8 @@ export async function createApiKey(
   userId: string,
   name: string,
   permissions: string[] = ['read'],
-  expiresInDays?: number
+  expiresInDays?: number,
+  allowedIndexes?: string[],
 ): Promise<{ apiKey: string; keyData: Omit<ApiKey, 'key_hash'> }> {
   const db = getSQLiteDB();
 
@@ -419,20 +420,24 @@ export async function createApiKey(
   const expiresAt = expiresInDays
     ? new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000).toISOString()
     : null;
+  const allowedIndexesJson =
+    allowedIndexes && allowedIndexes.length > 0 ? JSON.stringify(allowedIndexes) : null;
 
   db.prepare(`
-    INSERT INTO api_keys (id, user_id, name, key_hash, key_prefix, permissions, expires_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).run(id, userId, name, keyHash, keyPrefix, JSON.stringify(permissions), expiresAt);
+    INSERT INTO api_keys (id, user_id, name, key_hash, key_prefix, permissions, expires_at, allowed_indexes)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(id, userId, name, keyHash, keyPrefix, JSON.stringify(permissions), expiresAt, allowedIndexesJson);
 
   const keyData = db.prepare(
-    'SELECT id, user_id, name, key_prefix, permissions, last_used, expires_at, is_active, created_at FROM api_keys WHERE id = ?'
+    'SELECT id, user_id, name, key_prefix, permissions, allowed_indexes, last_used, expires_at, is_active, created_at FROM api_keys WHERE id = ?'
   ).get(id) as Omit<ApiKey, 'key_hash'>;
 
   return { apiKey, keyData };
 }
 
-export async function validateApiKey(apiKey: string): Promise<{ userId: string; permissions: string[] } | null> {
+export async function validateApiKey(
+  apiKey: string,
+): Promise<{ userId: string; permissions: string[]; allowedIndexes: string[] | null } | null> {
   if (!apiKey.startsWith('lnog_')) return null;
 
   const db = getSQLiteDB();
@@ -456,6 +461,7 @@ export async function validateApiKey(apiKey: string): Promise<{ userId: string; 
       return {
         userId: key.user_id,
         permissions: JSON.parse(key.permissions),
+        allowedIndexes: key.allowed_indexes ? JSON.parse(key.allowed_indexes) : null,
       };
     }
   }
