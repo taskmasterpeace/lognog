@@ -3,6 +3,7 @@ import express, { Express } from 'express';
 import request from 'supertest';
 import { Router } from 'express';
 import { authenticateIngestion } from '../auth/middleware.js';
+import { isIndexAllowed } from '../auth/index-scope.js';
 import * as auth from '../auth/auth.js';
 
 // Mock the auth module
@@ -350,5 +351,103 @@ describe('OTLP Authentication', () => {
       expect(response.status).toBe(200);
       expect(response.body.accepted).toBe(1);
     });
+  });
+});
+
+describe('ingest index scoping', () => {
+  it('helper rejects a disallowed index (guards the 403 path)', () => {
+    // Mirrors the runtime check in the HTTP ingest handler.
+    expect(isIndexAllowed(['hey-youre-hired'], 'directors-palette')).toBe(false);
+    expect(isIndexAllowed(['hey-youre-hired'], 'hey-youre-hired')).toBe(true);
+    expect(isIndexAllowed(null, 'directors-palette')).toBe(true);
+  });
+
+  // HTTP-level test: mirrors the real /http handler's enforcement so we exercise
+  // the full chain authenticateIngestion -> req.allowedIndexes -> isIndexAllowed -> 403.
+  function createScopedIngestApp(): Express {
+    const app = express();
+    app.use(express.json());
+    const router = Router();
+    router.post('/http', authenticateIngestion, async (req, res) => {
+      const customIndex = (req.headers['x-index'] as string) || 'http';
+      if (!isIndexAllowed(req.allowedIndexes, customIndex)) {
+        return res.status(403).json({
+          error: 'API key not authorized for this index',
+          attempted_index: customIndex,
+        });
+      }
+      res.status(200).json({ accepted: 1 });
+    });
+    app.use('/api/ingest', router);
+    return app;
+  }
+
+  beforeEach(() => {
+    process.env.OTLP_REQUIRE_AUTH = 'true';
+    vi.clearAllMocks();
+    vi.mocked(auth.getUserById).mockReturnValue({
+      id: 'scoped-user-id',
+      username: 'scoped-user',
+      email: 'scoped@example.com',
+      role: 'user' as const,
+      is_active: true,
+      last_login: null,
+      created_at: new Date().toISOString(),
+    });
+  });
+
+  it('rejects ingest to an index outside the key scope with 403', async () => {
+    vi.mocked(auth.validateApiKey).mockResolvedValue({
+      userId: 'scoped-user-id',
+      permissions: ['write'],
+      allowedIndexes: ['hey-youre-hired'],
+    });
+
+    const app = createScopedIngestApp();
+    const response = await request(app)
+      .post('/api/ingest/http')
+      .set('X-API-Key', 'scoped-key')
+      .set('X-Index', 'directors-palette')
+      .send([{ message: 'should be blocked' }]);
+
+    expect(response.status).toBe(403);
+    expect(response.body.error).toBe('API key not authorized for this index');
+    expect(response.body.attempted_index).toBe('directors-palette');
+  });
+
+  it('allows ingest to an in-scope index', async () => {
+    vi.mocked(auth.validateApiKey).mockResolvedValue({
+      userId: 'scoped-user-id',
+      permissions: ['write'],
+      allowedIndexes: ['hey-youre-hired'],
+    });
+
+    const app = createScopedIngestApp();
+    const response = await request(app)
+      .post('/api/ingest/http')
+      .set('X-API-Key', 'scoped-key')
+      .set('X-Index', 'hey-youre-hired')
+      .send([{ message: 'ok' }]);
+
+    expect(response.status).toBe(200);
+    expect(response.body.accepted).toBe(1);
+  });
+
+  it('allows any index for an unscoped key (backward compatible)', async () => {
+    vi.mocked(auth.validateApiKey).mockResolvedValue({
+      userId: 'scoped-user-id',
+      permissions: ['write'],
+      allowedIndexes: null,
+    });
+
+    const app = createScopedIngestApp();
+    const response = await request(app)
+      .post('/api/ingest/http')
+      .set('X-API-Key', 'unscoped-key')
+      .set('X-Index', 'directors-palette')
+      .send([{ message: 'ok' }]);
+
+    expect(response.status).toBe(200);
+    expect(response.body.accepted).toBe(1);
   });
 });
