@@ -16,6 +16,7 @@ import { compileDSL } from '../dsl/compiler.js';
 import { compileDSLToSQLite, parseRelativeTimeSQLite } from '../dsl/compiler-sqlite.js';
 import { logQueryExecution } from '../services/internal-logger.js';
 import { applyLookup } from '../services/lookup-tables.js';
+import { recordHeartbeats } from '../services/heartbeat.js';
 import type { ASTNode, LookupNode, Condition, SimpleCondition } from '../dsl/types.js';
 import { isLogicGroup } from '../dsl/types.js';
 
@@ -40,9 +41,18 @@ export function isLiteMode(): boolean {
  */
 export async function insertLogs(logs: Record<string, unknown>[]): Promise<void> {
   if (isLiteMode()) {
-    return sqliteLogs.insertLogs(logs);
+    await sqliteLogs.insertLogs(logs);
+  } else {
+    await clickhouse.insertLogs(logs);
   }
-  return clickhouse.insertLogs(logs);
+
+  // Phase 3: track presence cheaply for heartbeat / no-data monitoring.
+  // MUST never break ingestion — swallow any error.
+  try {
+    recordHeartbeats(logs as Array<{ index_name?: string; hostname?: string }>);
+  } catch (error) {
+    console.warn('[Heartbeat] recordHeartbeats threw from insertLogs:', error);
+  }
 }
 
 /**

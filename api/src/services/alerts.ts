@@ -696,6 +696,11 @@ export async function evaluateAlert(alertId: string): Promise<{
         // For custom conditions, just check if any results
         triggered = resultCount > 0;
         break;
+
+      case 'no_data':
+        // Per-query silence alarm: fire when the search returns NOTHING in the window
+        triggered = resultCount === 0;
+        break;
     }
 
     if (!triggered) {
@@ -922,6 +927,10 @@ export async function testAlert(
 
       case 'custom_condition':
         wouldTrigger = resultCount > 0;
+        break;
+
+      case 'no_data':
+        wouldTrigger = resultCount === 0;
         break;
     }
 

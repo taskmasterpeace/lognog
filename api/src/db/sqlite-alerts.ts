@@ -1,7 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { getSQLiteDB } from './sqlite.js';
 
-export type AlertTriggerType = 'number_of_results' | 'number_of_hosts' | 'custom_condition';
+export type AlertTriggerType = 'number_of_results' | 'number_of_hosts' | 'custom_condition' | 'no_data';
 export type AlertTriggerCondition = 'greater_than' | 'less_than' | 'equal_to' | 'not_equal_to' | 'drops_by' | 'rises_by';
 export type AlertSeverity = 'info' | 'low' | 'medium' | 'high' | 'critical';
 export type AlertScheduleType = 'cron' | 'realtime';
