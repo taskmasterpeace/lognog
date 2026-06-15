@@ -14,6 +14,7 @@ import {
 import { translateNaturalLanguage, getSuggestedQueries } from '../services/ai-search.js';
 import { applyFieldExtraction } from '../services/field-extractor.js';
 import { optionalAuth, rateLimit } from '../auth/middleware.js';
+import { isIndexAllowed, indexScopeSqlClause } from '../auth/index-scope.js';
 import { FilldownNode, TransactionNode, ChartNode, CompareNode, TimewrapNode } from '../dsl/types.js';
 import { listLookupTables } from '../services/lookup-tables.js';
 
@@ -563,12 +564,9 @@ router.post('/query', optionalAuth, rateLimit(120, 60000), async (req: Request, 
 
         // Phase 5: mandatory read-side index scoping for the histogram too, so a
         // scoped caller cannot infer counts from indexes outside its allow-list.
-        const scopeIdx = req.allowedIndexes;
-        if (scopeIdx && scopeIdx.length > 0) {
-          const quoted = scopeIdx
-            .map(idx => `'${String(idx).toLowerCase().replace(/'/g, "''")}'`)
-            .join(',');
-          whereClause += ` AND index_name IN (${quoted})`;
+        const histogramScope = indexScopeSqlClause(req.allowedIndexes);
+        if (histogramScope) {
+          whereClause += ` AND ${histogramScope}`;
         }
 
         // Build histogram SQL (different for each backend)
@@ -836,9 +834,9 @@ router.post('/validate', (req: Request, res: Response) => {
 });
 
 // Get field suggestions (core fields only)
-router.get('/fields', async (_req: Request, res: Response) => {
+router.get('/fields', optionalAuth, async (req: Request, res: Response) => {
   try {
-    const fields = await getFields();
+    const fields = await getFields(req.allowedIndexes ?? undefined);
     return res.json(fields);
   } catch (error) {
     console.error('Error fetching fields:', error);
@@ -847,7 +845,7 @@ router.get('/fields', async (_req: Request, res: Response) => {
 });
 
 // Discover all available fields (core + custom from structured_data)
-router.get('/fields/discover', async (req: Request, res: Response) => {
+router.get('/fields/discover', optionalAuth, async (req: Request, res: Response) => {
   try {
     const { earliest, latest, limit, index } = req.query;
 
@@ -870,6 +868,7 @@ router.get('/fields/discover', async (req: Request, res: Response) => {
       latest: latest as string | undefined,
       limit: limit ? parseInt(limit as string, 10) : undefined,
       index: index as string | undefined,
+      allowedIndexes: req.allowedIndexes ?? undefined,
     });
 
     // Map discovered fields to include source
@@ -972,12 +971,12 @@ router.post('/fields/reorder', optionalAuth, (req: Request, res: Response) => {
 });
 
 // Get unique values for a field (for autocomplete)
-router.get('/fields/:field/values', async (req: Request, res: Response) => {
+router.get('/fields/:field/values', optionalAuth, async (req: Request, res: Response) => {
   try {
     const { field } = req.params;
     const { limit = '100' } = req.query;
 
-    const values = await getFieldValues(field, parseInt(limit as string, 10));
+    const values = await getFieldValues(field, parseInt(limit as string, 10), req.allowedIndexes ?? undefined);
     return res.json(values);
   } catch (error) {
     if (error instanceof Error && error.message === 'Invalid field') {
@@ -1086,7 +1085,7 @@ router.delete('/saved/:id', (req: Request, res: Response) => {
  * GET /api/search/logs/:id/full-message
  * Fetch full message content for a truncated log entry (lazy loading)
  */
-router.get('/logs/:id/full-message', async (req: Request, res: Response) => {
+router.get('/logs/:id/full-message', optionalAuth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -1094,10 +1093,16 @@ router.get('/logs/:id/full-message', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Invalid log ID' });
     }
 
-    // Fetch the log entry with message fields
-    const log = await getLogById(id, ['id', 'message', 'raw', 'message_truncated']);
+    // Fetch the log entry with message fields (need index_name for scope check)
+    const log = await getLogById(id, ['id', 'message', 'raw', 'message_truncated', 'index_name']);
 
     if (!log) {
+      return res.status(404).json({ error: 'Log not found' });
+    }
+
+    // Phase 5: read-side index scoping. A scoped key may not read a log outside
+    // its allow-list. Return 404 (not 403) so existence is not revealed.
+    if (req.allowedIndexes && !isIndexAllowed(req.allowedIndexes, (log.index_name as string) || 'main')) {
       return res.status(404).json({ error: 'Log not found' });
     }
 
@@ -1122,7 +1127,7 @@ router.get('/logs/:id/full-message', async (req: Request, res: Response) => {
  * GET /api/search/logs/:id/context
  * Fetch surrounding log entries for context (like grep -C)
  */
-router.get('/logs/:id/context', async (req: Request, res: Response) => {
+router.get('/logs/:id/context', optionalAuth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { before = '5', after = '5' } = req.query;
@@ -1135,9 +1140,16 @@ router.get('/logs/:id/context', async (req: Request, res: Response) => {
     const afterCount = Math.min(parseInt(after as string, 10) || 5, 50);
 
     // First, get the target log to find its timestamp and hostname
-    const targetLog = await getLogById(id, ['id', 'timestamp', 'hostname', 'app_name']);
+    // (also fetch index_name for the read-side scope check)
+    const targetLog = await getLogById(id, ['id', 'timestamp', 'hostname', 'app_name', 'index_name']);
 
     if (!targetLog) {
+      return res.status(404).json({ error: 'Log not found' });
+    }
+
+    // Phase 5: read-side index scoping. Return 404 (not 403) so a scoped key
+    // cannot confirm the existence of a log outside its allow-list.
+    if (req.allowedIndexes && !isIndexAllowed(req.allowedIndexes, (targetLog.index_name as string) || 'main')) {
       return res.status(404).json({ error: 'Log not found' });
     }
 
@@ -1162,8 +1174,8 @@ router.get('/logs/:id/context', async (req: Request, res: Response) => {
 
     // Execute both queries in parallel
     const [beforeResult, afterResult] = await Promise.all([
-      executeDSLQuery(beforeQuery, {}),
-      executeDSLQuery(afterQuery, {}),
+      executeDSLQuery(beforeQuery, { allowedIndexes: req.allowedIndexes ?? undefined }),
+      executeDSLQuery(afterQuery, { allowedIndexes: req.allowedIndexes ?? undefined }),
     ]);
 
     // Reverse the before results to get chronological order

@@ -20,6 +20,29 @@ export function isIndexAllowed(
 }
 
 /**
+ * Build a SQL boolean clause that restricts a query to the key's allowed
+ * indexes, for read-side index scoping (Phase 5).
+ *
+ * Returns e.g. `index_name IN ('a','b')` with values force-lowercased (index
+ * names are stored lowercase on ingest) and single-quote escaped (`'` -> `''`)
+ * defensively. Returns `null` when the allow-list is null/undefined/empty
+ * (UNSCOPED) so callers can leave their query unchanged.
+ *
+ * This is the single source of truth for the IN-clause; the DSL compilers and
+ * ad-hoc stats/histogram queries all delegate here to avoid drift.
+ */
+export function indexScopeSqlClause(
+  allowedIndexes: string[] | null | undefined,
+  column = 'index_name',
+): string | null {
+  if (!allowedIndexes || allowedIndexes.length === 0) return null;
+  const quoted = allowedIndexes
+    .map((idx) => `'${String(idx).toLowerCase().replace(/'/g, "''")}'`)
+    .join(',');
+  return `${column} IN (${quoted})`;
+}
+
+/**
  * Default index used by the storage layer when a record carries no `index_name`
  * (see `COALESCE(index_name, 'main')` in the DB backend). Records that omit the
  * field are effectively written to this index, so scope checks must use it too.

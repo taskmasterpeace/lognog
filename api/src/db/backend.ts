@@ -19,6 +19,7 @@ import { applyLookup } from '../services/lookup-tables.js';
 import { recordHeartbeats } from '../services/heartbeat.js';
 import type { ASTNode, LookupNode, Condition, SimpleCondition } from '../dsl/types.js';
 import { isLogicGroup } from '../dsl/types.js';
+import { indexScopeSqlClause } from '../auth/index-scope.js';
 
 export type Backend = 'clickhouse' | 'sqlite';
 
@@ -375,7 +376,12 @@ export async function closeConnections(): Promise<void> {
 /**
  * Get available fields (for autocomplete)
  */
-export async function getFields(): Promise<{ name: string; type: string }[]> {
+export async function getFields(
+  // Accepted for API symmetry with the other discovery helpers. The field list
+  // is schema-level (ClickHouse system.columns / a static SQLite list) and is
+  // identical across indexes, so there is no per-index data to scope here.
+  _allowedIndexes?: string[],
+): Promise<{ name: string; type: string }[]> {
   if (isLiteMode()) {
     // Return static field list for SQLite
     return [
@@ -404,20 +410,26 @@ export async function getFields(): Promise<{ name: string; type: string }[]> {
  */
 export async function getFieldValues(
   field: string,
-  limit: number = 100
+  limit: number = 100,
+  allowedIndexes?: string[]
 ): Promise<{ value: string; count: number }[]> {
   const validFields = ['hostname', 'app_name', 'severity', 'facility', 'index_name', 'protocol'];
   if (!validFields.includes(field)) {
     throw new Error('Invalid field');
   }
 
+  // Phase 5: read-side index scoping. A scoped key must only see values that
+  // appear within its allowed indexes (null/empty allow-list = unscoped).
+  const scope = indexScopeSqlClause(allowedIndexes);
+  const whereClause = scope ? ` WHERE ${scope}` : '';
+
   if (isLiteMode()) {
     return sqliteLogs.executeQuery<{ value: string; count: number }>(
-      `SELECT ${field} as value, COUNT(*) as count FROM logs GROUP BY ${field} ORDER BY count DESC LIMIT ${limit}`
+      `SELECT ${field} as value, COUNT(*) as count FROM logs${whereClause} GROUP BY ${field} ORDER BY count DESC LIMIT ${limit}`
     );
   }
   return clickhouse.executeQuery<{ value: string; count: number }>(
-    `SELECT ${field} as value, count() as count FROM lognog.logs GROUP BY ${field} ORDER BY count DESC LIMIT ${limit}`
+    `SELECT ${field} as value, count() as count FROM lognog.logs${whereClause} GROUP BY ${field} ORDER BY count DESC LIMIT ${limit}`
   );
 }
 
@@ -463,8 +475,13 @@ export async function discoverStructuredDataFields(options?: {
   latest?: string;
   limit?: number;
   index?: string;
+  allowedIndexes?: string[];
 }): Promise<DiscoveredField[]> {
   const limit = options?.limit || 50;
+  // Phase 5: read-side index scoping. ANDed into both the discovery query and
+  // its per-field sample sub-queries so a scoped key cannot enumerate fields or
+  // sample values from indexes outside its allow-list (null/empty = unscoped).
+  const scope = indexScopeSqlClause(options?.allowedIndexes);
 
   if (isLiteMode()) {
     // SQLite: Use json_each to extract keys from structured_data
@@ -498,6 +515,11 @@ export async function discoverStructuredDataFields(options?: {
       sql += ` AND index_name = '${options.index.replace(/'/g, "''")}'`;
     }
 
+    // Phase 5: read-side index scoping
+    if (scope) {
+      sql += ` AND ${scope}`;
+    }
+
     sql += `
       GROUP BY json_each.key
       ORDER BY occurrences DESC
@@ -519,6 +541,7 @@ export async function discoverStructuredDataFields(options?: {
         FROM logs
         WHERE structured_data IS NOT NULL
           AND json_extract(structured_data, '$.' || ?) IS NOT NULL
+          ${scope ? `AND ${scope}` : ''}
         LIMIT 5
       `;
       try {
@@ -571,6 +594,11 @@ export async function discoverStructuredDataFields(options?: {
       sql += ` AND index_name = '${options.index.replace(/'/g, "\\'")}'`;
     }
 
+    // Phase 5: read-side index scoping
+    if (scope) {
+      sql += ` AND ${scope}`;
+    }
+
     sql += `
       GROUP BY name
       ORDER BY occurrences DESC
@@ -593,6 +621,7 @@ export async function discoverStructuredDataFields(options?: {
           FROM lognog.logs
           WHERE structured_data != '{}'
             AND JSONHas(structured_data, '${field.name.replace(/'/g, "\\'")}')
+            ${scope ? `AND ${scope}` : ''}
           LIMIT 1
         `;
         const typeInfo = await clickhouse.executeQuery<{
@@ -703,7 +732,11 @@ export interface ActiveSourcesResult {
 /**
  * Get active log sources with stats from the last 7 days
  */
-export async function getActiveSources(): Promise<ActiveSourcesResult> {
+export async function getActiveSources(allowedIndexes?: string[]): Promise<ActiveSourcesResult> {
+  // Phase 5: read-side index scoping. ANDed into the existing 7-day WHERE so a
+  // scoped key only sees sources / indexes within its allow-list (null = unscoped).
+  const scope = indexScopeSqlClause(allowedIndexes);
+  const scopeAnd = scope ? ` AND ${scope}` : '';
   if (isLiteMode()) {
     // SQLite version
     const sourcesResult = await sqliteLogs.executeQuery<{
@@ -724,7 +757,7 @@ export async function getActiveSources(): Promise<ActiveSourcesResult> {
         MAX(timestamp) as last_seen,
         SUM(CASE WHEN severity <= 3 THEN 1 ELSE 0 END) as error_count
       FROM logs
-      WHERE timestamp >= datetime('now', '-7 days')
+      WHERE timestamp >= datetime('now', '-7 days')${scopeAnd}
       GROUP BY app_name, index_name
       ORDER BY log_count DESC
       LIMIT 50
@@ -740,7 +773,7 @@ export async function getActiveSources(): Promise<ActiveSourcesResult> {
         COUNT(*) as count,
         COUNT(DISTINCT app_name) as sources
       FROM logs
-      WHERE timestamp >= datetime('now', '-7 days')
+      WHERE timestamp >= datetime('now', '-7 days')${scopeAnd}
       GROUP BY index_name
       ORDER BY count DESC
     `);
@@ -769,7 +802,7 @@ export async function getActiveSources(): Promise<ActiveSourcesResult> {
         max(timestamp) as last_seen,
         countIf(severity <= 3) as error_count
       FROM lognog.logs
-      WHERE timestamp >= now() - INTERVAL 7 DAY
+      WHERE timestamp >= now() - INTERVAL 7 DAY${scopeAnd}
       GROUP BY app_name, index_name
       ORDER BY log_count DESC
       LIMIT 50
@@ -785,7 +818,7 @@ export async function getActiveSources(): Promise<ActiveSourcesResult> {
         count() as count,
         uniq(app_name) as sources
       FROM lognog.logs
-      WHERE timestamp >= now() - INTERVAL 7 DAY
+      WHERE timestamp >= now() - INTERVAL 7 DAY${scopeAnd}
       GROUP BY index_name
       ORDER BY count DESC
     `);

@@ -1,6 +1,6 @@
 // api/src/auth/index-scope.test.ts
 import { describe, it, expect } from 'vitest';
-import { isIndexAllowed, firstDisallowedIndex } from './index-scope.js';
+import { isIndexAllowed, firstDisallowedIndex, indexScopeSqlClause } from './index-scope.js';
 
 describe('isIndexAllowed', () => {
   it('allows any index when restriction is null (unscoped key)', () => {
@@ -72,5 +72,39 @@ describe('firstDisallowedIndex', () => {
     // Records without index_name land in 'main' (COALESCE in the DB backend).
     expect(firstDisallowedIndex(['hey-youre-hired'], [{}])).toBe('main');
     expect(firstDisallowedIndex(['main'], [{}])).toBeNull();
+  });
+});
+
+describe('indexScopeSqlClause', () => {
+  it('returns null for an unscoped key (null allow-list)', () => {
+    expect(indexScopeSqlClause(null)).toBeNull();
+  });
+
+  it('returns null for an unscoped key (undefined allow-list)', () => {
+    expect(indexScopeSqlClause(undefined)).toBeNull();
+  });
+
+  it('returns null for an empty allow-list', () => {
+    expect(indexScopeSqlClause([])).toBeNull();
+  });
+
+  it('builds an IN clause for a single index', () => {
+    expect(indexScopeSqlClause(['alpha'])).toBe("index_name IN ('alpha')");
+  });
+
+  it('builds an IN clause for multiple indexes', () => {
+    expect(indexScopeSqlClause(['alpha', 'beta'])).toBe("index_name IN ('alpha','beta')");
+  });
+
+  it('force-lowercases index names (they are stored lowercase on ingest)', () => {
+    expect(indexScopeSqlClause(['ALPHA', 'Beta'])).toBe("index_name IN ('alpha','beta')");
+  });
+
+  it("escapes single quotes by doubling them ('' )", () => {
+    expect(indexScopeSqlClause(["o'brien"])).toBe("index_name IN ('o''brien')");
+  });
+
+  it('uses a custom column name when provided', () => {
+    expect(indexScopeSqlClause(['alpha'], 'l.index_name')).toBe("l.index_name IN ('alpha')");
   });
 });

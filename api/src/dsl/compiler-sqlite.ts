@@ -27,6 +27,7 @@ import {
   CompareNode,
   TimewrapNode,
 } from './types.js';
+import { indexScopeSqlClause } from '../auth/index-scope.js';
 
 // Extended compiled query with metadata for post-processing
 export interface CompiledQueryWithMeta extends CompiledQuery {
@@ -97,12 +98,7 @@ export class SQLiteCompiler {
    * escaped defensively before being placed into an IN (...) clause.
    */
   private buildIndexScopeCondition(): string | null {
-    const allow = this.allowedIndexes;
-    if (!allow || allow.length === 0) return null;
-    const quoted = allow
-      .map(idx => `'${String(idx).toLowerCase().replace(/'/g, "''")}'`)
-      .join(',');
-    return `index_name IN (${quoted})`;
+    return indexScopeSqlClause(this.allowedIndexes);
   }
 
   compile(): CompiledQueryWithMeta {

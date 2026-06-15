@@ -39,6 +39,13 @@ describe('SQLiteCompiler - read-side index scoping (allowedIndexes)', () => {
     expect(result.sql).toContain("index_name IN ('alpha')");
   });
 
+  // Phase 5.1 regression: a top-level OR group must be parenthesized BEFORE the
+  // mandatory index-scope clause is ANDed on, otherwise the scope leaks.
+  it('parenthesizes a top-level OR group before ANDing the index scope', () => {
+    const result = compileDSLToSQLite(parseToAST('search host=a OR host=b'), ['alpha']);
+    expect(result.sql).toContain("WHERE (hostname = 'a' OR hostname = 'b') AND index_name IN ('alpha')");
+  });
+
   it('applies to the empty (zero-stage) default query', () => {
     const ast = parseToAST('');
     const result = compileDSLToSQLite(ast, ['alpha']);

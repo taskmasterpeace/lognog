@@ -139,6 +139,14 @@ describe('Compiler', () => {
     expect(result.sql).toContain(' AND ');
   });
 
+  // Phase 5.1 regression: a top-level OR group must be parenthesized BEFORE the
+  // mandatory index-scope clause is ANDed on, otherwise the scope leaks (the OR
+  // would short-circuit the scope). `index_name IN (...)` must trail with AND.
+  it('parenthesizes a top-level OR group before ANDing the index scope', () => {
+    const result = compileDSL(parseToAST('search host=a OR host=b'), ['alpha']);
+    expect(result.sql).toContain("WHERE (hostname = 'a' OR hostname = 'b') AND index_name IN ('alpha')");
+  });
+
   it('compiles OR with AND groups maintaining precedence', () => {
     const result = parseAndCompile('search host=web1 severity=error OR host=web2 severity=warning');
 
