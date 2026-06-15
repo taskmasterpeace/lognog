@@ -7,6 +7,11 @@ export function getSQLiteDB(): Database.Database {
     const dbPath = process.env.SQLITE_PATH || './lognog.db';
     db = new Database(dbPath);
     db.pragma('foreign_keys = ON');
+    // Wait up to 10s for a held lock instead of immediately throwing
+    // SQLITE_BUSY ("database is locked"). Hardens against transient write
+    // contention (concurrent ingest + scheduler + API) in production, and
+    // keeps the parallel test suite deterministic.
+    db.pragma('busy_timeout = 10000');
     initializeSchema();
   }
   return db;
