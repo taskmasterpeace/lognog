@@ -4,6 +4,8 @@ import { executeDSLQuery } from '../db/backend.js';
 import { parseAndCompile } from '../dsl/index.js';
 import { evaluateAlert } from './alerts.js';
 import { logReportGenerated } from './internal-logger.js';
+import { getStaleSources, markStaleNotified } from './heartbeat.js';
+import { insertLogs } from '../db/backend.js';
 import {
   renderHtml,
   renderSubject,
@@ -388,6 +390,71 @@ async function checkScheduledSavedSearches(): Promise<void> {
   }
 }
 
+// Phase 3: Heartbeat / no-data sweep.
+// A source is considered stale once it has not been seen for this many minutes.
+const HEARTBEAT_STALE_MINUTES = 15;
+
+/**
+ * Sweep the tiny source_heartbeats table for sources that have gone silent.
+ * Cost is O(sources) — never scans log data.
+ *
+ * To avoid duplicate alerts every tick, we only warn when a source FIRST
+ * becomes stale (stale_notified = 0), then mark it notified. recordHeartbeats
+ * resets stale_notified to 0 when the source is seen again.
+ *
+ * Internal-logging convention: the internal-logger functions are gated behind
+ * the (default-off) self-monitoring settings, so for an operational warning we
+ * use console.warn with a clear "[Heartbeat] source X silent since Y" message
+ * AND emit a single synthetic warning log to index 'main' so it is searchable
+ * regardless of self-monitoring settings.
+ */
+async function checkHeartbeats(): Promise<void> {
+  try {
+    const stale = getStaleSources(HEARTBEAT_STALE_MINUTES);
+    for (const source of stale) {
+      if (source.stale_notified) continue; // already warned about this silence
+
+      const msg = `[Heartbeat] source ${source.source_key} silent since ${source.last_seen_at}`;
+      console.warn(msg);
+
+      // Emit a searchable synthetic warning log (severity 4 = WARNING).
+      try {
+        const ts = new Date().toISOString().replace('T', ' ').replace('Z', '');
+        await insertLogs([
+          {
+            timestamp: ts,
+            received_at: ts,
+            severity: 4, // WARNING
+            facility: 1,
+            priority: (1 * 8) + 4,
+            hostname: 'lognog-api',
+            app_name: 'lognog-internal',
+            app_scope: 'lognog',
+            index_name: 'main',
+            message: `Source ${source.source_key} has gone silent (last seen ${source.last_seen_at}, threshold ${HEARTBEAT_STALE_MINUTES}m)`,
+            structured_data: JSON.stringify({
+              action: 'heartbeat.stale',
+              category: 'system',
+              source_key: source.source_key,
+              source_index: source.index_name,
+              source_hostname: source.hostname,
+              last_seen_at: source.last_seen_at,
+              threshold_minutes: HEARTBEAT_STALE_MINUTES,
+            }),
+          },
+        ]);
+      } catch (logErr) {
+        console.warn('[Heartbeat] failed to emit synthetic stale log:', logErr);
+      }
+
+      // Mark so we don't warn again until the source returns.
+      markStaleNotified(source.source_key);
+    }
+  } catch (error) {
+    console.error('[Heartbeat] checkHeartbeats error:', error);
+  }
+}
+
 // Cleanup expired caches
 async function runCacheCleanup(): Promise<void> {
   try {
@@ -420,6 +487,13 @@ export function startScheduler(): void {
 
       // Check alerts
       await checkAlerts();
+
+      // Phase 3: Heartbeat / no-data sweep (cheap, reads tiny presence table)
+      try {
+        await checkHeartbeats();
+      } catch (hbError) {
+        console.error('Heartbeat sweep error:', hbError);
+      }
 
       // Check scheduled saved searches
       await checkScheduledSavedSearches();
