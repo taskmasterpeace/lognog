@@ -1719,6 +1719,12 @@ router.post('/generate-test-data', authenticate, async (req, res) => {
 
     const logs = Array.from({ length: count }, generateTestLog);
 
+    // Enforce per-key index scoping before writing.
+    const denied = firstDisallowedIndex(req.allowedIndexes, logs);
+    if (denied !== null) {
+      return denyIndex(req, res, denied);
+    }
+
     await insertLogs(logs);
 
     console.log(`Generated ${count} test logs`);
