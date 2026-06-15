@@ -27,6 +27,7 @@ import {
   CompareNode,
   TimewrapNode,
 } from './types.js';
+import { indexScopeSqlClause } from '../auth/index-scope.js';
 
 // Extended compiled query with metadata for post-processing
 export interface CompiledQueryWithMeta extends CompiledQuery {
@@ -83,9 +84,21 @@ const KNOWN_COLUMNS = new Set([
 export class SQLiteCompiler {
   private ast: QueryAST;
   private params: unknown[] = [];
+  private allowedIndexes?: string[];
 
-  constructor(ast: QueryAST) {
+  constructor(ast: QueryAST, allowedIndexes?: string[]) {
     this.ast = ast;
+    this.allowedIndexes = allowedIndexes;
+  }
+
+  /**
+   * Build a mandatory index-scoping condition for read-side isolation.
+   * Returns null when there is no scope (null/empty allow-list = unscoped).
+   * Values are lowercased (index names are stored lowercase) and single-quote
+   * escaped defensively before being placed into an IN (...) clause.
+   */
+  private buildIndexScopeCondition(): string | null {
+    return indexScopeSqlClause(this.allowedIndexes);
   }
 
   compile(): CompiledQueryWithMeta {
@@ -93,8 +106,10 @@ export class SQLiteCompiler {
 
     if (stages.length === 0) {
       // Default query - recent logs
+      const scope = this.buildIndexScopeCondition();
+      const whereClause = scope ? ` WHERE ${scope}` : '';
       return {
-        sql: `SELECT ${DEFAULT_FIELDS.join(', ')} FROM logs ORDER BY timestamp DESC LIMIT 1000`,
+        sql: `SELECT ${DEFAULT_FIELDS.join(', ')} FROM logs${whereClause} ORDER BY timestamp DESC LIMIT 1000`,
         params: [],
       };
     }
@@ -256,6 +271,13 @@ export class SQLiteCompiler {
 
     // Use 'logs' table for SQLite (not 'lognog.logs')
     sql += ' FROM logs';
+
+    // Mandatory read-side index scoping: ANDed into the base-table WHERE so it
+    // applies to bare/stats/timechart queries, not just user `search` filters.
+    const indexScope = this.buildIndexScopeCondition();
+    if (indexScope) {
+      whereConditions.push(indexScope);
+    }
 
     if (whereConditions.length > 0) {
       sql += ' WHERE ' + whereConditions.join(' AND ');
@@ -843,9 +865,11 @@ export class SQLiteCompiler {
   }
 }
 
-// Helper function to compile DSL to SQLite SQL
-export function compileDSLToSQLite(ast: QueryAST): CompiledQueryWithMeta {
-  const compiler = new SQLiteCompiler(ast);
+// Helper function to compile DSL to SQLite SQL.
+// When allowedIndexes is a non-empty array, a mandatory index_name IN (...)
+// filter is appended to the WHERE for read-side index scoping.
+export function compileDSLToSQLite(ast: QueryAST, allowedIndexes?: string[]): CompiledQueryWithMeta {
+  const compiler = new SQLiteCompiler(ast, allowedIndexes);
   return compiler.compile();
 }
 

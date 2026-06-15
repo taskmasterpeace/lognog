@@ -2,37 +2,63 @@ import { Router, Request, Response } from 'express';
 import { executeQuery } from '../db/clickhouse.js';
 import { getActiveSources } from '../db/backend.js';
 import { getSQLiteDB } from '../db/sqlite.js';
+import { optionalAuth } from '../auth/middleware.js';
+import { isIndexAllowed, indexScopeSqlClause } from '../auth/index-scope.js';
 
 const router = Router();
 
+// Phase 5: read-side index scoping for the stats router. optionalAuth populates
+// req.allowedIndexes for scoped API keys; unscoped keys / JWT / no-auth leave it
+// undefined so indexScopeSqlClause() returns null and queries are unchanged.
+router.use(optionalAuth);
+
+/**
+ * Build SQL fragments for ANDing the index scope into a stats query.
+ * Returns ready-to-interpolate strings (empty when unscoped) so each query can
+ * splice scoping into its existing WHERE / lack thereof:
+ *  - `and`:   ` AND <scope>` to append after an existing WHERE condition
+ *  - `where`: ` WHERE <scope>` to add a fresh WHERE when there is none
+ * `column` lets callers scope an aliased table (e.g. 'l.index_name').
+ */
+function scopeFragments(
+  allowedIndexes: string[] | null | undefined,
+  column = 'index_name',
+): { and: string; where: string } {
+  const clause = indexScopeSqlClause(allowedIndexes, column);
+  if (!clause) return { and: '', where: '' };
+  return { and: ` AND ${clause}`, where: ` WHERE ${clause}` };
+}
+
 // Get log statistics
-router.get('/overview', async (_req: Request, res: Response) => {
+router.get('/overview', async (req: Request, res: Response) => {
   try {
+    const scope = scopeFragments(req.allowedIndexes);
+
     // Execute multiple queries in parallel
     const [totalLogs, recentLogs, bySeverity, byHost, byApp] = await Promise.all([
       // Total log count
       executeQuery<{ count: number }>(
-        'SELECT count() as count FROM lognog.logs'
+        `SELECT count() as count FROM lognog.logs${scope.where}`
       ),
 
       // Logs in last 24 hours
       executeQuery<{ count: number }>(
-        "SELECT count() as count FROM lognog.logs WHERE timestamp > now() - INTERVAL 24 HOUR"
+        `SELECT count() as count FROM lognog.logs WHERE timestamp > now() - INTERVAL 24 HOUR${scope.and}`
       ),
 
       // Logs by severity
       executeQuery<{ severity: number; count: number }>(
-        'SELECT severity, count() as count FROM lognog.logs GROUP BY severity ORDER BY severity'
+        `SELECT severity, count() as count FROM lognog.logs${scope.where} GROUP BY severity ORDER BY severity`
       ),
 
       // Top hosts
       executeQuery<{ hostname: string; count: number }>(
-        'SELECT hostname, count() as count FROM lognog.logs GROUP BY hostname ORDER BY count DESC LIMIT 10'
+        `SELECT hostname, count() as count FROM lognog.logs${scope.where} GROUP BY hostname ORDER BY count DESC LIMIT 10`
       ),
 
       // Top apps
       executeQuery<{ app_name: string; count: number }>(
-        'SELECT app_name, count() as count FROM lognog.logs GROUP BY app_name ORDER BY count DESC LIMIT 10'
+        `SELECT app_name, count() as count FROM lognog.logs${scope.where} GROUP BY app_name ORDER BY count DESC LIMIT 10`
       ),
     ]);
 
@@ -60,13 +86,15 @@ router.get('/timeseries', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Invalid interval' });
     }
 
+    const scope = scopeFragments(req.allowedIndexes);
+
     const data = await executeQuery<{ time: string; count: number; errors: number }>(
       `SELECT
         toStartOfInterval(timestamp, INTERVAL ${interval}) as time,
         count() as count,
         countIf(severity <= 3) as errors
       FROM lognog.logs
-      WHERE timestamp > now() - INTERVAL ${parseInt(hours as string, 10)} HOUR
+      WHERE timestamp > now() - INTERVAL ${parseInt(hours as string, 10)} HOUR${scope.and}
       GROUP BY time
       ORDER BY time`
     );
@@ -79,8 +107,9 @@ router.get('/timeseries', async (req: Request, res: Response) => {
 });
 
 // Get severity distribution
-router.get('/severity', async (_req: Request, res: Response) => {
+router.get('/severity', async (req: Request, res: Response) => {
   try {
+    const scope = scopeFragments(req.allowedIndexes, 'l.index_name');
     const data = await executeQuery<{ severity: number; name: string; count: number }>(
       `SELECT
         l.severity,
@@ -88,7 +117,7 @@ router.get('/severity', async (_req: Request, res: Response) => {
         count() as count
       FROM lognog.logs l
       LEFT JOIN lognog.severity_levels s ON l.severity = s.level
-      WHERE timestamp > now() - INTERVAL 24 HOUR
+      WHERE timestamp > now() - INTERVAL 24 HOUR${scope.and}
       GROUP BY l.severity, s.name
       ORDER BY l.severity`
     );
@@ -101,14 +130,17 @@ router.get('/severity', async (_req: Request, res: Response) => {
 });
 
 // Get index sizes (basic)
-router.get('/indexes', async (_req: Request, res: Response) => {
+router.get('/indexes', async (req: Request, res: Response) => {
   try {
+    // Critically: scoped keys must only see indexes inside their allow-list, so
+    // they cannot enumerate the existence of other tenants' indexes.
+    const scope = scopeFragments(req.allowedIndexes);
     const data = await executeQuery<{ index_name: string; count: number; size_bytes: number }>(
       `SELECT
         index_name,
         count() as count,
         sum(length(message)) as size_bytes
-      FROM lognog.logs
+      FROM lognog.logs${scope.where}
       GROUP BY index_name`
     );
 
@@ -120,8 +152,11 @@ router.get('/indexes', async (_req: Request, res: Response) => {
 });
 
 // Get detailed index info with sparklines (for Dashboard Builder Wizard)
-router.get('/indexes/details', async (_req: Request, res: Response) => {
+router.get('/indexes/details', async (req: Request, res: Response) => {
   try {
+    // Scoped keys must only see their own indexes (no cross-tenant enumeration).
+    const scope = scopeFragments(req.allowedIndexes);
+
     // Get basic index stats
     const indexStats = await executeQuery<{
       index_name: string;
@@ -136,7 +171,7 @@ router.get('/indexes/details', async (_req: Request, res: Response) => {
         sum(length(message)) as size_bytes,
         min(timestamp) as first_seen,
         max(timestamp) as last_seen
-      FROM lognog.logs
+      FROM lognog.logs${scope.where}
       GROUP BY index_name
       ORDER BY count DESC`
     );
@@ -152,7 +187,7 @@ router.get('/indexes/details', async (_req: Request, res: Response) => {
         toHour(timestamp) as hour,
         count() as count
       FROM lognog.logs
-      WHERE timestamp > now() - INTERVAL 24 HOUR
+      WHERE timestamp > now() - INTERVAL 24 HOUR${scope.and}
       GROUP BY index_name, hour
       ORDER BY index_name, hour`
     );
@@ -191,6 +226,13 @@ router.get('/indexes/:indexName/fields', async (req: Request, res: Response) => 
     // Sanitize index name
     if (!/^[a-zA-Z][a-zA-Z0-9_-]{0,31}$/.test(indexName)) {
       return res.status(400).json({ error: 'Invalid index name' });
+    }
+
+    // Phase 5: a scoped key may only inspect fields of an index in its
+    // allow-list. Return an empty field set for out-of-scope indexes so the key
+    // cannot probe other tenants' schemas.
+    if (req.allowedIndexes && !isIndexAllowed(req.allowedIndexes, indexName)) {
+      return res.json({ fields: [] });
     }
 
     // Get standard fields with their cardinality and sample values
@@ -286,9 +328,9 @@ function getRecommendedViz(fieldName: string): string[] {
 }
 
 // Get active sources for Data Sources dashboard
-router.get('/sources', async (_req: Request, res: Response) => {
+router.get('/sources', async (req: Request, res: Response) => {
   try {
-    const data = await getActiveSources();
+    const data = await getActiveSources(req.allowedIndexes ?? undefined);
     return res.json(data);
   } catch (error) {
     console.error('Error fetching active sources:', error);
@@ -297,8 +339,11 @@ router.get('/sources', async (_req: Request, res: Response) => {
 });
 
 // Get detailed storage statistics
-router.get('/storage', async (_req: Request, res: Response) => {
+router.get('/storage', async (req: Request, res: Response) => {
   try {
+    const isScoped = !!(req.allowedIndexes && req.allowedIndexes.length > 0);
+    const scope = scopeFragments(req.allowedIndexes);
+
     // Get retention settings from SQLite
     const db = getSQLiteDB();
     const retentionSettings = db.prepare(`
@@ -325,13 +370,16 @@ router.get('/storage', async (_req: Request, res: Response) => {
         sum(length(message) + length(COALESCE(structured_data, ''))) as size_bytes,
         min(timestamp) as oldest_timestamp,
         max(timestamp) as newest_timestamp
-      FROM lognog.logs
+      FROM lognog.logs${scope.where}
       GROUP BY index_name
       ORDER BY size_bytes DESC
     `);
 
-    // Get total stats from system.parts for actual disk size
-    const systemPartsTotal = await executeQuery<{
+    // Get total stats from system.parts for actual disk size.
+    // system.parts is physical (per-part), with no index_name column, so it
+    // cannot be filtered per-index. For a scoped key we therefore skip it and
+    // fall back to the (already-scoped) diskUsage totals below.
+    const systemPartsTotal = isScoped ? [] : await executeQuery<{
       total_bytes: number;
       total_rows: number;
     }>(`
@@ -353,7 +401,7 @@ router.get('/storage', async (_req: Request, res: Response) => {
         count() as count,
         sum(length(message)) as bytes
       FROM lognog.logs
-      WHERE timestamp > now() - INTERVAL 7 DAY
+      WHERE timestamp > now() - INTERVAL 7 DAY${scope.and}
       GROUP BY day
       ORDER BY day
     `);
@@ -371,7 +419,7 @@ router.get('/storage', async (_req: Request, res: Response) => {
 
     // Get oldest data timestamp
     const oldestData = await executeQuery<{ oldest: string }>(`
-      SELECT min(timestamp) as oldest FROM lognog.logs
+      SELECT min(timestamp) as oldest FROM lognog.logs${scope.where}
     `);
 
     // Build index storage details
