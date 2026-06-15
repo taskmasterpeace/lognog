@@ -6,6 +6,7 @@ export function getSQLiteDB(): Database.Database {
   if (!db) {
     const dbPath = process.env.SQLITE_PATH || './lognog.db';
     db = new Database(dbPath);
+    db.pragma('foreign_keys = ON');
     initializeSchema();
   }
   return db;
