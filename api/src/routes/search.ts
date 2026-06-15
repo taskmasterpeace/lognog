@@ -178,7 +178,8 @@ async function applyCompare(
   earliest: string | undefined,
   latest: string | undefined,
   offset: string,
-  compareFields?: string[]
+  compareFields?: string[],
+  allowedIndexes?: string[]
 ): Promise<Record<string, unknown>[]> {
   if (currentResults.length === 0) return currentResults;
 
@@ -196,6 +197,7 @@ async function applyCompare(
     const { results: previousResults } = await executeDSLQuery(queryWithoutCompare, {
       earliest: new Date(currentStartMs - offsetMs).toISOString(),
       latest: new Date(currentEndMs - offsetMs).toISOString(),
+      allowedIndexes,
     });
 
     const numericFields = compareFields?.length
@@ -302,7 +304,8 @@ async function applyTimewrap(
   earliest: string | undefined,
   latest: string | undefined,
   span: string,
-  series: 'relative' | 'exact' = 'relative'
+  series: 'relative' | 'exact' = 'relative',
+  allowedIndexes?: string[]
 ): Promise<Record<string, unknown>[]> {
   const spanMs = parseOffsetToMs(span);
   const now = Date.now();
@@ -331,6 +334,7 @@ async function applyTimewrap(
       return executeDSLQuery(queryWithoutTimewrap, {
         earliest: new Date(periodStart).toISOString(),
         latest: new Date(periodEnd).toISOString(),
+        allowedIndexes,
       }).then(({ results }) => ({
         period: i,
         periodStart,
@@ -466,7 +470,7 @@ function parseRelativeTime(timeStr: string, referenceTime: number = Date.now()):
 }
 
 // Execute a DSL query (rate limited: 120/min for CPU-intensive parsing)
-router.post('/query', rateLimit(120, 60000), async (req: Request, res: Response) => {
+router.post('/query', optionalAuth, rateLimit(120, 60000), async (req: Request, res: Response) => {
   try {
     const { query, earliest, latest, extract_fields = false, source_type, include_histogram = true } = req.body;
 
@@ -557,6 +561,16 @@ router.post('/query', rateLimit(120, 60000), async (req: Request, res: Response)
           whereClause += ` AND timestamp >= parseDateTimeBestEffort('${startIso}') AND timestamp <= parseDateTimeBestEffort('${endIso}')`;
         }
 
+        // Phase 5: mandatory read-side index scoping for the histogram too, so a
+        // scoped caller cannot infer counts from indexes outside its allow-list.
+        const scopeIdx = req.allowedIndexes;
+        if (scopeIdx && scopeIdx.length > 0) {
+          const quoted = scopeIdx
+            .map(idx => `'${String(idx).toLowerCase().replace(/'/g, "''")}'`)
+            .join(',');
+          whereClause += ` AND index_name IN (${quoted})`;
+        }
+
         // Build histogram SQL (different for each backend)
         let histogramSql: string;
         if (liteMode) {
@@ -590,7 +604,7 @@ router.post('/query', rateLimit(120, 60000), async (req: Request, res: Response)
 
     // Execute main query and histogram in parallel
     const [mainResult, histogramResult] = await Promise.all([
-      executeDSLQuery(query, { earliest, latest }),
+      executeDSLQuery(query, { earliest, latest, allowedIndexes: req.allowedIndexes ?? undefined }),
       histogramPromise || Promise.resolve(null),
     ]);
 
@@ -635,7 +649,8 @@ router.post('/query', rateLimit(120, 60000), async (req: Request, res: Response)
           earliest,
           latest,
           compareStage.offset,
-          compareStage.fields
+          compareStage.fields,
+          req.allowedIndexes ?? undefined
         );
       }
 
@@ -648,7 +663,8 @@ router.post('/query', rateLimit(120, 60000), async (req: Request, res: Response)
           earliest,
           latest,
           timewrapStage.span,
-          timewrapStage.series
+          timewrapStage.series,
+          req.allowedIndexes ?? undefined
         );
       }
 
@@ -748,7 +764,7 @@ router.post('/parse', (req: Request, res: Response) => {
 });
 
 // AI-powered natural language search
-router.post('/ai', async (req: Request, res: Response) => {
+router.post('/ai', optionalAuth, async (req: Request, res: Response) => {
   try {
     const { question, execute = true } = req.body;
 
@@ -782,6 +798,7 @@ router.post('/ai', async (req: Request, res: Response) => {
         const { sql, results } = await executeDSLQuery(translation.query, {
           earliest: translation.timeRange?.earliest,
           latest: translation.timeRange?.latest,
+          allowedIndexes: req.allowedIndexes ?? undefined,
         });
         response.results = results;
         response.sql = sql;

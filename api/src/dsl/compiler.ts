@@ -92,9 +92,26 @@ function sanitizeFieldName(field: string): string {
 export class Compiler {
   private ast: QueryAST;
   private params: unknown[] = [];
+  private allowedIndexes?: string[];
 
-  constructor(ast: QueryAST) {
+  constructor(ast: QueryAST, allowedIndexes?: string[]) {
     this.ast = ast;
+    this.allowedIndexes = allowedIndexes;
+  }
+
+  /**
+   * Build a mandatory index-scoping condition for read-side isolation.
+   * Returns null when there is no scope (null/empty allow-list = unscoped).
+   * Values are lowercased (index names are stored lowercase) and single-quote
+   * escaped defensively before being placed into an IN (...) clause.
+   */
+  private buildIndexScopeCondition(): string | null {
+    const allow = this.allowedIndexes;
+    if (!allow || allow.length === 0) return null;
+    const quoted = allow
+      .map(idx => `'${String(idx).toLowerCase().replace(/'/g, "''")}'`)
+      .join(',');
+    return `index_name IN (${quoted})`;
   }
 
   compile(): CompiledQueryWithMeta {
@@ -102,8 +119,10 @@ export class Compiler {
 
     if (stages.length === 0) {
       // Default query - recent logs
+      const scope = this.buildIndexScopeCondition();
+      const whereClause = scope ? ` WHERE ${scope}` : '';
       return {
-        sql: `SELECT ${DEFAULT_FIELDS.join(', ')} FROM lognog.logs ORDER BY timestamp DESC LIMIT 1000`,
+        sql: `SELECT ${DEFAULT_FIELDS.join(', ')} FROM lognog.logs${whereClause} ORDER BY timestamp DESC LIMIT 1000`,
         params: [],
       };
     }
@@ -264,6 +283,13 @@ export class Compiler {
     }
 
     sql += ' FROM lognog.logs';
+
+    // Mandatory read-side index scoping: ANDed into the base-table WHERE so it
+    // applies to bare/stats/timechart queries, not just user `search` filters.
+    const indexScope = this.buildIndexScopeCondition();
+    if (indexScope) {
+      whereConditions.push(indexScope);
+    }
 
     if (whereConditions.length > 0) {
       sql += ' WHERE ' + whereConditions.join(' AND ');
@@ -834,8 +860,10 @@ export class Compiler {
   }
 }
 
-// Helper function to compile DSL to SQL
-export function compileDSL(ast: QueryAST): CompiledQueryWithMeta {
-  const compiler = new Compiler(ast);
+// Helper function to compile DSL to SQL.
+// When allowedIndexes is a non-empty array, a mandatory index_name IN (...)
+// filter is appended to the WHERE for read-side index scoping.
+export function compileDSL(ast: QueryAST, allowedIndexes?: string[]): CompiledQueryWithMeta {
+  const compiler = new Compiler(ast, allowedIndexes);
   return compiler.compile();
 }

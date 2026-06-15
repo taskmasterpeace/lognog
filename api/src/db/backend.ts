@@ -77,6 +77,7 @@ export async function executeDSLQuery<T = Record<string, unknown>>(
     earliest?: string;
     latest?: string;
     user_id?: string;  // For internal logging
+    allowedIndexes?: string[];  // Read-side index scoping (Phase 5)
   }
 ): Promise<{ sql: string; results: T[] }> {
   const startTime = Date.now();
@@ -95,8 +96,9 @@ export async function executeDSLQuery<T = Record<string, unknown>>(
     }
 
     if (isLiteMode()) {
-      // Compile to SQLite SQL
-      const compiled = compileDSLToSQLite(ast);
+      // Compile to SQLite SQL (with mandatory read-side index scoping applied
+      // pre-lookup, so any post-lookup in-memory stages already see constrained rows)
+      const compiled = compileDSLToSQLite(ast, options?.allowedIndexes);
       let sql = compiled.sql;
 
       // Add time range conditions
@@ -146,8 +148,9 @@ export async function executeDSLQuery<T = Record<string, unknown>>(
 
       return { sql, results };
     } else {
-      // Compile to ClickHouse SQL
-      const compiled = compileDSL(ast);
+      // Compile to ClickHouse SQL (with mandatory read-side index scoping applied
+      // pre-lookup, so any post-lookup in-memory stages already see constrained rows)
+      const compiled = compileDSL(ast, options?.allowedIndexes);
       let sql = compiled.sql;
 
       // Add time range conditions (ClickHouse format)
