@@ -1,14 +1,34 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import type { Request, Response } from 'express';
 import { authenticate, requirePermission, authenticateIngestion } from '../auth/middleware.js';
 import { logAuthEvent } from '../auth/auth.js';
-import { isIndexAllowed } from '../auth/index-scope.js';
+import { firstDisallowedIndex } from '../auth/index-scope.js';
 import { insertLogs, getBackendInfo } from '../db/backend.js';
 import { getPendingNotifications, markNotificationDelivered, AgentNotification } from '../db/sqlite.js';
 import { logIngestionStats } from '../services/internal-logger.js';
 import { processLogs } from '../services/source-processor.js';
 
 const router = Router();
+
+/**
+ * Audit-log an out-of-scope ingest attempt and send the standard 403 response.
+ *
+ * Shared by every ingest handler so per-key index scoping is enforced
+ * identically everywhere. Returns the Response so callers can `return denyIndex(...)`.
+ */
+function denyIndex(req: Request, res: Response, offendingIndex: string): Response {
+  logAuthEvent(req.user?.id ?? null, 'ingest_index_denied', req.ip, req.get('user-agent'), {
+    attempted_index: offendingIndex,
+    allowed_indexes: req.allowedIndexes,
+    path: req.path,
+  });
+  return res.status(403).json({
+    error: 'API key not authorized for this index',
+    message: `This key may only write to: ${(req.allowedIndexes ?? []).join(', ') || '(all)'}`,
+    attempted_index: offendingIndex,
+  });
+}
 
 // SQL reserved keywords that cannot be used as index names
 const SQL_RESERVED_KEYWORDS = new Set([
@@ -196,6 +216,13 @@ router.post(
 
       // Process logs through source config pipeline (extractions, transforms, routing)
       const processedLogs = processLogs(logs);
+
+      // Enforce per-key index scoping on the FINAL records (post-routing).
+      // /agent authenticates via API key, so req.allowedIndexes is populated.
+      const agentDenied = firstDisallowedIndex(req.allowedIndexes, processedLogs);
+      if (agentDenied !== null) {
+        return denyIndex(req, res, agentDenied);
+      }
 
       // Insert into database
       const ingestStart = Date.now();
@@ -486,6 +513,12 @@ router.post('/otlp/v1/logs', authenticateIngestion, async (req, res) => {
       return res.status(200).json({ accepted: 0 });
     }
 
+    // Enforce per-key index scoping before writing.
+    const otlpDenied = firstDisallowedIndex(req.allowedIndexes, logs);
+    if (otlpDenied !== null) {
+      return denyIndex(req, res, otlpDenied);
+    }
+
     // Insert into database
     const ingestStart = Date.now();
     await insertLogs(logs);
@@ -726,6 +759,12 @@ router.post('/supabase', authenticateIngestion, async (req, res) => {
       return res.status(200).json({ accepted: 0 });
     }
 
+    // Enforce per-key index scoping before writing.
+    const supabaseDenied = firstDisallowedIndex(req.allowedIndexes, logs);
+    if (supabaseDenied !== null) {
+      return denyIndex(req, res, supabaseDenied);
+    }
+
     // Insert into database
     await insertLogs(logs);
 
@@ -843,40 +882,15 @@ router.post('/http', authenticateIngestion, async (req, res) => {
       return res.status(200).json({ accepted: 0 });
     }
 
-    // Enforce per-key index scoping. Unscoped keys (allowedIndexes null/empty) pass.
-    if (!isIndexAllowed(req.allowedIndexes, customIndex)) {
-      logAuthEvent(req.user?.id ?? null, 'ingest_index_denied', req.ip, req.get('user-agent'), {
-        attempted_index: customIndex,
-        allowed_indexes: req.allowedIndexes,
-        path: req.path,
-      });
-      return res.status(403).json({
-        error: 'API key not authorized for this index',
-        message: `This key may only write to: ${(req.allowedIndexes ?? []).join(', ') || '(all)'}`,
-        attempted_index: customIndex,
-      });
-    }
-
     // Process logs through source config pipeline (extractions, transforms, routing)
     const processedLogs = processLogs(logs);
 
-    // Re-assert scoping on the FINAL index of each record. Admin source-configs /
-    // routing rules can override index_name during processing, so a record could
-    // otherwise land in an index the key was never scope-checked against.
-    for (const rec of processedLogs) {
-      const finalIndex = rec.index_name ?? customIndex;
-      if (!isIndexAllowed(req.allowedIndexes, finalIndex)) {
-        logAuthEvent(req.user?.id ?? null, 'ingest_index_denied', req.ip, req.get('user-agent'), {
-          attempted_index: finalIndex,
-          allowed_indexes: req.allowedIndexes,
-          path: req.path,
-        });
-        return res.status(403).json({
-          error: 'API key not authorized for this index',
-          message: `This key may only write to: ${(req.allowedIndexes ?? []).join(', ') || '(all)'}`,
-          attempted_index: finalIndex,
-        });
-      }
+    // Enforce per-key index scoping on the FINAL records (post-routing). Admin
+    // source-configs / routing rules can override index_name during processing,
+    // so checking the final records also covers the originally-requested index.
+    const httpDenied = firstDisallowedIndex(req.allowedIndexes, processedLogs);
+    if (httpDenied !== null) {
+      return denyIndex(req, res, httpDenied);
     }
 
     const ingestStart = Date.now();
@@ -1125,6 +1139,12 @@ router.post('/vercel', authenticateIngestion, async (req, res) => {
         protocol: 'vercel-log-drain',
       };
     });
+
+    // Enforce per-key index scoping before writing.
+    const vercelDenied = firstDisallowedIndex(req.allowedIndexes, logs);
+    if (vercelDenied !== null) {
+      return denyIndex(req, res, vercelDenied);
+    }
 
     // Insert into database
     await insertLogs(logs);
@@ -1503,6 +1523,12 @@ router.post('/nextjs', authenticateIngestion, async (req, res) => {
         protocol: 'nextjs-logger',
       };
     });
+
+    // Enforce per-key index scoping before writing.
+    const nextjsDenied = firstDisallowedIndex(req.allowedIndexes, logs);
+    if (nextjsDenied !== null) {
+      return denyIndex(req, res, nextjsDenied);
+    }
 
     await insertLogs(logs);
     console.log(`Next.js: Ingested ${logs.length} log events`);
@@ -1904,6 +1930,14 @@ router.post('/smartthings', authenticateIngestion, async (req, res) => {
         source_ip: null,
       };
     });
+
+    // Enforce per-key index scoping before writing. SmartThings records carry no
+    // index_name, so they land in the storage default ('main'); firstDisallowedIndex
+    // resolves the missing field to 'main' and a key not scoped to 'main' is denied.
+    const smartthingsDenied = firstDisallowedIndex(req.allowedIndexes, logs);
+    if (smartthingsDenied !== null) {
+      return denyIndex(req, res, smartthingsDenied);
+    }
 
     if (logs.length > 0) {
       await insertLogs(logs);

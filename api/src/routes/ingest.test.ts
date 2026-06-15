@@ -487,4 +487,76 @@ describe('ingest index scoping', () => {
     expect(response.body.error).toBe('API key not authorized for this index');
     expect(response.body.attempted_index).toBe('directors-palette');
   });
+
+  // --- Phase 1b: scoping enforced across the OTHER ingest endpoints too ---
+
+  it('rejects OTLP ingest (index "otel") for a key not scoped to otel', async () => {
+    vi.mocked(auth.validateApiKey).mockResolvedValue({
+      userId: 'scoped-user-id',
+      permissions: ['write'],
+      allowedIndexes: ['hey-youre-hired'],
+    });
+
+    const app = createScopedIngestApp();
+    const response = await request(app)
+      .post('/api/ingest/otlp/v1/logs')
+      .set('X-API-Key', 'scoped-key')
+      .send(validOtlpPayload);
+
+    expect(response.status).toBe(403);
+    expect(response.body.error).toBe('API key not authorized for this index');
+    expect(response.body.attempted_index).toBe('otel');
+  });
+
+  it('allows OTLP ingest for an unscoped key', async () => {
+    vi.mocked(auth.validateApiKey).mockResolvedValue({
+      userId: 'scoped-user-id',
+      permissions: ['write'],
+      allowedIndexes: null,
+    });
+
+    const app = createScopedIngestApp();
+    const response = await request(app)
+      .post('/api/ingest/otlp/v1/logs')
+      .set('X-API-Key', 'unscoped-key')
+      .send(validOtlpPayload);
+
+    expect(response.status).toBe(200);
+    expect(response.body.accepted).toBe(1);
+  });
+
+  it('rejects Vercel ingest (index "vercel") for a key not scoped to vercel', async () => {
+    vi.mocked(auth.validateApiKey).mockResolvedValue({
+      userId: 'scoped-user-id',
+      permissions: ['write'],
+      allowedIndexes: ['hey-youre-hired'],
+    });
+
+    const app = createScopedIngestApp();
+    const response = await request(app)
+      .post('/api/ingest/vercel')
+      .set('X-API-Key', 'scoped-key')
+      .send([{ message: 'should be blocked', timestamp: Date.now() }]);
+
+    expect(response.status).toBe(403);
+    expect(response.body.error).toBe('API key not authorized for this index');
+    expect(response.body.attempted_index).toBe('vercel');
+  });
+
+  it('allows Vercel ingest for an unscoped key', async () => {
+    vi.mocked(auth.validateApiKey).mockResolvedValue({
+      userId: 'scoped-user-id',
+      permissions: ['write'],
+      allowedIndexes: null,
+    });
+
+    const app = createScopedIngestApp();
+    const response = await request(app)
+      .post('/api/ingest/vercel')
+      .set('X-API-Key', 'unscoped-key')
+      .send([{ message: 'ok', timestamp: Date.now() }]);
+
+    expect(response.status).toBe(200);
+    expect(response.body.accepted).toBe(1);
+  });
 });
