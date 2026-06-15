@@ -75,6 +75,7 @@ const TRIGGER_TYPES = [
   { value: 'number_of_results', label: 'Number of Results' },
   { value: 'number_of_hosts', label: 'Number of Hosts' },
   { value: 'custom_condition', label: 'Custom (any results)' },
+  { value: 'no_data', label: 'No Data (silence)' },
 ];
 
 const TRIGGER_CONDITIONS = [

@@ -4,7 +4,7 @@ import { executeDSLQuery } from '../db/backend.js';
 import { parseAndCompile } from '../dsl/index.js';
 import { evaluateAlert } from './alerts.js';
 import { logReportGenerated } from './internal-logger.js';
-import { getStaleSources, markStaleNotified } from './heartbeat.js';
+import { getStaleSources, markStaleNotified, markSourceUnexpected } from './heartbeat.js';
 import { insertLogs } from '../db/backend.js';
 import {
   renderHtml,
@@ -445,6 +445,16 @@ async function checkHeartbeats(): Promise<void> {
         ]);
       } catch (logErr) {
         console.warn('[Heartbeat] failed to emit synthetic stale log:', logErr);
+      }
+
+      // The synthetic insert above re-enters insertLogs -> recordHeartbeats,
+      // which would register LogNog's own internal source (main::lognog-api)
+      // as a monitored/expected source. Mark it unexpected so it never
+      // self-alerts as a stale no-data source.
+      try {
+        markSourceUnexpected('main', 'lognog-api');
+      } catch (markErr) {
+        console.warn('[Heartbeat] failed to mark internal source unexpected:', markErr);
       }
 
       // Mark so we don't warn again until the source returns.

@@ -163,6 +163,26 @@ export function listSources(): SourceHeartbeat[] {
 }
 
 /**
+ * Mark a source as NOT expected (expected = 0) so it is excluded from
+ * getStaleSources and never triggers no-data alerts. Used for internal /
+ * synthetic sources such as LogNog's own stale-warning logs, which would
+ * otherwise re-enter recordHeartbeats and register `main::lognog-api` as a
+ * monitored source.
+ *
+ * DEFENSIVE: wrapped so a failure never throws to the caller.
+ */
+export function markSourceUnexpected(indexName: string, hostname: string): void {
+  try {
+    ensureSchema();
+    const db = getSQLiteDB();
+    const sourceKey = `${indexName}::${hostname}`;
+    db.prepare(`UPDATE source_heartbeats SET expected = 0 WHERE source_key = ?`).run(sourceKey);
+  } catch (error) {
+    console.warn('[Heartbeat] markSourceUnexpected failed:', error);
+  }
+}
+
+/**
  * Mark a source as already-notified (so the scheduler only warns once per
  * silence period). Used by the scheduler sweep.
  */

@@ -12,6 +12,7 @@ import {
   getStaleSources,
   listSources,
   initializeHeartbeatSchema,
+  markSourceUnexpected,
 } from './heartbeat.js';
 
 function clearTable(): void {
@@ -139,6 +140,31 @@ describe('heartbeat service', () => {
     recordHeartbeats([{ index_name: 'web', hostname: 'host1' }]);
     row = db.prepare(`SELECT stale_notified FROM source_heartbeats WHERE source_key = ?`).get('web::host1') as { stale_notified: number };
     expect(row.stale_notified).toBe(0);
+  });
+
+  it('markSourceUnexpected excludes a source from getStaleSources even when old', () => {
+    // LogNog's own internal source goes stale...
+    recordHeartbeats([{ index_name: 'main', hostname: 'lognog-api' }]);
+    backdateSource('main::lognog-api', 30);
+
+    // Sanity: it WOULD be reported as stale while still expected.
+    expect(getStaleSources(15).map((s) => s.source_key)).toContain('main::lognog-api');
+
+    // Mark it unexpected (as the scheduler does after the synthetic insert).
+    markSourceUnexpected('main', 'lognog-api');
+
+    const db = getSQLiteDB();
+    const row = db
+      .prepare(`SELECT expected FROM source_heartbeats WHERE source_key = ?`)
+      .get('main::lognog-api') as { expected: number };
+    expect(row.expected).toBe(0);
+
+    // Now excluded from stale sweep regardless of age.
+    expect(getStaleSources(15).map((s) => s.source_key)).not.toContain('main::lognog-api');
+  });
+
+  it('markSourceUnexpected never throws for an unknown source', () => {
+    expect(() => markSourceUnexpected('nope', 'nobody')).not.toThrow();
   });
 
   it('listSources returns newest-last_seen first', () => {
