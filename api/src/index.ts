@@ -39,6 +39,7 @@ import dslRouter from './routes/dsl.js';
 import sourceConfigsRouter from './routes/source-configs.js';
 import routingRulesRouter from './routes/routing-rules.js';
 import sourcesRouter from './routes/sources.js';
+import pullCollectorsRouter from './routes/pull-collectors.js';
 import { healthCheck as clickhouseHealth, executeQuery, closeConnection } from './db/clickhouse.js';
 import { closeDatabase } from './db/sqlite.js';
 import { startScheduler } from './services/scheduler.js';
@@ -119,6 +120,7 @@ app.use('/dsl', dslRouter);
 app.use('/source-configs', sourceConfigsRouter);
 app.use('/routing-rules', routingRulesRouter);
 app.use('/sources', sourcesRouter);
+app.use('/pull-collectors', pullCollectorsRouter);
 
 // WebSocket endpoint for live tail
 const liveTailClients: Set<WebSocket> = new Set();
