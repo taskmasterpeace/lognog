@@ -3,6 +3,7 @@ import express, { Express } from 'express';
 import request from 'supertest';
 import { Router } from 'express';
 import { authenticateIngestion } from '../auth/middleware.js';
+import { isIndexAllowed } from '../auth/index-scope.js';
 import * as auth from '../auth/auth.js';
 
 // Mock the auth module
@@ -15,6 +16,25 @@ vi.mock('../auth/auth.js', async () => {
     logAuthEvent: vi.fn(),
   };
 });
+
+// Mock the DB + processing deps the REAL ingest router pulls in, so we can mount
+// it without a database. processLogs passes records through by default; tests
+// override it to simulate routing-rule index overrides.
+vi.mock('../db/backend.js', () => ({
+  insertLogs: vi.fn(async () => {}),
+  getBackendInfo: vi.fn(() => ({ type: 'sqlite', name: 'test' })),
+}));
+// NOTE: do NOT mock ../db/sqlite.js — the real (unmocked) auth.ts initializes its
+// schema against the real SQLite DB at import time and needs getSQLiteDB.
+vi.mock('../services/internal-logger.js', () => ({
+  logIngestionStats: vi.fn(),
+}));
+vi.mock('../services/source-processor.js', () => ({
+  processLogs: vi.fn((logs: Array<Record<string, unknown>>) => logs),
+}));
+
+import ingestRouter from './ingest.js';
+import * as sourceProcessor from '../services/source-processor.js';
 
 // Mock the insertLogs function
 const mockInsertLogs = async () => {};
@@ -132,6 +152,7 @@ describe('OTLP Authentication', () => {
       vi.mocked(auth.validateApiKey).mockResolvedValue({
         userId: 'test-user-id',
         permissions: ['write'],
+        allowedIndexes: null,
       });
 
       vi.mocked(auth.getUserById).mockReturnValue({
@@ -158,6 +179,7 @@ describe('OTLP Authentication', () => {
       vi.mocked(auth.validateApiKey).mockResolvedValue({
         userId: 'test-user-id',
         permissions: ['write'],
+        allowedIndexes: null,
       });
 
       vi.mocked(auth.getUserById).mockReturnValue({
@@ -184,6 +206,7 @@ describe('OTLP Authentication', () => {
       vi.mocked(auth.validateApiKey).mockResolvedValue({
         userId: 'test-user-id',
         permissions: ['read'],
+        allowedIndexes: null,
       });
 
       vi.mocked(auth.getUserById).mockReturnValue({
@@ -209,6 +232,7 @@ describe('OTLP Authentication', () => {
       vi.mocked(auth.validateApiKey).mockResolvedValue({
         userId: 'admin-user-id',
         permissions: ['*'],
+        allowedIndexes: null,
       });
 
       vi.mocked(auth.getUserById).mockReturnValue({
@@ -234,6 +258,7 @@ describe('OTLP Authentication', () => {
       vi.mocked(auth.validateApiKey).mockResolvedValue({
         userId: 'disabled-user-id',
         permissions: ['write'],
+        allowedIndexes: null,
       });
 
       vi.mocked(auth.getUserById).mockReturnValue({
@@ -286,6 +311,7 @@ describe('OTLP Authentication', () => {
       vi.mocked(auth.validateApiKey).mockResolvedValue({
         userId: 'test-user-id',
         permissions: ['write'],
+        allowedIndexes: null,
       });
 
       vi.mocked(auth.getUserById).mockReturnValue({
@@ -344,5 +370,121 @@ describe('OTLP Authentication', () => {
       expect(response.status).toBe(200);
       expect(response.body.accepted).toBe(1);
     });
+  });
+});
+
+describe('ingest index scoping', () => {
+  it('helper rejects a disallowed index (guards the 403 path)', () => {
+    // Mirrors the runtime check in the HTTP ingest handler.
+    expect(isIndexAllowed(['hey-youre-hired'], 'directors-palette')).toBe(false);
+    expect(isIndexAllowed(['hey-youre-hired'], 'hey-youre-hired')).toBe(true);
+    expect(isIndexAllowed(null, 'directors-palette')).toBe(true);
+  });
+
+  // Mount the REAL ingest router (default export from ./ingest.ts) so the actual
+  // production enforcement block in routes/ingest.ts is exercised end-to-end:
+  // authenticateIngestion -> req.allowedIndexes -> isIndexAllowed -> 403.
+  function createScopedIngestApp(): Express {
+    const app = express();
+    app.use(express.json());
+    app.use('/api/ingest', ingestRouter);
+    return app;
+  }
+
+  beforeEach(() => {
+    process.env.OTLP_REQUIRE_AUTH = 'true';
+    vi.clearAllMocks();
+    // Default: processLogs is a pass-through (no routing override).
+    vi.mocked(sourceProcessor.processLogs).mockImplementation((logs) => logs);
+    vi.mocked(auth.getUserById).mockReturnValue({
+      id: 'scoped-user-id',
+      username: 'scoped-user',
+      email: 'scoped@example.com',
+      role: 'user' as const,
+      is_active: true,
+      last_login: null,
+      created_at: new Date().toISOString(),
+    });
+  });
+
+  it('rejects ingest to an index outside the key scope with 403', async () => {
+    vi.mocked(auth.validateApiKey).mockResolvedValue({
+      userId: 'scoped-user-id',
+      permissions: ['write'],
+      allowedIndexes: ['hey-youre-hired'],
+    });
+
+    const app = createScopedIngestApp();
+    const response = await request(app)
+      .post('/api/ingest/http')
+      .set('X-API-Key', 'scoped-key')
+      .set('X-Index', 'directors-palette')
+      .send([{ message: 'should be blocked' }]);
+
+    expect(response.status).toBe(403);
+    expect(response.body.error).toBe('API key not authorized for this index');
+    expect(response.body.attempted_index).toBe('directors-palette');
+  });
+
+  it('allows ingest to an in-scope index', async () => {
+    vi.mocked(auth.validateApiKey).mockResolvedValue({
+      userId: 'scoped-user-id',
+      permissions: ['write'],
+      allowedIndexes: ['hey-youre-hired'],
+    });
+
+    const app = createScopedIngestApp();
+    const response = await request(app)
+      .post('/api/ingest/http')
+      .set('X-API-Key', 'scoped-key')
+      .set('X-Index', 'hey-youre-hired')
+      .send([{ message: 'ok' }]);
+
+    expect(response.status).toBe(200);
+    expect(response.body.accepted).toBe(1);
+    expect(response.body.index).toBe('hey-youre-hired');
+  });
+
+  it('allows any index for an unscoped key (backward compatible)', async () => {
+    vi.mocked(auth.validateApiKey).mockResolvedValue({
+      userId: 'scoped-user-id',
+      permissions: ['write'],
+      allowedIndexes: null,
+    });
+
+    const app = createScopedIngestApp();
+    const response = await request(app)
+      .post('/api/ingest/http')
+      .set('X-API-Key', 'unscoped-key')
+      .set('X-Index', 'directors-palette')
+      .send([{ message: 'ok' }]);
+
+    expect(response.status).toBe(200);
+    expect(response.body.accepted).toBe(1);
+  });
+
+  it('rejects when routing rules re-route a processed record to an out-of-scope index (post-routing recheck)', async () => {
+    vi.mocked(auth.validateApiKey).mockResolvedValue({
+      userId: 'scoped-user-id',
+      permissions: ['write'],
+      allowedIndexes: ['hey-youre-hired'],
+    });
+
+    // Simulate an admin routing rule overriding the index to a disallowed one
+    // AFTER the initial (in-scope) scope check passed.
+    vi.mocked(sourceProcessor.processLogs).mockImplementation((logs) =>
+      logs.map((l) => ({ ...l, index_name: 'directors-palette' })),
+    );
+
+    const app = createScopedIngestApp();
+    const response = await request(app)
+      .post('/api/ingest/http')
+      .set('X-API-Key', 'scoped-key')
+      .set('X-Index', 'hey-youre-hired') // in-scope at the pre-process check
+      .send([{ message: 'should be blocked after re-routing' }]);
+
+    expect(response.status).toBe(403);
+    expect(response.body.error).toBe('API key not authorized for this index');
+    expect(response.body.attempted_index).toBe('directors-palette');
   });
 });

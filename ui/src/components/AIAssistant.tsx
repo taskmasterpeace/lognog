@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { MessageCircle, X, Send, Loader2, Bot, User, Sparkles, BookOpen, AlertCircle } from 'lucide-react';
+import { authFetch } from '../api/client';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -46,7 +47,7 @@ export function AIAssistant() {
   const loadDocs = async () => {
     if (docsLoaded) return;
     try {
-      await fetch('/api/ai/llama/seed-docs', { method: 'POST' });
+      await authFetch('/ai/llama/seed-docs', { method: 'POST' });
       setDocsLoaded(true);
     } catch (error) {
       console.error('Failed to load docs:', error);
@@ -67,7 +68,7 @@ export function AIAssistant() {
     }
 
     try {
-      const response = await fetch('/api/ai/assistant/chat', {
+      const response = await authFetch('/ai/assistant/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

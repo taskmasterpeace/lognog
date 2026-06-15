@@ -182,6 +182,12 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
     ...(options?.headers as Record<string, string>),
   };
 
+  // Add JWT auth token
+  const token = localStorage.getItem('lognog_access_token');
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
   // Add CSRF token for state-changing methods
   const method = options?.method?.toUpperCase() || 'GET';
   if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
@@ -202,6 +208,32 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
   }
 
   return response.json();
+}
+
+// Authenticated fetch — returns raw Response (for blobs, streaming, etc.)
+// Adds JWT auth + CSRF headers automatically
+export async function authFetch(endpoint: string, options?: RequestInit): Promise<Response> {
+  const headers: Record<string, string> = {
+    ...(options?.headers as Record<string, string>),
+  };
+
+  const token = localStorage.getItem('lognog_access_token');
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const method = options?.method?.toUpperCase() || 'GET';
+  if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
+    const csrfToken = getCsrfToken();
+    if (csrfToken) {
+      headers['X-CSRF-Token'] = csrfToken;
+    }
+  }
+
+  return fetch(`${API_BASE}${endpoint}`, {
+    ...options,
+    headers,
+  });
 }
 
 // Generic API client for ad-hoc requests

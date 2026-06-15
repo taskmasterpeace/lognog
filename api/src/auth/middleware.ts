@@ -12,6 +12,7 @@ declare global {
       };
       authMethod?: 'jwt' | 'apikey';
       apiKeyPermissions?: string[];
+      allowedIndexes?: string[] | null;
     }
   }
 }
@@ -72,6 +73,7 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
       };
       req.authMethod = 'apikey';
       req.apiKeyPermissions = result.permissions;
+      req.allowedIndexes = result.allowedIndexes;
       next();
     } catch {
       res.status(500).json({ error: 'Authentication error' });
@@ -126,6 +128,7 @@ export async function optionalAuth(req: Request, res: Response, next: NextFuncti
           };
           req.authMethod = 'apikey';
           req.apiKeyPermissions = result.permissions;
+          req.allowedIndexes = result.allowedIndexes;
         }
       }
     } catch {
@@ -268,7 +271,7 @@ setInterval(() => {
  * If OTLP_REQUIRE_AUTH=false, authentication is optional
  * If OTLP_REQUIRE_AUTH=true (default), authentication is required
  */
-export function authenticateIngestion(req: Request, res: Response, next: NextFunction): void {
+export async function authenticateIngestion(req: Request, res: Response, next: NextFunction): Promise<void> {
   const requireAuth = process.env.OTLP_REQUIRE_AUTH !== 'false';
 
   // Check for authorization header or X-API-Key header
@@ -311,58 +314,59 @@ export function authenticateIngestion(req: Request, res: Response, next: NextFun
   }
 
   // Validate API key
-  validateApiKey(apiKey)
-    .then((result) => {
-      if (!result) {
-        if (requireAuth) {
-          res.status(401).json({ error: 'Invalid API key' });
-          return;
-        }
-        next();
+  try {
+    const result = await validateApiKey(apiKey);
+
+    if (!result) {
+      if (requireAuth) {
+        res.status(401).json({ error: 'Invalid API key' });
         return;
       }
+      next();
+      return;
+    }
 
-      const user = getUserById(result.userId);
-      if (!user || !user.is_active) {
-        if (requireAuth) {
-          res.status(401).json({ error: 'User account is disabled' });
-          return;
-        }
-        next();
+    const user = getUserById(result.userId);
+    if (!user || !user.is_active) {
+      if (requireAuth) {
+        res.status(401).json({ error: 'User account is disabled' });
         return;
       }
+      next();
+      return;
+    }
 
-      // Check if API key has write permission
-      const hasWritePermission = result.permissions.includes('write') || result.permissions.includes('*');
-      if (!hasWritePermission) {
-        logAuthEvent(user.id, 'ingestion_permission_denied', req.ip, req.get('user-agent'), {
-          apiKeyPermissions: result.permissions,
-          path: req.path,
-        });
-        res.status(403).json({ error: 'API key requires write permission for ingestion' });
-        return;
-      }
-
-      req.user = {
-        id: user.id,
-        username: user.username,
-        role: user.role,
-      };
-      req.authMethod = 'apikey';
-      req.apiKeyPermissions = result.permissions;
-
-      // Log successful authentication
-      logAuthEvent(user.id, 'otlp_ingest_auth', req.ip, req.get('user-agent'), {
+    // Check if API key has write permission
+    const hasWritePermission = result.permissions.includes('write') || result.permissions.includes('*');
+    if (!hasWritePermission) {
+      logAuthEvent(user.id, 'ingestion_permission_denied', req.ip, req.get('user-agent'), {
+        apiKeyPermissions: result.permissions,
         path: req.path,
       });
+      res.status(403).json({ error: 'API key requires write permission for ingestion' });
+      return;
+    }
 
-      next();
-    })
-    .catch(() => {
-      if (requireAuth) {
-        res.status(500).json({ error: 'Authentication error' });
-        return;
-      }
-      next();
+    req.user = {
+      id: user.id,
+      username: user.username,
+      role: user.role,
+    };
+    req.authMethod = 'apikey';
+    req.apiKeyPermissions = result.permissions;
+    req.allowedIndexes = result.allowedIndexes;
+
+    // Log successful authentication
+    logAuthEvent(user.id, 'otlp_ingest_auth', req.ip, req.get('user-agent'), {
+      path: req.path,
     });
+
+    next();
+  } catch {
+    if (requireAuth) {
+      res.status(500).json({ error: 'Authentication error' });
+      return;
+    }
+    next();
+  }
 }

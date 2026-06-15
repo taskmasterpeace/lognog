@@ -9,6 +9,7 @@ import {
   updateChannelTestResult,
   NotificationService,
 } from '../db/sqlite.js';
+import { authenticate } from '../auth/middleware.js';
 
 const router = Router();
 
@@ -232,7 +233,7 @@ router.get('/channels/:id', (req: Request, res: Response) => {
 });
 
 // Create a notification channel
-router.post('/channels', (req: Request, res: Response) => {
+router.post('/channels', authenticate, (req: Request, res: Response) => {
   try {
     const { name, service, apprise_url, description, enabled } = req.body;
 
@@ -262,7 +263,7 @@ router.post('/channels', (req: Request, res: Response) => {
 });
 
 // Update a notification channel
-router.put('/channels/:id', (req: Request, res: Response) => {
+router.put('/channels/:id', authenticate, (req: Request, res: Response) => {
   try {
     const { name, service, apprise_url, description, enabled } = req.body;
 
@@ -298,7 +299,7 @@ router.put('/channels/:id', (req: Request, res: Response) => {
 });
 
 // Delete a notification channel
-router.delete('/channels/:id', (req: Request, res: Response) => {
+router.delete('/channels/:id', authenticate, (req: Request, res: Response) => {
   try {
     const deleted = deleteNotificationChannel(req.params.id);
     if (!deleted) {
@@ -312,7 +313,7 @@ router.delete('/channels/:id', (req: Request, res: Response) => {
 });
 
 // Test a notification channel
-router.post('/channels/:id/test', async (req: Request, res: Response) => {
+router.post('/channels/:id/test', authenticate, async (req: Request, res: Response) => {
   try {
     const channel = getNotificationChannel(req.params.id);
     if (!channel) {
@@ -361,7 +362,7 @@ router.post('/channels/:id/test', async (req: Request, res: Response) => {
 });
 
 // Test an Apprise URL directly (without saving)
-router.post('/test', async (req: Request, res: Response) => {
+router.post('/test', authenticate, async (req: Request, res: Response) => {
   try {
     const { apprise_url, title, body } = req.body;
 

@@ -52,6 +52,7 @@ export interface ApiKey {
   key_hash: string;
   key_prefix: string;
   permissions: string;
+  allowed_indexes: string | null; // JSON array of index names, or null = all
   last_used: string | null;
   expires_at: string | null;
   is_active: number;
@@ -97,6 +98,7 @@ export function initializeAuthSchema(): void {
       key_hash TEXT NOT NULL,
       key_prefix TEXT NOT NULL,
       permissions TEXT DEFAULT '["read"]',
+      allowed_indexes TEXT,
       last_used TEXT,
       expires_at TEXT,
       is_active INTEGER DEFAULT 1,
@@ -134,6 +136,15 @@ export function initializeAuthSchema(): void {
     CREATE INDEX IF NOT EXISTS idx_auth_audit_user ON auth_audit_log(user_id);
     CREATE INDEX IF NOT EXISTS idx_auth_audit_created ON auth_audit_log(created_at);
   `);
+
+  // Migration: add allowed_indexes to api_keys if missing (SQLite has no
+  // ADD COLUMN IF NOT EXISTS). NULL = unscoped (all indexes).
+  const apiKeyCols = db
+    .prepare("PRAGMA table_info(api_keys)")
+    .all() as Array<{ name: string }>;
+  if (!apiKeyCols.some((c) => c.name === 'allowed_indexes')) {
+    db.exec('ALTER TABLE api_keys ADD COLUMN allowed_indexes TEXT');
+  }
 }
 
 // User management
@@ -394,7 +405,8 @@ export async function createApiKey(
   userId: string,
   name: string,
   permissions: string[] = ['read'],
-  expiresInDays?: number
+  expiresInDays?: number,
+  allowedIndexes?: string[],
 ): Promise<{ apiKey: string; keyData: Omit<ApiKey, 'key_hash'> }> {
   const db = getSQLiteDB();
 
@@ -409,20 +421,24 @@ export async function createApiKey(
   const expiresAt = expiresInDays
     ? new Date(Date.now() + expiresInDays * 24 * 60 * 60 * 1000).toISOString()
     : null;
+  const allowedIndexesJson =
+    allowedIndexes && allowedIndexes.length > 0 ? JSON.stringify(allowedIndexes) : null;
 
   db.prepare(`
-    INSERT INTO api_keys (id, user_id, name, key_hash, key_prefix, permissions, expires_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?)
-  `).run(id, userId, name, keyHash, keyPrefix, JSON.stringify(permissions), expiresAt);
+    INSERT INTO api_keys (id, user_id, name, key_hash, key_prefix, permissions, expires_at, allowed_indexes)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(id, userId, name, keyHash, keyPrefix, JSON.stringify(permissions), expiresAt, allowedIndexesJson);
 
   const keyData = db.prepare(
-    'SELECT id, user_id, name, key_prefix, permissions, last_used, expires_at, is_active, created_at FROM api_keys WHERE id = ?'
+    'SELECT id, user_id, name, key_prefix, permissions, allowed_indexes, last_used, expires_at, is_active, created_at FROM api_keys WHERE id = ?'
   ).get(id) as Omit<ApiKey, 'key_hash'>;
 
   return { apiKey, keyData };
 }
 
-export async function validateApiKey(apiKey: string): Promise<{ userId: string; permissions: string[] } | null> {
+export async function validateApiKey(
+  apiKey: string,
+): Promise<{ userId: string; permissions: string[]; allowedIndexes: string[] | null } | null> {
   if (!apiKey.startsWith('lnog_')) return null;
 
   const db = getSQLiteDB();
@@ -443,9 +459,21 @@ export async function validateApiKey(apiKey: string): Promise<{ userId: string; 
         UPDATE api_keys SET last_used = datetime('now') WHERE id = ?
       `).run(key.id);
 
+      // Guard against a malformed allowed_indexes row 500-ing the auth path.
+      // An unparseable value is treated as unscoped (null = all indexes).
+      let allowedIndexes: string[] | null = null;
+      if (key.allowed_indexes) {
+        try {
+          allowedIndexes = JSON.parse(key.allowed_indexes);
+        } catch {
+          allowedIndexes = null;
+        }
+      }
+
       return {
         userId: key.user_id,
         permissions: JSON.parse(key.permissions),
+        allowedIndexes,
       };
     }
   }
@@ -456,7 +484,7 @@ export async function validateApiKey(apiKey: string): Promise<{ userId: string; 
 export function getApiKeys(userId: string): Omit<ApiKey, 'key_hash'>[] {
   const db = getSQLiteDB();
   return db.prepare(`
-    SELECT id, user_id, name, key_prefix, permissions, last_used, expires_at, is_active, created_at
+    SELECT id, user_id, name, key_prefix, permissions, allowed_indexes, last_used, expires_at, is_active, created_at
     FROM api_keys WHERE user_id = ? ORDER BY created_at DESC
   `).all(userId) as Omit<ApiKey, 'key_hash'>[];
 }

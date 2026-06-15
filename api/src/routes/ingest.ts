@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { authenticate, requirePermission, authenticateIngestion } from '../auth/middleware.js';
 import { logAuthEvent } from '../auth/auth.js';
+import { isIndexAllowed } from '../auth/index-scope.js';
 import { insertLogs, getBackendInfo } from '../db/backend.js';
 import { getPendingNotifications, markNotificationDelivered, AgentNotification } from '../db/sqlite.js';
 import { logIngestionStats } from '../services/internal-logger.js';
@@ -842,8 +843,41 @@ router.post('/http', authenticateIngestion, async (req, res) => {
       return res.status(200).json({ accepted: 0 });
     }
 
+    // Enforce per-key index scoping. Unscoped keys (allowedIndexes null/empty) pass.
+    if (!isIndexAllowed(req.allowedIndexes, customIndex)) {
+      logAuthEvent(req.user?.id ?? null, 'ingest_index_denied', req.ip, req.get('user-agent'), {
+        attempted_index: customIndex,
+        allowed_indexes: req.allowedIndexes,
+        path: req.path,
+      });
+      return res.status(403).json({
+        error: 'API key not authorized for this index',
+        message: `This key may only write to: ${(req.allowedIndexes ?? []).join(', ') || '(all)'}`,
+        attempted_index: customIndex,
+      });
+    }
+
     // Process logs through source config pipeline (extractions, transforms, routing)
     const processedLogs = processLogs(logs);
+
+    // Re-assert scoping on the FINAL index of each record. Admin source-configs /
+    // routing rules can override index_name during processing, so a record could
+    // otherwise land in an index the key was never scope-checked against.
+    for (const rec of processedLogs) {
+      const finalIndex = rec.index_name ?? customIndex;
+      if (!isIndexAllowed(req.allowedIndexes, finalIndex)) {
+        logAuthEvent(req.user?.id ?? null, 'ingest_index_denied', req.ip, req.get('user-agent'), {
+          attempted_index: finalIndex,
+          allowed_indexes: req.allowedIndexes,
+          path: req.path,
+        });
+        return res.status(403).json({
+          error: 'API key not authorized for this index',
+          message: `This key may only write to: ${(req.allowedIndexes ?? []).join(', ') || '(all)'}`,
+          attempted_index: finalIndex,
+        });
+      }
+    }
 
     const ingestStart = Date.now();
     await insertLogs(processedLogs);

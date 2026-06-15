@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Sparkles, RefreshCw, AlertTriangle, TrendingUp, TrendingDown, Lightbulb, Loader2, Settings } from 'lucide-react';
+import { authFetch } from '../../api/client';
 
 interface Insight {
   type: 'anomaly' | 'trend' | 'suggestion';
@@ -38,7 +39,7 @@ export function AIInsightsPanel({
 
     try {
       // Check if Ollama is available
-      const response = await fetch('/api/ai/insights', {
+      const response = await authFetch('/ai/insights', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ dashboardId, timeRange }),

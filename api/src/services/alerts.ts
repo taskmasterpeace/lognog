@@ -593,10 +593,20 @@ async function executeActions(
   resultCount: number,
   sampleResults: Record<string, unknown>[]
 ): Promise<{ type: string; success: boolean; message: string }[]> {
-  const actions: AlertAction[] = JSON.parse(alert.actions || '[]');
+  let actions: AlertAction[];
+  try {
+    actions = JSON.parse(alert.actions || '[]');
+  } catch {
+    console.error(`[Alert ${alert.name}] Failed to parse actions JSON:`, alert.actions);
+    return [{ type: 'unknown', success: false, message: 'Invalid actions JSON' }];
+  }
   const results: { type: string; success: boolean; message: string }[] = [];
 
   for (const action of actions) {
+    if (!action.config) {
+      results.push({ type: action.type, success: false, message: 'Action missing config' });
+      continue;
+    }
     let result: { success: boolean; message: string };
 
     switch (action.type) {
