@@ -53,6 +53,11 @@ export type UpdatePullCollectorInput = Partial<CreatePullCollectorInput>;
 // Fetch timeout (matches the alerts webhook convention).
 const FETCH_TIMEOUT_MS = 30000;
 
+// Cap on the response size we will read/parse. This is an admin-only feature
+// and most APIs send Content-Length, so a header check is sufficient as an
+// OOM guard without a full streaming byte-cap.
+const MAX_RESPONSE_BYTES = 10 * 1024 * 1024; // 10MB
+
 // Initialize schema on import, mirroring the pattern other modules rely on.
 getSQLiteDB().exec(`
   CREATE TABLE IF NOT EXISTS pull_collectors (
@@ -283,12 +288,21 @@ export async function runPullCollector(
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
-  try {
-    let headers: Record<string, string> = {};
-    if (collector.headers) {
+  // Parse headers in their OWN try/catch. Header JSON can contain API tokens,
+  // so a malformed-headers SyntaxError message must NOT leak token fragments
+  // into last_error. On failure we record a fixed, raw-message-free error.
+  let headers: Record<string, string> = {};
+  if (collector.headers) {
+    try {
       headers = JSON.parse(collector.headers) as Record<string, string>;
+    } catch {
+      clearTimeout(timeoutId);
+      persistRunResult(id, 'error', 0, 'invalid headers JSON');
+      return { ok: false, eventCount: 0, error: 'invalid headers JSON' };
     }
+  }
 
+  try {
     const method = collector.http_method || 'GET';
     const response = await fetch(collector.url, {
       method,
@@ -300,6 +314,15 @@ export async function runPullCollector(
 
     if (!response.ok) {
       throw new Error(`HTTP ${response.status} ${response.statusText}`);
+    }
+
+    // OOM guard: reject oversized responses via Content-Length before parsing.
+    const contentLength = response.headers?.get?.('content-length');
+    if (contentLength) {
+      const declaredBytes = Number(contentLength);
+      if (Number.isFinite(declaredBytes) && declaredBytes > MAX_RESPONSE_BYTES) {
+        throw new Error('response too large');
+      }
     }
 
     const body = (await response.json()) as unknown;
@@ -314,12 +337,14 @@ export async function runPullCollector(
     return { ok: true, eventCount: records.length };
   } catch (error) {
     clearTimeout(timeoutId);
-    const message =
+    const rawMessage =
       error instanceof Error && error.name === 'AbortError'
         ? `Fetch timed out after ${FETCH_TIMEOUT_MS / 1000}s`
         : error instanceof Error
-          ? error.message
+          ? String(error.message ?? error)
           : String(error);
+    // Defense-in-depth: cap the stored message length.
+    const message = rawMessage.slice(0, 500);
     persistRunResult(id, 'error', 0, message);
     return { ok: false, eventCount: 0, error: message };
   }

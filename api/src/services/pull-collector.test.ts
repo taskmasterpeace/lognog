@@ -32,6 +32,7 @@ function makeResponse(body: unknown, ok = true, status = 200): Response {
     ok,
     status,
     statusText: ok ? 'OK' : 'Error',
+    headers: new Headers(),
     json: async () => body,
     text: async () => JSON.stringify(body),
   } as unknown as Response;
@@ -203,5 +204,65 @@ describe('runPullCollector', () => {
     const result = await runPullCollector('does-not-exist');
     expect(result.ok).toBe(false);
     expect(result.error).toBeTruthy();
+  });
+
+  it('returns ok:false when items_path resolves to a non-array (does not throw)', async () => {
+    const collector = createPullCollector({
+      name: 'bad-path-source',
+      url: 'https://api.example.com/data',
+      index_name: 'badpath',
+      items_path: 'data.events',
+    });
+
+    // data.events is an object, NOT an array.
+    const body = { data: { events: { not: 'an array' } } };
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(makeResponse(body)));
+
+    let result: { ok: boolean; eventCount: number; error?: string };
+    await expect(
+      (async () => {
+        result = await runPullCollector(collector.id);
+      })(),
+    ).resolves.not.toThrow();
+
+    expect(result!.ok).toBe(false);
+    expect(mockInsertLogs).not.toHaveBeenCalled();
+
+    const persisted = getPullCollector(collector.id)!;
+    expect(persisted.last_status).toBe('error');
+  });
+
+  it('does not leak header tokens into last_error on malformed headers JSON', async () => {
+    const secretToken = 'super-secret-token-abc123';
+    const collector = createPullCollector({
+      name: 'bad-headers-source',
+      url: 'https://api.example.com/data',
+      index_name: 'badheaders',
+      // Malformed JSON that embeds the token — a SyntaxError message could
+      // echo this fragment if not guarded.
+      headers: `{"Authorization": "Bearer ${secretToken}`,
+    });
+
+    const fetchMock = vi.fn().mockResolvedValue(makeResponse([{ a: 1 }]));
+    vi.stubGlobal('fetch', fetchMock);
+
+    let result: { ok: boolean; eventCount: number; error?: string };
+    await expect(
+      (async () => {
+        result = await runPullCollector(collector.id);
+      })(),
+    ).resolves.not.toThrow();
+
+    expect(result!.ok).toBe(false);
+    expect(result!.error).toBe('invalid headers JSON');
+    // fetch must never be called with malformed headers.
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(mockInsertLogs).not.toHaveBeenCalled();
+
+    const persisted = getPullCollector(collector.id)!;
+    expect(persisted.last_status).toBe('error');
+    expect(persisted.last_error).toBe('invalid headers JSON');
+    // The token value must NOT appear anywhere in last_error.
+    expect(persisted.last_error).not.toContain(secretToken);
   });
 });

@@ -30,6 +30,12 @@ function isValidIndexName(name: unknown): name is string {
   return typeof name === 'string' && INDEX_NAME_RE.test(name);
 }
 
+// A cron expression must be exactly 5 whitespace-separated fields. Reject
+// malformed values so collectors don't silently never run.
+function isValidCron(expr: unknown): expr is string {
+  return typeof expr === 'string' && expr.trim().split(/\s+/).length === 5;
+}
+
 // List all collectors
 router.get('/', authenticate, requireAdmin, (req: Request, res: Response) => {
   try {
@@ -54,6 +60,9 @@ router.post('/', authenticate, requireAdmin, (req: Request, res: Response) => {
     }
     if (!isValidIndexName(body.index_name)) {
       return res.status(400).json({ error: 'index_name must match /^[a-z0-9][a-z0-9_-]*$/' });
+    }
+    if (body.cron_expression !== undefined && !isValidCron(body.cron_expression)) {
+      return res.status(400).json({ error: 'cron_expression must have 5 fields' });
     }
 
     const created = createPullCollector(body);
@@ -88,6 +97,9 @@ router.put('/:id', authenticate, requireAdmin, (req: Request, res: Response) => 
     }
     if (body.index_name !== undefined && !isValidIndexName(body.index_name)) {
       return res.status(400).json({ error: 'index_name must match /^[a-z0-9][a-z0-9_-]*$/' });
+    }
+    if (body.cron_expression !== undefined && !isValidCron(body.cron_expression)) {
+      return res.status(400).json({ error: 'cron_expression must have 5 fields' });
     }
 
     const updated = updatePullCollector(req.params.id, body);
