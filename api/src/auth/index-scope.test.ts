@@ -1,6 +1,6 @@
 // api/src/auth/index-scope.test.ts
 import { describe, it, expect } from 'vitest';
-import { isIndexAllowed } from './index-scope.js';
+import { isIndexAllowed, firstDisallowedIndex } from './index-scope.js';
 
 describe('isIndexAllowed', () => {
   it('allows any index when restriction is null (unscoped key)', () => {
@@ -26,5 +26,51 @@ describe('isIndexAllowed', () => {
 
   it('rejects when undefined restriction is treated as scoped-empty? No — undefined = all', () => {
     expect(isIndexAllowed(undefined, 'anything')).toBe(true);
+  });
+});
+
+describe('firstDisallowedIndex', () => {
+  it('returns null for an unscoped key (null allow-list)', () => {
+    expect(
+      firstDisallowedIndex(null, [{ index_name: 'anything' }, { index_name: 'other' }]),
+    ).toBeNull();
+  });
+
+  it('returns null for an unscoped key (empty allow-list)', () => {
+    expect(firstDisallowedIndex([], [{ index_name: 'anything' }])).toBeNull();
+  });
+
+  it('returns null when every record is in the allow-list', () => {
+    expect(
+      firstDisallowedIndex(['hey-youre-hired', 'directors-palette'], [
+        { index_name: 'hey-youre-hired' },
+        { index_name: 'directors-palette' },
+      ]),
+    ).toBeNull();
+  });
+
+  it('returns the first disallowed index name', () => {
+    expect(
+      firstDisallowedIndex(['hey-youre-hired'], [
+        { index_name: 'hey-youre-hired' },
+        { index_name: 'directors-palette' },
+        { index_name: 'evil' },
+      ]),
+    ).toBe('directors-palette');
+  });
+
+  it('matches case-insensitively', () => {
+    expect(
+      firstDisallowedIndex(['Hey-Youre-Hired'], [{ index_name: 'hey-youre-hired' }]),
+    ).toBeNull();
+    expect(
+      firstDisallowedIndex(['Hey-Youre-Hired'], [{ index_name: 'Directors-Palette' }]),
+    ).toBe('Directors-Palette');
+  });
+
+  it('treats a missing index_name as the storage default (main)', () => {
+    // Records without index_name land in 'main' (COALESCE in the DB backend).
+    expect(firstDisallowedIndex(['hey-youre-hired'], [{}])).toBe('main');
+    expect(firstDisallowedIndex(['main'], [{}])).toBeNull();
   });
 });

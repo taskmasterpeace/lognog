@@ -487,4 +487,153 @@ describe('ingest index scoping', () => {
     expect(response.body.error).toBe('API key not authorized for this index');
     expect(response.body.attempted_index).toBe('directors-palette');
   });
+
+  // --- Phase 1b: scoping enforced across the OTHER ingest endpoints too ---
+
+  it('rejects OTLP ingest (index "otel") for a key not scoped to otel', async () => {
+    vi.mocked(auth.validateApiKey).mockResolvedValue({
+      userId: 'scoped-user-id',
+      permissions: ['write'],
+      allowedIndexes: ['hey-youre-hired'],
+    });
+
+    const app = createScopedIngestApp();
+    const response = await request(app)
+      .post('/api/ingest/otlp/v1/logs')
+      .set('X-API-Key', 'scoped-key')
+      .send(validOtlpPayload);
+
+    expect(response.status).toBe(403);
+    expect(response.body.error).toBe('API key not authorized for this index');
+    expect(response.body.attempted_index).toBe('otel');
+  });
+
+  it('allows OTLP ingest for an unscoped key', async () => {
+    vi.mocked(auth.validateApiKey).mockResolvedValue({
+      userId: 'scoped-user-id',
+      permissions: ['write'],
+      allowedIndexes: null,
+    });
+
+    const app = createScopedIngestApp();
+    const response = await request(app)
+      .post('/api/ingest/otlp/v1/logs')
+      .set('X-API-Key', 'unscoped-key')
+      .send(validOtlpPayload);
+
+    expect(response.status).toBe(200);
+    expect(response.body.accepted).toBe(1);
+  });
+
+  it('rejects Vercel ingest (index "vercel") for a key not scoped to vercel', async () => {
+    vi.mocked(auth.validateApiKey).mockResolvedValue({
+      userId: 'scoped-user-id',
+      permissions: ['write'],
+      allowedIndexes: ['hey-youre-hired'],
+    });
+
+    const app = createScopedIngestApp();
+    const response = await request(app)
+      .post('/api/ingest/vercel')
+      .set('X-API-Key', 'scoped-key')
+      .send([{ message: 'should be blocked', timestamp: Date.now() }]);
+
+    expect(response.status).toBe(403);
+    expect(response.body.error).toBe('API key not authorized for this index');
+    expect(response.body.attempted_index).toBe('vercel');
+  });
+
+  it('allows Vercel ingest for an unscoped key', async () => {
+    vi.mocked(auth.validateApiKey).mockResolvedValue({
+      userId: 'scoped-user-id',
+      permissions: ['write'],
+      allowedIndexes: null,
+    });
+
+    const app = createScopedIngestApp();
+    const response = await request(app)
+      .post('/api/ingest/vercel')
+      .set('X-API-Key', 'unscoped-key')
+      .send([{ message: 'ok', timestamp: Date.now() }]);
+
+    expect(response.status).toBe(200);
+    expect(response.body.accepted).toBe(1);
+  });
+
+  // SmartThings records carry no index_name, so they resolve to the storage
+  // default ('main'). A key scoped away from 'main' must be denied; an unscoped
+  // (or 'main'-scoped) key must be accepted. This exercises the missing
+  // index_name -> 'main' resolution path through the REAL router.
+  const smartThingsEventPayload = {
+    messageType: 'EVENT' as const,
+    eventData: {
+      installedApp: { installedAppId: 'app-123', locationId: 'loc-456' },
+      events: [
+        {
+          eventTime: '2026-06-15T00:00:00.000Z',
+          eventType: 'DEVICE_EVENT',
+          deviceEvent: {
+            deviceId: 'device-abcdef123456',
+            componentId: 'main',
+            capability: 'switch',
+            attribute: 'switch',
+            value: 'on',
+          },
+        },
+      ],
+    },
+  };
+
+  it('rejects SmartThings ingest (resolves to "main") for a key not scoped to main', async () => {
+    vi.mocked(auth.validateApiKey).mockResolvedValue({
+      userId: 'scoped-user-id',
+      permissions: ['write'],
+      allowedIndexes: ['hey-youre-hired'],
+    });
+
+    const app = createScopedIngestApp();
+    const response = await request(app)
+      .post('/api/ingest/smartthings')
+      .set('X-API-Key', 'scoped-key')
+      .send(smartThingsEventPayload);
+
+    expect(response.status).toBe(403);
+    expect(response.body.error).toBe('API key not authorized for this index');
+    expect(response.body.attempted_index).toBe('main');
+  });
+
+  it('allows SmartThings ingest for a key scoped to main', async () => {
+    vi.mocked(auth.validateApiKey).mockResolvedValue({
+      userId: 'scoped-user-id',
+      permissions: ['write'],
+      allowedIndexes: ['main'],
+    });
+
+    const app = createScopedIngestApp();
+    const response = await request(app)
+      .post('/api/ingest/smartthings')
+      .set('X-API-Key', 'main-scoped-key')
+      .send(smartThingsEventPayload);
+
+    expect(response.status).toBe(200);
+    expect(response.body.status).toBe('ok');
+    expect(response.body.stored).toBe(1);
+  });
+
+  it('allows SmartThings ingest for an unscoped key', async () => {
+    vi.mocked(auth.validateApiKey).mockResolvedValue({
+      userId: 'scoped-user-id',
+      permissions: ['write'],
+      allowedIndexes: null,
+    });
+
+    const app = createScopedIngestApp();
+    const response = await request(app)
+      .post('/api/ingest/smartthings')
+      .set('X-API-Key', 'unscoped-key')
+      .send(smartThingsEventPayload);
+
+    expect(response.status).toBe(200);
+    expect(response.body.stored).toBe(1);
+  });
 });
