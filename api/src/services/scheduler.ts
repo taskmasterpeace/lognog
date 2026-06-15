@@ -5,6 +5,7 @@ import { parseAndCompile } from '../dsl/index.js';
 import { evaluateAlert } from './alerts.js';
 import { logReportGenerated } from './internal-logger.js';
 import { getStaleSources, markStaleNotified, markSourceUnexpected } from './heartbeat.js';
+import { getPullCollectors, runPullCollector } from './pull-collector.js';
 import { insertLogs } from '../db/backend.js';
 import {
   renderHtml,
@@ -465,6 +466,32 @@ async function checkHeartbeats(): Promise<void> {
   }
 }
 
+// Phase 4 (Reach): check scheduled pull collectors.
+// Each enabled collector fetches its HTTP endpoint on its own cron cadence and
+// ingests the response as logs. runPullCollector never throws (it records
+// errors on the collector row), but we still guard each call defensively.
+async function checkPullCollectors(): Promise<void> {
+  try {
+    const collectors = getPullCollectors(true); // enabled only
+
+    for (const collector of collectors) {
+      if (shouldRunNow(collector.cron_expression || '*/15 * * * *', collector.last_run || null)) {
+        console.log(`Running pull collector: ${collector.name}`);
+        try {
+          const result = await runPullCollector(collector.id);
+          if (!result.ok) {
+            console.error(`Pull collector "${collector.name}" failed: ${result.error}`);
+          }
+        } catch (error) {
+          console.error(`Error running pull collector "${collector.name}":`, error);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error checking pull collectors:', error);
+  }
+}
+
 // Cleanup expired caches
 async function runCacheCleanup(): Promise<void> {
   try {
@@ -507,6 +534,13 @@ export function startScheduler(): void {
 
       // Check scheduled saved searches
       await checkScheduledSavedSearches();
+
+      // Phase 4 (Reach): pull collectors (fetch external HTTP endpoints -> logs)
+      try {
+        await checkPullCollectors();
+      } catch (pcError) {
+        console.error('Pull collector sweep error:', pcError);
+      }
 
       // Cleanup expired caches (run less frequently - every 5 minutes)
       const now = new Date();
