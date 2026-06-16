@@ -250,9 +250,9 @@ export default function SyntheticPage() {
     return TEST_TYPES.find((t) => t.value === type) || TEST_TYPES[0];
   };
 
-  const formatResponseTime = (ms: number | null) => {
-    if (ms === null) return '-';
-    if (ms < 1000) return `${ms}ms`;
+  const formatResponseTime = (ms: number | null | undefined) => {
+    if (ms === null || ms === undefined || Number.isNaN(ms)) return '-';
+    if (ms < 1000) return `${Math.round(ms)}ms`;
     return `${(ms / 1000).toFixed(2)}s`;
   };
 
