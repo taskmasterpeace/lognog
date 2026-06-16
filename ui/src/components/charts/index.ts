@@ -30,3 +30,6 @@ export type { FunnelChartProps, FunnelChartData } from './FunnelChart';
 
 export { TreemapChart } from './TreemapChart';
 export type { TreemapChartProps, TreemapNode } from './TreemapChart';
+
+export { CHART_PALETTE, CHART_ACCENT, getChartTheme } from './palette';
+export type { ChartTheme } from './palette';

@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
+import { CHART_PALETTE } from './palette';
 
 export interface TreemapNode {
   name: string;
@@ -148,11 +149,9 @@ export const TreemapChart: React.FC<TreemapChartProps> = ({
   );
 };
 
-// Add colors to data recursively
+// Add colors to data recursively (shared brand palette)
 function addColorsToData(data: TreemapNode[], darkMode: boolean): TreemapNode[] {
-  const colors = darkMode
-    ? ['#60a5fa', '#34d399', '#fbbf24', '#f87171', '#a78bfa', '#fb923c', '#38bdf8', '#4ade80', '#e879f9', '#f472b6']
-    : ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#f97316', '#0ea5e9', '#22c55e', '#d946ef', '#ec4899'];
+  const colors = CHART_PALETTE;
 
   return data.map((node, index) => ({
     ...node,

@@ -394,7 +394,7 @@ export default function AnomalyPage() {
             </div>
             <AreaChart
               data={dashboard?.recentTrend || []}
-              series={[{ name: 'Anomalies', dataKey: 'count', color: '#a855f7' }]}
+              series={[{ name: 'Anomalies', dataKey: 'count', color: '#C8862B' }]}
               xAxisKey="hour"
               height={256}
               darkMode={isDarkMode}
@@ -421,7 +421,7 @@ export default function AnomalyPage() {
               height={256}
               darkMode={isDarkMode}
               horizontal={true}
-              barColor="#a855f7"
+              barColor="#C8862B"
               showValues={false}
             />
           </div>

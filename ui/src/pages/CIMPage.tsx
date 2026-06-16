@@ -55,7 +55,7 @@ const fieldTypeColors: Record<string, string> = {
   boolean: 'text-honey-600 bg-honey-50 dark:text-honey-400 dark:bg-honey-900/30',
   timestamp: 'text-honey-600 bg-honey-50 dark:text-honey-400 dark:bg-honey-900/30',
   ip: 'text-honey-600 bg-honey-50 dark:text-honey-400 dark:bg-honey-900/30',
-  array: 'text-pink-600 bg-pink-50 dark:text-pink-400 dark:bg-pink-900/30',
+  array: 'text-teal-600 bg-teal-50 dark:text-teal-400 dark:bg-teal-900/30',
 };
 
 export default function CIMPage() {

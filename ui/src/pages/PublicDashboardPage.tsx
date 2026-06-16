@@ -5,10 +5,10 @@ import {
   Lock,
   AlertCircle,
 } from 'lucide-react';
-import { AreaChart, BarChart, PieChart, HeatmapChart, GaugeChart, WordCloudChart } from '../components/charts';
+import { AreaChart, BarChart, PieChart, HeatmapChart, GaugeChart, WordCloudChart, CHART_PALETTE } from '../components/charts';
 import { executeSearch } from '../api/client';
 
-const CHART_COLORS = ['#0ea5e9', '#8b5cf6', '#22c55e', '#f59e0b', '#ef4444', '#ec4899', '#06b6d4', '#84cc16'];
+const CHART_COLORS = CHART_PALETTE;
 
 interface DashboardPanel {
   id: string;

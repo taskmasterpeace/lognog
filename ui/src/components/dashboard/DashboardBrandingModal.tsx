@@ -29,7 +29,7 @@ export function DashboardBrandingModal({
   const [logoPosition, setLogoPosition] = useState<'left' | 'center' | 'right'>(
     branding.logo_position || 'left'
   );
-  const [accentColor, setAccentColor] = useState(branding.accent_color || '#0ea5e9');
+  const [accentColor, setAccentColor] = useState(branding.accent_color || '#C8862B');
   const [headerColor, setHeaderColor] = useState(branding.header_color || '#ffffff');
   const [description, setDescription] = useState(branding.description || '');
   const [uploadError, setUploadError] = useState<string | null>(null);

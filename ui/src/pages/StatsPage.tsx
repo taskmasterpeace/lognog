@@ -285,7 +285,6 @@ export default function StatsPage() {
               height={288}
               darkMode={isDarkMode}
               horizontal={true}
-              barColor="#8b5cf6"
               showValues={false}
               onBarClick={(category) => handleDrilldown('app_name', category)}
             />

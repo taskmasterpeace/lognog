@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { CHART_PALETTE } from '../charts/palette';
 import {
   HardDrive,
   Database,
@@ -57,11 +58,8 @@ function StatCard({ icon: Icon, label, value, subValue, color, iconBg }: StatCar
   );
 }
 
-// Colors for the index bar chart
-const INDEX_COLORS = [
-  '#f59e0b', '#3b82f6', '#10b981', '#8b5cf6', '#ec4899',
-  '#06b6d4', '#84cc16', '#f97316', '#6366f1', '#14b8a6',
-];
+// Colors for the index bar chart (shared brand palette)
+const INDEX_COLORS = CHART_PALETTE;
 
 export default function StorageTab() {
   const queryClient = useQueryClient();

@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
+import { CHART_ACCENT } from './palette';
 
 export interface BarChartData {
   category: string;
@@ -31,7 +32,7 @@ export const BarChart: React.FC<BarChartProps> = ({
   topN,
   sortOrder = 'desc',
   showValues = true,
-  barColor = '#f59e0b',
+  barColor = CHART_ACCENT,
   onBarClick,
   xAxisLabel,
   yAxisLabel,
