@@ -250,22 +250,22 @@ export default function TimePickerEnhanced({ onRangeChange, defaultRange = '-24h
         className="btn-secondary h-11 sm:h-12 min-w-[90px] sm:min-w-[160px] group px-2 sm:px-4"
         title={formatDisplayText()}
       >
-        <Clock className="w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-all duration-200 group-hover:scale-110" />
+        <Clock className="w-4 h-4 text-nog-400 group-hover:text-nog-600 transition-all duration-200 group-hover:scale-110" />
         <span className="font-medium text-sm sm:text-base">{formatShortText()}</span>
-        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 hidden sm:block ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-4 h-4 text-nog-400 transition-transform duration-200 hidden sm:block ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {/* Dropdown Menu */}
       {isOpen && (
         <div className="dropdown right-0 w-80 sm:w-96 animate-fade-in max-h-[80vh] overflow-hidden flex flex-col">
           {/* Tab Headers */}
-          <div className="flex border-b border-slate-200 dark:border-slate-700 bg-nog-50 dark:bg-nog-800">
+          <div className="flex border-b border-nog-200 dark:border-nog-700 bg-nog-50 dark:bg-nog-800">
             <button
               onClick={() => setViewMode('presets')}
               className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors ${
                 viewMode === 'presets'
-                  ? 'text-sky-600 border-b-2 border-sky-500 bg-white dark:bg-nog-900'
-                  : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'
+                  ? 'text-honey-600 border-b-2 border-honey-500 bg-white dark:bg-nog-900'
+                  : 'text-nog-500 hover:text-nog-700 dark:text-nog-400'
               }`}
             >
               Presets
@@ -274,8 +274,8 @@ export default function TimePickerEnhanced({ onRangeChange, defaultRange = '-24h
               onClick={() => setViewMode('relative')}
               className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors ${
                 viewMode === 'relative'
-                  ? 'text-sky-600 border-b-2 border-sky-500 bg-white dark:bg-nog-900'
-                  : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'
+                  ? 'text-honey-600 border-b-2 border-honey-500 bg-white dark:bg-nog-900'
+                  : 'text-nog-500 hover:text-nog-700 dark:text-nog-400'
               }`}
             >
               Relative
@@ -284,8 +284,8 @@ export default function TimePickerEnhanced({ onRangeChange, defaultRange = '-24h
               onClick={() => setViewMode('absolute')}
               className={`flex-1 px-4 py-2.5 text-sm font-medium transition-colors ${
                 viewMode === 'absolute'
-                  ? 'text-sky-600 border-b-2 border-sky-500 bg-white dark:bg-nog-900'
-                  : 'text-slate-500 hover:text-slate-700 dark:text-slate-400'
+                  ? 'text-honey-600 border-b-2 border-honey-500 bg-white dark:bg-nog-900'
+                  : 'text-nog-500 hover:text-nog-700 dark:text-nog-400'
               }`}
             >
               Absolute
@@ -298,11 +298,11 @@ export default function TimePickerEnhanced({ onRangeChange, defaultRange = '-24h
               /* Grouped Preset Selection */
               <div className="py-1">
                 {TIME_PRESET_GROUPS.map((group) => (
-                  <div key={group.label} className="border-b border-slate-100 dark:border-slate-700 last:border-0">
+                  <div key={group.label} className="border-b border-nog-100 dark:border-nog-700 last:border-0">
                     {/* Group Header */}
                     <button
                       onClick={() => setExpandedGroup(expandedGroup === group.label ? null : group.label)}
-                      className="w-full px-4 py-2 flex items-center justify-between text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider hover:bg-nog-50 dark:hover:bg-nog-800"
+                      className="w-full px-4 py-2 flex items-center justify-between text-xs font-semibold text-nog-500 dark:text-nog-400 uppercase tracking-wider hover:bg-nog-50 dark:hover:bg-nog-800"
                     >
                       <span>{group.label}</span>
                       <ChevronRight
@@ -326,8 +326,8 @@ export default function TimePickerEnhanced({ onRangeChange, defaultRange = '-24h
                               onClick={() => handlePresetSelect(preset)}
                               className={`dropdown-item w-full text-left pl-8 pr-4 py-2 text-sm transition-all duration-150 ${
                                 selectedPreset.value === preset.value
-                                  ? 'bg-sky-50 text-sky-600 font-medium dark:bg-sky-900/20 dark:text-sky-400'
-                                  : 'text-slate-700 dark:text-slate-300 hover:bg-nog-50 dark:hover:bg-nog-800'
+                                  ? 'bg-honey-50 text-honey-600 font-medium dark:bg-honey-900/20 dark:text-honey-400'
+                                  : 'text-nog-700 dark:text-nog-300 hover:bg-nog-50 dark:hover:bg-nog-800'
                               }`}
                             >
                               {preset.label}
@@ -344,14 +344,14 @@ export default function TimePickerEnhanced({ onRangeChange, defaultRange = '-24h
             {viewMode === 'relative' && (
               /* Relative Time Input */
               <div className="p-4 space-y-4">
-                <div className="text-sm text-slate-600 dark:text-slate-400 mb-3">
+                <div className="text-sm text-nog-600 dark:text-nog-400 mb-3">
                   Enter a relative time range from now
                 </div>
 
                 <div className="flex gap-3">
                   {/* Amount Input */}
                   <div className="flex-1">
-                    <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                    <label className="block text-xs font-medium text-nog-700 dark:text-nog-300 mb-1.5">
                       Amount
                     </label>
                     <input
@@ -367,7 +367,7 @@ export default function TimePickerEnhanced({ onRangeChange, defaultRange = '-24h
 
                   {/* Unit Selector */}
                   <div className="flex-1">
-                    <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                    <label className="block text-xs font-medium text-nog-700 dark:text-nog-300 mb-1.5">
                       Unit
                     </label>
                     <select
@@ -385,12 +385,12 @@ export default function TimePickerEnhanced({ onRangeChange, defaultRange = '-24h
                 </div>
 
                 {/* Preview */}
-                <div className="p-3 bg-nog-50 dark:bg-nog-800 rounded-lg border border-slate-200 dark:border-slate-700">
-                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Preview</p>
-                  <p className="text-sm font-mono text-slate-900 dark:text-slate-100">
+                <div className="p-3 bg-nog-50 dark:bg-nog-800 rounded-lg border border-nog-200 dark:border-nog-700">
+                  <p className="text-xs font-medium text-nog-500 dark:text-nog-400 mb-1">Preview</p>
+                  <p className="text-sm font-mono text-nog-900 dark:text-nog-100">
                     Last {relativeAmount} {TIME_UNITS.find(u => u.value === relativeUnit)?.label.toLowerCase()}
                   </p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  <p className="text-xs text-nog-500 dark:text-nog-400 mt-1">
                     earliest: -{relativeAmount}{relativeUnit}
                   </p>
                 </div>
@@ -408,13 +408,13 @@ export default function TimePickerEnhanced({ onRangeChange, defaultRange = '-24h
             {viewMode === 'absolute' && (
               /* Absolute Date/Time Picker */
               <div className="p-4 space-y-4">
-                <div className="text-sm text-slate-600 dark:text-slate-400 mb-3">
+                <div className="text-sm text-nog-600 dark:text-nog-400 mb-3">
                   Select exact start and end dates
                 </div>
 
                 {/* Start Date */}
                 <div>
-                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                  <label className="block text-xs font-medium text-nog-700 dark:text-nog-300 mb-1.5">
                     Start Date & Time
                   </label>
                   <DatePicker
@@ -433,7 +433,7 @@ export default function TimePickerEnhanced({ onRangeChange, defaultRange = '-24h
 
                 {/* End Date */}
                 <div>
-                  <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                  <label className="block text-xs font-medium text-nog-700 dark:text-nog-300 mb-1.5">
                     End Date & Time
                   </label>
                   <DatePicker
@@ -453,16 +453,16 @@ export default function TimePickerEnhanced({ onRangeChange, defaultRange = '-24h
 
                 {/* Preview */}
                 {startDate && endDate && (
-                  <div className="p-3 bg-sky-50 dark:bg-sky-900/20 rounded-lg border border-sky-200 dark:border-sky-800">
-                    <p className="text-xs font-medium text-sky-900 dark:text-sky-300 mb-1">Selected Range</p>
-                    <p className="text-sm text-sky-700 dark:text-sky-400 font-mono">
+                  <div className="p-3 bg-honey-50 dark:bg-honey-900/20 rounded-lg border border-honey-200 dark:border-honey-800">
+                    <p className="text-xs font-medium text-honey-900 dark:text-honey-300 mb-1">Selected Range</p>
+                    <p className="text-sm text-honey-700 dark:text-honey-400 font-mono">
                       {startDate.toLocaleString()}
                       <br />
-                      <span className="text-sky-400 dark:text-sky-600">to</span>
+                      <span className="text-honey-400 dark:text-honey-600">to</span>
                       <br />
                       {endDate.toLocaleString()}
                     </p>
-                    <p className="text-xs text-sky-600 dark:text-sky-500 mt-2">
+                    <p className="text-xs text-honey-600 dark:text-honey-500 mt-2">
                       Duration: {Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60))} hours
                     </p>
                   </div>
@@ -484,9 +484,9 @@ export default function TimePickerEnhanced({ onRangeChange, defaultRange = '-24h
 
       {/* Visual Display - Selected Range Info (for custom ranges) */}
       {selectedPreset.value === 'custom' && selectedPreset.latest && (
-        <div className="absolute top-full left-0 right-0 mt-1 px-3 py-2 bg-white dark:bg-nog-800 border border-sky-200 dark:border-sky-700 rounded-lg shadow-sm text-xs text-slate-600 dark:text-slate-400">
+        <div className="absolute top-full left-0 right-0 mt-1 px-3 py-2 bg-white dark:bg-nog-800 border border-honey-200 dark:border-honey-700 rounded-lg shadow-sm text-xs text-nog-600 dark:text-nog-400">
           <div className="flex items-center justify-between">
-            <span className="font-medium text-sky-700 dark:text-sky-400">Custom:</span>
+            <span className="font-medium text-honey-700 dark:text-honey-400">Custom:</span>
             <span className="font-mono text-xs">
               {new Date(selectedPreset.earliest).toLocaleString()} - {new Date(selectedPreset.latest).toLocaleString()}
             </span>

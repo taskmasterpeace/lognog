@@ -130,7 +130,7 @@ export default function VariableInsertHelper({ onInsert, compact = false }: Vari
             <button
               key={v.name}
               onClick={() => handleInsertClick(v.name)}
-              className="px-2 py-1 text-xs bg-nog-100 dark:bg-nog-700 text-slate-600 dark:text-slate-300 rounded hover:bg-amber-100 dark:hover:bg-amber-900/30 hover:text-amber-700 dark:hover:text-amber-300 font-mono transition-colors"
+              className="px-2 py-1 text-xs bg-nog-100 dark:bg-nog-700 text-nog-600 dark:text-nog-300 rounded hover:bg-honey-100 dark:hover:bg-honey-900/30 hover:text-honey-700 dark:hover:text-honey-300 font-mono transition-colors"
               title={v.description}
             >
               {v.name.replace(/\{\{|\}\}/g, '')}
@@ -139,7 +139,7 @@ export default function VariableInsertHelper({ onInsert, compact = false }: Vari
         )}
         <button
           onClick={() => setExpandedCategory(expandedCategory ? null : 'all')}
-          className="px-2 py-1 text-xs text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300"
+          className="px-2 py-1 text-xs text-honey-600 dark:text-honey-400 hover:text-honey-700 dark:hover:text-honey-300"
         >
           More...
         </button>
@@ -148,13 +148,13 @@ export default function VariableInsertHelper({ onInsert, compact = false }: Vari
   }
 
   return (
-    <div className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
-      <div className="bg-nog-50 dark:bg-nog-800 px-3 py-2 border-b border-slate-200 dark:border-slate-700">
-        <h4 className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+    <div className="border border-nog-200 dark:border-nog-700 rounded-lg overflow-hidden">
+      <div className="bg-nog-50 dark:bg-nog-800 px-3 py-2 border-b border-nog-200 dark:border-nog-700">
+        <h4 className="text-sm font-semibold text-nog-700 dark:text-nog-300 flex items-center gap-2">
           <Code2 className="w-4 h-4" />
           Template Variables
         </h4>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+        <p className="text-xs text-nog-500 dark:text-nog-400 mt-0.5">
           Click to insert into message template
         </p>
       </div>
@@ -162,19 +162,19 @@ export default function VariableInsertHelper({ onInsert, compact = false }: Vari
       <div className="max-h-80 overflow-y-auto">
         {/* Categories */}
         {VARIABLE_CATEGORIES.map((category) => (
-          <div key={category.name} className="border-b border-slate-100 dark:border-slate-700 last:border-b-0">
+          <div key={category.name} className="border-b border-nog-100 dark:border-nog-700 last:border-b-0">
             <button
               onClick={() => setExpandedCategory(expandedCategory === category.name ? null : category.name)}
               className="w-full px-3 py-2 flex items-center justify-between hover:bg-nog-50 dark:hover:bg-nog-800/50 transition-colors"
             >
               <div className="flex items-center gap-2">
-                <span className="text-slate-400">{category.icon}</span>
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{category.name}</span>
+                <span className="text-nog-400">{category.icon}</span>
+                <span className="text-sm font-medium text-nog-700 dark:text-nog-300">{category.name}</span>
               </div>
               {expandedCategory === category.name ? (
-                <ChevronDown className="w-4 h-4 text-slate-400" />
+                <ChevronDown className="w-4 h-4 text-nog-400" />
               ) : (
-                <ChevronRight className="w-4 h-4 text-slate-400" />
+                <ChevronRight className="w-4 h-4 text-nog-400" />
               )}
             </button>
 
@@ -183,17 +183,17 @@ export default function VariableInsertHelper({ onInsert, compact = false }: Vari
                 {category.variables.map((variable) => (
                   <div
                     key={variable.name}
-                    className="flex items-start justify-between gap-2 p-2 rounded bg-nog-50 dark:bg-nog-800/50 hover:bg-amber-50 dark:hover:bg-amber-900/20 group cursor-pointer"
+                    className="flex items-start justify-between gap-2 p-2 rounded bg-nog-50 dark:bg-nog-800/50 hover:bg-honey-50 dark:hover:bg-honey-900/20 group cursor-pointer"
                     onClick={() => handleInsertClick(variable.name)}
                   >
                     <div className="flex-1 min-w-0">
-                      <code className="text-xs font-mono text-amber-600 dark:text-amber-400 break-all">
+                      <code className="text-xs font-mono text-honey-600 dark:text-honey-400 break-all">
                         {variable.name}
                       </code>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      <p className="text-xs text-nog-500 dark:text-nog-400 mt-0.5">
                         {variable.description}
                         {variable.example && (
-                          <span className="text-slate-400 dark:text-slate-500"> ({variable.example})</span>
+                          <span className="text-nog-400 dark:text-nog-500"> ({variable.example})</span>
                         )}
                       </p>
                     </div>
@@ -202,7 +202,7 @@ export default function VariableInsertHelper({ onInsert, compact = false }: Vari
                         e.stopPropagation();
                         handleCopy(variable.name);
                       }}
-                      className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="p-1 text-nog-400 hover:text-nog-600 dark:hover:text-nog-300 opacity-0 group-hover:opacity-100 transition-opacity"
                     >
                       {copied === variable.name ? (
                         <Check className="w-3.5 h-3.5 text-green-500" />
@@ -218,20 +218,20 @@ export default function VariableInsertHelper({ onInsert, compact = false }: Vari
         ))}
 
         {/* Filters */}
-        <div className="border-b border-slate-100 dark:border-slate-700">
+        <div className="border-b border-nog-100 dark:border-nog-700">
           <button
             onClick={() => setShowFilters(!showFilters)}
             className="w-full px-3 py-2 flex items-center justify-between hover:bg-nog-50 dark:hover:bg-nog-800/50 transition-colors"
           >
             <div className="flex items-center gap-2">
-              <span className="text-slate-400"><Hash className="w-4 h-4" /></span>
-              <span className="text-sm font-medium text-slate-700 dark:text-slate-300">Filters</span>
-              <span className="text-xs text-slate-400">(append with :filter)</span>
+              <span className="text-nog-400"><Hash className="w-4 h-4" /></span>
+              <span className="text-sm font-medium text-nog-700 dark:text-nog-300">Filters</span>
+              <span className="text-xs text-nog-400">(append with :filter)</span>
             </div>
             {showFilters ? (
-              <ChevronDown className="w-4 h-4 text-slate-400" />
+              <ChevronDown className="w-4 h-4 text-nog-400" />
             ) : (
-              <ChevronRight className="w-4 h-4 text-slate-400" />
+              <ChevronRight className="w-4 h-4 text-nog-400" />
             )}
           </button>
 
@@ -241,14 +241,14 @@ export default function VariableInsertHelper({ onInsert, compact = false }: Vari
                 {FILTERS.map((filter) => (
                   <div
                     key={filter.name}
-                    className="p-1.5 rounded bg-nog-50 dark:bg-nog-800/50 hover:bg-amber-50 dark:hover:bg-amber-900/20 cursor-pointer"
+                    className="p-1.5 rounded bg-nog-50 dark:bg-nog-800/50 hover:bg-honey-50 dark:hover:bg-honey-900/20 cursor-pointer"
                     onClick={() => handleCopy(`:${filter.name.replace(':N', ':')}`)}
                     title={filter.example}
                   >
-                    <code className="text-xs font-mono text-amber-600 dark:text-amber-400">
+                    <code className="text-xs font-mono text-honey-600 dark:text-honey-400">
                       :{filter.name}
                     </code>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+                    <p className="text-xs text-nog-500 dark:text-nog-400 truncate">
                       {filter.description}
                     </p>
                   </div>
@@ -260,9 +260,9 @@ export default function VariableInsertHelper({ onInsert, compact = false }: Vari
       </div>
 
       {/* Pro tips */}
-      <div className="px-3 py-2 bg-amber-50 dark:bg-amber-900/20 border-t border-amber-100 dark:border-amber-800">
-        <p className="text-xs text-amber-700 dark:text-amber-300">
-          <strong>Pro tip:</strong> Chain filters like <code className="text-amber-800 dark:text-amber-200">{'{{result_count:comma}}'}</code> or use math like <code className="text-amber-800 dark:text-amber-200">{'{{result.bytes / 1024 / 1024}}'}</code>
+      <div className="px-3 py-2 bg-honey-50 dark:bg-honey-900/20 border-t border-honey-100 dark:border-honey-800">
+        <p className="text-xs text-honey-700 dark:text-honey-300">
+          <strong>Pro tip:</strong> Chain filters like <code className="text-honey-800 dark:text-honey-200">{'{{result_count:comma}}'}</code> or use math like <code className="text-honey-800 dark:text-honey-200">{'{{result.bytes / 1024 / 1024}}'}</code>
         </p>
       </div>
     </div>

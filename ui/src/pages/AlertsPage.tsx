@@ -88,10 +88,10 @@ const TRIGGER_CONDITIONS = [
 ];
 
 const SEVERITIES = [
-  { value: 'info', label: 'Info', icon: Info, color: 'text-amber-500', bg: 'bg-amber-100' },
-  { value: 'low', label: 'Low', icon: AlertCircle, color: 'text-slate-500', bg: 'bg-nog-100' },
+  { value: 'info', label: 'Info', icon: Info, color: 'text-honey-500', bg: 'bg-honey-100' },
+  { value: 'low', label: 'Low', icon: AlertCircle, color: 'text-nog-500', bg: 'bg-nog-100' },
   { value: 'medium', label: 'Medium', icon: AlertTriangle, color: 'text-yellow-500', bg: 'bg-yellow-100' },
-  { value: 'high', label: 'High', icon: AlertTriangle, color: 'text-orange-500', bg: 'bg-orange-100' },
+  { value: 'high', label: 'High', icon: AlertTriangle, color: 'text-honey-500', bg: 'bg-honey-100' },
   { value: 'critical', label: 'Critical', icon: Zap, color: 'text-red-500', bg: 'bg-red-100' },
 ];
 
@@ -490,7 +490,7 @@ export default function AlertsPage() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
+        <Loader2 className="w-8 h-8 animate-spin text-honey-500" />
       </div>
     );
   }
@@ -508,21 +508,21 @@ export default function AlertsPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-            <Bell className="w-6 sm:w-7 h-6 sm:h-7 text-amber-500" />
+          <h1 className="text-xl sm:text-2xl font-bold text-nog-900 dark:text-nog-100 flex items-center gap-2">
+            <Bell className="w-6 sm:w-7 h-6 sm:h-7 text-honey-500" />
             Alerts
           </h1>
-          <p className="text-sm sm:text-base text-slate-500 dark:text-slate-400 mt-1">
+          <p className="text-sm sm:text-base text-nog-500 dark:text-nog-400 mt-1">
             Configure alert rules to notify you when conditions are met
           </p>
         </div>
         <div className="flex gap-2 items-center">
           <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-slate-400" />
+            <Filter className="w-4 h-4 text-nog-400" />
             <AppScopeFilter value={appScope} onChange={setAppScope} />
           </div>
           <div className="flex items-center gap-1">
-            <ArrowUpDown className="w-4 h-4 text-slate-400" />
+            <ArrowUpDown className="w-4 h-4 text-nog-400" />
             <select
               value={`${sortBy}-${sortDir}`}
               onChange={(e) => {
@@ -530,7 +530,7 @@ export default function AlertsPage() {
                 setSortBy(field);
                 setSortDir(dir);
               }}
-              className="px-2 py-1.5 text-sm bg-white dark:bg-nog-800 border border-slate-200 dark:border-nog-700 rounded-lg text-slate-700 dark:text-slate-300"
+              className="px-2 py-1.5 text-sm bg-white dark:bg-nog-800 border border-nog-200 dark:border-nog-700 rounded-lg text-nog-700 dark:text-nog-300"
             >
               <option value="name-asc">Name (A-Z)</option>
               <option value="name-desc">Name (Z-A)</option>
@@ -547,7 +547,7 @@ export default function AlertsPage() {
               setSelectedAlertId(null);
               setShowHistoryModal(true);
             }}
-            className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-nog-100 hover:bg-slate-200 dark:bg-nog-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg flex items-center justify-center gap-2"
+            className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-nog-100 hover:bg-nog-200 dark:bg-nog-700 dark:hover:bg-nog-600 text-nog-700 dark:text-nog-200 rounded-lg flex items-center justify-center gap-2"
           >
             <History className="w-4 h-4" />
             <span className="hidden sm:inline">Alert History</span>
@@ -559,7 +559,7 @@ export default function AlertsPage() {
               setEditingAlert(null);
               setShowCreateModal(true);
             }}
-            className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg flex items-center justify-center gap-2"
+            className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-honey-500 hover:bg-honey-600 text-nog-900 rounded-lg flex items-center justify-center gap-2"
           >
             <Plus className="w-4 h-4" />
             <span className="hidden sm:inline">Create Alert</span>
@@ -570,15 +570,15 @@ export default function AlertsPage() {
 
       {/* Bulk Actions Bar */}
       {selectedAlerts.size > 0 && (
-        <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 flex items-center justify-between gap-4">
+        <div className="bg-honey-50 dark:bg-honey-900/20 border border-honey-200 dark:border-honey-800 rounded-lg p-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <input
               type="checkbox"
               checked={selectedAlerts.size === sortedAlerts.length}
               onChange={handleSelectAll}
-              className="w-4 h-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500"
+              className="w-4 h-4 rounded border-honey-300 text-honey-600 focus:ring-honey-500"
             />
-            <span className="text-sm font-medium text-amber-800 dark:text-amber-300">
+            <span className="text-sm font-medium text-honey-800 dark:text-honey-300">
               {selectedAlerts.size} alert{selectedAlerts.size !== 1 ? 's' : ''} selected
             </span>
           </div>
@@ -594,14 +594,14 @@ export default function AlertsPage() {
             <button
               onClick={() => bulkToggleMutation.mutate({ alertIds: Array.from(selectedAlerts), enable: false })}
               disabled={bulkToggleMutation.isPending}
-              className="px-3 py-1.5 text-sm bg-slate-600 hover:bg-slate-700 text-white rounded-lg flex items-center gap-1.5 disabled:opacity-50"
+              className="px-3 py-1.5 text-sm bg-nog-600 hover:bg-nog-700 text-white rounded-lg flex items-center gap-1.5 disabled:opacity-50"
             >
               <Pause className="w-4 h-4" />
               Disable
             </button>
             <button
               onClick={() => setSelectedAlerts(new Set())}
-              className="px-3 py-1.5 text-sm text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg"
+              className="px-3 py-1.5 text-sm text-nog-600 dark:text-nog-400 hover:bg-nog-200 dark:hover:bg-nog-700 rounded-lg"
             >
               Clear
             </button>
@@ -621,7 +621,7 @@ export default function AlertsPage() {
               <div
                 key={alert.id}
                 className={`bg-white dark:bg-nog-800 rounded-xl shadow-sm border ${
-                  alert.enabled ? 'border-slate-200 dark:border-slate-700' : 'border-slate-200/50 dark:border-slate-700/50 opacity-60'
+                  alert.enabled ? 'border-nog-200 dark:border-nog-700' : 'border-nog-200/50 dark:border-nog-700/50 opacity-60'
                 }`}
               >
                 {/* Alert Header */}
@@ -633,11 +633,11 @@ export default function AlertsPage() {
                       checked={selectedAlerts.has(alert.id)}
                       onChange={(e) => handleSelectAlert(alert.id, e.target.checked)}
                       onClick={(e) => e.stopPropagation()}
-                      className="w-4 h-4 rounded border-slate-300 dark:border-slate-600 text-amber-600 focus:ring-amber-500 flex-shrink-0"
+                      className="w-4 h-4 rounded border-nog-300 dark:border-nog-600 text-honey-600 focus:ring-honey-500 flex-shrink-0"
                     />
                     <button
                       onClick={() => toggleExpand(alert.id)}
-                      className="text-slate-400 hover:text-slate-600 flex-shrink-0"
+                      className="text-nog-400 hover:text-nog-600 flex-shrink-0"
                     >
                       {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
                     </button>
@@ -647,24 +647,24 @@ export default function AlertsPage() {
                     </div>
 
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-slate-900 dark:text-slate-100 truncate text-sm sm:text-base">
+                      <h3 className="font-semibold text-nog-900 dark:text-nog-100 truncate text-sm sm:text-base">
                         {alert.name}
                       </h3>
-                      <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 truncate">
+                      <p className="text-xs sm:text-sm text-nog-500 dark:text-nog-400 truncate">
                         {alert.search_query}
                       </p>
                     </div>
                   </div>
 
                   {/* Schedule and trigger info */}
-                  <div className="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm text-slate-500 ml-8 sm:ml-0 flex-wrap">
+                  <div className="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm text-nog-500 ml-8 sm:ml-0 flex-wrap">
                     <div className="flex items-center gap-1">
                       <Clock className="w-3 sm:w-4 h-3 sm:h-4" />
                       <span className="hidden sm:inline">{alert.cron_expression || '*/5 * * * *'}</span>
                       <span className="sm:hidden">{(alert.cron_expression || '').split(' ')[0] === '*' ? '1m' : (alert.cron_expression || '').split(' ')[0].replace('*/', '') + 'm'}</span>
                     </div>
                     {alert.trigger_count > 0 && (
-                      <div className="px-2 py-0.5 sm:py-1 bg-orange-100 text-orange-700 rounded-full text-xs font-medium">
+                      <div className="px-2 py-0.5 sm:py-1 bg-honey-100 text-honey-700 rounded-full text-xs font-medium">
                         {alert.trigger_count}x
                       </div>
                     )}
@@ -675,7 +675,7 @@ export default function AlertsPage() {
                     <button
                       onClick={() => evaluateMutation.mutate(alert.id)}
                       disabled={evaluateMutation.isPending}
-                      className="p-1.5 sm:p-2 text-slate-400 hover:text-amber-500 hover:bg-amber-50 rounded-lg flex-shrink-0"
+                      className="p-1.5 sm:p-2 text-nog-400 hover:text-honey-500 hover:bg-honey-50 rounded-lg flex-shrink-0"
                       title="Run Now"
                     >
                       <Play className="w-4 h-4" />
@@ -693,7 +693,7 @@ export default function AlertsPage() {
                       className={`p-1.5 sm:p-2 rounded-lg flex-shrink-0 ${
                         alert.enabled
                           ? 'text-green-500 hover:bg-green-50'
-                          : 'text-slate-400 hover:bg-nog-100'
+                          : 'text-nog-400 hover:bg-nog-100'
                       }`}
                       title={alert.enabled ? 'Disable' : 'Enable'}
                     >
@@ -701,7 +701,7 @@ export default function AlertsPage() {
                     </button>
                     <button
                       onClick={() => handleEdit(alert)}
-                      className="p-1.5 sm:p-2 text-slate-400 hover:text-slate-600 hover:bg-nog-100 rounded-lg flex-shrink-0"
+                      className="p-1.5 sm:p-2 text-nog-400 hover:text-nog-600 hover:bg-nog-100 rounded-lg flex-shrink-0"
                       title="Edit"
                     >
                       <Settings className="w-4 h-4" />
@@ -722,7 +722,7 @@ export default function AlertsPage() {
                           });
                         }
                       }}
-                      className="p-1.5 sm:p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg flex-shrink-0"
+                      className="p-1.5 sm:p-2 text-nog-400 hover:text-red-500 hover:bg-red-50 rounded-lg flex-shrink-0"
                       title="Delete"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -732,38 +732,38 @@ export default function AlertsPage() {
 
                 {/* Expanded Details */}
                 {isExpanded && (
-                  <div className="px-3 sm:px-4 pb-3 sm:pb-4 border-t border-slate-100 dark:border-slate-700 pt-3 sm:pt-4">
+                  <div className="px-3 sm:px-4 pb-3 sm:pb-4 border-t border-nog-100 dark:border-nog-700 pt-3 sm:pt-4">
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 text-xs sm:text-sm">
                       <div>
-                        <div className="text-slate-500 dark:text-slate-400">Trigger Condition</div>
-                        <div className="font-medium text-slate-900 dark:text-slate-100">
+                        <div className="text-nog-500 dark:text-nog-400">Trigger Condition</div>
+                        <div className="font-medium text-nog-900 dark:text-nog-100">
                           {TRIGGER_TYPES.find(t => t.value === alert.trigger_type)?.label}{' '}
                           {TRIGGER_CONDITIONS.find(c => c.value === alert.trigger_condition)?.label}{' '}
                           {alert.trigger_threshold}
                         </div>
                       </div>
                       <div>
-                        <div className="text-slate-500 dark:text-slate-400">Time Range</div>
-                        <div className="font-medium text-slate-900 dark:text-slate-100">
+                        <div className="text-nog-500 dark:text-nog-400">Time Range</div>
+                        <div className="font-medium text-nog-900 dark:text-nog-100">
                           {TIME_RANGES.find(t => t.value === alert.time_range)?.label || alert.time_range}
                         </div>
                       </div>
                       <div>
-                        <div className="text-slate-500 dark:text-slate-400">Last Run</div>
-                        <div className="font-medium text-slate-900 dark:text-slate-100">
+                        <div className="text-nog-500 dark:text-nog-400">Last Run</div>
+                        <div className="font-medium text-nog-900 dark:text-nog-100">
                           {alert.last_run ? formatDate(alert.last_run) : 'Never'}
                         </div>
                       </div>
                       <div>
-                        <div className="text-slate-500 dark:text-slate-400">Last Triggered</div>
-                        <div className="font-medium text-slate-900 dark:text-slate-100">
+                        <div className="text-nog-500 dark:text-nog-400">Last Triggered</div>
+                        <div className="font-medium text-nog-900 dark:text-nog-100">
                           {alert.last_triggered ? formatDate(alert.last_triggered) : 'Never'}
                         </div>
                       </div>
                     </div>
                     {alert.actions.length > 0 && (
                       <div className="mt-4">
-                        <div className="text-slate-500 dark:text-slate-400 text-sm mb-2">Actions</div>
+                        <div className="text-nog-500 dark:text-nog-400 text-sm mb-2">Actions</div>
                         <div className="flex flex-wrap gap-2">
                           {alert.actions.map((action, i) => (
                             <div
@@ -790,9 +790,9 @@ export default function AlertsPage() {
         </div>
       ) : (
         <div className="text-center py-12 bg-white dark:bg-nog-800 rounded-xl">
-          <Bell className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100 mb-2">No alerts configured</h3>
-          <p className="text-slate-500 dark:text-slate-400 mb-4">
+          <Bell className="w-12 h-12 text-nog-300 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-nog-900 dark:text-nog-100 mb-2">No alerts configured</h3>
+          <p className="text-nog-500 dark:text-nog-400 mb-4">
             Create your first alert to monitor your logs
           </p>
           <button
@@ -800,7 +800,7 @@ export default function AlertsPage() {
               resetForm();
               setShowCreateModal(true);
             }}
-            className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg inline-flex items-center gap-2"
+            className="px-4 py-2 bg-honey-500 hover:bg-honey-600 text-nog-900 rounded-lg inline-flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
             Create Alert
@@ -812,8 +812,8 @@ export default function AlertsPage() {
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-nog-800 rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
+            <div className="p-6 border-b border-nog-200 dark:border-nog-700 flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-nog-900 dark:text-nog-100">
                 {editingAlert ? 'Edit Alert' : 'Create Alert'}
               </h2>
               <button
@@ -822,7 +822,7 @@ export default function AlertsPage() {
                   setEditingAlert(null);
                   resetForm();
                 }}
-                className="p-2 hover:bg-nog-100 dark:hover:bg-slate-700 rounded-lg"
+                className="p-2 hover:bg-nog-100 dark:hover:bg-nog-700 rounded-lg"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -831,9 +831,9 @@ export default function AlertsPage() {
             <div className="p-6 space-y-6">
               {/* Basic Info */}
               <div className="space-y-4">
-                <h3 className="font-medium text-slate-900 dark:text-slate-100">Basic Information</h3>
+                <h3 className="font-medium text-nog-900 dark:text-nog-100">Basic Information</h3>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
                     Alert Name
                   </label>
                   <input
@@ -841,11 +841,11 @@ export default function AlertsPage() {
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     placeholder="e.g., High Error Rate"
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100"
+                    className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-700 text-nog-900 dark:text-nog-100"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
                     Description (optional)
                   </label>
                   <input
@@ -853,16 +853,16 @@ export default function AlertsPage() {
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     placeholder="Alert when error count is high"
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100"
+                    className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-700 text-nog-900 dark:text-nog-100"
                   />
                 </div>
               </div>
 
               {/* Search Query */}
               <div className="space-y-4">
-                <h3 className="font-medium text-slate-900 dark:text-slate-100">Search Query</h3>
+                <h3 className="font-medium text-nog-900 dark:text-nog-100">Search Query</h3>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
                     DSL Query
                   </label>
                   <textarea
@@ -870,7 +870,7 @@ export default function AlertsPage() {
                     onChange={(e) => setFormData({ ...formData, search_query: e.target.value })}
                     placeholder="search severity<=3 | stats count"
                     rows={3}
-                    className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100 font-mono text-sm"
+                    className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-700 text-nog-900 dark:text-nog-100 font-mono text-sm"
                   />
                 </div>
               </div>
@@ -878,7 +878,7 @@ export default function AlertsPage() {
               {/* Trigger Condition */}
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
-                  <h3 className="font-medium text-slate-900 dark:text-slate-100">Trigger Condition</h3>
+                  <h3 className="font-medium text-nog-900 dark:text-nog-100">Trigger Condition</h3>
                   <InfoTip
                     content="Define when this alert should fire based on search results. The alert will trigger when the condition is met."
                     placement="right"
@@ -886,7 +886,7 @@ export default function AlertsPage() {
                 </div>
                 <div className="grid grid-cols-3 gap-4">
                   <div>
-                    <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    <label className="flex items-center gap-2 text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
                       Type
                       <InfoTip
                         content={
@@ -902,7 +902,7 @@ export default function AlertsPage() {
                     <select
                       value={formData.trigger_type}
                       onChange={(e) => setFormData({ ...formData, trigger_type: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100"
+                      className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-700 text-nog-900 dark:text-nog-100"
                     >
                       {TRIGGER_TYPES.map((t) => (
                         <option key={t.value} value={t.value}>{t.label}</option>
@@ -910,7 +910,7 @@ export default function AlertsPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    <label className="flex items-center gap-2 text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
                       Condition
                       <InfoTip
                         content="Compare the result count/value against the threshold. Use 'drops by' or 'rises by' to detect sudden changes."
@@ -920,7 +920,7 @@ export default function AlertsPage() {
                     <select
                       value={formData.trigger_condition}
                       onChange={(e) => setFormData({ ...formData, trigger_condition: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100"
+                      className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-700 text-nog-900 dark:text-nog-100"
                     >
                       {TRIGGER_CONDITIONS.map((c) => (
                         <option key={c.value} value={c.value}>{c.label}</option>
@@ -928,7 +928,7 @@ export default function AlertsPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    <label className="flex items-center gap-2 text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
                       Threshold
                       <InfoTip
                         content="The numeric value to compare against. For example, set to 10 to trigger when results exceed 10."
@@ -939,7 +939,7 @@ export default function AlertsPage() {
                       type="number"
                       value={formData.trigger_threshold}
                       onChange={(e) => setFormData({ ...formData, trigger_threshold: parseInt(e.target.value) || 0 })}
-                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100"
+                      className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-700 text-nog-900 dark:text-nog-100"
                     />
                   </div>
                 </div>
@@ -948,7 +948,7 @@ export default function AlertsPage() {
               {/* Schedule */}
               <div className="space-y-4">
                 <div className="flex items-center gap-2">
-                  <h3 className="font-medium text-slate-900 dark:text-slate-100">Schedule</h3>
+                  <h3 className="font-medium text-nog-900 dark:text-nog-100">Schedule</h3>
                   <InfoTip
                     content="Configure how often this alert runs and what time range to search."
                     placement="right"
@@ -956,7 +956,7 @@ export default function AlertsPage() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    <label className="flex items-center gap-2 text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
                       Run Schedule
                       <InfoTip
                         content="How frequently the alert runs. For example, 'Every 5 minutes' will check for alert conditions every 5 minutes."
@@ -966,7 +966,7 @@ export default function AlertsPage() {
                     <select
                       value={formData.cron_expression}
                       onChange={(e) => setFormData({ ...formData, cron_expression: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100"
+                      className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-700 text-nog-900 dark:text-nog-100"
                     >
                       {SCHEDULE_OPTIONS.map((s) => (
                         <option key={s.value} value={s.value}>{s.label}</option>
@@ -974,7 +974,7 @@ export default function AlertsPage() {
                     </select>
                   </div>
                   <div>
-                    <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    <label className="flex items-center gap-2 text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
                       Time Range to Search
                       <InfoTip
                         content="How far back to search when the alert runs. For example, 'Last 5 minutes' will search the most recent 5 minutes of logs."
@@ -984,7 +984,7 @@ export default function AlertsPage() {
                     <select
                       value={formData.time_range}
                       onChange={(e) => setFormData({ ...formData, time_range: e.target.value })}
-                      className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100"
+                      className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-700 text-nog-900 dark:text-nog-100"
                     >
                       {TIME_RANGES.map((t) => (
                         <option key={t.value} value={t.value}>{t.label}</option>
@@ -996,7 +996,7 @@ export default function AlertsPage() {
 
               {/* Severity */}
               <div className="space-y-4">
-                <h3 className="font-medium text-slate-900 dark:text-slate-100">Severity</h3>
+                <h3 className="font-medium text-nog-900 dark:text-nog-100">Severity</h3>
                 <div className="flex gap-2">
                   {SEVERITIES.map((s) => {
                     const Icon = s.icon;
@@ -1008,7 +1008,7 @@ export default function AlertsPage() {
                         className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-colors ${
                           formData.severity === s.value
                             ? `${s.bg} border-current ${s.color}`
-                            : 'border-slate-200 dark:border-slate-600 hover:bg-nog-50 dark:hover:bg-slate-700'
+                            : 'border-nog-200 dark:border-nog-600 hover:bg-nog-50 dark:hover:bg-nog-700'
                         }`}
                       >
                         <Icon className={`w-4 h-4 ${s.color}`} />
@@ -1027,9 +1027,9 @@ export default function AlertsPage() {
                     id="throttle"
                     checked={formData.throttle_enabled}
                     onChange={(e) => setFormData({ ...formData, throttle_enabled: e.target.checked })}
-                    className="w-4 h-4 rounded border-slate-300"
+                    className="w-4 h-4 rounded border-nog-300"
                   />
-                  <label htmlFor="throttle" className="flex items-center gap-2 font-medium text-slate-900 dark:text-slate-100">
+                  <label htmlFor="throttle" className="flex items-center gap-2 font-medium text-nog-900 dark:text-nog-100">
                     Enable Throttling
                     <InfoTip
                       content="Prevent alert fatigue by suppressing notifications after the first trigger. The alert won't fire again until the throttle window expires."
@@ -1039,14 +1039,14 @@ export default function AlertsPage() {
                 </div>
                 {formData.throttle_enabled && (
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
                       Suppress for (seconds)
                     </label>
                     <input
                       type="number"
                       value={formData.throttle_window_seconds}
                       onChange={(e) => setFormData({ ...formData, throttle_window_seconds: parseInt(e.target.value) || 300 })}
-                      className="w-32 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100"
+                      className="w-32 px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-700 text-nog-900 dark:text-nog-100"
                     />
                   </div>
                 )}
@@ -1055,12 +1055,12 @@ export default function AlertsPage() {
               {/* Actions */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-medium text-slate-900 dark:text-slate-100">Actions</h3>
+                  <h3 className="font-medium text-nog-900 dark:text-nog-100">Actions</h3>
                   <div className="flex flex-wrap gap-2">
                     <button
                       type="button"
                       onClick={() => addAction('apprise')}
-                      className="px-3 py-1 text-sm bg-amber-100 hover:bg-amber-200 dark:bg-amber-900/30 dark:hover:bg-amber-900/50 text-amber-700 dark:text-amber-300 rounded-lg flex items-center gap-1"
+                      className="px-3 py-1 text-sm bg-honey-100 hover:bg-honey-200 dark:bg-honey-900/30 dark:hover:bg-honey-900/50 text-honey-700 dark:text-honey-300 rounded-lg flex items-center gap-1"
                       title="Send to Slack, Discord, Telegram, PagerDuty, and 100+ more"
                     >
                       <Send className="w-3 h-3" /> Notify
@@ -1068,35 +1068,35 @@ export default function AlertsPage() {
                     <button
                       type="button"
                       onClick={() => addAction('email')}
-                      className="px-3 py-1 text-sm bg-nog-100 hover:bg-slate-200 dark:bg-nog-700 dark:hover:bg-slate-600 rounded-lg flex items-center gap-1"
+                      className="px-3 py-1 text-sm bg-nog-100 hover:bg-nog-200 dark:bg-nog-700 dark:hover:bg-nog-600 rounded-lg flex items-center gap-1"
                     >
                       <Mail className="w-3 h-3" /> Email
                     </button>
                     <button
                       type="button"
                       onClick={() => addAction('webhook')}
-                      className="px-3 py-1 text-sm bg-nog-100 hover:bg-slate-200 dark:bg-nog-700 dark:hover:bg-slate-600 rounded-lg flex items-center gap-1"
+                      className="px-3 py-1 text-sm bg-nog-100 hover:bg-nog-200 dark:bg-nog-700 dark:hover:bg-nog-600 rounded-lg flex items-center gap-1"
                     >
                       <Globe className="w-3 h-3" /> Webhook
                     </button>
                     <button
                       type="button"
                       onClick={() => addAction('script')}
-                      className="px-3 py-1 text-sm bg-nog-100 hover:bg-slate-200 dark:bg-nog-700 dark:hover:bg-slate-600 rounded-lg flex items-center gap-1"
+                      className="px-3 py-1 text-sm bg-nog-100 hover:bg-nog-200 dark:bg-nog-700 dark:hover:bg-nog-600 rounded-lg flex items-center gap-1"
                     >
                       <Terminal className="w-3 h-3" /> Script
                     </button>
                     <button
                       type="button"
                       onClick={() => addAction('log')}
-                      className="px-3 py-1 text-sm bg-nog-100 hover:bg-slate-200 dark:bg-nog-700 dark:hover:bg-slate-600 rounded-lg flex items-center gap-1"
+                      className="px-3 py-1 text-sm bg-nog-100 hover:bg-nog-200 dark:bg-nog-700 dark:hover:bg-nog-600 rounded-lg flex items-center gap-1"
                     >
                       <FileText className="w-3 h-3" /> Log
                     </button>
                     <button
                       type="button"
                       onClick={() => addAction('show_on_login')}
-                      className="px-3 py-1 text-sm bg-amber-100 hover:bg-amber-200 dark:bg-amber-900/30 dark:hover:bg-amber-900/50 text-amber-700 dark:text-amber-300 rounded-lg flex items-center gap-1"
+                      className="px-3 py-1 text-sm bg-honey-100 hover:bg-honey-200 dark:bg-honey-900/30 dark:hover:bg-honey-900/50 text-honey-700 dark:text-honey-300 rounded-lg flex items-center gap-1"
                       title="Show notification in UI on next login"
                     >
                       <LogIn className="w-3 h-3" /> On Login
@@ -1105,7 +1105,7 @@ export default function AlertsPage() {
                 </div>
 
                 {formData.actions.length === 0 ? (
-                  <p className="text-sm text-slate-500">No actions configured. Alert will only log to history.</p>
+                  <p className="text-sm text-nog-500">No actions configured. Alert will only log to history.</p>
                 ) : (
                   <div className="space-y-3">
                     {formData.actions.map((action, index) => (
@@ -1124,7 +1124,7 @@ export default function AlertsPage() {
                           <button
                             type="button"
                             onClick={() => removeAction(index)}
-                            className="text-slate-400 hover:text-red-500"
+                            className="text-nog-400 hover:text-red-500"
                           >
                             <X className="w-4 h-4" />
                           </button>
@@ -1133,7 +1133,7 @@ export default function AlertsPage() {
                         {action.type === 'email' && (
                           <div className="space-y-3">
                             <div>
-                              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                              <label className="block text-xs font-medium text-nog-700 dark:text-nog-300 mb-1">
                                 Recipient Email
                               </label>
                               <input
@@ -1141,10 +1141,10 @@ export default function AlertsPage() {
                                 placeholder="recipient@example.com"
                                 value={action.config.to || ''}
                                 onChange={(e) => updateAction(index, { to: e.target.value })}
-                                className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100 text-sm ${
+                                className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-nog-700 text-nog-900 dark:text-nog-100 text-sm ${
                                   action.config.to && !isValidEmail(action.config.to)
                                     ? 'border-red-400 focus:ring-red-200 focus:border-red-400'
-                                    : 'border-slate-300 dark:border-slate-600'
+                                    : 'border-nog-300 dark:border-nog-600'
                                 }`}
                               />
                               {action.config.to && !isValidEmail(action.config.to) && (
@@ -1154,7 +1154,7 @@ export default function AlertsPage() {
 
                             <div>
                               <div className="flex items-center justify-between mb-1">
-                                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+                                <label className="block text-xs font-medium text-nog-700 dark:text-nog-300">
                                   Subject (supports variables)
                                 </label>
                                 <VariableHelper onInsert={(variable) => insertVariableIntoField(variable, emailSubjectRefs.current[index])} />
@@ -1165,13 +1165,13 @@ export default function AlertsPage() {
                                 placeholder="e.g., High Error Rate on {{hostname}}"
                                 value={action.config.subject || ''}
                                 onChange={(e) => updateAction(index, { subject: e.target.value })}
-                                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100 text-sm"
+                                className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-700 text-nog-900 dark:text-nog-100 text-sm"
                               />
                             </div>
 
                             <div>
                               <div className="flex items-center justify-between mb-1">
-                                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+                                <label className="block text-xs font-medium text-nog-700 dark:text-nog-300">
                                   Body (supports variables)
                                 </label>
                                 <VariableHelper onInsert={(variable) => insertVariableIntoField(variable, emailBodyRefs.current[index])} />
@@ -1182,9 +1182,9 @@ export default function AlertsPage() {
                                 value={action.config.body || ''}
                                 onChange={(e) => updateAction(index, { body: e.target.value })}
                                 rows={4}
-                                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100 text-sm font-mono"
+                                className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-700 text-nog-900 dark:text-nog-100 text-sm font-mono"
                               />
-                              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                              <p className="text-xs text-nog-500 dark:text-nog-400 mt-1">
                                 Leave empty to use default template
                               </p>
                             </div>
@@ -1194,7 +1194,7 @@ export default function AlertsPage() {
                         {action.type === 'webhook' && (
                           <div className="space-y-3">
                             <div>
-                              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                              <label className="block text-xs font-medium text-nog-700 dark:text-nog-300 mb-1">
                                 Webhook URL
                               </label>
                               <input
@@ -1202,10 +1202,10 @@ export default function AlertsPage() {
                                 placeholder="https://api.example.com/webhook"
                                 value={action.config.url || ''}
                                 onChange={(e) => updateAction(index, { url: e.target.value })}
-                                className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100 text-sm ${
+                                className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-nog-700 text-nog-900 dark:text-nog-100 text-sm ${
                                   action.config.url && !(action.config.url.startsWith('http://') || action.config.url.startsWith('https://'))
                                     ? 'border-red-400 focus:ring-red-200 focus:border-red-400'
-                                    : 'border-slate-300 dark:border-slate-600'
+                                    : 'border-nog-300 dark:border-nog-600'
                                 }`}
                               />
                               {action.config.url && !(action.config.url.startsWith('http://') || action.config.url.startsWith('https://')) && (
@@ -1214,13 +1214,13 @@ export default function AlertsPage() {
                             </div>
 
                             <div>
-                              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                              <label className="block text-xs font-medium text-nog-700 dark:text-nog-300 mb-1">
                                 HTTP Method
                               </label>
                               <select
                                 value={action.config.method || 'POST'}
                                 onChange={(e) => updateAction(index, { method: e.target.value as 'GET' | 'POST' | 'PUT' })}
-                                className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100 text-sm"
+                                className="px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-700 text-nog-900 dark:text-nog-100 text-sm"
                               >
                                 <option value="GET">GET</option>
                                 <option value="POST">POST</option>
@@ -1230,7 +1230,7 @@ export default function AlertsPage() {
 
                             <div>
                               <div className="flex items-center justify-between mb-1">
-                                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+                                <label className="block text-xs font-medium text-nog-700 dark:text-nog-300">
                                   Custom Payload (JSON, supports variables)
                                 </label>
                                 <VariableHelper onInsert={(variable) => insertVariableIntoField(variable, webhookPayloadRefs.current[index])} />
@@ -1241,9 +1241,9 @@ export default function AlertsPage() {
                                 value={action.config.payload || ''}
                                 onChange={(e) => updateAction(index, { payload: e.target.value })}
                                 rows={6}
-                                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100 text-sm font-mono"
+                                className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-700 text-nog-900 dark:text-nog-100 text-sm font-mono"
                               />
-                              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                              <p className="text-xs text-nog-500 dark:text-nog-400 mt-1">
                                 Leave empty to use default payload
                               </p>
                             </div>
@@ -1253,13 +1253,13 @@ export default function AlertsPage() {
                         {action.type === 'apprise' && (
                           <div className="space-y-3">
                             <div>
-                              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                              <label className="block text-xs font-medium text-nog-700 dark:text-nog-300 mb-1">
                                 Notification Channel
                               </label>
                               <select
                                 value={action.config.channel || ''}
                                 onChange={(e) => updateAction(index, { channel: e.target.value, apprise_urls: '' })}
-                                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100 text-sm"
+                                className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-700 text-nog-900 dark:text-nog-100 text-sm"
                               >
                                 <option value="">Select a channel or use custom URL...</option>
                                 {notificationChannels?.filter(ch => ch.enabled).map((channel) => (
@@ -1272,7 +1272,7 @@ export default function AlertsPage() {
 
                             {!action.config.channel && (
                               <div>
-                                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                                <label className="block text-xs font-medium text-nog-700 dark:text-nog-300 mb-1">
                                   Custom Apprise URL
                                 </label>
                                 <input
@@ -1280,10 +1280,10 @@ export default function AlertsPage() {
                                   placeholder="e.g., slack://tokenA/tokenB/tokenC/#channel"
                                   value={action.config.apprise_urls || ''}
                                   onChange={(e) => updateAction(index, { apprise_urls: e.target.value })}
-                                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100 text-sm font-mono"
+                                  className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-700 text-nog-900 dark:text-nog-100 text-sm font-mono"
                                 />
-                                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                                  <a href="https://github.com/caronc/apprise/wiki" target="_blank" rel="noopener noreferrer" className="text-amber-500 hover:underline">
+                                <p className="text-xs text-nog-500 dark:text-nog-400 mt-1">
+                                  <a href="https://github.com/caronc/apprise/wiki" target="_blank" rel="noopener noreferrer" className="text-honey-500 hover:underline">
                                     View all supported services →
                                   </a>
                                 </p>
@@ -1292,7 +1292,7 @@ export default function AlertsPage() {
 
                             <div>
                               <div className="flex items-center justify-between mb-1">
-                                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+                                <label className="block text-xs font-medium text-nog-700 dark:text-nog-300">
                                   Title (supports variables)
                                 </label>
                                 <VariableHelper onInsert={(variable) => insertVariableIntoField(variable, appriseTitleRefs.current[index])} />
@@ -1303,13 +1303,13 @@ export default function AlertsPage() {
                                 placeholder="e.g., 🚨 {{alert_name:upper}}"
                                 value={action.config.title || ''}
                                 onChange={(e) => updateAction(index, { title: e.target.value })}
-                                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100 text-sm"
+                                className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-700 text-nog-900 dark:text-nog-100 text-sm"
                               />
                             </div>
 
                             <div>
                               <div className="flex items-center justify-between mb-1">
-                                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+                                <label className="block text-xs font-medium text-nog-700 dark:text-nog-300">
                                   Message (supports variables)
                                 </label>
                                 <VariableHelper onInsert={(variable) => insertVariableIntoField(variable, appriseMessageRefs.current[index])} />
@@ -1320,21 +1320,21 @@ export default function AlertsPage() {
                                 value={action.config.message || ''}
                                 onChange={(e) => updateAction(index, { message: e.target.value })}
                                 rows={4}
-                                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100 text-sm font-mono"
+                                className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-700 text-nog-900 dark:text-nog-100 text-sm font-mono"
                               />
-                              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                                Use <code className="text-amber-600">{'{{ai_summary}}'}</code> for AI-generated summary
+                              <p className="text-xs text-nog-500 dark:text-nog-400 mt-1">
+                                Use <code className="text-honey-600">{'{{ai_summary}}'}</code> for AI-generated summary
                               </p>
                             </div>
 
                             <div>
-                              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                              <label className="block text-xs font-medium text-nog-700 dark:text-nog-300 mb-1">
                                 Format
                               </label>
                               <select
                                 value={action.config.format || 'text'}
                                 onChange={(e) => updateAction(index, { format: e.target.value as 'text' | 'markdown' | 'html' })}
-                                className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100 text-sm"
+                                className="px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-700 text-nog-900 dark:text-nog-100 text-sm"
                               >
                                 <option value="text">Plain Text</option>
                                 <option value="markdown">Markdown</option>
@@ -1348,7 +1348,7 @@ export default function AlertsPage() {
                           <div className="space-y-3">
                             <div>
                               <div className="flex items-center justify-between mb-1">
-                                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+                                <label className="block text-xs font-medium text-nog-700 dark:text-nog-300">
                                   Command (supports variables)
                                 </label>
                                 <VariableHelper onInsert={(variable) => insertVariableIntoField(variable, scriptCommandRefs.current[index])} />
@@ -1359,15 +1359,15 @@ export default function AlertsPage() {
                                 placeholder='e.g., python /scripts/alert.py --name "{{alert_name}}" --count {{result_count}}'
                                 value={action.config.command || ''}
                                 onChange={(e) => updateAction(index, { command: e.target.value })}
-                                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100 text-sm font-mono"
+                                className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-700 text-nog-900 dark:text-nog-100 text-sm font-mono"
                               />
-                              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                              <p className="text-xs text-nog-500 dark:text-nog-400 mt-1">
                                 Execute a shell command when the alert triggers
                               </p>
                             </div>
 
-                            <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-                              <p className="text-xs text-amber-800 dark:text-amber-200">
+                            <div className="p-3 bg-honey-50 dark:bg-honey-900/20 border border-honey-200 dark:border-honey-800 rounded-lg">
+                              <p className="text-xs text-honey-800 dark:text-honey-200">
                                 <strong>Security Note:</strong> Scripts run with the API server's permissions.
                                 Only use trusted commands and sanitize any dynamic content.
                               </p>
@@ -1377,15 +1377,15 @@ export default function AlertsPage() {
 
                         {action.type === 'show_on_login' && (
                           <div className="space-y-3">
-                            <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-                              <p className="text-xs text-amber-800 dark:text-amber-200">
+                            <div className="p-3 bg-honey-50 dark:bg-honey-900/20 border border-honey-200 dark:border-honey-800 rounded-lg">
+                              <p className="text-xs text-honey-800 dark:text-honey-200">
                                 This notification will appear in the LogNog UI when users log in.
                               </p>
                             </div>
 
                             <div>
                               <div className="flex items-center justify-between mb-1">
-                                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+                                <label className="block text-xs font-medium text-nog-700 dark:text-nog-300">
                                   Title (supports variables)
                                 </label>
                                 <VariableHelper onInsert={(variable) => insertVariableIntoField(variable, loginNotifTitleRefs.current[index])} />
@@ -1396,13 +1396,13 @@ export default function AlertsPage() {
                                 placeholder="e.g., High Error Rate on {{hostname}}"
                                 value={action.config.title || ''}
                                 onChange={(e) => updateAction(index, { title: e.target.value })}
-                                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100 text-sm"
+                                className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-700 text-nog-900 dark:text-nog-100 text-sm"
                               />
                             </div>
 
                             <div>
                               <div className="flex items-center justify-between mb-1">
-                                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300">
+                                <label className="block text-xs font-medium text-nog-700 dark:text-nog-300">
                                   Message (supports variables)
                                 </label>
                                 <VariableHelper onInsert={(variable) => insertVariableIntoField(variable, loginNotifMessageRefs.current[index])} />
@@ -1413,21 +1413,21 @@ export default function AlertsPage() {
                                 value={action.config.message || ''}
                                 onChange={(e) => updateAction(index, { message: e.target.value })}
                                 rows={3}
-                                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100 text-sm font-mono"
+                                className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-700 text-nog-900 dark:text-nog-100 text-sm font-mono"
                               />
-                              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                              <p className="text-xs text-nog-500 dark:text-nog-400 mt-1">
                                 Leave empty to use alert name as message
                               </p>
                             </div>
 
                             <div>
-                              <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                              <label className="block text-xs font-medium text-nog-700 dark:text-nog-300 mb-1">
                                 Expires After
                               </label>
                               <select
                                 value={action.config.expires_in || '24h'}
                                 onChange={(e) => updateAction(index, { expires_in: e.target.value })}
-                                className="px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-700 text-slate-900 dark:text-slate-100 text-sm"
+                                className="px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-700 text-nog-900 dark:text-nog-100 text-sm"
                               >
                                 <option value="1h">1 hour</option>
                                 <option value="4h">4 hours</option>
@@ -1436,7 +1436,7 @@ export default function AlertsPage() {
                                 <option value="7d">7 days</option>
                                 <option value="">Never (manual dismiss only)</option>
                               </select>
-                              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                              <p className="text-xs text-nog-500 dark:text-nog-400 mt-1">
                                 How long the notification remains visible before auto-expiring
                               </p>
                             </div>
@@ -1450,8 +1450,8 @@ export default function AlertsPage() {
 
               {/* Test Result */}
               {testResult && (
-                <div className={`rounded-lg overflow-hidden ${testResult.wouldTrigger ? 'bg-orange-50 dark:bg-orange-900/20' : 'bg-green-50 dark:bg-green-900/20'}`}>
-                  <div className={`p-4 ${testResult.wouldTrigger ? 'text-orange-800 dark:text-orange-300' : 'text-green-800 dark:text-green-300'}`}>
+                <div className={`rounded-lg overflow-hidden ${testResult.wouldTrigger ? 'bg-honey-50 dark:bg-honey-900/20' : 'bg-green-50 dark:bg-green-900/20'}`}>
+                  <div className={`p-4 ${testResult.wouldTrigger ? 'text-honey-800 dark:text-honey-300' : 'text-green-800 dark:text-green-300'}`}>
                     <div className="font-medium flex items-center gap-2">
                       {testResult.wouldTrigger ? <AlertTriangle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
                       {testResult.wouldTrigger ? 'Alert Would Trigger' : 'Alert Would Not Trigger'}
@@ -1461,29 +1461,29 @@ export default function AlertsPage() {
                     </div>
                   </div>
                   {testResult.sampleResults && testResult.sampleResults.length > 0 && (
-                    <div className="border-t border-orange-200 dark:border-orange-800">
+                    <div className="border-t border-honey-200 dark:border-honey-800">
                       <button
                         type="button"
                         onClick={() => setShowSampleResults(!showSampleResults)}
-                        className={`w-full px-4 py-2 text-sm flex items-center justify-between ${testResult.wouldTrigger ? 'text-orange-700 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/30' : 'text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30'}`}
+                        className={`w-full px-4 py-2 text-sm flex items-center justify-between ${testResult.wouldTrigger ? 'text-honey-700 dark:text-honey-400 hover:bg-honey-100 dark:hover:bg-honey-900/30' : 'text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30'}`}
                       >
                         <span>View Sample Results ({Math.min(testResult.sampleResults.length, 10)} of {testResult.resultCount})</span>
                         <ChevronDown className={`w-4 h-4 transition-transform ${showSampleResults ? 'rotate-180' : ''}`} />
                       </button>
                       {showSampleResults && (
                         <div className="px-4 pb-4 max-h-64 overflow-auto">
-                          <div className="bg-white dark:bg-nog-800 rounded border border-slate-200 dark:border-nog-700 overflow-x-auto">
+                          <div className="bg-white dark:bg-nog-800 rounded border border-nog-200 dark:border-nog-700 overflow-x-auto">
                             <table className="w-full text-xs">
-                              <thead className="bg-slate-50 dark:bg-nog-700 text-slate-600 dark:text-nog-300">
+                              <thead className="bg-nog-50 dark:bg-nog-700 text-nog-600 dark:text-nog-300">
                                 <tr>
                                   {Object.keys(testResult.sampleResults[0]).slice(0, 5).map((key) => (
                                     <th key={key} className="px-3 py-2 text-left font-medium">{key}</th>
                                   ))}
                                 </tr>
                               </thead>
-                              <tbody className="text-slate-700 dark:text-nog-200">
+                              <tbody className="text-nog-700 dark:text-nog-200">
                                 {testResult.sampleResults.slice(0, 5).map((row, i) => (
-                                  <tr key={i} className="border-t border-slate-100 dark:border-nog-700">
+                                  <tr key={i} className="border-t border-nog-100 dark:border-nog-700">
                                     {Object.keys(testResult.sampleResults![0]).slice(0, 5).map((key) => (
                                       <td key={key} className="px-3 py-2 truncate max-w-[200px]" title={String(row[key] ?? '')}>
                                         {String(row[key] ?? '')}
@@ -1503,12 +1503,12 @@ export default function AlertsPage() {
             </div>
 
             {/* Footer */}
-            <div className="p-6 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
+            <div className="p-6 border-t border-nog-200 dark:border-nog-700 flex items-center justify-between">
               <button
                 type="button"
                 onClick={handleTest}
                 disabled={testing || !formData.search_query}
-                className="px-4 py-2 bg-nog-100 hover:bg-slate-200 dark:bg-nog-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg flex items-center gap-2 disabled:opacity-50"
+                className="px-4 py-2 bg-nog-100 hover:bg-nog-200 dark:bg-nog-700 dark:hover:bg-nog-600 text-nog-700 dark:text-nog-200 rounded-lg flex items-center gap-2 disabled:opacity-50"
               >
                 {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : <TestTube className="w-4 h-4" />}
                 Test Alert
@@ -1521,14 +1521,14 @@ export default function AlertsPage() {
                     setEditingAlert(null);
                     resetForm();
                   }}
-                  className="px-4 py-2 text-slate-700 dark:text-slate-200 hover:bg-nog-100 dark:hover:bg-slate-700 rounded-lg"
+                  className="px-4 py-2 text-nog-700 dark:text-nog-200 hover:bg-nog-100 dark:hover:bg-nog-700 rounded-lg"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={() => editingAlert ? updateMutation.mutate() : createMutation.mutate()}
                   disabled={!formData.name.trim() || !formData.search_query.trim() || !areActionsValid() || createMutation.isPending || updateMutation.isPending}
-                  className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg flex items-center gap-2 disabled:opacity-50"
+                  className="px-4 py-2 bg-honey-500 hover:bg-honey-600 text-nog-900 rounded-lg flex items-center gap-2 disabled:opacity-50"
                 >
                   {(createMutation.isPending || updateMutation.isPending) && <Loader2 className="w-4 h-4 animate-spin" />}
                   {editingAlert ? 'Update Alert' : 'Create Alert'}
@@ -1543,14 +1543,14 @@ export default function AlertsPage() {
       {showHistoryModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-nog-800 rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
-              <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+            <div className="p-6 border-b border-nog-200 dark:border-nog-700 flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-nog-900 dark:text-nog-100 flex items-center gap-2">
                 <History className="w-5 h-5" />
                 Alert History
               </h2>
               <button
                 onClick={() => setShowHistoryModal(false)}
-                className="p-2 hover:bg-nog-100 dark:hover:bg-slate-700 rounded-lg"
+                className="p-2 hover:bg-nog-100 dark:hover:bg-nog-700 rounded-lg"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1575,14 +1575,14 @@ export default function AlertsPage() {
                           </div>
                           <div className="flex-1">
                             <div className="flex items-center justify-between">
-                              <div className="font-medium text-slate-900 dark:text-slate-100">
+                              <div className="font-medium text-nog-900 dark:text-nog-100">
                                 {alert?.name || 'Unknown Alert'}
                               </div>
-                              <div className="text-sm text-slate-500">
+                              <div className="text-sm text-nog-500">
                                 {formatDate(entry.triggered_at)}
                               </div>
                             </div>
-                            <div className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                            <div className="text-sm text-nog-600 dark:text-nog-400 mt-1">
                               {entry.result_count} results triggered this alert
                             </div>
                             {entry.actions_executed && entry.actions_executed.length > 0 && (
@@ -1608,7 +1608,7 @@ export default function AlertsPage() {
                   })}
                 </div>
               ) : (
-                <div className="text-center py-12 text-slate-500">
+                <div className="text-center py-12 text-nog-500">
                   No alert history yet
                 </div>
               )}
@@ -1689,7 +1689,7 @@ function SnoozeDropdown({ alertId, alertName, onFullSilence }: SnoozeDropdownPro
     <div ref={dropdownRef} className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="p-1.5 sm:p-2 text-slate-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded-lg flex-shrink-0 flex items-center gap-0.5"
+        className="p-1.5 sm:p-2 text-nog-400 hover:text-honey-500 hover:bg-honey-50 dark:hover:bg-honey-900/30 rounded-lg flex-shrink-0 flex items-center gap-0.5"
         title="Snooze this alert"
       >
         <Timer className="w-4 h-4" />
@@ -1697,8 +1697,8 @@ function SnoozeDropdown({ alertId, alertName, onFullSilence }: SnoozeDropdownPro
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 top-full mt-1 z-20 bg-white dark:bg-nog-800 border border-slate-200 dark:border-nog-700 rounded-lg shadow-lg py-1 min-w-[140px]">
-          <div className="px-3 py-1.5 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase border-b border-slate-100 dark:border-nog-700">
+        <div className="absolute right-0 top-full mt-1 z-20 bg-white dark:bg-nog-800 border border-nog-200 dark:border-nog-700 rounded-lg shadow-lg py-1 min-w-[140px]">
+          <div className="px-3 py-1.5 text-xs font-semibold text-nog-500 dark:text-nog-400 uppercase border-b border-nog-100 dark:border-nog-700">
             Quick Snooze
           </div>
           {snoozeOptions.map((opt) => (
@@ -1706,19 +1706,19 @@ function SnoozeDropdown({ alertId, alertName, onFullSilence }: SnoozeDropdownPro
               key={opt.value}
               onClick={() => snoozeMutation.mutate(opt.value)}
               disabled={snoozeMutation.isPending}
-              className="w-full px-3 py-2 text-left text-sm text-slate-700 dark:text-slate-300 hover:bg-amber-50 dark:hover:bg-amber-900/30 flex items-center gap-2 disabled:opacity-50"
+              className="w-full px-3 py-2 text-left text-sm text-nog-700 dark:text-nog-300 hover:bg-honey-50 dark:hover:bg-honey-900/30 flex items-center gap-2 disabled:opacity-50"
             >
-              <Timer className="w-3 h-3 text-amber-500" />
+              <Timer className="w-3 h-3 text-honey-500" />
               {opt.label}
             </button>
           ))}
-          <div className="border-t border-slate-100 dark:border-nog-700 mt-1 pt-1">
+          <div className="border-t border-nog-100 dark:border-nog-700 mt-1 pt-1">
             <button
               onClick={() => {
                 setIsOpen(false);
                 onFullSilence();
               }}
-              className="w-full px-3 py-2 text-left text-sm text-slate-500 dark:text-slate-400 hover:bg-nog-50 dark:hover:bg-nog-700 flex items-center gap-2"
+              className="w-full px-3 py-2 text-left text-sm text-nog-500 dark:text-nog-400 hover:bg-nog-50 dark:hover:bg-nog-700 flex items-center gap-2"
             >
               <BellOff className="w-3 h-3" />
               More options...
@@ -1771,15 +1771,15 @@ function QuickSilenceModal({ alertId, alertName, onClose }: QuickSilenceModalPro
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white dark:bg-nog-800 rounded-lg shadow-xl max-w-md w-full mx-4">
-        <div className="p-6 border-b border-slate-200 dark:border-slate-700">
+        <div className="p-6 border-b border-nog-200 dark:border-nog-700">
           <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <BellOff className="h-5 w-5 text-amber-500" />
+            <h2 className="text-xl font-bold text-nog-900 dark:text-nog-100 flex items-center gap-2">
+              <BellOff className="h-5 w-5 text-honey-500" />
               Silence Alert
             </h2>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-nog-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+              className="p-2 hover:bg-nog-100 dark:hover:bg-nog-700 rounded-lg transition-colors"
             >
               <X className="h-5 w-5" />
             </button>
@@ -1788,20 +1788,20 @@ function QuickSilenceModal({ alertId, alertName, onClose }: QuickSilenceModalPro
 
         <form onSubmit={handleSubmit} className="p-6">
           <div className="mb-4">
-            <p className="text-slate-600 dark:text-slate-400">
-              Silence <span className="font-medium text-slate-900 dark:text-slate-100">{alertName}</span>
+            <p className="text-nog-600 dark:text-nog-400">
+              Silence <span className="font-medium text-nog-900 dark:text-nog-100">{alertName}</span>
             </p>
           </div>
 
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-2">
                 Duration
               </label>
               <select
                 value={duration}
                 onChange={(e) => setDuration(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 dark:bg-nog-700 dark:text-slate-100"
+                className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg focus:ring-2 focus:ring-honey-500 focus:border-honey-500 dark:bg-nog-700 dark:text-nog-100"
               >
                 {durationOptions.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -1812,13 +1812,13 @@ function QuickSilenceModal({ alertId, alertName, onClose }: QuickSilenceModalPro
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+              <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-2">
                 Reason (optional)
               </label>
               <textarea
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 dark:bg-nog-700 dark:text-slate-100"
+                className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg focus:ring-2 focus:ring-honey-500 focus:border-honey-500 dark:bg-nog-700 dark:text-nog-100"
                 rows={3}
                 placeholder="Why are you silencing this alert?"
               />
@@ -1829,14 +1829,14 @@ function QuickSilenceModal({ alertId, alertName, onClose }: QuickSilenceModalPro
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-nog-50 dark:hover:bg-slate-700"
+              className="flex-1 px-4 py-2 border border-nog-300 dark:border-nog-600 text-nog-700 dark:text-nog-300 rounded-lg hover:bg-nog-50 dark:hover:bg-nog-700"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={silenceMutation.isPending}
-              className="flex-1 px-4 py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-2 bg-honey-600 text-nog-900 rounded-lg hover:bg-honey-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {silenceMutation.isPending ? (
                 <span className="flex items-center justify-center gap-2">

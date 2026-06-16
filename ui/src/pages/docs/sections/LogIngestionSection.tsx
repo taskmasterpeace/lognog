@@ -4,8 +4,8 @@ export default function LogIngestionSection() {
   return (
     <div className="space-y-8">
       <section>
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">Sending Logs to LogNog</h2>
-        <p className="text-slate-600 dark:text-slate-400 mb-4">
+        <h2 className="text-2xl font-bold text-nog-900 dark:text-nog-100 mb-4">Sending Logs to LogNog</h2>
+        <p className="text-nog-600 dark:text-nog-400 mb-4">
           LogNog supports multiple ingestion methods to accommodate different log sources and use cases.
           Choose the method that best fits your infrastructure.
         </p>
@@ -35,16 +35,16 @@ export default function LogIngestionSection() {
       </section>
 
       <section>
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">Syslog Ingestion</h2>
-        <p className="text-slate-600 dark:text-slate-400 mb-4">
+        <h2 className="text-2xl font-bold text-nog-900 dark:text-nog-100 mb-4">Syslog Ingestion</h2>
+        <p className="text-nog-600 dark:text-nog-400 mb-4">
           LogNog accepts syslog messages on port 514 via both UDP and TCP. This is the simplest way to send logs
           from network devices, servers, and applications that support syslog output.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div className="card p-4 dark:bg-nog-800">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">UDP Syslog (Recommended)</h3>
-            <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">UDP Syslog (Recommended)</h3>
+            <p className="text-sm text-nog-600 dark:text-nog-400 mb-3">
               Fast, fire-and-forget delivery. Best for high-volume logging where occasional message loss is acceptable.
             </p>
             <CodeBlock code={`# Send a test message via UDP
@@ -55,8 +55,8 @@ echo "<14>$(date +"%b %d %H:%M:%S") myhost myapp[1234]: Test log" | nc -u localh
           </div>
 
           <div className="card p-4 dark:bg-nog-800">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">TCP Syslog</h3>
-            <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">TCP Syslog</h3>
+            <p className="text-sm text-nog-600 dark:text-nog-400 mb-3">
               Reliable delivery with connection-oriented protocol. Use when you need guaranteed delivery.
             </p>
             <CodeBlock code={`# Send a test message via TCP
@@ -68,8 +68,8 @@ logger -n localhost -P 514 -T "Test message from logger"`} />
         </div>
 
         <div className="card p-4 dark:bg-nog-800 mb-4">
-          <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Configure rsyslog to Forward Logs</h3>
-          <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
+          <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">Configure rsyslog to Forward Logs</h3>
+          <p className="text-sm text-nog-600 dark:text-nog-400 mb-3">
             Add this to your <code className="code">/etc/rsyslog.conf</code> or <code className="code">/etc/rsyslog.d/lognog.conf</code>:
           </p>
           <CodeBlock code={`# Forward all logs to LogNog via UDP
@@ -83,7 +83,7 @@ auth,authpriv.* @lognog-server:514`} />
         </div>
 
         <div className="card p-4 dark:bg-nog-800">
-          <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Configure syslog-ng to Forward Logs</h3>
+          <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">Configure syslog-ng to Forward Logs</h3>
           <CodeBlock code={`# Add to syslog-ng.conf
 destination d_lognog {
     network("lognog-server" port(514) transport("udp"));
@@ -97,21 +97,21 @@ log {
       </section>
 
       <section>
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">HTTP API Ingestion</h2>
-        <p className="text-slate-600 dark:text-slate-400 mb-4">
+        <h2 className="text-2xl font-bold text-nog-900 dark:text-nog-100 mb-4">HTTP API Ingestion</h2>
+        <p className="text-nog-600 dark:text-nog-400 mb-4">
           Send logs directly via HTTP POST requests. Requires an API key for authentication.
         </p>
 
-        <div className="card p-4 bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800 mb-4">
-          <p className="text-amber-800 dark:text-amber-300 text-sm">
+        <div className="card p-4 bg-honey-50 border-honey-200 dark:bg-honey-900/20 dark:border-honey-800 mb-4">
+          <p className="text-honey-800 dark:text-honey-300 text-sm">
             <strong>API Key Required:</strong> Generate an API key from <strong>Settings &rarr; API Keys</strong> before using HTTP ingestion endpoints.
           </p>
         </div>
 
         <div className="space-y-4">
           <div className="card p-4 dark:bg-nog-800">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Generic HTTP Endpoint</h3>
-            <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">Generic HTTP Endpoint</h3>
+            <p className="text-sm text-nog-600 dark:text-nog-400 mb-3">
               <code className="code">POST /api/ingest/http</code> - Accept JSON array of log entries
             </p>
             <CodeBlock code={`curl -X POST http://localhost/api/ingest/http \\
@@ -136,7 +136,7 @@ log {
           </div>
 
           <div className="card p-4 dark:bg-nog-800">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Log Entry Fields</h3>
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">Log Entry Fields</h3>
             <div className="overflow-x-auto">
               <table className="table w-full">
                 <thead>
@@ -163,15 +163,15 @@ log {
       </section>
 
       <section>
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">OTLP Ingestion (OpenTelemetry)</h2>
-        <p className="text-slate-600 dark:text-slate-400 mb-4">
+        <h2 className="text-2xl font-bold text-nog-900 dark:text-nog-100 mb-4">OTLP Ingestion (OpenTelemetry)</h2>
+        <p className="text-nog-600 dark:text-nog-400 mb-4">
           LogNog supports OpenTelemetry Protocol (OTLP) for logs. This allows integration with OpenTelemetry
           collectors and instrumented applications.
         </p>
 
         <div className="card p-4 dark:bg-nog-800 mb-4">
-          <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">OTLP HTTP Endpoint</h3>
-          <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
+          <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">OTLP HTTP Endpoint</h3>
+          <p className="text-sm text-nog-600 dark:text-nog-400 mb-3">
             <code className="code">POST /api/ingest/otlp/v1/logs</code>
           </p>
           <CodeBlock code={`curl -X POST http://localhost/api/ingest/otlp/v1/logs \\
@@ -196,8 +196,8 @@ log {
         </div>
 
         <div className="card p-4 dark:bg-nog-800">
-          <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">OpenTelemetry Collector Configuration</h3>
-          <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
+          <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">OpenTelemetry Collector Configuration</h3>
+          <p className="text-sm text-nog-600 dark:text-nog-400 mb-3">
             Configure your OTEL Collector to export logs to LogNog:
           </p>
           <CodeBlock code={`exporters:
@@ -216,15 +216,15 @@ service:
       </section>
 
       <section>
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">Supabase Log Drains</h2>
-        <p className="text-slate-600 dark:text-slate-400 mb-4">
+        <h2 className="text-2xl font-bold text-nog-900 dark:text-nog-100 mb-4">Supabase Log Drains</h2>
+        <p className="text-nog-600 dark:text-nog-400 mb-4">
           Ingest logs from your Supabase projects including database, auth, storage, and edge functions.
         </p>
 
         <div className="space-y-4">
           <div className="card p-4 dark:bg-nog-800">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Setup Instructions</h3>
-            <ol className="text-sm text-slate-600 dark:text-slate-400 space-y-2 list-decimal list-inside">
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">Setup Instructions</h3>
+            <ol className="text-sm text-nog-600 dark:text-nog-400 space-y-2 list-decimal list-inside">
               <li>Go to your Supabase Dashboard &rarr; Settings &rarr; Log Drains</li>
               <li>Click "Add destination" and select "Generic HTTP"</li>
               <li>Set the URL to: <code className="code">https://your-lognog-server/api/ingest/supabase</code></li>
@@ -234,8 +234,8 @@ service:
           </div>
 
           <div className="card p-4 dark:bg-nog-800">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Endpoint Details</h3>
-            <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">Endpoint Details</h3>
+            <p className="text-sm text-nog-600 dark:text-nog-400 mb-3">
               <code className="code">POST /api/ingest/supabase</code>
             </p>
             <CodeBlock code={`# Test with sample Supabase log format
@@ -255,8 +255,8 @@ curl -X POST http://localhost/api/ingest/supabase \\
   ]'`} />
           </div>
 
-          <div className="card p-4 bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800">
-            <p className="text-amber-800 dark:text-amber-300 text-sm">
+          <div className="card p-4 bg-honey-50 border-honey-200 dark:bg-honey-900/20 dark:border-honey-800">
+            <p className="text-honey-800 dark:text-honey-300 text-sm">
               <strong>Log Types:</strong> Supabase sends logs from PostgreSQL, PostgREST, GoTrue (auth), Storage,
               Realtime, and Edge Functions - all automatically categorized by source.
             </p>
@@ -265,15 +265,15 @@ curl -X POST http://localhost/api/ingest/supabase \\
       </section>
 
       <section>
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">Vercel Log Drains</h2>
-        <p className="text-slate-600 dark:text-slate-400 mb-4">
+        <h2 className="text-2xl font-bold text-nog-900 dark:text-nog-100 mb-4">Vercel Log Drains</h2>
+        <p className="text-nog-600 dark:text-nog-400 mb-4">
           Stream logs from your Vercel deployments including serverless functions, edge functions, and builds.
         </p>
 
         <div className="space-y-4">
           <div className="card p-4 dark:bg-nog-800">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Setup Instructions</h3>
-            <ol className="text-sm text-slate-600 dark:text-slate-400 space-y-2 list-decimal list-inside">
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">Setup Instructions</h3>
+            <ol className="text-sm text-nog-600 dark:text-nog-400 space-y-2 list-decimal list-inside">
               <li>Go to Vercel Dashboard &rarr; Project Settings &rarr; Integrations</li>
               <li>Navigate to the Log Drains section</li>
               <li>Set the URL to: <code className="code">https://your-lognog-server/api/ingest/vercel</code></li>
@@ -283,8 +283,8 @@ curl -X POST http://localhost/api/ingest/supabase \\
           </div>
 
           <div className="card p-4 dark:bg-nog-800">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Endpoint Details</h3>
-            <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">Endpoint Details</h3>
+            <p className="text-sm text-nog-600 dark:text-nog-400 mb-3">
               <code className="code">POST /api/ingest/vercel</code> - Accepts NDJSON format
             </p>
             <CodeBlock code={`# Vercel sends logs in NDJSON format (newline-delimited JSON)
@@ -304,15 +304,15 @@ curl -X POST http://localhost/api/ingest/supabase \\
       </section>
 
       <section>
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">SmartThings Integration</h2>
-        <p className="text-slate-600 dark:text-slate-400 mb-4">
+        <h2 className="text-2xl font-bold text-nog-900 dark:text-nog-100 mb-4">SmartThings Integration</h2>
+        <p className="text-nog-600 dark:text-nog-400 mb-4">
           Collect IoT device events from Samsung SmartThings for home automation monitoring.
         </p>
 
         <div className="space-y-4">
           <div className="card p-4 dark:bg-nog-800">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Setup Instructions</h3>
-            <ol className="text-sm text-slate-600 dark:text-slate-400 space-y-2 list-decimal list-inside">
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">Setup Instructions</h3>
+            <ol className="text-sm text-nog-600 dark:text-nog-400 space-y-2 list-decimal list-inside">
               <li>Create a SmartApp in SmartThings Developer Workspace</li>
               <li>Register a Webhook SmartApp pointing to: <code className="code">https://your-lognog-server/api/ingest/smartthings</code></li>
               <li>Add header: <code className="code">X-API-Key: your-lognog-api-key</code></li>
@@ -321,8 +321,8 @@ curl -X POST http://localhost/api/ingest/supabase \\
           </div>
 
           <div className="card p-4 dark:bg-nog-800">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Event Types Captured</h3>
-            <ul className="text-sm text-slate-600 dark:text-slate-400 space-y-1 list-disc list-inside">
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">Event Types Captured</h3>
+            <ul className="text-sm text-nog-600 dark:text-nog-400 space-y-1 list-disc list-inside">
               <li><strong>Device events:</strong> capability.attribute = value (e.g., switch.on, temperature.72)</li>
               <li><strong>Device lifecycle:</strong> add, remove, update operations</li>
               <li><strong>Device health:</strong> online, offline, unhealthy status changes</li>
@@ -333,16 +333,16 @@ curl -X POST http://localhost/api/ingest/supabase \\
       </section>
 
       <section>
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">LogNog In Agent</h2>
-        <p className="text-slate-600 dark:text-slate-400 mb-4">
+        <h2 className="text-2xl font-bold text-nog-900 dark:text-nog-100 mb-4">LogNog In Agent</h2>
+        <p className="text-nog-600 dark:text-nog-400 mb-4">
           The LogNog In agent is a lightweight collector that runs on Windows, Linux, and macOS to collect
           log files, Windows Event Logs, and file integrity monitoring (FIM) events.
         </p>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div className="card p-4 dark:bg-nog-800">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Features</h3>
-            <ul className="text-sm text-slate-600 dark:text-slate-400 space-y-1 list-disc list-inside">
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">Features</h3>
+            <ul className="text-sm text-nog-600 dark:text-nog-400 space-y-1 list-disc list-inside">
               <li>Watch directories for new log files</li>
               <li>Windows Event Log collection (Security, System, Application)</li>
               <li>File Integrity Monitoring (FIM)</li>
@@ -353,7 +353,7 @@ curl -X POST http://localhost/api/ingest/supabase \\
           </div>
 
           <div className="card p-4 dark:bg-nog-800">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Installation</h3>
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">Installation</h3>
             <CodeBlock code={`# Install from source
 cd agent
 pip install -e ".[dev]"
@@ -367,8 +367,8 @@ python build.py`} />
         </div>
 
         <div className="card p-4 dark:bg-nog-800">
-          <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Agent Configuration</h3>
-          <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
+          <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">Agent Configuration</h3>
+          <p className="text-sm text-nog-600 dark:text-nog-400 mb-3">
             Configure the agent with a <code className="code">config.yaml</code> file:
           </p>
           <CodeBlock code={`# LogNog In Agent Configuration
@@ -398,8 +398,8 @@ collectors:
         </div>
 
         <div className="card p-4 dark:bg-nog-800">
-          <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Agent API Endpoint</h3>
-          <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
+          <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">Agent API Endpoint</h3>
+          <p className="text-sm text-nog-600 dark:text-nog-400 mb-3">
             <code className="code">POST /api/ingest</code> - Used by the LogNog In agent
           </p>
           <CodeBlock code={`curl -X POST http://localhost/api/ingest \\
@@ -420,15 +420,15 @@ collectors:
       </section>
 
       <section>
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">Authentication</h2>
-        <p className="text-slate-600 dark:text-slate-400 mb-4">
+        <h2 className="text-2xl font-bold text-nog-900 dark:text-nog-100 mb-4">Authentication</h2>
+        <p className="text-nog-600 dark:text-nog-400 mb-4">
           All HTTP ingestion endpoints (except syslog) require API key authentication.
         </p>
 
         <div className="space-y-4">
           <div className="card p-4 dark:bg-nog-800">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Creating an API Key</h3>
-            <ol className="text-sm text-slate-600 dark:text-slate-400 space-y-2 list-decimal list-inside">
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">Creating an API Key</h3>
+            <ol className="text-sm text-nog-600 dark:text-nog-400 space-y-2 list-decimal list-inside">
               <li>Navigate to <strong>Settings &rarr; API Keys</strong></li>
               <li>Click "Create API Key"</li>
               <li>Give it a descriptive name (e.g., "Vercel Log Drain", "Production Agent")</li>
@@ -437,8 +437,8 @@ collectors:
           </div>
 
           <div className="card p-4 dark:bg-nog-800">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Using API Keys</h3>
-            <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">Using API Keys</h3>
+            <p className="text-sm text-nog-600 dark:text-nog-400 mb-3">
               Include the API key in the <code className="code">X-API-Key</code> header:
             </p>
             <CodeBlock code={`# Header format
@@ -461,10 +461,10 @@ curl -X POST http://localhost/api/ingest/http \\
       </section>
 
       <section>
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">Quick Reference: curl Examples</h2>
+        <h2 className="text-2xl font-bold text-nog-900 dark:text-nog-100 mb-4">Quick Reference: curl Examples</h2>
         <div className="space-y-4">
           <div className="card p-4 dark:bg-nog-800">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Send a Single Log</h3>
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">Send a Single Log</h3>
             <CodeBlock code={`curl -X POST http://localhost/api/ingest/http \\
   -H "Content-Type: application/json" \\
   -H "X-API-Key: YOUR_API_KEY" \\
@@ -472,7 +472,7 @@ curl -X POST http://localhost/api/ingest/http \\
           </div>
 
           <div className="card p-4 dark:bg-nog-800">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Send Error Log</h3>
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">Send Error Log</h3>
             <CodeBlock code={`curl -X POST http://localhost/api/ingest/http \\
   -H "Content-Type: application/json" \\
   -H "X-API-Key: YOUR_API_KEY" \\
@@ -485,7 +485,7 @@ curl -X POST http://localhost/api/ingest/http \\
           </div>
 
           <div className="card p-4 dark:bg-nog-800">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Send Batch of Logs</h3>
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">Send Batch of Logs</h3>
             <CodeBlock code={`curl -X POST http://localhost/api/ingest/http \\
   -H "Content-Type: application/json" \\
   -H "X-API-Key: YOUR_API_KEY" \\
@@ -497,7 +497,7 @@ curl -X POST http://localhost/api/ingest/http \\
           </div>
 
           <div className="card p-4 dark:bg-nog-800">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Test Syslog via netcat</h3>
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">Test Syslog via netcat</h3>
             <CodeBlock code={`# UDP
 echo "<14>Jan 15 10:30:00 myhost myapp: Test message" | nc -u localhost 514
 

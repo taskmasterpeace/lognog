@@ -146,7 +146,7 @@ export const StatCard: React.FC<StatCardProps> = ({
         return darkMode ? 'text-red-400' : 'text-red-600';
       case 'neutral':
       default:
-        return darkMode ? 'text-gray-400' : 'text-gray-600';
+        return darkMode ? 'text-nog-400' : 'text-nog-600';
     }
   };
 
@@ -154,8 +154,8 @@ export const StatCard: React.FC<StatCardProps> = ({
     <div
       className={`relative overflow-hidden rounded-lg border ${
         darkMode
-          ? 'bg-gray-800 border-gray-700'
-          : 'bg-white border-gray-200'
+          ? 'bg-nog-800 border-nog-700'
+          : 'bg-white border-nog-200'
       }`}
       style={{ height: `${height}px` }}
     >
@@ -177,7 +177,7 @@ export const StatCard: React.FC<StatCardProps> = ({
           <div className="flex-1">
             <p
               className={`text-sm font-medium ${
-                darkMode ? 'text-gray-400' : 'text-gray-600'
+                darkMode ? 'text-nog-400' : 'text-nog-600'
               }`}
             >
               {title}
@@ -186,7 +186,7 @@ export const StatCard: React.FC<StatCardProps> = ({
           {icon && (
             <div
               className={`flex-shrink-0 ${
-                darkMode ? 'text-gray-500' : 'text-gray-400'
+                darkMode ? 'text-nog-500' : 'text-nog-400'
               }`}
             >
               {icon}
@@ -199,14 +199,14 @@ export const StatCard: React.FC<StatCardProps> = ({
           <div>
             <p
               className={`text-3xl font-bold ${
-                darkMode ? 'text-gray-100' : 'text-gray-900'
+                darkMode ? 'text-nog-100' : 'text-nog-900'
               }`}
             >
               {formattedValue}
               {unit && (
                 <span
                   className={`text-lg ml-1 ${
-                    darkMode ? 'text-gray-400' : 'text-gray-600'
+                    darkMode ? 'text-nog-400' : 'text-nog-600'
                   }`}
                 >
                   {unit}
@@ -226,7 +226,7 @@ export const StatCard: React.FC<StatCardProps> = ({
             {trendLabel && (
               <span
                 className={`text-sm ${
-                  darkMode ? 'text-gray-400' : 'text-gray-600'
+                  darkMode ? 'text-nog-400' : 'text-nog-600'
                 }`}
               >
                 {trendLabel}

@@ -96,9 +96,9 @@ async function analyzeAnomaly(id: string): Promise<{ analysis: unknown }> {
 // Severity colors
 const SEVERITY_CONFIG = {
   critical: { bg: 'bg-red-100', text: 'text-red-700', border: 'border-red-200', icon: AlertTriangle },
-  high: { bg: 'bg-orange-100', text: 'text-orange-700', border: 'border-orange-200', icon: AlertTriangle },
+  high: { bg: 'bg-honey-100', text: 'text-honey-700', border: 'border-honey-200', icon: AlertTriangle },
   medium: { bg: 'bg-yellow-100', text: 'text-yellow-700', border: 'border-yellow-200', icon: Activity },
-  low: { bg: 'bg-amber-100', text: 'text-amber-700', border: 'border-amber-200', icon: Activity },
+  low: { bg: 'bg-honey-100', text: 'text-honey-700', border: 'border-honey-200', icon: Activity },
 };
 
 const ENTITY_ICONS = {
@@ -140,12 +140,12 @@ function StatCard({
         </div>
       </div>
       <div className="mt-3 sm:mt-4">
-        <p className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100">
+        <p className="text-2xl sm:text-3xl font-bold text-nog-900 dark:text-nog-100">
           {typeof value === 'number' ? value.toLocaleString() : value}
         </p>
-        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">{label}</p>
+        <p className="text-xs sm:text-sm text-nog-500 dark:text-nog-400 mt-1">{label}</p>
         {subValue && (
-          <p className="text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+          <p className="text-[10px] sm:text-xs text-nog-400 dark:text-nog-500 mt-0.5">
             {subValue}
           </p>
         )}
@@ -176,20 +176,20 @@ function AnomalyRow({
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="font-medium text-slate-900 dark:text-slate-100">
+              <span className="font-medium text-nog-900 dark:text-nog-100">
                 {anomaly.entityId}
               </span>
               <span className={`px-2 py-0.5 text-xs rounded-full ${config.bg} ${config.text}`}>
                 {anomaly.severity}
               </span>
-              <span className="text-xs text-slate-500 dark:text-slate-400">
+              <span className="text-xs text-nog-500 dark:text-nog-400">
                 {ANOMALY_TYPE_LABELS[anomaly.anomalyType]}
               </span>
             </div>
-            <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+            <p className="text-sm text-nog-600 dark:text-nog-400 mt-1">
               {anomaly.metricName}: {anomaly.observedValue.toFixed(1)} (expected {anomaly.expectedValue.toFixed(1)})
             </p>
-            <div className="flex items-center gap-3 mt-2 text-xs text-slate-500">
+            <div className="flex items-center gap-3 mt-2 text-xs text-nog-500">
               <span className="flex items-center gap-1">
                 <Clock className="w-3 h-3" />
                 {new Date(anomaly.timestamp).toLocaleString()}
@@ -198,7 +198,7 @@ function AnomalyRow({
                 {anomaly.deviationScore > 0 ? (
                   <TrendingUp className="w-3 h-3 text-red-500" />
                 ) : (
-                  <TrendingDown className="w-3 h-3 text-amber-500" />
+                  <TrendingDown className="w-3 h-3 text-honey-500" />
                 )}
                 {Math.abs(anomaly.deviationScore).toFixed(1)}σ
               </span>
@@ -210,26 +210,26 @@ function AnomalyRow({
         <div className="flex items-center gap-2">
           <button
             onClick={() => onAnalyze(anomaly.id)}
-            className="p-2 text-amber-600 hover:bg-amber-50 rounded-lg transition-colors"
+            className="p-2 text-honey-600 hover:bg-honey-50 rounded-lg transition-colors"
             title="Analyze with AI"
           >
             <Brain className="w-4 h-4" />
           </button>
           <button
             onClick={() => onFeedback(anomaly.id, true)}
-            className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+            className="p-2 text-nog-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
             title="Mark as false positive"
           >
             <ThumbsUp className="w-4 h-4" />
           </button>
           <button
             onClick={() => onFeedback(anomaly.id, false)}
-            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            className="p-2 text-nog-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
             title="Confirm as true positive"
           >
             <ThumbsDown className="w-4 h-4" />
           </button>
-          <ChevronRight className="w-4 h-4 text-slate-400" />
+          <ChevronRight className="w-4 h-4 text-nog-400" />
         </div>
       </div>
     </div>
@@ -288,8 +288,8 @@ export default function AnomalyPage() {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-full">
-        <Loader2 className="w-10 h-10 text-amber-500 animate-spin mb-4" />
-        <p className="text-slate-600 dark:text-slate-400">Loading anomaly detection...</p>
+        <Loader2 className="w-10 h-10 text-honey-500 animate-spin mb-4" />
+        <p className="text-nog-600 dark:text-nog-400">Loading anomaly detection...</p>
       </div>
     );
   }
@@ -299,17 +299,17 @@ export default function AnomalyPage() {
   return (
     <div className="min-h-full bg-nog-50 dark:bg-nog-900">
       {/* Header */}
-      <div className="bg-white dark:bg-nog-800 border-b border-slate-200 dark:border-slate-700 shadow-sm">
+      <div className="bg-white dark:bg-nog-800 border-b border-nog-200 dark:border-nog-700 shadow-sm">
         <div className="p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
               <div className="flex items-center gap-2">
-                <Brain className="w-6 h-6 text-amber-600" />
-                <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100">
+                <Brain className="w-6 h-6 text-honey-600" />
+                <h1 className="text-xl sm:text-2xl font-bold text-nog-900 dark:text-nog-100">
                   Anomaly Detection
                 </h1>
               </div>
-              <p className="text-slate-500 dark:text-slate-400 text-sm mt-1 hidden sm:block">
+              <p className="text-nog-500 dark:text-nog-400 text-sm mt-1 hidden sm:block">
                 UEBA - User and Entity Behavior Analytics
               </p>
             </div>
@@ -351,8 +351,8 @@ export default function AnomalyPage() {
             label="Total Anomalies"
             value={dashboard?.totalAnomalies || 0}
             subValue="Last 24 hours"
-            color="text-amber-600"
-            iconBg="bg-amber-50"
+            color="text-honey-600"
+            iconBg="bg-honey-50"
           />
           <StatCard
             icon={AlertTriangle}
@@ -367,16 +367,16 @@ export default function AnomalyPage() {
             label="High Risk"
             value={dashboard?.bySeverity?.high || 0}
             subValue="Investigate soon"
-            color="text-orange-600"
-            iconBg="bg-orange-50"
+            color="text-honey-600"
+            iconBg="bg-honey-50"
           />
           <StatCard
             icon={Shield}
             label="Entities Affected"
             value={dashboard?.topEntities?.length || 0}
             subValue="Unique entities"
-            color="text-amber-600"
-            iconBg="bg-amber-50"
+            color="text-honey-600"
+            iconBg="bg-honey-50"
           />
         </div>
 
@@ -385,10 +385,10 @@ export default function AnomalyPage() {
           {/* Anomaly Trend */}
           <div className="card p-4 sm:p-5">
             <div className="mb-3 sm:mb-4">
-              <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-sm sm:text-base">
+              <h3 className="font-semibold text-nog-900 dark:text-nog-100 text-sm sm:text-base">
                 Anomaly Trend
               </h3>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+              <p className="text-xs sm:text-sm text-nog-500 dark:text-nog-400">
                 Detections per hour (last 24h)
               </p>
             </div>
@@ -406,10 +406,10 @@ export default function AnomalyPage() {
           {/* Top Affected Entities */}
           <div className="card p-4 sm:p-5">
             <div className="mb-3 sm:mb-4">
-              <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-sm sm:text-base">
+              <h3 className="font-semibold text-nog-900 dark:text-nog-100 text-sm sm:text-base">
                 Top Affected Entities
               </h3>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+              <p className="text-xs sm:text-sm text-nog-500 dark:text-nog-400">
                 Entities with most anomalies
               </p>
             </div>
@@ -429,13 +429,13 @@ export default function AnomalyPage() {
 
         {/* Anomaly List */}
         <div className="card">
-          <div className="p-4 sm:p-5 border-b border-slate-200 dark:border-slate-700">
+          <div className="p-4 sm:p-5 border-b border-nog-200 dark:border-nog-700">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div>
-                <h3 className="font-semibold text-slate-900 dark:text-slate-100">
+                <h3 className="font-semibold text-nog-900 dark:text-nog-100">
                   Recent Anomalies
                 </h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400">
+                <p className="text-sm text-nog-500 dark:text-nog-400">
                   {anomalies.length} anomalies detected
                 </p>
               </div>
@@ -443,7 +443,7 @@ export default function AnomalyPage() {
                 <select
                   value={selectedSeverity || ''}
                   onChange={(e) => setSelectedSeverity(e.target.value || undefined)}
-                  className="px-3 py-1.5 text-sm border border-slate-300 rounded-lg bg-white dark:bg-nog-800 dark:border-slate-600"
+                  className="px-3 py-1.5 text-sm border border-nog-300 rounded-lg bg-white dark:bg-nog-800 dark:border-nog-600"
                 >
                   <option value="">All Severities</option>
                   <option value="critical">Critical</option>
@@ -455,12 +455,12 @@ export default function AnomalyPage() {
             </div>
           </div>
 
-          <div className="divide-y divide-slate-200 dark:divide-slate-700">
+          <div className="divide-y divide-nog-200 dark:divide-nog-700">
             {anomalies.length === 0 ? (
               <div className="p-8 text-center">
-                <Shield className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                <p className="text-slate-600 dark:text-slate-400">No anomalies detected</p>
-                <p className="text-sm text-slate-500 dark:text-slate-500 mt-1">
+                <Shield className="w-12 h-12 text-nog-300 mx-auto mb-3" />
+                <p className="text-nog-600 dark:text-nog-400">No anomalies detected</p>
+                <p className="text-sm text-nog-500 dark:text-nog-500 mt-1">
                   Click "Run Detection" to scan for anomalies
                 </p>
               </div>

@@ -172,9 +172,9 @@ export default function TimePicker({ onRangeChange, defaultRange = '-24h', class
         className="btn-secondary h-11 sm:h-12 min-w-[90px] sm:min-w-[140px] group px-2 sm:px-4"
         title={formatDisplayText()}
       >
-        <Clock className="w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-all duration-200 group-hover:scale-110" />
+        <Clock className="w-4 h-4 text-nog-400 group-hover:text-nog-600 transition-all duration-200 group-hover:scale-110" />
         <span className="font-medium text-sm sm:text-base">{formatShortText()}</span>
-        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 hidden sm:block ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-4 h-4 text-nog-400 transition-transform duration-200 hidden sm:block ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {/* Dropdown Menu */}
@@ -183,8 +183,8 @@ export default function TimePicker({ onRangeChange, defaultRange = '-24h', class
           {!isCustomMode ? (
             /* Preset Selection */
             <div className="py-2">
-              <div className="px-4 py-2 border-b border-slate-100">
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+              <div className="px-4 py-2 border-b border-nog-100">
+                <p className="text-xs font-semibold text-nog-400 uppercase tracking-wider">
                   Time Range
                 </p>
               </div>
@@ -199,13 +199,13 @@ export default function TimePicker({ onRangeChange, defaultRange = '-24h', class
                     onClick={() => handlePresetSelect(preset)}
                     className={`dropdown-item flex items-center justify-between transition-all duration-150 animate-fade-in animate-stagger-${Math.min(index + 1, 8)} ${
                       selectedPreset.value === preset.value && !isCustomMode
-                        ? 'bg-amber-50 text-amber-600 font-medium dark:bg-amber-900/20 dark:text-amber-400'
-                        : 'text-slate-700 dark:text-slate-300'
+                        ? 'bg-honey-50 text-honey-600 font-medium dark:bg-honey-900/20 dark:text-honey-400'
+                        : 'text-nog-700 dark:text-nog-300'
                     }`}
                   >
                     <span>{preset.label}</span>
                     {preset.value === 'custom' && (
-                      <Calendar className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+                      <Calendar className="w-4 h-4 text-nog-400 dark:text-nog-500" />
                     )}
                   </button>
                 </Tooltip>
@@ -214,8 +214,8 @@ export default function TimePicker({ onRangeChange, defaultRange = '-24h', class
           ) : (
             /* Custom Date/Time Picker */
             <div className="p-4 space-y-4 animate-slide-right">
-              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                <p className="text-sm font-semibold text-slate-900">Custom Time Range</p>
+              <div className="flex items-center justify-between border-b border-nog-100 pb-3">
+                <p className="text-sm font-semibold text-nog-900">Custom Time Range</p>
                 <button
                   onClick={handleCustomCancel}
                   className="btn-ghost p-1 rounded-md"
@@ -227,7 +227,7 @@ export default function TimePicker({ onRangeChange, defaultRange = '-24h', class
 
               {/* Start Date */}
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1.5">
+                <label className="block text-xs font-medium text-nog-700 mb-1.5">
                   Start Date & Time
                 </label>
                 <DatePicker
@@ -246,7 +246,7 @@ export default function TimePicker({ onRangeChange, defaultRange = '-24h', class
 
               {/* End Date */}
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1.5">
+                <label className="block text-xs font-medium text-nog-700 mb-1.5">
                   End Date & Time
                 </label>
                 <DatePicker
@@ -266,14 +266,14 @@ export default function TimePicker({ onRangeChange, defaultRange = '-24h', class
 
               {/* Visual Display */}
               {startDate && endDate && (
-                <div className="p-3 bg-amber-50 rounded-lg border border-amber-200">
-                  <p className="text-xs font-medium text-amber-900 mb-1">Selected Range</p>
-                  <p className="text-sm text-amber-700 font-mono">
+                <div className="p-3 bg-honey-50 rounded-lg border border-honey-200">
+                  <p className="text-xs font-medium text-honey-900 mb-1">Selected Range</p>
+                  <p className="text-sm text-honey-700 font-mono">
                     {startDate.toLocaleString()} <br />
-                    <span className="text-amber-400">to</span> <br />
+                    <span className="text-honey-400">to</span> <br />
                     {endDate.toLocaleString()}
                   </p>
-                  <p className="text-xs text-amber-600 mt-2">
+                  <p className="text-xs text-honey-600 mt-2">
                     Duration: {Math.round((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60))} hours
                   </p>
                 </div>
@@ -302,9 +302,9 @@ export default function TimePicker({ onRangeChange, defaultRange = '-24h', class
 
       {/* Visual Display - Selected Range Info */}
       {selectedPreset.latest && (
-        <div className="absolute top-full left-0 right-0 mt-1 px-3 py-2 bg-white border border-amber-200 rounded-lg shadow-sm text-xs text-slate-600">
+        <div className="absolute top-full left-0 right-0 mt-1 px-3 py-2 bg-white border border-honey-200 rounded-lg shadow-sm text-xs text-nog-600">
           <div className="flex items-center justify-between">
-            <span className="font-medium text-amber-700">Custom:</span>
+            <span className="font-medium text-honey-700">Custom:</span>
             <span className="font-mono">
               {new Date(selectedPreset.earliest).toLocaleString()} - {new Date(selectedPreset.latest).toLocaleString()}
             </span>

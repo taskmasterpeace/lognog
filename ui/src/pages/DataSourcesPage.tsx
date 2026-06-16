@@ -43,11 +43,11 @@ const CATEGORY_ICONS = {
 };
 
 const CATEGORY_COLORS = {
-  database: 'text-amber-500 bg-amber-100 dark:bg-amber-900/30',
+  database: 'text-honey-500 bg-honey-100 dark:bg-honey-900/30',
   security: 'text-red-500 bg-red-100 dark:bg-red-900/30',
   web: 'text-green-500 bg-green-100 dark:bg-green-900/30',
-  system: 'text-amber-500 bg-amber-100 dark:bg-amber-900/30',
-  application: 'text-orange-500 bg-orange-100 dark:bg-orange-900/30',
+  system: 'text-honey-500 bg-honey-100 dark:bg-honey-900/30',
+  application: 'text-honey-500 bg-honey-100 dark:bg-honey-900/30',
 };
 
 // Helper to get status color based on last_seen time
@@ -61,9 +61,9 @@ function getStatusInfo(lastSeen: string): { color: string; label: string; dotCla
   } else if (diffMinutes < 60) {
     return { color: 'text-yellow-500', label: 'Recent', dotClass: 'bg-yellow-500' };
   } else if (diffMinutes < 60 * 24) {
-    return { color: 'text-orange-500', label: 'Inactive', dotClass: 'bg-orange-500' };
+    return { color: 'text-honey-500', label: 'Inactive', dotClass: 'bg-honey-500' };
   } else {
-    return { color: 'text-slate-400', label: 'Stale', dotClass: 'bg-slate-400' };
+    return { color: 'text-nog-400', label: 'Stale', dotClass: 'bg-nog-400' };
   }
 }
 
@@ -150,7 +150,7 @@ export default function DataSourcesPage() {
     return (
       <div className="p-6 max-w-7xl mx-auto">
         <div className="flex items-center justify-center h-64">
-          <div className="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin" />
+          <div className="w-8 h-8 border-4 border-honey-500 border-t-transparent rounded-full animate-spin" />
         </div>
       </div>
     );
@@ -174,21 +174,21 @@ export default function DataSourcesPage() {
   return (
     <div className="min-h-full bg-nog-50 dark:bg-nog-900">
       {/* Header */}
-      <div className="bg-white dark:bg-nog-800 border-b border-slate-200 dark:border-slate-700 shadow-sm">
+      <div className="bg-white dark:bg-nog-800 border-b border-nog-200 dark:border-nog-700 shadow-sm">
         <div className="max-w-7xl mx-auto px-6 py-6">
           <div className="flex items-start justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-                <Database className="w-7 h-7 text-amber-500" />
+              <h1 className="text-2xl font-bold text-nog-900 dark:text-nog-100 flex items-center gap-2">
+                <Database className="w-7 h-7 text-honey-500" />
                 Data Sources
               </h1>
-              <p className="text-slate-500 dark:text-slate-400 mt-1">
+              <p className="text-nog-500 dark:text-nog-400 mt-1">
                 Monitor active sources and configure new log ingestion
               </p>
             </div>
             <button
               onClick={() => setShowWizard(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-medium shadow-sm transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-honey-500 hover:bg-honey-600 text-nog-900 rounded-lg font-medium shadow-sm transition-colors"
             >
               <Plus className="w-5 h-5" />
               Add Data Source
@@ -201,8 +201,8 @@ export default function DataSourcesPage() {
               onClick={() => handleTabChange('active')}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-t-lg font-medium text-sm transition-colors border-b-2 ${
                 activeTab === 'active'
-                  ? 'bg-nog-50 dark:bg-nog-900 text-amber-600 dark:text-amber-400 border-amber-500'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border-transparent hover:bg-nog-100 dark:hover:bg-slate-700'
+                  ? 'bg-nog-50 dark:bg-nog-900 text-honey-600 dark:text-honey-400 border-honey-500'
+                  : 'text-nog-600 dark:text-nog-400 hover:text-nog-900 dark:hover:text-nog-200 border-transparent hover:bg-nog-100 dark:hover:bg-nog-700'
               }`}
             >
               <Activity className="w-4 h-4" />
@@ -210,8 +210,8 @@ export default function DataSourcesPage() {
               {activeSources && (
                 <span className={`px-1.5 py-0.5 text-xs rounded-full ${
                   activeTab === 'active'
-                    ? 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300'
-                    : 'bg-slate-200 dark:bg-nog-600 text-slate-600 dark:text-slate-300'
+                    ? 'bg-honey-100 dark:bg-honey-900/50 text-honey-700 dark:text-honey-300'
+                    : 'bg-nog-200 dark:bg-nog-600 text-nog-600 dark:text-nog-300'
                 }`}>
                   {activeSources.sources.length}
                 </span>
@@ -221,8 +221,8 @@ export default function DataSourcesPage() {
               onClick={() => handleTabChange('templates')}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-t-lg font-medium text-sm transition-colors border-b-2 ${
                 activeTab === 'templates'
-                  ? 'bg-nog-50 dark:bg-nog-900 text-amber-600 dark:text-amber-400 border-amber-500'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border-transparent hover:bg-nog-100 dark:hover:bg-slate-700'
+                  ? 'bg-nog-50 dark:bg-nog-900 text-honey-600 dark:text-honey-400 border-honey-500'
+                  : 'text-nog-600 dark:text-nog-400 hover:text-nog-900 dark:hover:text-nog-200 border-transparent hover:bg-nog-100 dark:hover:bg-nog-700'
               }`}
             >
               <Database className="w-4 h-4" />
@@ -230,8 +230,8 @@ export default function DataSourcesPage() {
               {stats && (
                 <span className={`px-1.5 py-0.5 text-xs rounded-full ${
                   activeTab === 'templates'
-                    ? 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300'
-                    : 'bg-slate-200 dark:bg-nog-600 text-slate-600 dark:text-slate-300'
+                    ? 'bg-honey-100 dark:bg-honey-900/50 text-honey-700 dark:text-honey-300'
+                    : 'bg-nog-200 dark:bg-nog-600 text-nog-600 dark:text-nog-300'
                 }`}>
                   {stats.total}
                 </span>
@@ -241,8 +241,8 @@ export default function DataSourcesPage() {
               onClick={() => handleTabChange('config')}
               className={`flex items-center gap-2 px-4 py-2.5 rounded-t-lg font-medium text-sm transition-colors border-b-2 ${
                 activeTab === 'config'
-                  ? 'bg-nog-50 dark:bg-nog-900 text-amber-600 dark:text-amber-400 border-amber-500'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border-transparent hover:bg-nog-100 dark:hover:bg-slate-700'
+                  ? 'bg-nog-50 dark:bg-nog-900 text-honey-600 dark:text-honey-400 border-honey-500'
+                  : 'text-nog-600 dark:text-nog-400 hover:text-nog-900 dark:hover:text-nog-200 border-transparent hover:bg-nog-100 dark:hover:bg-nog-700'
               }`}
             >
               <Settings className="w-4 h-4" />
@@ -259,30 +259,30 @@ export default function DataSourcesPage() {
           <div>
             {/* Index Management Tip Banner */}
             {showIndexTip && (
-              <div className="mb-6 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
+              <div className="mb-6 bg-honey-50 dark:bg-honey-900/20 border border-honey-200 dark:border-honey-800 rounded-xl p-4">
                 <div className="flex items-start gap-3">
-                  <div className="p-2 bg-amber-100 dark:bg-amber-800 rounded-lg">
-                    <Lightbulb className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                  <div className="p-2 bg-honey-100 dark:bg-honey-800 rounded-lg">
+                    <Lightbulb className="w-5 h-5 text-honey-600 dark:text-honey-400" />
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-semibold text-amber-900 dark:text-amber-100 mb-1">
+                    <h3 className="font-semibold text-honey-900 dark:text-honey-100 mb-1">
                       Organize your logs with indexes
                     </h3>
-                    <p className="text-sm text-amber-700 dark:text-amber-300 mb-3">
+                    <p className="text-sm text-honey-700 dark:text-honey-300 mb-3">
                       Logs are grouped into indexes (like folders). When sending logs via HTTP API, use the{' '}
-                      <code className="px-1.5 py-0.5 bg-amber-100 dark:bg-amber-800 rounded font-mono text-xs">X-Index</code>{' '}
+                      <code className="px-1.5 py-0.5 bg-honey-100 dark:bg-honey-800 rounded font-mono text-xs">X-Index</code>{' '}
                       header to specify a custom index name. You can also normalize field names across sources using{' '}
-                      <Link to="/data-models" className="underline hover:text-amber-900 dark:hover:text-amber-100">
+                      <Link to="/data-models" className="underline hover:text-honey-900 dark:hover:text-honey-100">
                         Data Models (CIM)
                       </Link>.
                     </p>
                     <div className="flex flex-wrap items-center gap-2">
-                      <code className="text-xs bg-nog-800 text-slate-100 px-3 py-1.5 rounded font-mono">
+                      <code className="text-xs bg-nog-800 text-nog-100 px-3 py-1.5 rounded font-mono">
                         curl -H "X-Index: my-app" -H "X-API-Key: ..." /api/ingest/http
                       </code>
                       <Link
                         to="/docs"
-                        className="text-sm text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1"
+                        className="text-sm text-honey-600 dark:text-honey-400 hover:underline flex items-center gap-1"
                       >
                         Learn more <ExternalLink className="w-3 h-3" />
                       </Link>
@@ -291,14 +291,14 @@ export default function DataSourcesPage() {
                   <div className="flex items-center gap-1">
                     <button
                       onClick={() => dismissIndexTip(false)}
-                      className="p-1.5 hover:bg-amber-100 dark:hover:bg-amber-800 rounded text-amber-600 dark:text-amber-400"
+                      className="p-1.5 hover:bg-honey-100 dark:hover:bg-honey-800 rounded text-honey-600 dark:text-honey-400"
                       title="Dismiss for now"
                     >
                       <X className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => dismissIndexTip(true)}
-                      className="p-1.5 hover:bg-amber-100 dark:hover:bg-amber-800 rounded text-amber-600 dark:text-amber-400 text-xs"
+                      className="p-1.5 hover:bg-honey-100 dark:hover:bg-honey-800 rounded text-honey-600 dark:text-honey-400 text-xs"
                       title="Don't show again"
                     >
                       <span className="sr-only">Don't show again</span>
@@ -320,21 +320,21 @@ export default function DataSourcesPage() {
                       key={idx.index_name}
                       className={`px-4 py-2 bg-white dark:bg-nog-800 rounded-lg border transition-colors flex items-center gap-3 ${
                         muted
-                          ? 'border-orange-300 dark:border-orange-700 opacity-60'
-                          : 'border-slate-200 dark:border-slate-700 hover:border-amber-300 dark:hover:border-amber-600'
+                          ? 'border-honey-300 dark:border-honey-700 opacity-60'
+                          : 'border-nog-200 dark:border-nog-700 hover:border-honey-300 dark:hover:border-honey-600'
                       }`}
                     >
                       <button
                         onClick={() => navigate(`/search?q=${encodeURIComponent(`search index=${indexName}`)}`)}
                         className="flex items-center gap-3"
                       >
-                        <div className={`text-sm font-medium ${muted ? 'line-through text-slate-500' : 'text-slate-900 dark:text-slate-100'}`}>
+                        <div className={`text-sm font-medium ${muted ? 'line-through text-nog-500' : 'text-nog-900 dark:text-nog-100'}`}>
                           {indexName}
                         </div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400">
+                        <div className="text-xs text-nog-500 dark:text-nog-400">
                           {idx.count.toLocaleString()} logs
                         </div>
-                        <div className="text-xs text-slate-400">
+                        <div className="text-xs text-nog-400">
                           {idx.sources} sources
                         </div>
                       </button>
@@ -345,8 +345,8 @@ export default function DataSourcesPage() {
                         }}
                         className={`p-1 rounded transition-colors ${
                           muted
-                            ? 'text-orange-500 hover:bg-orange-100 dark:hover:bg-orange-900/30'
-                            : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-nog-100 dark:hover:bg-slate-600'
+                            ? 'text-honey-500 hover:bg-honey-100 dark:hover:bg-honey-900/30'
+                            : 'text-nog-400 hover:text-nog-600 dark:hover:text-nog-300 hover:bg-nog-100 dark:hover:bg-nog-600'
                         }`}
                         title={muted ? 'Unmute index' : 'Mute index (hide from search)'}
                       >
@@ -361,44 +361,44 @@ export default function DataSourcesPage() {
             {/* Active Sources Table */}
             {sourcesLoading ? (
               <div className="flex items-center justify-center h-64">
-                <Loader2 className="w-8 h-8 text-amber-500 animate-spin" />
+                <Loader2 className="w-8 h-8 text-honey-500 animate-spin" />
               </div>
             ) : activeSources && activeSources.sources.length > 0 ? (
-              <div className="bg-white dark:bg-nog-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+              <div className="bg-white dark:bg-nog-800 rounded-xl border border-nog-200 dark:border-nog-700 overflow-hidden">
                 <table className="w-full">
-                  <thead className="bg-nog-50 dark:bg-nog-900 border-b border-slate-200 dark:border-slate-700">
+                  <thead className="bg-nog-50 dark:bg-nog-900 border-b border-nog-200 dark:border-nog-700">
                     <tr>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-nog-500 dark:text-nog-400 uppercase tracking-wide">
                         Status
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-nog-500 dark:text-nog-400 uppercase tracking-wide">
                         Source
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-nog-500 dark:text-nog-400 uppercase tracking-wide">
                         Index
                       </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-nog-500 dark:text-nog-400 uppercase tracking-wide">
                         Protocol
                       </th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-nog-500 dark:text-nog-400 uppercase tracking-wide">
                         Logs (7d)
                       </th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-nog-500 dark:text-nog-400 uppercase tracking-wide">
                         Errors
                       </th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-nog-500 dark:text-nog-400 uppercase tracking-wide">
                         Last Seen
                       </th>
                       <th className="px-4 py-3"></th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                  <tbody className="divide-y divide-nog-100 dark:divide-nog-700">
                     {activeSources.sources.map((source, idx) => {
                       const status = getStatusInfo(source.last_seen);
                       return (
                         <tr
                           key={`${source.app_name}-${source.index_name}-${idx}`}
-                          className="hover:bg-nog-50 dark:hover:bg-slate-700/50 transition-colors"
+                          className="hover:bg-nog-50 dark:hover:bg-nog-700/50 transition-colors"
                         >
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">
@@ -409,25 +409,25 @@ export default function DataSourcesPage() {
                             </div>
                           </td>
                           <td className="px-4 py-3">
-                            <div className="font-medium text-slate-900 dark:text-slate-100">
+                            <div className="font-medium text-nog-900 dark:text-nog-100">
                               {source.app_name}
                             </div>
-                            <div className="text-xs text-slate-500 dark:text-slate-400">
+                            <div className="text-xs text-nog-500 dark:text-nog-400">
                               {source.hostname}
                             </div>
                           </td>
                           <td className="px-4 py-3">
-                            <span className="px-2 py-1 text-xs font-medium bg-nog-100 dark:bg-nog-700 text-slate-700 dark:text-slate-300 rounded">
+                            <span className="px-2 py-1 text-xs font-medium bg-nog-100 dark:bg-nog-700 text-nog-700 dark:text-nog-300 rounded">
                               {source.index_name || 'main'}
                             </span>
                           </td>
                           <td className="px-4 py-3">
-                            <span className="text-sm text-slate-600 dark:text-slate-400">
+                            <span className="text-sm text-nog-600 dark:text-nog-400">
                               {source.protocol || 'unknown'}
                             </span>
                           </td>
                           <td className="px-4 py-3 text-right">
-                            <span className="text-sm font-medium text-slate-900 dark:text-slate-100">
+                            <span className="text-sm font-medium text-nog-900 dark:text-nog-100">
                               {source.log_count.toLocaleString()}
                             </span>
                           </td>
@@ -437,11 +437,11 @@ export default function DataSourcesPage() {
                                 {source.error_count.toLocaleString()}
                               </span>
                             ) : (
-                              <span className="text-sm text-slate-400">0</span>
+                              <span className="text-sm text-nog-400">0</span>
                             )}
                           </td>
                           <td className="px-4 py-3 text-right">
-                            <div className="flex items-center justify-end gap-1 text-sm text-slate-500 dark:text-slate-400">
+                            <div className="flex items-center justify-end gap-1 text-sm text-nog-500 dark:text-nog-400">
                               <Clock className="w-3 h-3" />
                               {formatRelativeTime(source.last_seen)}
                             </div>
@@ -456,8 +456,8 @@ export default function DataSourcesPage() {
                                 }}
                                 className={`p-1.5 rounded transition-colors ${
                                   isMuted('index_name', source.index_name || 'main')
-                                    ? 'text-orange-500 hover:bg-orange-100 dark:hover:bg-orange-900/30'
-                                    : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-nog-100 dark:hover:bg-slate-600'
+                                    ? 'text-honey-500 hover:bg-honey-100 dark:hover:bg-honey-900/30'
+                                    : 'text-nog-400 hover:text-nog-600 dark:hover:text-nog-300 hover:bg-nog-100 dark:hover:bg-nog-600'
                                 }`}
                                 title={
                                   isMuted('index_name', source.index_name || 'main')
@@ -480,10 +480,10 @@ export default function DataSourcesPage() {
                                     )}`
                                   )
                                 }
-                                className="p-1.5 hover:bg-nog-100 dark:hover:bg-slate-600 rounded transition-colors"
+                                className="p-1.5 hover:bg-nog-100 dark:hover:bg-nog-600 rounded transition-colors"
                                 title="View logs"
                               >
-                                <ExternalLink className="w-4 h-4 text-slate-400 hover:text-amber-500" />
+                                <ExternalLink className="w-4 h-4 text-nog-400 hover:text-honey-500" />
                               </button>
                             </div>
                           </td>
@@ -494,35 +494,35 @@ export default function DataSourcesPage() {
                 </table>
               </div>
             ) : (
-              <div className="bg-white dark:bg-nog-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+              <div className="bg-white dark:bg-nog-800 rounded-xl border border-nog-200 dark:border-nog-700 overflow-hidden">
                 {/* Header */}
-                <div className="p-6 border-b border-slate-200 dark:border-slate-700 text-center">
-                  <Activity className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
-                  <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-1">
+                <div className="p-6 border-b border-nog-200 dark:border-nog-700 text-center">
+                  <Activity className="w-12 h-12 text-nog-300 dark:text-nog-600 mx-auto mb-3" />
+                  <h3 className="text-lg font-semibold text-nog-900 dark:text-nog-100 mb-1">
                     No log sources detected yet
                   </h3>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                  <p className="text-sm text-nog-500 dark:text-nog-400">
                     Here are 3 ways to start sending logs to LogNog
                   </p>
                 </div>
 
                 {/* Getting Started Options */}
-                <div className="grid md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-slate-200 dark:divide-slate-700">
+                <div className="grid md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-nog-200 dark:divide-nog-700">
                   {/* Option 1: Syslog */}
                   <div className="p-6">
                     <div className="flex items-center gap-2 mb-3">
                       <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
                         <Server className="w-5 h-5 text-green-600 dark:text-green-400" />
                       </div>
-                      <h4 className="font-medium text-slate-900 dark:text-slate-100">Syslog</h4>
+                      <h4 className="font-medium text-nog-900 dark:text-nog-100">Syslog</h4>
                     </div>
-                    <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
+                    <p className="text-sm text-nog-600 dark:text-nog-400 mb-3">
                       Point any syslog-compatible device to LogNog.
                     </p>
-                    <code className="block text-xs bg-nog-100 dark:bg-nog-700 text-slate-700 dark:text-slate-300 p-2 rounded font-mono mb-2">
+                    <code className="block text-xs bg-nog-100 dark:bg-nog-700 text-nog-700 dark:text-nog-300 p-2 rounded font-mono mb-2">
                       Port: UDP/TCP 514
                     </code>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                    <p className="text-xs text-nog-500 dark:text-nog-400">
                       Logs go to index: <strong>main</strong>
                     </p>
                   </div>
@@ -530,20 +530,20 @@ export default function DataSourcesPage() {
                   {/* Option 2: HTTP API */}
                   <div className="p-6">
                     <div className="flex items-center gap-2 mb-3">
-                      <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
-                        <Terminal className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                      <div className="p-2 bg-honey-100 dark:bg-honey-900/30 rounded-lg">
+                        <Terminal className="w-5 h-5 text-honey-600 dark:text-honey-400" />
                       </div>
-                      <h4 className="font-medium text-slate-900 dark:text-slate-100">HTTP API</h4>
+                      <h4 className="font-medium text-nog-900 dark:text-nog-100">HTTP API</h4>
                     </div>
-                    <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
+                    <p className="text-sm text-nog-600 dark:text-nog-400 mb-3">
                       Send JSON logs with custom index names.
                     </p>
-                    <code className="block text-xs bg-nog-100 dark:bg-nog-700 text-slate-700 dark:text-slate-300 p-2 rounded font-mono mb-2 break-all">
+                    <code className="block text-xs bg-nog-100 dark:bg-nog-700 text-nog-700 dark:text-nog-300 p-2 rounded font-mono mb-2 break-all">
                       POST /api/ingest/http
                       <br />
                       X-Index: my-app
                     </code>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                    <p className="text-xs text-nog-500 dark:text-nog-400">
                       Set index via <strong>X-Index</strong> header
                     </p>
                   </div>
@@ -551,36 +551,36 @@ export default function DataSourcesPage() {
                   {/* Option 3: Agent */}
                   <div className="p-6">
                     <div className="flex items-center gap-2 mb-3">
-                      <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
-                        <Layers className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+                      <div className="p-2 bg-honey-100 dark:bg-honey-900/30 rounded-lg">
+                        <Layers className="w-5 h-5 text-honey-600 dark:text-honey-400" />
                       </div>
-                      <h4 className="font-medium text-slate-900 dark:text-slate-100">LogNog In Agent</h4>
+                      <h4 className="font-medium text-nog-900 dark:text-nog-100">LogNog In Agent</h4>
                     </div>
-                    <p className="text-sm text-slate-600 dark:text-slate-400 mb-3">
+                    <p className="text-sm text-nog-600 dark:text-nog-400 mb-3">
                       Install on Windows/Linux to collect logs and events.
                     </p>
-                    <code className="block text-xs bg-nog-100 dark:bg-nog-700 text-slate-700 dark:text-slate-300 p-2 rounded font-mono mb-2">
+                    <code className="block text-xs bg-nog-100 dark:bg-nog-700 text-nog-700 dark:text-nog-300 p-2 rounded font-mono mb-2">
                       LogNogIn.exe init
                     </code>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                    <p className="text-xs text-nog-500 dark:text-nog-400">
                       Logs go to index: <strong>agent</strong>
                     </p>
                   </div>
                 </div>
 
                 {/* Footer */}
-                <div className="p-4 bg-nog-50 dark:bg-nog-900 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                <div className="p-4 bg-nog-50 dark:bg-nog-900 border-t border-nog-200 dark:border-nog-700 flex items-center justify-between">
+                  <p className="text-sm text-nog-500 dark:text-nog-400">
                     Need help? Check out our{' '}
-                    <Link to="/docs" className="text-amber-600 dark:text-amber-400 hover:underline">
+                    <Link to="/docs" className="text-honey-600 dark:text-honey-400 hover:underline">
                       documentation
                     </Link>{' '}
                     or ask{' '}
-                    <span className="text-amber-600 dark:text-amber-400">NogChat</span> (bottom right).
+                    <span className="text-honey-600 dark:text-honey-400">NogChat</span> (bottom right).
                   </p>
                   <button
                     onClick={() => handleTabChange('templates')}
-                    className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-medium text-sm transition-colors"
+                    className="px-4 py-2 bg-honey-500 hover:bg-honey-600 text-nog-900 rounded-lg font-medium text-sm transition-colors"
                   >
                     Browse Templates
                   </button>
@@ -596,21 +596,21 @@ export default function DataSourcesPage() {
             {/* Stats Cards */}
             {stats && (
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                <div className="bg-white dark:bg-nog-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-                  <div className="text-sm text-slate-500 dark:text-slate-400">Total Templates</div>
-                  <div className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1">{stats.total}</div>
+                <div className="bg-white dark:bg-nog-800 rounded-xl p-4 border border-nog-200 dark:border-nog-700">
+                  <div className="text-sm text-nog-500 dark:text-nog-400">Total Templates</div>
+                  <div className="text-2xl font-bold text-nog-900 dark:text-nog-100 mt-1">{stats.total}</div>
                 </div>
-                <div className="bg-white dark:bg-nog-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-                  <div className="text-sm text-slate-500 dark:text-slate-400">Built-in</div>
-                  <div className="text-2xl font-bold text-amber-500 mt-1">{stats.built_in}</div>
+                <div className="bg-white dark:bg-nog-800 rounded-xl p-4 border border-nog-200 dark:border-nog-700">
+                  <div className="text-sm text-nog-500 dark:text-nog-400">Built-in</div>
+                  <div className="text-2xl font-bold text-honey-500 mt-1">{stats.built_in}</div>
                 </div>
-                <div className="bg-white dark:bg-nog-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-                  <div className="text-sm text-slate-500 dark:text-slate-400">Custom</div>
-                  <div className="text-2xl font-bold text-amber-500 mt-1">{stats.custom}</div>
+                <div className="bg-white dark:bg-nog-800 rounded-xl p-4 border border-nog-200 dark:border-nog-700">
+                  <div className="text-sm text-nog-500 dark:text-nog-400">Custom</div>
+                  <div className="text-2xl font-bold text-honey-500 mt-1">{stats.custom}</div>
                 </div>
-                <div className="bg-white dark:bg-nog-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-                  <div className="text-sm text-slate-500 dark:text-slate-400">Categories</div>
-                  <div className="text-2xl font-bold text-slate-900 dark:text-slate-100 mt-1">
+                <div className="bg-white dark:bg-nog-800 rounded-xl p-4 border border-nog-200 dark:border-nog-700">
+                  <div className="text-sm text-nog-500 dark:text-nog-400">Categories</div>
+                  <div className="text-2xl font-bold text-nog-900 dark:text-nog-100 mt-1">
                     {Object.keys(stats.by_category).filter((k) => stats.by_category[k] > 0).length}
                   </div>
                 </div>
@@ -623,8 +623,8 @@ export default function DataSourcesPage() {
                 onClick={() => setSelectedCategory('all')}
                 className={`px-4 py-2 rounded-lg font-medium transition-colors ${
                   selectedCategory === 'all'
-                    ? 'bg-amber-500 text-white'
-                    : 'bg-white dark:bg-nog-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-nog-50 dark:hover:bg-slate-700'
+                    ? 'bg-honey-500 text-nog-900'
+                    : 'bg-white dark:bg-nog-800 border border-nog-200 dark:border-nog-700 text-nog-700 dark:text-nog-300 hover:bg-nog-50 dark:hover:bg-nog-700'
                 }`}
               >
                 All Templates ({allTemplates.length})
@@ -638,8 +638,8 @@ export default function DataSourcesPage() {
                     onClick={() => setSelectedCategory(category)}
                     className={`px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2 ${
                       selectedCategory === category
-                        ? 'bg-amber-500 text-white'
-                        : 'bg-white dark:bg-nog-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-nog-50 dark:hover:bg-slate-700'
+                        ? 'bg-honey-500 text-nog-900'
+                        : 'bg-white dark:bg-nog-800 border border-nog-200 dark:border-nog-700 text-nog-700 dark:text-nog-300 hover:bg-nog-50 dark:hover:bg-nog-700'
                     }`}
                   >
                     <Icon className="w-4 h-4" />
@@ -658,7 +658,7 @@ export default function DataSourcesPage() {
                 return (
                   <div
                     key={template.id}
-                    className="bg-white dark:bg-nog-800 rounded-xl border border-slate-200 dark:border-slate-700 p-5 hover:shadow-lg transition-shadow cursor-pointer"
+                    className="bg-white dark:bg-nog-800 rounded-xl border border-nog-200 dark:border-nog-700 p-5 hover:shadow-lg transition-shadow cursor-pointer"
                     onClick={() => openTemplateSetup(template)}
                   >
                     <div className="flex items-start justify-between mb-3">
@@ -666,16 +666,16 @@ export default function DataSourcesPage() {
                         <Icon className="w-6 h-6" />
                       </div>
                       {template.built_in ? (
-                        <span className="px-2 py-1 text-xs font-medium bg-nog-100 dark:bg-nog-700 text-slate-600 dark:text-slate-400 rounded">
+                        <span className="px-2 py-1 text-xs font-medium bg-nog-100 dark:bg-nog-700 text-nog-600 dark:text-nog-400 rounded">
                           Built-in
                         </span>
                       ) : null}
                     </div>
 
-                    <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-1">{template.name}</h3>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2 mb-3">{template.description}</p>
+                    <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-1">{template.name}</h3>
+                    <p className="text-sm text-nog-500 dark:text-nog-400 line-clamp-2 mb-3">{template.description}</p>
 
-                    <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                    <div className="flex items-center gap-2 text-xs text-nog-500 dark:text-nog-400">
                       <span className="px-2 py-1 bg-nog-100 dark:bg-nog-700 rounded capitalize">{template.category}</span>
                       {template.field_extractions && template.field_extractions.length > 0 && (
                         <span className="px-2 py-1 bg-nog-100 dark:bg-nog-700 rounded">
@@ -689,12 +689,12 @@ export default function DataSourcesPage() {
             </div>
 
             {filteredTemplates.length === 0 && (
-              <div className="text-center py-12 bg-white dark:bg-nog-800 rounded-xl border border-slate-200 dark:border-slate-700">
-                <Search className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-slate-900 dark:text-slate-100 mb-2">
+              <div className="text-center py-12 bg-white dark:bg-nog-800 rounded-xl border border-nog-200 dark:border-nog-700">
+                <Search className="w-12 h-12 text-nog-300 dark:text-nog-600 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-nog-900 dark:text-nog-100 mb-2">
                   No templates found
                 </h3>
-                <p className="text-slate-500 dark:text-slate-400">
+                <p className="text-nog-500 dark:text-nog-400">
                   Try selecting a different category or browse all templates
                 </p>
               </div>
@@ -713,7 +713,7 @@ export default function DataSourcesPage() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-nog-800 rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
             {/* Header */}
-            <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+            <div className="p-6 border-b border-nog-200 dark:border-nog-700 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 {(() => {
                   const Icon = CATEGORY_ICONS[selectedTemplate.category];
@@ -725,10 +725,10 @@ export default function DataSourcesPage() {
                   );
                 })()}
                 <div>
-                  <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100">
+                  <h2 className="text-xl font-semibold text-nog-900 dark:text-nog-100">
                     {selectedTemplate.name}
                   </h2>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">{selectedTemplate.description}</p>
+                  <p className="text-sm text-nog-500 dark:text-nog-400">{selectedTemplate.description}</p>
                 </div>
               </div>
               <button
@@ -736,7 +736,7 @@ export default function DataSourcesPage() {
                   setShowSetupModal(false);
                   setSelectedTemplate(null);
                 }}
-                className="p-2 hover:bg-nog-100 dark:hover:bg-slate-700 rounded-lg"
+                className="p-2 hover:bg-nog-100 dark:hover:bg-nog-700 rounded-lg"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -747,12 +747,12 @@ export default function DataSourcesPage() {
               {/* Setup Instructions */}
               {selectedTemplate.setup_instructions && (
                 <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-lg font-semibold text-slate-900 dark:text-slate-100">
-                    <Info className="w-5 h-5 text-amber-500" />
+                  <div className="flex items-center gap-2 text-lg font-semibold text-nog-900 dark:text-nog-100">
+                    <Info className="w-5 h-5 text-honey-500" />
                     Setup Instructions
                   </div>
                   <div className="prose dark:prose-invert max-w-none bg-nog-50 dark:bg-nog-900 rounded-lg p-4">
-                    <pre className="text-sm text-slate-700 dark:text-slate-300 whitespace-pre-wrap">
+                    <pre className="text-sm text-nog-700 dark:text-nog-300 whitespace-pre-wrap">
                       {selectedTemplate.setup_instructions}
                     </pre>
                   </div>
@@ -763,13 +763,13 @@ export default function DataSourcesPage() {
               {selectedTemplate.agent_config_example && (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-lg font-semibold text-slate-900 dark:text-slate-100">
-                      <FileCode className="w-5 h-5 text-amber-500" />
+                    <div className="flex items-center gap-2 text-lg font-semibold text-nog-900 dark:text-nog-100">
+                      <FileCode className="w-5 h-5 text-honey-500" />
                       LogNog In Agent Configuration
                     </div>
                     <button
                       onClick={() => handleCopy(selectedTemplate.agent_config_example!, 'agent')}
-                      className="px-3 py-1 text-sm bg-nog-100 dark:bg-nog-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded flex items-center gap-2"
+                      className="px-3 py-1 text-sm bg-nog-100 dark:bg-nog-700 hover:bg-nog-200 dark:hover:bg-nog-600 rounded flex items-center gap-2"
                     >
                       {copiedSection === 'agent' ? (
                         <>
@@ -785,7 +785,7 @@ export default function DataSourcesPage() {
                     </button>
                   </div>
                   <div className="bg-nog-900 dark:bg-black rounded-lg p-4 overflow-x-auto">
-                    <pre className="text-sm text-slate-100 font-mono">{selectedTemplate.agent_config_example}</pre>
+                    <pre className="text-sm text-nog-100 font-mono">{selectedTemplate.agent_config_example}</pre>
                   </div>
                 </div>
               )}
@@ -794,13 +794,13 @@ export default function DataSourcesPage() {
               {selectedTemplate.syslog_config_example && (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-lg font-semibold text-slate-900 dark:text-slate-100">
+                    <div className="flex items-center gap-2 text-lg font-semibold text-nog-900 dark:text-nog-100">
                       <Server className="w-5 h-5 text-green-500" />
                       Syslog Configuration
                     </div>
                     <button
                       onClick={() => handleCopy(selectedTemplate.syslog_config_example!, 'syslog')}
-                      className="px-3 py-1 text-sm bg-nog-100 dark:bg-nog-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded flex items-center gap-2"
+                      className="px-3 py-1 text-sm bg-nog-100 dark:bg-nog-700 hover:bg-nog-200 dark:hover:bg-nog-600 rounded flex items-center gap-2"
                     >
                       {copiedSection === 'syslog' ? (
                         <>
@@ -816,7 +816,7 @@ export default function DataSourcesPage() {
                     </button>
                   </div>
                   <div className="bg-nog-900 dark:bg-black rounded-lg p-4 overflow-x-auto">
-                    <pre className="text-sm text-slate-100 font-mono">{selectedTemplate.syslog_config_example}</pre>
+                    <pre className="text-sm text-nog-100 font-mono">{selectedTemplate.syslog_config_example}</pre>
                   </div>
                 </div>
               )}
@@ -824,19 +824,19 @@ export default function DataSourcesPage() {
               {/* Field Extractions */}
               {selectedTemplate.field_extractions && selectedTemplate.field_extractions.length > 0 && (
                 <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-lg font-semibold text-slate-900 dark:text-slate-100">
-                    <Database className="w-5 h-5 text-amber-500" />
+                  <div className="flex items-center gap-2 text-lg font-semibold text-nog-900 dark:text-nog-100">
+                    <Database className="w-5 h-5 text-honey-500" />
                     Field Extractions ({selectedTemplate.field_extractions.length})
                   </div>
                   <div className="space-y-2">
                     {selectedTemplate.field_extractions.map((extraction, idx) => (
                       <div
                         key={idx}
-                        className="bg-nog-50 dark:bg-nog-900 rounded-lg p-3 border border-slate-200 dark:border-slate-700"
+                        className="bg-nog-50 dark:bg-nog-900 rounded-lg p-3 border border-nog-200 dark:border-nog-700"
                       >
                         <div className="flex items-center justify-between mb-2">
                           <div className="flex items-center gap-2">
-                            <code className="text-sm font-mono font-semibold text-slate-900 dark:text-slate-100">
+                            <code className="text-sm font-mono font-semibold text-nog-900 dark:text-nog-100">
                               {extraction.field_name}
                             </code>
                             {extraction.required && (
@@ -844,15 +844,15 @@ export default function DataSourcesPage() {
                                 Required
                               </span>
                             )}
-                            <span className="px-2 py-0.5 text-xs bg-slate-200 dark:bg-nog-700 text-slate-600 dark:text-slate-400 rounded">
+                            <span className="px-2 py-0.5 text-xs bg-nog-200 dark:bg-nog-700 text-nog-600 dark:text-nog-400 rounded">
                               {extraction.pattern_type}
                             </span>
                           </div>
                         </div>
                         {extraction.description && (
-                          <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">{extraction.description}</p>
+                          <p className="text-sm text-nog-600 dark:text-nog-400 mb-2">{extraction.description}</p>
                         )}
-                        <code className="text-xs font-mono text-slate-700 dark:text-slate-300 bg-white dark:bg-nog-800 px-2 py-1 rounded">
+                        <code className="text-xs font-mono text-nog-700 dark:text-nog-300 bg-white dark:bg-nog-800 px-2 py-1 rounded">
                           {extraction.pattern}
                         </code>
                       </div>
@@ -864,12 +864,12 @@ export default function DataSourcesPage() {
               {/* Sample Log */}
               {selectedTemplate.sample_log && (
                 <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-lg font-semibold text-slate-900 dark:text-slate-100">
-                    <FileCode className="w-5 h-5 text-orange-500" />
+                  <div className="flex items-center gap-2 text-lg font-semibold text-nog-900 dark:text-nog-100">
+                    <FileCode className="w-5 h-5 text-honey-500" />
                     Sample Log Line
                   </div>
                   <div className="bg-nog-900 dark:bg-black rounded-lg p-4 overflow-x-auto">
-                    <pre className="text-sm text-slate-100 font-mono whitespace-pre-wrap">
+                    <pre className="text-sm text-nog-100 font-mono whitespace-pre-wrap">
                       {selectedTemplate.sample_log}
                     </pre>
                   </div>
@@ -879,12 +879,12 @@ export default function DataSourcesPage() {
               {/* Sample Query */}
               {selectedTemplate.sample_query && (
                 <div className="space-y-3">
-                  <div className="flex items-center gap-2 text-lg font-semibold text-slate-900 dark:text-slate-100">
-                    <Search className="w-5 h-5 text-amber-500" />
+                  <div className="flex items-center gap-2 text-lg font-semibold text-nog-900 dark:text-nog-100">
+                    <Search className="w-5 h-5 text-honey-500" />
                     Example Query
                   </div>
-                  <div className="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-4">
-                    <code className="text-sm font-mono text-amber-900 dark:text-amber-100">
+                  <div className="bg-honey-50 dark:bg-honey-900/20 rounded-lg p-4">
+                    <code className="text-sm font-mono text-honey-900 dark:text-honey-100">
                       {selectedTemplate.sample_query}
                     </code>
                   </div>
@@ -893,8 +893,8 @@ export default function DataSourcesPage() {
             </div>
 
             {/* Footer */}
-            <div className="p-6 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between bg-nog-50 dark:bg-nog-900">
-              <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
+            <div className="p-6 border-t border-nog-200 dark:border-nog-700 flex items-center justify-between bg-nog-50 dark:bg-nog-900">
+              <div className="flex items-center gap-2 text-sm text-nog-600 dark:text-nog-400">
                 {selectedTemplate.built_in ? (
                   <>
                     <CheckCircle2 className="w-4 h-4 text-green-500" />
@@ -902,7 +902,7 @@ export default function DataSourcesPage() {
                   </>
                 ) : (
                   <>
-                    <AlertCircle className="w-4 h-4 text-orange-500" />
+                    <AlertCircle className="w-4 h-4 text-honey-500" />
                     Custom template
                   </>
                 )}
@@ -912,7 +912,7 @@ export default function DataSourcesPage() {
                   setShowSetupModal(false);
                   setSelectedTemplate(null);
                 }}
-                className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg"
+                className="px-4 py-2 bg-honey-500 hover:bg-honey-600 text-nog-900 rounded-lg"
               >
                 Close
               </button>

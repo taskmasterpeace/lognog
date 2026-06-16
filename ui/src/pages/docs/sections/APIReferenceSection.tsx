@@ -5,32 +5,32 @@ export default function APIReferenceSection() {
     <div className="space-y-6 sm:space-y-8">
       {/* Overview */}
       <section>
-        <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 mb-3 sm:mb-4">API Overview</h2>
-        <p className="text-slate-600 dark:text-slate-400 mb-4">
+        <h2 className="text-xl sm:text-2xl font-bold text-nog-900 dark:text-nog-100 mb-3 sm:mb-4">API Overview</h2>
+        <p className="text-nog-600 dark:text-nog-400 mb-4">
           LogNog provides a RESTful API for all operations. All endpoints are prefixed with <code className="code">/api</code>.
         </p>
-        <div className="card p-4 bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800 mb-4">
-          <p className="text-amber-800 dark:text-amber-300 text-sm">
-            <strong>Base URL:</strong> <code className="bg-amber-100 dark:bg-amber-900 px-2 py-0.5 rounded">http://localhost/api</code> (or your LogNog server address)
+        <div className="card p-4 bg-honey-50 border-honey-200 dark:bg-honey-900/20 dark:border-honey-800 mb-4">
+          <p className="text-honey-800 dark:text-honey-300 text-sm">
+            <strong>Base URL:</strong> <code className="bg-honey-100 dark:bg-honey-900 px-2 py-0.5 rounded">http://localhost/api</code> (or your LogNog server address)
           </p>
         </div>
       </section>
 
       {/* Authentication */}
       <section>
-        <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-4">Authentication</h2>
-        <p className="text-slate-600 dark:text-slate-400 mb-4">
+        <h2 className="text-xl font-bold text-nog-900 dark:text-nog-100 mb-4">Authentication</h2>
+        <p className="text-nog-600 dark:text-nog-400 mb-4">
           LogNog uses JWT tokens for user authentication and API keys for programmatic access.
         </p>
         <div className="space-y-4">
           <div className="card p-4 dark:bg-nog-800">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">JWT Token Authentication</h3>
-            <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">For UI/interactive sessions</p>
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">JWT Token Authentication</h3>
+            <p className="text-sm text-nog-600 dark:text-nog-400 mb-2">For UI/interactive sessions</p>
             <CodeBlock code={`Authorization: Bearer <jwt_token>`} />
           </div>
           <div className="card p-4 dark:bg-nog-800">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">API Key Authentication</h3>
-            <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">For agents and integrations</p>
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">API Key Authentication</h3>
+            <p className="text-sm text-nog-600 dark:text-nog-400 mb-2">For agents and integrations</p>
             <CodeBlock code={`X-API-Key: <your_api_key>
 # OR
 Authorization: Bearer <your_api_key>`} />
@@ -54,7 +54,7 @@ Authorization: Bearer <your_api_key>`} />
           </table>
         </div>
         <div className="card p-4 dark:bg-nog-800 mt-4">
-          <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Login Example</h3>
+          <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">Login Example</h3>
           <CodeBlock code={`curl -X POST http://localhost/api/auth/login \\
   -H "Content-Type: application/json" \\
   -d '{"username": "admin", "password": "your_password"}'
@@ -70,8 +70,8 @@ Authorization: Bearer <your_api_key>`} />
 
       {/* Search API */}
       <section>
-        <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-4">Search API</h2>
-        <p className="text-slate-600 dark:text-slate-400 mb-4">Execute DSL queries and manage saved searches.</p>
+        <h2 className="text-xl font-bold text-nog-900 dark:text-nog-100 mb-4">Search API</h2>
+        <p className="text-nog-600 dark:text-nog-400 mb-4">Execute DSL queries and manage saved searches.</p>
         <div className="overflow-x-auto">
           <table className="table card dark:bg-nog-800">
             <thead><tr><th>Endpoint</th><th>Method</th><th>Description</th></tr></thead>
@@ -89,7 +89,7 @@ Authorization: Bearer <your_api_key>`} />
           </table>
         </div>
         <div className="card p-4 dark:bg-nog-800 mt-4">
-          <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Query Example</h3>
+          <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">Query Example</h3>
           <CodeBlock code={`curl -X POST http://localhost/api/search/query \\
   -H "Content-Type: application/json" \\
   -H "Authorization: Bearer <token>" \\
@@ -99,8 +99,8 @@ Authorization: Bearer <your_api_key>`} />
 
       {/* Ingestion API */}
       <section>
-        <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-4">Ingestion API</h2>
-        <p className="text-slate-600 dark:text-slate-400 mb-4">Send logs to LogNog via HTTP. Requires API key.</p>
+        <h2 className="text-xl font-bold text-nog-900 dark:text-nog-100 mb-4">Ingestion API</h2>
+        <p className="text-nog-600 dark:text-nog-400 mb-4">Send logs to LogNog via HTTP. Requires API key.</p>
         <div className="overflow-x-auto">
           <table className="table card dark:bg-nog-800">
             <thead><tr><th>Endpoint</th><th>Method</th><th>Description</th></tr></thead>
@@ -121,8 +121,8 @@ Authorization: Bearer <your_api_key>`} />
 
       {/* Dashboards API */}
       <section>
-        <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-4">Dashboards API</h2>
-        <p className="text-slate-600 dark:text-slate-400 mb-4">Manage dashboards, panels, variables, and annotations.</p>
+        <h2 className="text-xl font-bold text-nog-900 dark:text-nog-100 mb-4">Dashboards API</h2>
+        <p className="text-nog-600 dark:text-nog-400 mb-4">Manage dashboards, panels, variables, and annotations.</p>
         <div className="overflow-x-auto">
           <table className="table card dark:bg-nog-800">
             <thead><tr><th>Endpoint</th><th>Method</th><th>Description</th></tr></thead>
@@ -143,8 +143,8 @@ Authorization: Bearer <your_api_key>`} />
 
       {/* Alerts API */}
       <section>
-        <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-4">Alerts API</h2>
-        <p className="text-slate-600 dark:text-slate-400 mb-4">Create and manage alert rules with various trigger conditions.</p>
+        <h2 className="text-xl font-bold text-nog-900 dark:text-nog-100 mb-4">Alerts API</h2>
+        <p className="text-nog-600 dark:text-nog-400 mb-4">Create and manage alert rules with various trigger conditions.</p>
         <div className="overflow-x-auto">
           <table className="table card dark:bg-nog-800">
             <thead><tr><th>Endpoint</th><th>Method</th><th>Description</th></tr></thead>
@@ -164,8 +164,8 @@ Authorization: Bearer <your_api_key>`} />
 
       {/* Silences API */}
       <section>
-        <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-4">Silences API</h2>
-        <p className="text-slate-600 dark:text-slate-400 mb-4">Temporarily silence alerts at global, host, or alert level.</p>
+        <h2 className="text-xl font-bold text-nog-900 dark:text-nog-100 mb-4">Silences API</h2>
+        <p className="text-nog-600 dark:text-nog-400 mb-4">Temporarily silence alerts at global, host, or alert level.</p>
         <div className="overflow-x-auto">
           <table className="table card dark:bg-nog-800">
             <thead><tr><th>Endpoint</th><th>Method</th><th>Description</th></tr></thead>
@@ -178,20 +178,20 @@ Authorization: Bearer <your_api_key>`} />
           </table>
         </div>
         <div className="card p-4 dark:bg-nog-800 mt-4">
-          <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Silence Levels</h3>
-          <ul className="text-sm text-slate-600 dark:text-slate-400 space-y-1">
+          <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">Silence Levels</h3>
+          <ul className="text-sm text-nog-600 dark:text-nog-400 space-y-1">
             <li><strong>global</strong> - Silence all alerts</li>
             <li><strong>host</strong> - Silence alerts for specific hostname</li>
             <li><strong>alert</strong> - Silence a specific alert</li>
           </ul>
-          <p className="text-xs text-slate-500 mt-2">Duration formats: 1h, 4h, 8h, 12h, 24h, 2d, 3d, 1w, indefinite</p>
+          <p className="text-xs text-nog-500 mt-2">Duration formats: 1h, 4h, 8h, 12h, 24h, 2d, 3d, 1w, indefinite</p>
         </div>
       </section>
 
       {/* GeoIP & IP Utils */}
       <section>
-        <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-4">GeoIP & IP Utilities</h2>
-        <p className="text-slate-600 dark:text-slate-400 mb-4">IP geolocation and classification endpoints.</p>
+        <h2 className="text-xl font-bold text-nog-900 dark:text-nog-100 mb-4">GeoIP & IP Utilities</h2>
+        <p className="text-nog-600 dark:text-nog-400 mb-4">IP geolocation and classification endpoints.</p>
         <div className="overflow-x-auto">
           <table className="table card dark:bg-nog-800">
             <thead><tr><th>Endpoint</th><th>Method</th><th>Description</th></tr></thead>
@@ -207,7 +207,7 @@ Authorization: Bearer <your_api_key>`} />
           </table>
         </div>
         <div className="card p-4 dark:bg-nog-800 mt-4">
-          <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">IP Classification Types</h3>
+          <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">IP Classification Types</h3>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
             <code className="code">private</code>
             <code className="code">public</code>
@@ -223,7 +223,7 @@ Authorization: Bearer <your_api_key>`} />
 
       {/* Statistics API */}
       <section>
-        <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-4">Statistics API</h2>
+        <h2 className="text-xl font-bold text-nog-900 dark:text-nog-100 mb-4">Statistics API</h2>
         <div className="overflow-x-auto">
           <table className="table card dark:bg-nog-800">
             <thead><tr><th>Endpoint</th><th>Method</th><th>Description</th></tr></thead>
@@ -240,7 +240,7 @@ Authorization: Bearer <your_api_key>`} />
 
       {/* Settings API */}
       <section>
-        <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-4">Settings API</h2>
+        <h2 className="text-xl font-bold text-nog-900 dark:text-nog-100 mb-4">Settings API</h2>
         <div className="overflow-x-auto">
           <table className="table card dark:bg-nog-800">
             <thead><tr><th>Endpoint</th><th>Method</th><th>Description</th></tr></thead>
@@ -257,8 +257,8 @@ Authorization: Bearer <your_api_key>`} />
 
       {/* AI API */}
       <section>
-        <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-4">AI API</h2>
-        <p className="text-slate-600 dark:text-slate-400 mb-4">AI-powered features via Ollama or OpenRouter.</p>
+        <h2 className="text-xl font-bold text-nog-900 dark:text-nog-100 mb-4">AI API</h2>
+        <p className="text-nog-600 dark:text-nog-400 mb-4">AI-powered features via Ollama or OpenRouter.</p>
         <div className="overflow-x-auto">
           <table className="table card dark:bg-nog-800">
             <thead><tr><th>Endpoint</th><th>Method</th><th>Description</th></tr></thead>
@@ -276,7 +276,7 @@ Authorization: Bearer <your_api_key>`} />
 
       {/* Error Codes */}
       <section>
-        <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-4">Error Codes</h2>
+        <h2 className="text-xl font-bold text-nog-900 dark:text-nog-100 mb-4">Error Codes</h2>
         <div className="overflow-x-auto">
           <table className="table card dark:bg-nog-800">
             <thead><tr><th>Code</th><th>Description</th></tr></thead>
@@ -294,7 +294,7 @@ Authorization: Bearer <your_api_key>`} />
           </table>
         </div>
         <div className="card p-4 dark:bg-nog-800 mt-4">
-          <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Error Response Format</h3>
+          <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">Error Response Format</h3>
           <CodeBlock code={`{
   "error": "Short error description",
   "message": "Detailed error message"
@@ -304,7 +304,7 @@ Authorization: Bearer <your_api_key>`} />
 
       {/* Rate Limiting */}
       <section>
-        <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-4">Rate Limiting</h2>
+        <h2 className="text-xl font-bold text-nog-900 dark:text-nog-100 mb-4">Rate Limiting</h2>
         <div className="overflow-x-auto">
           <table className="table card dark:bg-nog-800">
             <thead><tr><th>Endpoint</th><th>Limit</th></tr></thead>
@@ -318,8 +318,8 @@ Authorization: Bearer <your_api_key>`} />
             </tbody>
           </table>
         </div>
-        <div className="card p-4 bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800 mt-4">
-          <p className="text-amber-800 dark:text-amber-300 text-sm">
+        <div className="card p-4 bg-honey-50 border-honey-200 dark:bg-honey-900/20 dark:border-honey-800 mt-4">
+          <p className="text-honey-800 dark:text-honey-300 text-sm">
             <strong>Note:</strong> When rate limited, you will receive a 429 status code. Wait before retrying.
           </p>
         </div>

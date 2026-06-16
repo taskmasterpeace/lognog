@@ -111,8 +111,8 @@ export function DashboardImportModal({
         <div className="modal-header">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Upload className="w-5 h-5 text-amber-500" />
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+              <Upload className="w-5 h-5 text-honey-500" />
+              <h3 className="text-lg font-semibold text-nog-900 dark:text-nog-100">
                 Import Dashboard
               </h3>
             </div>
@@ -131,8 +131,8 @@ export function DashboardImportModal({
             className={`
               border-2 border-dashed rounded-lg p-6 text-center transition-colors cursor-pointer
               ${isDragOver
-                ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/20'
-                : 'border-slate-300 dark:border-slate-600 hover:border-amber-400 dark:hover:border-amber-500'
+                ? 'border-honey-500 bg-honey-50 dark:bg-honey-900/20'
+                : 'border-nog-300 dark:border-nog-600 hover:border-honey-400 dark:hover:border-honey-500'
               }
             `}
             onClick={() => document.getElementById('file-input')?.click()}
@@ -144,18 +144,18 @@ export function DashboardImportModal({
               onChange={handleFileInput}
               className="hidden"
             />
-            <FileJson className={`w-10 h-10 mx-auto mb-3 ${isDragOver ? 'text-amber-500' : 'text-slate-400'}`} />
-            <p className="text-sm font-medium text-slate-700 dark:text-slate-300">
+            <FileJson className={`w-10 h-10 mx-auto mb-3 ${isDragOver ? 'text-honey-500' : 'text-nog-400'}`} />
+            <p className="text-sm font-medium text-nog-700 dark:text-nog-300">
               Drag & drop a JSON file here
             </p>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+            <p className="text-xs text-nog-500 dark:text-nog-400 mt-1">
               or click to browse
             </p>
           </div>
 
           {/* JSON Paste Area */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+            <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">
               Or paste JSON
             </label>
             <textarea
@@ -180,22 +180,22 @@ export function DashboardImportModal({
             <div className="p-4 bg-nog-50 dark:bg-nog-800 rounded-lg space-y-3">
               <div className="flex items-center gap-2">
                 <Check className="w-5 h-5 text-green-500" />
-                <span className="font-medium text-slate-900 dark:text-slate-100">
+                <span className="font-medium text-nog-900 dark:text-nog-100">
                   Valid dashboard detected
                 </span>
               </div>
 
               <div className="grid grid-cols-2 gap-3 text-sm">
-                <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
+                <div className="flex items-center gap-2 text-nog-600 dark:text-nog-400">
                   <LayoutGrid className="w-4 h-4" />
                   <span>{template.panels.length} panels</span>
                 </div>
-                <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
+                <div className="flex items-center gap-2 text-nog-600 dark:text-nog-400">
                   <Variable className="w-4 h-4" />
                   <span>{template.variables?.length || 0} variables</span>
                 </div>
                 {(template.logo_url || template.accent_color) && (
-                  <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400 col-span-2">
+                  <div className="flex items-center gap-2 text-nog-600 dark:text-nog-400 col-span-2">
                     <Palette className="w-4 h-4" />
                     <span>Custom branding included</span>
                     {template.accent_color && (
@@ -210,7 +210,7 @@ export function DashboardImportModal({
 
               {/* Rename */}
               <div>
-                <label className="block text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
+                <label className="block text-xs font-medium text-nog-500 dark:text-nog-400 mb-1">
                   Dashboard Name
                 </label>
                 <input
@@ -223,7 +223,7 @@ export function DashboardImportModal({
               </div>
 
               {template.exported_at && (
-                <p className="text-xs text-slate-500 dark:text-slate-400">
+                <p className="text-xs text-nog-500 dark:text-nog-400">
                   Exported: {new Date(template.exported_at).toLocaleDateString()}
                 </p>
               )}

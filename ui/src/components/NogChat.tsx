@@ -198,7 +198,7 @@ export function NogChat() {
       // Bold
       formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
       // Inline code
-      formatted = formatted.replace(/`([^`]+)`/g, '<code class="bg-slate-200 dark:bg-nog-600 px-1 rounded text-sm">$1</code>');
+      formatted = formatted.replace(/`([^`]+)`/g, '<code class="bg-nog-200 dark:bg-nog-600 px-1 rounded text-sm">$1</code>');
       return formatted;
     };
 
@@ -210,8 +210,8 @@ export function NogChat() {
         <div
           className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
             msg.role === 'user'
-              ? 'bg-amber-500'
-              : 'bg-gradient-to-br from-amber-500 to-orange-600'
+              ? 'bg-honey-500'
+              : 'bg-gradient-to-br from-honey-500 to-honey-600'
           }`}
         >
           {msg.role === 'user' ? (
@@ -223,7 +223,7 @@ export function NogChat() {
         <div
           className={`flex-1 max-w-[85%] ${
             msg.role === 'user'
-              ? 'bg-amber-500 text-white rounded-2xl rounded-tr-sm p-3'
+              ? 'bg-honey-500 text-nog-900 rounded-2xl rounded-tr-sm p-3'
               : 'space-y-2'
           }`}
         >
@@ -232,7 +232,7 @@ export function NogChat() {
           ) : (
             <>
               <div
-                className="bg-nog-100 dark:bg-nog-700 text-slate-900 dark:text-slate-100 rounded-2xl rounded-tl-sm p-3"
+                className="bg-nog-100 dark:bg-nog-700 text-nog-900 dark:text-nog-100 rounded-2xl rounded-tl-sm p-3"
               >
                 <div
                   className="text-sm whitespace-pre-wrap prose prose-sm dark:prose-invert max-w-none"
@@ -252,11 +252,11 @@ export function NogChat() {
                   key={codeIndex}
                   className="relative bg-nog-800 dark:bg-nog-900 rounded-lg overflow-hidden"
                 >
-                  <div className="flex items-center justify-between px-3 py-1.5 bg-slate-700 dark:bg-nog-800 border-b border-slate-600">
-                    <span className="text-xs text-slate-400 font-mono">DSL Query</span>
+                  <div className="flex items-center justify-between px-3 py-1.5 bg-nog-700 dark:bg-nog-800 border-b border-nog-600">
+                    <span className="text-xs text-nog-400 font-mono">DSL Query</span>
                     <button
                       onClick={() => copyToClipboard(code, index * 100 + codeIndex)}
-                      className="flex items-center gap-1 text-xs text-slate-400 hover:text-white transition-colors"
+                      className="flex items-center gap-1 text-xs text-nog-400 hover:text-nog-900 transition-colors"
                     >
                       {copiedIndex === index * 100 + codeIndex ? (
                         <>
@@ -271,16 +271,16 @@ export function NogChat() {
                       )}
                     </button>
                   </div>
-                  <pre className="p-3 text-sm text-amber-400 font-mono overflow-x-auto">
+                  <pre className="p-3 text-sm text-honey-400 font-mono overflow-x-auto">
                     {code}
                   </pre>
                 </div>
               ))}
               {/* Show executed query badge for insights */}
               {msg.query && (
-                <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                <div className="flex items-center gap-2 text-xs text-nog-500 dark:text-nog-400">
                   <Database className="w-3 h-3" />
-                  <span>Analyzed your data with: <code className="text-amber-600 dark:text-amber-400">{msg.query}</code></span>
+                  <span>Analyzed your data with: <code className="text-honey-600 dark:text-honey-400">{msg.query}</code></span>
                 </div>
               )}
               {/* Show citations panel for RAG-enhanced responses */}
@@ -305,32 +305,32 @@ export function NogChat() {
         title="NogChat - Your LogNog Assistant"
       >
         <div className="relative">
-          <div className="absolute inset-0 bg-gradient-to-r from-amber-500 to-orange-500 rounded-full blur-lg opacity-50 group-hover:opacity-75 transition-all duration-300" />
-          <div className="relative p-3 sm:p-4 bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 active:scale-95">
+          <div className="absolute inset-0 bg-honey-500 rounded-full blur-lg opacity-50 group-hover:opacity-75 transition-all duration-300" />
+          <div className="relative p-3 sm:p-4 bg-gradient-to-r from-honey-500 to-honey-600 text-nog-900 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 active:scale-95">
             <MessageCircle className="w-5 h-5 sm:w-6 sm:h-6" />
           </div>
-          <span className="absolute -top-1 -right-1 w-3 h-3 bg-amber-400 rounded-full animate-pulse" />
+          <span className="absolute -top-1 -right-1 w-3 h-3 bg-honey-400 rounded-full animate-pulse" />
         </div>
       </button>
     );
   }
 
   return (
-    <div className="fixed inset-2 sm:inset-auto sm:bottom-6 sm:right-6 z-50 sm:w-[420px] bg-white dark:bg-nog-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 flex flex-col max-h-[calc(100vh-1rem)] sm:max-h-[650px] animate-scale-in safe-area-inset">
+    <div className="fixed inset-2 sm:inset-auto sm:bottom-6 sm:right-6 z-50 sm:w-[420px] bg-white dark:bg-nog-800 rounded-2xl shadow-2xl border border-nog-200 dark:border-nog-700 flex flex-col max-h-[calc(100vh-1rem)] sm:max-h-[650px] animate-scale-in safe-area-inset">
       {/* Header */}
-      <div className="flex items-center justify-between p-3 sm:p-4 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-amber-500/10 to-orange-500/10 rounded-t-2xl">
+      <div className="flex items-center justify-between p-3 sm:p-4 border-b border-nog-200 dark:border-nog-700 bg-honey-500/10 rounded-t-2xl">
         <div className="flex items-center gap-2 sm:gap-3">
-          <div className="p-1.5 sm:p-2 bg-gradient-to-br from-amber-500 to-orange-600 rounded-xl shadow-lg">
-            <Bot className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+          <div className="p-1.5 sm:p-2 bg-gradient-to-br from-honey-500 to-honey-600 rounded-xl shadow-lg">
+            <Bot className="w-4 h-4 sm:w-5 sm:h-5 text-nog-900" />
           </div>
           <div>
-            <h3 className="font-bold text-sm sm:text-base text-slate-900 dark:text-slate-100">NogChat</h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1">
+            <h3 className="font-bold text-sm sm:text-base text-nog-900 dark:text-nog-100">NogChat</h3>
+            <p className="text-xs text-nog-500 dark:text-nog-400 flex items-center gap-1">
               {aiAvailable === null ? (
                 'Connecting...'
               ) : aiAvailable ? (
                 <>
-                  <span className="w-1.5 h-1.5 bg-amber-500 rounded-full" />
+                  <span className="w-1.5 h-1.5 bg-honey-500 rounded-full" />
                   Ready to help
                 </>
               ) : (
@@ -344,7 +344,7 @@ export function NogChat() {
         </div>
         <button
           onClick={() => setIsOpen(false)}
-          className="p-2.5 sm:p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-nog-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+          className="p-2.5 sm:p-2 text-nog-400 hover:text-nog-600 dark:hover:text-nog-300 hover:bg-nog-100 dark:hover:bg-nog-700 rounded-lg transition-colors"
           aria-label="Close chat"
         >
           <X className="w-6 h-6 sm:w-5 sm:h-5" />
@@ -357,30 +357,30 @@ export function NogChat() {
           <div className="space-y-4">
             {/* Welcome */}
             <div className="text-center py-2">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-amber-500/20 to-orange-500/20 rounded-2xl mb-3">
-                <Sparkles className="w-8 h-8 text-amber-500" />
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-honey-500/20 rounded-2xl mb-3">
+                <Sparkles className="w-8 h-8 text-honey-500" />
               </div>
-              <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-1">
+              <h4 className="font-semibold text-nog-900 dark:text-nog-100 mb-1">
                 Welcome to NogChat
               </h4>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
+              <p className="text-sm text-nog-500 dark:text-nog-400">
                 Your intelligent LogNog assistant. Ask anything about queries, alerts, or analyze your data.
               </p>
             </div>
 
             {/* Quick Actions */}
             <div className="space-y-2">
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide px-1">
+              <p className="text-xs font-semibold text-nog-400 uppercase tracking-wide px-1">
                 Quick Actions
               </p>
               <div className="grid grid-cols-2 gap-2">
                 {QUICK_ACTIONS.map((action, i) => {
                   const Icon = action.icon;
                   const categoryColors = {
-                    learn: 'from-amber-500/10 to-orange-500/10 hover:from-amber-500/20 hover:to-orange-500/20 text-amber-600 dark:text-amber-400',
-                    query: 'from-amber-500/10 to-orange-500/10 hover:from-amber-500/20 hover:to-orange-500/20 text-amber-600 dark:text-amber-400',
-                    insight: 'from-amber-500/10 to-pink-500/10 hover:from-amber-500/20 hover:to-pink-500/20 text-amber-600 dark:text-amber-400',
-                    splunk: 'from-orange-500/10 to-amber-500/10 hover:from-orange-500/20 hover:to-amber-500/20 text-orange-600 dark:text-orange-400',
+                    learn: 'from-honey-500/10 to-honey-500/10 hover:from-honey-500/20 hover:to-honey-500/20 text-honey-600 dark:text-honey-400',
+                    query: 'from-honey-500/10 to-honey-500/10 hover:from-honey-500/20 hover:to-honey-500/20 text-honey-600 dark:text-honey-400',
+                    insight: 'from-honey-500/10 to-honey-500/10 hover:from-honey-500/20 hover:to-honey-500/20 text-honey-600 dark:text-honey-400',
+                    splunk: 'from-honey-500/10 to-honey-500/10 hover:from-honey-500/20 hover:to-honey-500/20 text-honey-600 dark:text-honey-400',
                   };
                   const staggerClass = `animate-stagger-${Math.min(i + 1, 8)}`;
                   return (
@@ -390,7 +390,7 @@ export function NogChat() {
                       className={`flex items-center gap-2 p-3 rounded-xl bg-gradient-to-r ${categoryColors[action.category]} transition-all duration-200 text-left group hover:scale-[1.02] active:scale-[0.98] animate-fade-in ${staggerClass}`}
                     >
                       <Icon className="w-4 h-4 flex-shrink-0" />
-                      <span className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">
+                      <span className="text-sm font-medium text-nog-700 dark:text-nog-200 truncate">
                         {action.label}
                       </span>
                       <ChevronRight className="w-3 h-3 ml-auto opacity-0 group-hover:opacity-100 transition-all duration-200" />
@@ -402,7 +402,7 @@ export function NogChat() {
 
             {/* Starter Prompts */}
             <div className="space-y-2">
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide px-1">
+              <p className="text-xs font-semibold text-nog-400 uppercase tracking-wide px-1">
                 Try asking
               </p>
               <div className="space-y-1.5">
@@ -413,7 +413,7 @@ export function NogChat() {
                       setInput(prompt);
                       inputRef.current?.focus();
                     }}
-                    className="w-full text-left px-3 py-2 text-sm bg-nog-50 dark:bg-nog-700/50 hover:bg-nog-100 dark:hover:bg-slate-700 rounded-lg transition-colors text-slate-600 dark:text-slate-300 truncate"
+                    className="w-full text-left px-3 py-2 text-sm bg-nog-50 dark:bg-nog-700/50 hover:bg-nog-100 dark:hover:bg-nog-700 rounded-lg transition-colors text-nog-600 dark:text-nog-300 truncate"
                   >
                     "{prompt}"
                   </button>
@@ -426,13 +426,13 @@ export function NogChat() {
         )}
         {loading && (
           <div className="flex gap-3">
-            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
+            <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-honey-500 to-honey-600 flex items-center justify-center">
               <Bot className="w-4 h-4 text-white" />
             </div>
             <div className="p-3 bg-nog-100 dark:bg-nog-700 rounded-2xl rounded-tl-sm">
               <div className="flex items-center gap-2">
-                <Loader2 className="w-4 h-4 animate-spin text-amber-500" />
-                <span className="text-sm text-slate-500">Thinking...</span>
+                <Loader2 className="w-4 h-4 animate-spin text-honey-500" />
+                <span className="text-sm text-nog-500">Thinking...</span>
               </div>
             </div>
           </div>
@@ -442,14 +442,14 @@ export function NogChat() {
 
       {/* AI Unavailable Warning */}
       {aiAvailable === false && (
-        <div className="mx-4 mb-2 p-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg flex items-center gap-2 text-xs text-amber-700 dark:text-amber-400">
+        <div className="mx-4 mb-2 p-2 bg-honey-50 dark:bg-honey-900/20 border border-honey-200 dark:border-honey-800 rounded-lg flex items-center gap-2 text-xs text-honey-700 dark:text-honey-400">
           <AlertCircle className="w-4 h-4 flex-shrink-0" />
           <span>Start Ollama or configure OpenRouter for AI features.</span>
         </div>
       )}
 
       {/* Input */}
-      <div className="p-4 border-t border-slate-200 dark:border-slate-700">
+      <div className="p-4 border-t border-nog-200 dark:border-nog-700">
         <div className="flex items-center gap-2">
           <input
             ref={inputRef}
@@ -458,13 +458,13 @@ export function NogChat() {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSubmit()}
             placeholder="Ask about queries, alerts, your data..."
-            className="flex-1 px-4 py-2.5 bg-nog-100 dark:bg-nog-700 border-none rounded-xl text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500"
+            className="flex-1 px-4 py-2.5 bg-nog-100 dark:bg-nog-700 border-none rounded-xl text-sm text-nog-900 dark:text-nog-100 placeholder:text-nog-400 focus:outline-none focus:ring-2 focus:ring-honey-500"
             disabled={loading}
           />
           <button
             onClick={() => handleSubmit()}
             disabled={!input.trim() || loading}
-            className="p-2.5 bg-gradient-to-r from-amber-500 to-orange-600 text-white rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg transition-all"
+            className="p-2.5 bg-gradient-to-r from-honey-500 to-honey-600 text-nog-900 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg transition-all"
           >
             {loading ? (
               <Loader2 className="w-5 h-5 animate-spin" />
@@ -473,8 +473,8 @@ export function NogChat() {
             )}
           </button>
         </div>
-        <div className="mt-2 flex items-center justify-center gap-2 text-xs text-slate-400">
-          <span className="font-medium text-amber-500">NogChat</span>
+        <div className="mt-2 flex items-center justify-center gap-2 text-xs text-nog-400">
+          <span className="font-medium text-honey-500">NogChat</span>
           <span>•</span>
           <span>Powered by Local AI</span>
         </div>

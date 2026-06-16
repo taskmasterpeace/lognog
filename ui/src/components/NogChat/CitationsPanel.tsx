@@ -43,9 +43,9 @@ interface CitationsPanelProps {
 
 function RelevanceBadge({ category }: { category: 'high' | 'medium' | 'low' }) {
   const styles = {
-    high: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-    medium: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-    low: 'bg-nog-100 text-slate-600 dark:bg-nog-700 dark:text-slate-400',
+    high: 'bg-honey-100 text-honey-700 dark:bg-honey-900/30 dark:text-honey-400',
+    medium: 'bg-honey-100 text-honey-700 dark:bg-honey-900/30 dark:text-honey-400',
+    low: 'bg-nog-100 text-nog-600 dark:bg-nog-700 dark:text-nog-400',
   };
 
   return (
@@ -60,17 +60,17 @@ function MatchTypeBadge({ type }: { type: 'vector' | 'text' | 'hybrid' }) {
     vector: {
       icon: Sparkles,
       label: 'Semantic',
-      className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+      className: 'bg-honey-100 text-honey-700 dark:bg-honey-900/30 dark:text-honey-400',
     },
     text: {
       icon: Search,
       label: 'Keyword',
-      className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+      className: 'bg-honey-100 text-honey-700 dark:bg-honey-900/30 dark:text-honey-400',
     },
     hybrid: {
       icon: Zap,
       label: 'Hybrid',
-      className: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+      className: 'bg-honey-100 text-honey-700 dark:bg-honey-900/30 dark:text-honey-400',
     },
   };
 
@@ -97,19 +97,19 @@ function SourceCard({
   onClick?: () => void;
 }) {
   return (
-    <div className="border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
+    <div className="border border-nog-200 dark:border-nog-700 rounded-lg overflow-hidden">
       {/* Header */}
       <button
         onClick={onToggle}
         className="w-full flex items-center gap-2 p-3 text-left hover:bg-nog-50 dark:hover:bg-nog-800 transition-colors"
       >
         {isExpanded ? (
-          <ChevronDown className="w-4 h-4 text-slate-400 flex-shrink-0" />
+          <ChevronDown className="w-4 h-4 text-nog-400 flex-shrink-0" />
         ) : (
-          <ChevronRight className="w-4 h-4 text-slate-400 flex-shrink-0" />
+          <ChevronRight className="w-4 h-4 text-nog-400 flex-shrink-0" />
         )}
-        <FileText className="w-4 h-4 text-slate-500 flex-shrink-0" />
-        <span className="flex-1 text-sm font-medium text-slate-900 dark:text-slate-100 truncate">
+        <FileText className="w-4 h-4 text-nog-500 flex-shrink-0" />
+        <span className="flex-1 text-sm font-medium text-nog-900 dark:text-nog-100 truncate">
           {source.title}
         </span>
         <div className="flex items-center gap-1.5 flex-shrink-0">
@@ -120,20 +120,20 @@ function SourceCard({
 
       {/* Expanded Content */}
       {isExpanded && (
-        <div className="border-t border-slate-200 dark:border-slate-700 p-3 space-y-3">
+        <div className="border-t border-nog-200 dark:border-nog-700 p-3 space-y-3">
           {/* Highlighted excerpt */}
           <div
-            className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed"
+            className="text-sm text-nog-700 dark:text-nog-300 leading-relaxed"
             dangerouslySetInnerHTML={{
               __html: source.highlightedText.replace(
                 /<mark>/g,
-                '<mark class="bg-amber-200 dark:bg-amber-900/50 px-0.5 rounded">'
+                '<mark class="bg-honey-200 dark:bg-honey-900/50 px-0.5 rounded">'
               ),
             }}
           />
 
           {/* Metadata */}
-          <div className="flex flex-wrap gap-2 text-xs text-slate-500 dark:text-slate-400">
+          <div className="flex flex-wrap gap-2 text-xs text-nog-500 dark:text-nog-400">
             {source.metadata.sourceType && (
               <span className="inline-flex items-center gap-1">
                 <span className="font-medium">Source:</span> {source.metadata.sourceType}
@@ -155,7 +155,7 @@ function SourceCard({
           {onClick && (
             <button
               onClick={onClick}
-              className="inline-flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400 hover:underline"
+              className="inline-flex items-center gap-1 text-xs text-honey-600 dark:text-honey-400 hover:underline"
             >
               View full document
               <ExternalLink className="w-3 h-3" />
@@ -169,7 +169,7 @@ function SourceCard({
 
 function StatsBar({ stats }: { stats: SearchStats }) {
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 dark:text-slate-400 px-1">
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-nog-500 dark:text-nog-400 px-1">
       <span>
         <Sparkles className="w-3 h-3 inline mr-1" />
         {stats.vectorMatches} semantic
@@ -185,7 +185,7 @@ function StatsBar({ stats }: { stats: SearchStats }) {
         </span>
       )}
       {stats.reranked && (
-        <span className="text-amber-600 dark:text-amber-400">
+        <span className="text-honey-600 dark:text-honey-400">
           Re-ranked
         </span>
       )}
@@ -219,23 +219,23 @@ export function CitationsPanel({
   };
 
   return (
-    <div className="border border-slate-200 dark:border-slate-700 rounded-xl bg-nog-50 dark:bg-nog-800/50 overflow-hidden">
+    <div className="border border-nog-200 dark:border-nog-700 rounded-xl bg-nog-50 dark:bg-nog-800/50 overflow-hidden">
       {/* Panel Header */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
         className="w-full flex items-center gap-2 px-4 py-3 text-left hover:bg-nog-100 dark:hover:bg-nog-800 transition-colors"
       >
         {isExpanded ? (
-          <ChevronDown className="w-4 h-4 text-slate-400" />
+          <ChevronDown className="w-4 h-4 text-nog-400" />
         ) : (
-          <ChevronRight className="w-4 h-4 text-slate-400" />
+          <ChevronRight className="w-4 h-4 text-nog-400" />
         )}
-        <Info className="w-4 h-4 text-slate-500" />
-        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+        <Info className="w-4 h-4 text-nog-500" />
+        <span className="text-sm font-medium text-nog-700 dark:text-nog-300">
           Sources ({citations.length})
         </span>
         {!isExpanded && (
-          <span className="text-xs text-slate-500 ml-auto">
+          <span className="text-xs text-nog-500 ml-auto">
             Click to expand
           </span>
         )}
@@ -262,7 +262,7 @@ export function CitationsPanel({
 
           {/* Show more indicator */}
           {citations.length > 5 && (
-            <div className="text-center text-xs text-slate-500 dark:text-slate-400">
+            <div className="text-center text-xs text-nog-500 dark:text-nog-400">
               +{citations.length - 5} more sources
             </div>
           )}

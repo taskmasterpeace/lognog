@@ -40,7 +40,7 @@ export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
   onBrushEnd,
   chartType = 'line',
   onBarClick,
-  barColor = '#f59e0b', // amber-500
+  barColor = '#f59e0b', // honey-500
   barHoverColor,
 }) => {
   const seriesMap = React.useMemo(() => {

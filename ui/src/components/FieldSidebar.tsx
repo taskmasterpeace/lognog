@@ -333,17 +333,17 @@ export default function FieldSidebar({
     const num = parseInt(value, 10);
     const colors = [
       'text-red-700 bg-red-50 border-red-200 dark:text-red-400 dark:bg-red-950 dark:border-red-800',
-      'text-orange-700 bg-orange-50 border-orange-200 dark:text-orange-400 dark:bg-orange-950 dark:border-orange-800',
-      'text-amber-700 bg-amber-50 border-amber-200 dark:text-amber-400 dark:bg-amber-950 dark:border-amber-800',
+      'text-honey-700 bg-honey-50 border-honey-200 dark:text-honey-400 dark:bg-honey-950 dark:border-honey-800',
+      'text-honey-700 bg-honey-50 border-honey-200 dark:text-honey-400 dark:bg-honey-950 dark:border-honey-800',
       'text-yellow-700 bg-yellow-50 border-yellow-200 dark:text-yellow-400 dark:bg-yellow-950 dark:border-yellow-800',
       'text-lime-700 bg-lime-50 border-lime-200 dark:text-lime-400 dark:bg-lime-950 dark:border-lime-800',
       'text-green-700 bg-green-50 border-green-200 dark:text-green-400 dark:bg-green-950 dark:border-green-800',
-      'text-amber-700 bg-amber-50 border-amber-200 dark:text-amber-400 dark:bg-amber-950 dark:border-amber-800',
-      'text-amber-700 bg-amber-50 border-amber-200 dark:text-amber-400 dark:bg-amber-950 dark:border-amber-800',
+      'text-honey-700 bg-honey-50 border-honey-200 dark:text-honey-400 dark:bg-honey-950 dark:border-honey-800',
+      'text-honey-700 bg-honey-50 border-honey-200 dark:text-honey-400 dark:bg-honey-950 dark:border-honey-800',
     ];
     return !isNaN(num) && num >= 0 && num <= 7
       ? colors[num]
-      : 'text-slate-700 bg-nog-50 border-slate-200 dark:text-nog-300 dark:bg-nog-800 dark:border-nog-700';
+      : 'text-nog-700 bg-nog-50 border-nog-200 dark:text-nog-300 dark:bg-nog-800 dark:border-nog-700';
   };
 
   const renderFacet = (facet: Facet, showPinButton: boolean = false) => {
@@ -360,7 +360,7 @@ export default function FieldSidebar({
     const fieldStats = calculateFieldStats(facet.field);
 
     return (
-      <div key={facet.field} className="border-b border-slate-200 dark:border-nog-700">
+      <div key={facet.field} className="border-b border-nog-200 dark:border-nog-700">
         {/* Panel Header */}
         <div className="flex items-center">
           <button
@@ -369,19 +369,19 @@ export default function FieldSidebar({
           >
             <div className="flex items-center gap-2">
               {isCollapsed ? (
-                <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-nog-300 transition-all duration-200" />
+                <ChevronRight className="w-4 h-4 text-nog-400 group-hover:text-nog-600 dark:group-hover:text-nog-300 transition-all duration-200" />
               ) : (
-                <ChevronDown className="w-4 h-4 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-nog-300 transition-all duration-200" />
+                <ChevronDown className="w-4 h-4 text-nog-400 group-hover:text-nog-600 dark:group-hover:text-nog-300 transition-all duration-200" />
               )}
-              <span className="text-sm font-semibold text-slate-700 dark:text-nog-300">
+              <span className="text-sm font-semibold text-nog-700 dark:text-nog-300">
                 {getFieldLabel(facet.field)}
               </span>
             </div>
             {(pendingCount > 0 || hasFieldChanges) && (
               <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
                 hasFieldChanges
-                  ? 'bg-amber-200 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300'
-                  : 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400'
+                  ? 'bg-honey-200 dark:bg-honey-900/40 text-honey-800 dark:text-honey-300'
+                  : 'bg-honey-100 dark:bg-honey-900/30 text-honey-700 dark:text-honey-400'
               }`}>
                 {pendingCount}{hasFieldChanges ? '*' : ''}
               </span>
@@ -396,8 +396,8 @@ export default function FieldSidebar({
               <Pin
                 className={`w-4 h-4 ${
                   facet.isPinned
-                    ? 'text-amber-500 fill-amber-500'
-                    : 'text-slate-400 hover:text-slate-600 dark:hover:text-nog-300'
+                    ? 'text-honey-500 fill-honey-500'
+                    : 'text-nog-400 hover:text-nog-600 dark:hover:text-nog-300'
                 }`}
               />
             </button>
@@ -409,39 +409,39 @@ export default function FieldSidebar({
           <div className="px-4 py-2 bg-nog-50/50 dark:bg-nog-900/30">
             {/* Quick Stats */}
             {fieldStats.totalValues > 0 && (
-              <div className="mb-2 pb-2 border-b border-slate-200 dark:border-nog-700">
+              <div className="mb-2 pb-2 border-b border-nog-200 dark:border-nog-700">
                 <div className="grid grid-cols-3 gap-1 text-xs">
-                  <div className="flex items-center gap-1 text-slate-500 dark:text-nog-400" title="Number of unique values">
+                  <div className="flex items-center gap-1 text-nog-500 dark:text-nog-400" title="Number of unique values">
                     <Hash className="w-3 h-3" />
-                    <span className="font-medium text-slate-700 dark:text-nog-300">{fieldStats.uniqueValues}</span>
+                    <span className="font-medium text-nog-700 dark:text-nog-300">{fieldStats.uniqueValues}</span>
                     <span className="hidden sm:inline">unique</span>
                   </div>
-                  <div className="flex items-center gap-1 text-slate-500 dark:text-nog-400" title="Coverage: percentage of results with this field">
+                  <div className="flex items-center gap-1 text-nog-500 dark:text-nog-400" title="Coverage: percentage of results with this field">
                     <Percent className="w-3 h-3" />
-                    <span className="font-medium text-slate-700 dark:text-nog-300">{fieldStats.coverage.toFixed(0)}%</span>
+                    <span className="font-medium text-nog-700 dark:text-nog-300">{fieldStats.coverage.toFixed(0)}%</span>
                     <span className="hidden sm:inline">coverage</span>
                   </div>
-                  <div className="flex items-center gap-1 text-slate-500 dark:text-nog-400" title="Total values in results">
+                  <div className="flex items-center gap-1 text-nog-500 dark:text-nog-400" title="Total values in results">
                     <BarChart3 className="w-3 h-3" />
-                    <span className="font-medium text-slate-700 dark:text-nog-300">{fieldStats.totalValues.toLocaleString()}</span>
+                    <span className="font-medium text-nog-700 dark:text-nog-300">{fieldStats.totalValues.toLocaleString()}</span>
                   </div>
                 </div>
                 {/* Numeric stats row */}
                 {fieldStats.isNumeric && fieldStats.min !== undefined && fieldStats.max !== undefined && (
                   <div className="grid grid-cols-3 gap-1 mt-1 text-xs">
-                    <div className="flex items-center gap-1 text-slate-500 dark:text-nog-400" title="Minimum value">
+                    <div className="flex items-center gap-1 text-nog-500 dark:text-nog-400" title="Minimum value">
                       <TrendingDown className="w-3 h-3 text-blue-500" />
-                      <span className="font-medium text-slate-700 dark:text-nog-300">{fieldStats.min.toLocaleString()}</span>
+                      <span className="font-medium text-nog-700 dark:text-nog-300">{fieldStats.min.toLocaleString()}</span>
                       <span className="hidden sm:inline">min</span>
                     </div>
-                    <div className="flex items-center gap-1 text-slate-500 dark:text-nog-400" title="Average value">
+                    <div className="flex items-center gap-1 text-nog-500 dark:text-nog-400" title="Average value">
                       <BarChart3 className="w-3 h-3 text-green-500" />
-                      <span className="font-medium text-slate-700 dark:text-nog-300">{fieldStats.avg?.toFixed(1)}</span>
+                      <span className="font-medium text-nog-700 dark:text-nog-300">{fieldStats.avg?.toFixed(1)}</span>
                       <span className="hidden sm:inline">avg</span>
                     </div>
-                    <div className="flex items-center gap-1 text-slate-500 dark:text-nog-400" title="Maximum value">
+                    <div className="flex items-center gap-1 text-nog-500 dark:text-nog-400" title="Maximum value">
                       <TrendingUp className="w-3 h-3 text-red-500" />
-                      <span className="font-medium text-slate-700 dark:text-nog-300">{fieldStats.max.toLocaleString()}</span>
+                      <span className="font-medium text-nog-700 dark:text-nog-300">{fieldStats.max.toLocaleString()}</span>
                       <span className="hidden sm:inline">max</span>
                     </div>
                   </div>
@@ -449,7 +449,7 @@ export default function FieldSidebar({
               </div>
             )}
             {facet.values.length === 0 ? (
-              <p className="text-xs text-slate-500 py-2">No values</p>
+              <p className="text-xs text-nog-500 py-2">No values</p>
             ) : (
               <div className="space-y-1">
                 {facet.values.map((item) => {
@@ -478,11 +478,11 @@ export default function FieldSidebar({
                           valueMuted
                             ? 'opacity-50'
                             : notInResults
-                              ? 'bg-slate-100 dark:bg-nog-700/50 hover:bg-slate-200 dark:hover:bg-nog-700'
+                              ? 'bg-nog-100 dark:bg-nog-700/50 hover:bg-nog-200 dark:hover:bg-nog-700'
                               : isPending
                                 ? isChanged
-                                  ? 'bg-amber-200 dark:bg-amber-900/30 hover:bg-amber-300 dark:hover:bg-amber-900/40 ring-1 ring-amber-400 dark:ring-amber-700'
-                                  : 'bg-amber-100 dark:bg-amber-900/20 hover:bg-amber-200 dark:hover:bg-amber-900/30'
+                                  ? 'bg-honey-200 dark:bg-honey-900/30 hover:bg-honey-300 dark:hover:bg-honey-900/40 ring-1 ring-honey-400 dark:ring-honey-700'
+                                  : 'bg-honey-100 dark:bg-honey-900/20 hover:bg-honey-200 dark:hover:bg-honey-900/30'
                                 : isChanged
                                   ? 'bg-red-50 dark:bg-red-900/10 hover:bg-red-100 dark:hover:bg-red-900/20 ring-1 ring-red-200 dark:ring-red-800'
                                   : 'hover:bg-nog-100 dark:hover:bg-nog-700'
@@ -494,9 +494,9 @@ export default function FieldSidebar({
                             className={`absolute left-0 top-0 bottom-0 transition-all duration-300 ${
                               isPending
                                 ? isChanged
-                                  ? 'bg-amber-300/60 dark:bg-amber-800/40'
-                                  : 'bg-amber-200/60 dark:bg-amber-800/30'
-                                : 'bg-amber-100/50 dark:bg-amber-900/20'
+                                  ? 'bg-honey-300/60 dark:bg-honey-800/40'
+                                  : 'bg-honey-200/60 dark:bg-honey-800/30'
+                                : 'bg-honey-100/50 dark:bg-honey-900/20'
                             }`}
                             style={{ width: `${percent}%` }}
                           />
@@ -505,8 +505,8 @@ export default function FieldSidebar({
                           type="checkbox"
                           checked={isPending}
                           onChange={() => toggleValue(facet.field, item.value)}
-                          className={`relative z-10 w-4 h-4 border-slate-300 rounded focus:ring-offset-0 cursor-pointer ${
-                            isChanged ? 'text-amber-700 focus:ring-amber-600' : 'text-amber-600 focus:ring-amber-500'
+                          className={`relative z-10 w-4 h-4 border-nog-300 rounded focus:ring-offset-0 cursor-pointer ${
+                            isChanged ? 'text-honey-700 focus:ring-honey-600' : 'text-honey-600 focus:ring-honey-500'
                           }`}
                         />
                         <div className="relative z-10 flex-1 min-w-0 flex items-center justify-between gap-2">
@@ -520,23 +520,23 @@ export default function FieldSidebar({
                             </span>
                           ) : (
                             <span
-                              className={`text-sm truncate ${valueMuted ? 'line-through text-slate-400 dark:text-nog-500' : 'text-slate-700 dark:text-nog-300'}`}
+                              className={`text-sm truncate ${valueMuted ? 'line-through text-nog-400 dark:text-nog-500' : 'text-nog-700 dark:text-nog-300'}`}
                               title={displayValue}
                             >
                               {displayValue}
                             </span>
                           )}
-                          <span className="text-xs text-slate-500 font-medium tabular-nums flex-shrink-0 whitespace-nowrap flex items-center gap-1">
+                          <span className="text-xs text-nog-500 font-medium tabular-nums flex-shrink-0 whitespace-nowrap flex items-center gap-1">
                             {notInResults ? (
                               <>
-                                <Database className="w-3 h-3 text-slate-400" />
-                                <span className="text-slate-400 dark:text-nog-500 italic">not in results</span>
+                                <Database className="w-3 h-3 text-nog-400" />
+                                <span className="text-nog-400 dark:text-nog-500 italic">not in results</span>
                               </>
                             ) : (
                               <>
                                 {item.count.toLocaleString()}
                                 {percentDisplay && (
-                                  <span className="text-slate-400 dark:text-nog-500 ml-1">
+                                  <span className="text-nog-400 dark:text-nog-500 ml-1">
                                     ({percentDisplay})
                                   </span>
                                 )}
@@ -555,8 +555,8 @@ export default function FieldSidebar({
                           }}
                           className={`relative z-10 p-1 rounded transition-colors ${
                             valueMuted
-                              ? 'text-orange-500 dark:text-orange-400 hover:text-orange-600 dark:hover:text-orange-300 hover:bg-orange-100 dark:hover:bg-orange-900/30'
-                              : 'text-slate-400 dark:text-nog-400 hover:text-slate-600 dark:hover:text-nog-200 hover:bg-nog-100 dark:hover:bg-nog-700'
+                              ? 'text-honey-500 dark:text-honey-400 hover:text-honey-600 dark:hover:text-honey-300 hover:bg-honey-100 dark:hover:bg-honey-900/30'
+                              : 'text-nog-400 dark:text-nog-400 hover:text-nog-600 dark:hover:text-nog-200 hover:bg-nog-100 dark:hover:bg-nog-700'
                           }`}
                           title={valueMuted ? 'Unmute (show in search results)' : 'Mute (hide from search results)'}
                         >
@@ -584,11 +584,11 @@ export default function FieldSidebar({
   );
 
   return (
-    <div className="h-full flex flex-col bg-white dark:bg-nog-800 border-r border-slate-200 dark:border-nog-700">
+    <div className="h-full flex flex-col bg-white dark:bg-nog-800 border-r border-nog-200 dark:border-nog-700">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-slate-200 dark:border-nog-700 bg-nog-50 dark:bg-nog-900">
+      <div className="px-4 py-3 border-b border-nog-200 dark:border-nog-700 bg-nog-50 dark:bg-nog-900">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-slate-700 dark:text-nog-300 uppercase tracking-wide">
+          <h3 className="text-sm font-semibold text-nog-700 dark:text-nog-300 uppercase tracking-wide">
             Fields
           </h3>
           <div className="flex items-center gap-2">
@@ -596,23 +596,23 @@ export default function FieldSidebar({
               <div className="relative">
                 <button
                   onClick={() => setShowMutedPopover(!showMutedPopover)}
-                  className="flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 hover:bg-orange-200 dark:hover:bg-orange-900/50 transition-colors cursor-pointer"
+                  className="flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-full bg-honey-100 dark:bg-honey-900/30 text-honey-700 dark:text-honey-400 hover:bg-honey-200 dark:hover:bg-honey-900/50 transition-colors cursor-pointer"
                   title="Click to manage muted values"
                 >
                   <VolumeX className="w-3 h-3" />
                   {getMutedCount()} muted
                 </button>
                 {showMutedPopover && (
-                  <div className="absolute right-0 top-full mt-1 w-64 bg-white dark:bg-nog-800 border border-slate-200 dark:border-nog-600 rounded-lg shadow-lg z-50">
-                    <div className="p-3 border-b border-slate-200 dark:border-nog-700">
-                      <h4 className="text-sm font-semibold text-slate-700 dark:text-nog-200">Muted Values</h4>
-                      <p className="text-xs text-slate-500 dark:text-nog-400 mt-1">Click to unmute and show in results</p>
+                  <div className="absolute right-0 top-full mt-1 w-64 bg-white dark:bg-nog-800 border border-nog-200 dark:border-nog-600 rounded-lg shadow-lg z-50">
+                    <div className="p-3 border-b border-nog-200 dark:border-nog-700">
+                      <h4 className="text-sm font-semibold text-nog-700 dark:text-nog-200">Muted Values</h4>
+                      <p className="text-xs text-nog-500 dark:text-nog-400 mt-1">Click to unmute and show in results</p>
                     </div>
                     <div className="max-h-60 overflow-y-auto p-2">
                       {Object.entries(mutedValues).map(([field, values]) =>
                         values.length > 0 && (
                           <div key={field} className="mb-2">
-                            <div className="text-xs font-medium text-slate-500 dark:text-nog-400 px-2 py-1 uppercase">
+                            <div className="text-xs font-medium text-nog-500 dark:text-nog-400 px-2 py-1 uppercase">
                               {field.replace('_', ' ')}
                             </div>
                             {values.map((value: string) => (
@@ -622,11 +622,11 @@ export default function FieldSidebar({
                                   removeMute(field, value);
                                   if (getMutedCount() <= 1) setShowMutedPopover(false);
                                 }}
-                                className="w-full flex items-center gap-2 px-2 py-1.5 text-sm text-left text-slate-700 dark:text-nog-300 hover:bg-nog-100 dark:hover:bg-nog-700 rounded transition-colors"
+                                className="w-full flex items-center gap-2 px-2 py-1.5 text-sm text-left text-nog-700 dark:text-nog-300 hover:bg-nog-100 dark:hover:bg-nog-700 rounded transition-colors"
                               >
-                                <VolumeX className="w-4 h-4 text-orange-500" />
+                                <VolumeX className="w-4 h-4 text-honey-500" />
                                 <span className="truncate flex-1">{value}</span>
-                                <span className="text-xs text-slate-400 dark:text-nog-500">click to unmute</span>
+                                <span className="text-xs text-nog-400 dark:text-nog-500">click to unmute</span>
                               </button>
                             ))}
                           </div>
@@ -637,11 +637,11 @@ export default function FieldSidebar({
                 )}
               </div>
             )}
-            {isLoading && <Loader2 className="w-4 h-4 animate-spin text-slate-400" />}
+            {isLoading && <Loader2 className="w-4 h-4 animate-spin text-nog-400" />}
           </div>
         </div>
         {totalSelected > 0 && (
-          <p className="text-xs text-slate-500 dark:text-nog-400 mt-1">
+          <p className="text-xs text-nog-500 dark:text-nog-400 mt-1">
             {totalSelected} filter{totalSelected !== 1 ? 's' : ''} active
           </p>
         )}
@@ -649,17 +649,17 @@ export default function FieldSidebar({
 
       {/* Apply/Reset Buttons (sticky top when there are pending changes) */}
       {hasPendingChanges && (
-        <div className="px-4 py-3 border-b border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20">
+        <div className="px-4 py-3 border-b border-honey-200 dark:border-honey-800 bg-honey-50 dark:bg-honey-900/20">
           <div className="flex gap-2">
             <button
               onClick={resetPending}
-              className="flex-1 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-nog-100 dark:hover:bg-slate-700 rounded-md transition-colors"
+              className="flex-1 px-3 py-2 text-sm font-medium text-nog-600 dark:text-nog-400 hover:bg-nog-100 dark:hover:bg-nog-700 rounded-md transition-colors"
             >
               Reset
             </button>
             <button
               onClick={applyFilters}
-              className="flex-1 px-3 py-2 text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 rounded-md transition-colors"
+              className="flex-1 px-3 py-2 text-sm font-medium text-nog-900 bg-honey-600 hover:bg-honey-700 rounded-md transition-colors"
             >
               Apply ({pendingChangeCount})
             </button>
@@ -672,10 +672,10 @@ export default function FieldSidebar({
         {/* Pinned Fields Section */}
         {pinnedFacets.length > 0 && (
           <div>
-            <div className="px-4 py-2 bg-nog-100 dark:bg-nog-800 border-b border-slate-200 dark:border-nog-700">
+            <div className="px-4 py-2 bg-nog-100 dark:bg-nog-800 border-b border-nog-200 dark:border-nog-700">
               <div className="flex items-center gap-2">
-                <Pin className="w-3 h-3 text-amber-500" />
-                <span className="text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wide">
+                <Pin className="w-3 h-3 text-honey-500" />
+                <span className="text-xs font-semibold text-honey-600 dark:text-honey-400 uppercase tracking-wide">
                   Pinned Fields
                 </span>
               </div>
@@ -687,10 +687,10 @@ export default function FieldSidebar({
         {/* Discovered Fields Section */}
         {discoveredFacets.length > 0 && (
           <div>
-            <div className="px-4 py-2 bg-nog-100 dark:bg-nog-800 border-b border-slate-200 dark:border-nog-700">
+            <div className="px-4 py-2 bg-nog-100 dark:bg-nog-800 border-b border-nog-200 dark:border-nog-700">
               <div className="flex items-center gap-2">
-                <Search className="w-3 h-3 text-slate-400" />
-                <span className="text-xs font-semibold text-slate-500 dark:text-nog-400 uppercase tracking-wide">
+                <Search className="w-3 h-3 text-nog-400" />
+                <span className="text-xs font-semibold text-nog-500 dark:text-nog-400 uppercase tracking-wide">
                   Discovered Fields
                 </span>
               </div>
@@ -701,7 +701,7 @@ export default function FieldSidebar({
 
         {/* No Fields Message */}
         {pinnedFacets.length === 0 && discoveredFacets.length === 0 && !isLoading && (
-          <div className="px-4 py-6 text-center text-sm text-slate-500 dark:text-nog-400">
+          <div className="px-4 py-6 text-center text-sm text-nog-500 dark:text-nog-400">
             Run a search to see fields
           </div>
         )}
@@ -709,17 +709,17 @@ export default function FieldSidebar({
 
       {/* Apply/Reset Buttons (sticky footer when there are pending changes) */}
       {hasPendingChanges && (
-        <div className="px-4 py-3 border-t border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20">
+        <div className="px-4 py-3 border-t border-honey-200 dark:border-honey-800 bg-honey-50 dark:bg-honey-900/20">
           <div className="flex gap-2">
             <button
               onClick={resetPending}
-              className="flex-1 px-3 py-2 text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-nog-100 dark:hover:bg-slate-700 rounded-md transition-colors"
+              className="flex-1 px-3 py-2 text-sm font-medium text-nog-600 dark:text-nog-400 hover:bg-nog-100 dark:hover:bg-nog-700 rounded-md transition-colors"
             >
               Reset
             </button>
             <button
               onClick={applyFilters}
-              className="flex-1 px-3 py-2 text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 rounded-md transition-colors"
+              className="flex-1 px-3 py-2 text-sm font-medium text-nog-900 bg-honey-600 hover:bg-honey-700 rounded-md transition-colors"
             >
               Apply ({pendingChangeCount})
             </button>
@@ -728,10 +728,10 @@ export default function FieldSidebar({
       )}
 
       {/* Footer */}
-      <div className="px-4 py-3 border-t border-slate-200 dark:border-nog-700 bg-nog-50 dark:bg-nog-900">
+      <div className="px-4 py-3 border-t border-nog-200 dark:border-nog-700 bg-nog-50 dark:bg-nog-900">
         <button
           onClick={() => setShowBrowser(true)}
-          className="w-full px-3 py-2 text-sm font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-md transition-colors"
+          className="w-full px-3 py-2 text-sm font-medium text-honey-600 dark:text-honey-400 hover:bg-honey-50 dark:hover:bg-honey-900/20 rounded-md transition-colors"
         >
           Browse All Fields...
         </button>

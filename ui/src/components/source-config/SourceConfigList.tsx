@@ -111,7 +111,7 @@ export default function SourceConfigList() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-8 h-8 text-amber-500 animate-spin" />
+        <Loader2 className="w-8 h-8 text-honey-500 animate-spin" />
       </div>
     );
   }
@@ -119,13 +119,13 @@ export default function SourceConfigList() {
   return (
     <div className="space-y-6">
       {/* Section Tabs */}
-      <div className="flex gap-4 border-b border-slate-200 dark:border-slate-700">
+      <div className="flex gap-4 border-b border-nog-200 dark:border-nog-700">
         <button
           onClick={() => setActiveSection('configs')}
           className={`pb-3 px-1 font-medium text-sm border-b-2 transition-colors ${
             activeSection === 'configs'
-              ? 'border-amber-500 text-amber-600 dark:text-amber-400'
-              : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+              ? 'border-honey-500 text-honey-600 dark:text-honey-400'
+              : 'border-transparent text-nog-500 hover:text-nog-700 dark:hover:text-nog-300'
           }`}
         >
           <div className="flex items-center gap-2">
@@ -137,8 +137,8 @@ export default function SourceConfigList() {
           onClick={() => setActiveSection('routing')}
           className={`pb-3 px-1 font-medium text-sm border-b-2 transition-colors ${
             activeSection === 'routing'
-              ? 'border-amber-500 text-amber-600 dark:text-amber-400'
-              : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+              ? 'border-honey-500 text-honey-600 dark:text-honey-400'
+              : 'border-transparent text-nog-500 hover:text-nog-700 dark:hover:text-nog-300'
           }`}
         >
           <div className="flex items-center gap-2">
@@ -152,7 +152,7 @@ export default function SourceConfigList() {
       {activeSection === 'configs' && (
         <div className="space-y-4">
           <div className="flex justify-between items-center">
-            <p className="text-sm text-slate-500 dark:text-slate-400">
+            <p className="text-sm text-nog-500 dark:text-nog-400">
               Define source patterns to match incoming logs and configure parsing, field extraction, and index routing.
             </p>
             <button
@@ -172,46 +172,46 @@ export default function SourceConfigList() {
               {configs.map((config) => (
                 <div
                   key={config.id}
-                  className="bg-white dark:bg-nog-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4"
+                  className="bg-white dark:bg-nog-800 rounded-lg border border-nog-200 dark:border-nog-700 p-4"
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center gap-3">
-                        <h4 className="font-medium text-slate-900 dark:text-slate-100">
+                        <h4 className="font-medium text-nog-900 dark:text-nog-100">
                           {config.name}
                         </h4>
                         <span
                           className={`px-2 py-0.5 text-xs rounded-full ${
                             config.enabled
                               ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                              : 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400'
+                              : 'bg-nog-100 text-nog-500 dark:bg-nog-700 dark:text-nog-400'
                           }`}
                         >
                           {config.enabled ? 'Active' : 'Disabled'}
                         </span>
                       </div>
                       {config.description && (
-                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                        <p className="text-sm text-nog-500 dark:text-nog-400 mt-1">
                           {config.description}
                         </p>
                       )}
-                      <div className="flex flex-wrap gap-4 mt-3 text-xs text-slate-500 dark:text-slate-400">
+                      <div className="flex flex-wrap gap-4 mt-3 text-xs text-nog-500 dark:text-nog-400">
                         {config.hostname_pattern && (
                           <span className="flex items-center gap-1">
                             <Regex className="w-3 h-3" />
-                            Host: <code className="bg-slate-100 dark:bg-slate-700 px-1 rounded">{config.hostname_pattern}</code>
+                            Host: <code className="bg-nog-100 dark:bg-nog-700 px-1 rounded">{config.hostname_pattern}</code>
                           </span>
                         )}
                         {config.app_name_pattern && (
                           <span className="flex items-center gap-1">
                             <Regex className="w-3 h-3" />
-                            App: <code className="bg-slate-100 dark:bg-slate-700 px-1 rounded">{config.app_name_pattern}</code>
+                            App: <code className="bg-nog-100 dark:bg-nog-700 px-1 rounded">{config.app_name_pattern}</code>
                           </span>
                         )}
                         {config.target_index && (
                           <span className="flex items-center gap-1">
                             <ChevronRight className="w-3 h-3" />
-                            Index: <code className="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-1 rounded">{config.target_index}</code>
+                            Index: <code className="bg-honey-100 dark:bg-honey-900/30 text-honey-700 dark:text-honey-400 px-1 rounded">{config.target_index}</code>
                           </span>
                         )}
                         <span>Mode: {config.parsing_mode}</span>
@@ -273,9 +273,9 @@ export default function SourceConfigList() {
               ))}
             </div>
           ) : (
-            <div className="bg-white dark:bg-nog-800 rounded-lg border border-slate-200 dark:border-slate-700 p-8 text-center">
-              <Settings className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
-              <p className="text-slate-500 dark:text-slate-400">
+            <div className="bg-white dark:bg-nog-800 rounded-lg border border-nog-200 dark:border-nog-700 p-8 text-center">
+              <Settings className="w-12 h-12 text-nog-300 dark:text-nog-600 mx-auto mb-3" />
+              <p className="text-nog-500 dark:text-nog-400">
                 No source configurations yet. Create one to define how logs are parsed and routed.
               </p>
             </div>
@@ -287,7 +287,7 @@ export default function SourceConfigList() {
       {activeSection === 'routing' && (
         <div className="space-y-4">
           <div className="flex justify-between items-center">
-            <p className="text-sm text-slate-500 dark:text-slate-400">
+            <p className="text-sm text-nog-500 dark:text-nog-400">
               Route incoming logs to specific indexes based on conditions like hostname, app name, or message content.
             </p>
             <button
@@ -315,44 +315,44 @@ export default function SourceConfigList() {
                 return (
                   <div
                     key={rule.id}
-                    className="bg-white dark:bg-nog-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4"
+                    className="bg-white dark:bg-nog-800 rounded-lg border border-nog-200 dark:border-nog-700 p-4"
                   >
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="flex items-center gap-3">
-                          <h4 className="font-medium text-slate-900 dark:text-slate-100">
+                          <h4 className="font-medium text-nog-900 dark:text-nog-100">
                             {rule.name}
                           </h4>
                           <span
                             className={`px-2 py-0.5 text-xs rounded-full ${
                               rule.enabled
                                 ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
-                                : 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400'
+                                : 'bg-nog-100 text-nog-500 dark:bg-nog-700 dark:text-nog-400'
                             }`}
                           >
                             {rule.enabled ? 'Active' : 'Disabled'}
                           </span>
-                          <span className="text-xs text-slate-400">
+                          <span className="text-xs text-nog-400">
                             Match: {rule.match_mode === 'all' ? 'ALL conditions' : 'ANY condition'}
                           </span>
                         </div>
                         <div className="flex items-center gap-2 mt-2">
-                          <span className="text-sm text-slate-500 dark:text-slate-400">
+                          <span className="text-sm text-nog-500 dark:text-nog-400">
                             Conditions:
                           </span>
                           {conditions.map((cond, i) => (
                             <span
                               key={i}
-                              className="text-xs bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded"
+                              className="text-xs bg-nog-100 dark:bg-nog-700 px-2 py-1 rounded"
                             >
                               {cond.field} {cond.operator} "{cond.value}"
                             </span>
                           ))}
                         </div>
-                        <div className="flex items-center gap-4 mt-2 text-xs text-slate-500 dark:text-slate-400">
+                        <div className="flex items-center gap-4 mt-2 text-xs text-nog-500 dark:text-nog-400">
                           <span className="flex items-center gap-1">
                             <ChevronRight className="w-3 h-3" />
-                            Route to: <code className="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 px-1 rounded">{rule.target_index}</code>
+                            Route to: <code className="bg-honey-100 dark:bg-honey-900/30 text-honey-700 dark:text-honey-400 px-1 rounded">{rule.target_index}</code>
                           </span>
                           <span>Priority: {rule.priority}</span>
                           <span>Matches: {rule.match_count.toLocaleString()}</span>
@@ -387,9 +387,9 @@ export default function SourceConfigList() {
               })}
             </div>
           ) : (
-            <div className="bg-white dark:bg-nog-800 rounded-lg border border-slate-200 dark:border-slate-700 p-8 text-center">
-              <Route className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
-              <p className="text-slate-500 dark:text-slate-400">
+            <div className="bg-white dark:bg-nog-800 rounded-lg border border-nog-200 dark:border-nog-700 p-8 text-center">
+              <Route className="w-12 h-12 text-nog-300 dark:text-nog-600 mx-auto mb-3" />
+              <p className="text-nog-500 dark:text-nog-400">
                 No routing rules yet. Create one to route logs to specific indexes.
               </p>
             </div>
@@ -430,8 +430,8 @@ export default function SourceConfigList() {
             <div className="modal-header">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <TestTube className="w-5 h-5 text-amber-500" />
-                  <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                  <TestTube className="w-5 h-5 text-honey-500" />
+                  <h3 className="text-lg font-semibold text-nog-900 dark:text-nog-100">
                     Test Configuration
                   </h3>
                 </div>
@@ -442,7 +442,7 @@ export default function SourceConfigList() {
             </div>
             <div className="modal-body space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">
                   Sample Log
                 </label>
                 <textarea
@@ -462,7 +462,7 @@ export default function SourceConfigList() {
               </button>
               {testResult !== null && (
                 <div className="p-4 bg-nog-50 dark:bg-nog-800 rounded-lg">
-                  <h4 className="font-medium text-slate-900 dark:text-slate-100 mb-2">Results</h4>
+                  <h4 className="font-medium text-nog-900 dark:text-nog-100 mb-2">Results</h4>
                   <pre className="text-xs overflow-auto whitespace-pre-wrap">
                     {JSON.stringify(testResult as object, null, 2)}
                   </pre>
@@ -516,8 +516,8 @@ function ConfigModal({
         <div className="modal-header">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Settings className="w-5 h-5 text-amber-500" />
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+              <Settings className="w-5 h-5 text-honey-500" />
+              <h3 className="text-lg font-semibold text-nog-900 dark:text-nog-100">
                 {config ? 'Edit Source Config' : 'New Source Config'}
               </h3>
             </div>
@@ -528,7 +528,7 @@ function ConfigModal({
         </div>
         <div className="modal-body space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+            <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">
               Name *
             </label>
             <input
@@ -540,7 +540,7 @@ function ConfigModal({
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+            <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">
               Description
             </label>
             <textarea
@@ -553,7 +553,7 @@ function ConfigModal({
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+              <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">
                 Hostname Pattern (regex)
               </label>
               <input
@@ -565,7 +565,7 @@ function ConfigModal({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+              <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">
                 App Name Pattern (regex)
               </label>
               <input
@@ -579,7 +579,7 @@ function ConfigModal({
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+              <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">
                 Target Index
               </label>
               <input
@@ -591,7 +591,7 @@ function ConfigModal({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+              <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">
                 Parsing Mode
               </label>
               <select
@@ -609,7 +609,7 @@ function ConfigModal({
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+            <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">
               Priority (lower = higher priority)
             </label>
             <input
@@ -708,8 +708,8 @@ function RoutingRuleModal({
         <div className="modal-header">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Route className="w-5 h-5 text-amber-500" />
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+              <Route className="w-5 h-5 text-honey-500" />
+              <h3 className="text-lg font-semibold text-nog-900 dark:text-nog-100">
                 {rule ? 'Edit Routing Rule' : 'New Routing Rule'}
               </h3>
             </div>
@@ -721,7 +721,7 @@ function RoutingRuleModal({
         <div className="modal-body space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+              <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">
                 Rule Name *
               </label>
               <input
@@ -733,7 +733,7 @@ function RoutingRuleModal({
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+              <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">
                 Target Index *
               </label>
               <input
@@ -747,7 +747,7 @@ function RoutingRuleModal({
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+              <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">
                 Match Mode
               </label>
               <select
@@ -760,7 +760,7 @@ function RoutingRuleModal({
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+              <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">
                 Priority
               </label>
               <input
@@ -776,7 +776,7 @@ function RoutingRuleModal({
 
           <div>
             <div className="flex justify-between items-center mb-2">
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+              <label className="block text-sm font-medium text-nog-700 dark:text-nog-300">
                 Conditions
               </label>
               <button onClick={addCondition} className="btn-ghost text-xs">

@@ -207,28 +207,28 @@ export default function NotificationChannelsSection() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+        <Loader2 className="w-6 h-6 animate-spin text-nog-400" />
       </div>
     );
   }
 
   return (
-    <section className="bg-white dark:bg-nog-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+    <section className="bg-white dark:bg-nog-800 rounded-xl shadow-sm border border-nog-200 dark:border-nog-700 p-6">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+        <h2 className="text-lg font-semibold text-nog-900 dark:text-nog-100 flex items-center gap-2">
           <Bell className="w-5 h-5" />
           Notification Channels
         </h2>
         <button
           onClick={openAddModal}
-          className="flex items-center gap-2 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium rounded-lg transition-colors"
+          className="flex items-center gap-2 px-3 py-1.5 bg-honey-500 hover:bg-honey-600 text-nog-900 text-sm font-medium rounded-lg transition-colors"
         >
           <Plus className="w-4 h-4" />
           Add Channel
         </button>
       </div>
 
-      <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+      <p className="text-sm text-nog-500 dark:text-nog-400 mb-6">
         Configure notification channels for alert actions. Supports Slack, Discord, Telegram, PagerDuty, and 100+ more services via Apprise.
       </p>
 
@@ -237,18 +237,18 @@ export default function NotificationChannelsSection() {
         <div className={`mb-6 p-3 rounded-lg border ${
           appriseStatus.available
             ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
-            : 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'
+            : 'bg-honey-50 dark:bg-honey-900/20 border-honey-200 dark:border-honey-800'
         }`}>
           <div className="flex items-center gap-2">
             {appriseStatus.available ? (
               <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400" />
             ) : (
-              <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+              <AlertCircle className="w-4 h-4 text-honey-600 dark:text-honey-400" />
             )}
             <span className={`text-sm font-medium ${
               appriseStatus.available
                 ? 'text-green-700 dark:text-green-300'
-                : 'text-amber-700 dark:text-amber-300'
+                : 'text-honey-700 dark:text-honey-300'
             }`}>
               {appriseStatus.message}
             </span>
@@ -269,7 +269,7 @@ export default function NotificationChannelsSection() {
 
       {/* Channels List */}
       {channels.length === 0 ? (
-        <div className="text-center py-12 text-slate-500 dark:text-slate-400">
+        <div className="text-center py-12 text-nog-500 dark:text-nog-400">
           <Bell className="w-12 h-12 mx-auto mb-3 opacity-30" />
           <p className="text-sm">No notification channels configured yet.</p>
           <p className="text-xs mt-1">Add a channel to start receiving alert notifications.</p>
@@ -281,8 +281,8 @@ export default function NotificationChannelsSection() {
               key={channel.id}
               className={`p-4 rounded-lg border ${
                 channel.enabled
-                  ? 'bg-white dark:bg-nog-900 border-slate-200 dark:border-slate-700'
-                  : 'bg-nog-50 dark:bg-nog-900/50 border-slate-200 dark:border-slate-700 opacity-60'
+                  ? 'bg-white dark:bg-nog-900 border-nog-200 dark:border-nog-700'
+                  : 'bg-nog-50 dark:bg-nog-900/50 border-nog-200 dark:border-nog-700 opacity-60'
               }`}
             >
               <div className="flex items-start justify-between">
@@ -299,13 +299,13 @@ export default function NotificationChannelsSection() {
                         }}
                       />
                     ) : (
-                      <Bell className="w-5 h-5 text-slate-400" />
+                      <Bell className="w-5 h-5 text-nog-400" />
                     )}
                   </div>
 
                   <div>
                     <div className="flex items-center gap-2">
-                      <h4 className="font-medium text-slate-900 dark:text-slate-100">
+                      <h4 className="font-medium text-nog-900 dark:text-nog-100">
                         {channel.name}
                       </h4>
                       {channel.last_test_success === 1 && (
@@ -319,11 +319,11 @@ export default function NotificationChannelsSection() {
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                    <p className="text-sm text-nog-500 dark:text-nog-400">
                       {getServiceName(channel.service)}
                       {channel.description && ` - ${channel.description}`}
                     </p>
-                    <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 font-mono">
+                    <p className="text-xs text-nog-400 dark:text-nog-500 mt-1 font-mono">
                       {channel.apprise_url_masked || channel.apprise_url}
                     </p>
                   </div>
@@ -334,7 +334,7 @@ export default function NotificationChannelsSection() {
                   <button
                     onClick={() => handleTest(channel.id)}
                     disabled={testingId === channel.id || !channel.enabled}
-                    className="p-2 text-slate-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors disabled:opacity-50"
+                    className="p-2 text-nog-400 hover:text-honey-500 hover:bg-honey-50 dark:hover:bg-honey-900/20 rounded-lg transition-colors disabled:opacity-50"
                     title="Send test notification"
                   >
                     {testingId === channel.id ? (
@@ -347,7 +347,7 @@ export default function NotificationChannelsSection() {
                   {/* Toggle */}
                   <button
                     onClick={() => handleToggle(channel)}
-                    className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-lg transition-colors"
+                    className="p-2 text-nog-400 hover:text-nog-600 dark:hover:text-nog-300 rounded-lg transition-colors"
                     title={channel.enabled ? 'Disable' : 'Enable'}
                   >
                     {channel.enabled ? (
@@ -360,7 +360,7 @@ export default function NotificationChannelsSection() {
                   {/* Edit */}
                   <button
                     onClick={() => openEditModal(channel)}
-                    className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-nog-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                    className="p-2 text-nog-400 hover:text-nog-600 dark:hover:text-nog-300 hover:bg-nog-100 dark:hover:bg-nog-700 rounded-lg transition-colors"
                     title="Edit"
                   >
                     <Edit2 className="w-4 h-4" />
@@ -369,7 +369,7 @@ export default function NotificationChannelsSection() {
                   {/* Delete */}
                   <button
                     onClick={() => handleDelete(channel.id)}
-                    className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                    className="p-2 text-nog-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                     title="Delete"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -391,7 +391,7 @@ export default function NotificationChannelsSection() {
 
               {/* Last test info */}
               {channel.last_test && (
-                <p className="mt-2 text-xs text-slate-400 dark:text-slate-500">
+                <p className="mt-2 text-xs text-nog-400 dark:text-nog-500">
                   Last tested: {formatDate(channel.last_test)}
                 </p>
               )}
@@ -404,14 +404,14 @@ export default function NotificationChannelsSection() {
       {showModal && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-nog-800 rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6 border-b border-slate-200 dark:border-slate-700">
+            <div className="p-6 border-b border-nog-200 dark:border-nog-700">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                <h3 className="text-lg font-semibold text-nog-900 dark:text-nog-100">
                   {editingChannel ? 'Edit Notification Channel' : 'Add Notification Channel'}
                 </h3>
                 <button
                   onClick={() => setShowModal(false)}
-                  className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                  className="p-1 text-nog-400 hover:text-nog-600 dark:hover:text-nog-300"
                 >
                   <X className="w-5 h-5" />
                 </button>
@@ -421,7 +421,7 @@ export default function NotificationChannelsSection() {
             <div className="p-6 space-y-4">
               {/* Channel Name */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
                   Channel Name *
                 </label>
                 <input
@@ -429,19 +429,19 @@ export default function NotificationChannelsSection() {
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
                   placeholder="e.g., slack-ops-alerts"
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-900 text-slate-900 dark:text-slate-100"
+                  className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-900 text-nog-900 dark:text-nog-100"
                 />
               </div>
 
               {/* Service */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
                   Service
                 </label>
                 <select
                   value={formService}
                   onChange={(e) => setFormService(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-900 text-slate-900 dark:text-slate-100"
+                  className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-900 text-nog-900 dark:text-nog-100"
                 >
                   {services.map((service) => (
                     <option key={service.id} value={service.id}>
@@ -450,13 +450,13 @@ export default function NotificationChannelsSection() {
                   ))}
                 </select>
                 {formService && services.find(s => s.id === formService) && (
-                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  <p className="mt-1 text-xs text-nog-500 dark:text-nog-400">
                     {services.find(s => s.id === formService)?.description}
                     <a
                       href={services.find(s => s.id === formService)?.docsUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="ml-2 text-amber-500 hover:text-amber-600 inline-flex items-center gap-1"
+                      className="ml-2 text-honey-500 hover:text-honey-600 inline-flex items-center gap-1"
                     >
                       Docs <ExternalLink className="w-3 h-3" />
                     </a>
@@ -466,7 +466,7 @@ export default function NotificationChannelsSection() {
 
               {/* Apprise URL */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
                   Apprise URL *
                 </label>
                 <input
@@ -474,16 +474,16 @@ export default function NotificationChannelsSection() {
                   value={formUrl}
                   onChange={(e) => setFormUrl(e.target.value)}
                   placeholder={services.find(s => s.id === formService)?.urlPattern || 'service://...'}
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-900 text-slate-900 dark:text-slate-100 font-mono text-sm"
+                  className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-900 text-nog-900 dark:text-nog-100 font-mono text-sm"
                 />
-                <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                <p className="mt-1 text-xs text-nog-500 dark:text-nog-400">
                   Format: {services.find(s => s.id === formService)?.urlPattern || 'See service documentation'}
                 </p>
               </div>
 
               {/* Description */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
                   Description (optional)
                 </label>
                 <input
@@ -491,7 +491,7 @@ export default function NotificationChannelsSection() {
                   value={formDescription}
                   onChange={(e) => setFormDescription(e.target.value)}
                   placeholder="e.g., #ops-alerts channel"
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-900 text-slate-900 dark:text-slate-100"
+                  className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-900 text-nog-900 dark:text-nog-100"
                 />
               </div>
 
@@ -501,14 +501,14 @@ export default function NotificationChannelsSection() {
                   type="button"
                   onClick={() => setFormEnabled(!formEnabled)}
                   className={`relative w-11 h-6 rounded-full transition-colors ${
-                    formEnabled ? 'bg-green-500' : 'bg-slate-300 dark:bg-nog-600'
+                    formEnabled ? 'bg-green-500' : 'bg-nog-300 dark:bg-nog-600'
                   }`}
                 >
                   <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white transition-transform ${
                     formEnabled ? 'translate-x-5' : ''
                   }`} />
                 </button>
-                <span className="text-sm text-slate-700 dark:text-slate-300">
+                <span className="text-sm text-nog-700 dark:text-nog-300">
                   {formEnabled ? 'Enabled' : 'Disabled'}
                 </span>
               </div>
@@ -519,7 +519,7 @@ export default function NotificationChannelsSection() {
                   <button
                     onClick={handleTestUrl}
                     disabled={testingId === 'form'}
-                    className="flex items-center gap-2 px-3 py-1.5 text-sm text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors disabled:opacity-50"
+                    className="flex items-center gap-2 px-3 py-1.5 text-sm text-honey-600 dark:text-honey-400 hover:bg-honey-50 dark:hover:bg-honey-900/20 rounded-lg transition-colors disabled:opacity-50"
                   >
                     {testingId === 'form' ? (
                       <>
@@ -548,17 +548,17 @@ export default function NotificationChannelsSection() {
               )}
             </div>
 
-            <div className="p-6 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-3">
+            <div className="p-6 border-t border-nog-200 dark:border-nog-700 flex justify-end gap-3">
               <button
                 onClick={() => setShowModal(false)}
-                className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-medium transition-colors"
+                className="px-4 py-2 text-nog-600 dark:text-nog-400 hover:text-nog-800 dark:hover:text-nog-200 font-medium transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSave}
                 disabled={saving || !formName.trim() || !formUrl.trim()}
-                className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2 bg-honey-500 hover:bg-honey-600 text-nog-900 font-medium rounded-lg transition-colors disabled:opacity-50"
               >
                 {saving ? (
                   <>

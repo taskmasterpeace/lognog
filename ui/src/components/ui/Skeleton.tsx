@@ -21,7 +21,7 @@ export function Skeleton({
   height,
   animation = 'shimmer',
 }: SkeletonProps) {
-  const baseStyles = 'bg-slate-200 dark:bg-nog-700';
+  const baseStyles = 'bg-nog-200 dark:bg-nog-700';
   const animationClass =
     animation === 'shimmer'
       ? 'animate-shimmer'
@@ -83,10 +83,10 @@ export function SkeletonCard({ className = '' }: { className?: string }) {
 export function SkeletonTable({ rows = 5, className = '' }: { rows?: number; className?: string }) {
   return (
     <div className={`card overflow-hidden ${className}`}>
-      <div className="p-4 bg-nog-50 dark:bg-nog-800 border-b border-slate-200 dark:border-slate-700">
+      <div className="p-4 bg-nog-50 dark:bg-nog-800 border-b border-nog-200 dark:border-nog-700">
         <Skeleton variant="text" width="30%" height={20} />
       </div>
-      <div className="divide-y divide-slate-200 dark:divide-slate-700">
+      <div className="divide-y divide-nog-200 dark:divide-nog-700">
         {Array.from({ length: rows }).map((_, i) => (
           <div key={i} className="p-4 flex items-center gap-4">
             <Skeleton variant="circular" width={40} height={40} />

@@ -26,8 +26,8 @@ export function PanelProvenanceModal({
         <div className="modal-header">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <GitMerge className="w-5 h-5 text-amber-500" />
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+              <GitMerge className="w-5 h-5 text-honey-500" />
+              <h3 className="text-lg font-semibold text-nog-900 dark:text-nog-100">
                 Panel Origin
               </h3>
             </div>
@@ -40,7 +40,7 @@ export function PanelProvenanceModal({
         <div className="modal-body space-y-4">
           {isLoading && (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="w-6 h-6 text-amber-500 animate-spin" />
+              <Loader2 className="w-6 h-6 text-honey-500 animate-spin" />
             </div>
           )}
 
@@ -55,11 +55,11 @@ export function PanelProvenanceModal({
           {provenance && (
             <div className="space-y-4">
               {/* Current Panel */}
-              <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
-                <div className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">
+              <div className="p-4 bg-nog-50 dark:bg-nog-800 rounded-lg">
+                <div className="text-sm font-medium text-nog-500 dark:text-nog-400 mb-1">
                   Current Panel
                 </div>
-                <div className="font-semibold text-slate-900 dark:text-slate-100">
+                <div className="font-semibold text-nog-900 dark:text-nog-100">
                   {panelTitle}
                 </div>
               </div>
@@ -68,28 +68,28 @@ export function PanelProvenanceModal({
               {provenance.source_panel_id ? (
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
-                    <div className="w-px h-8 bg-slate-300 dark:bg-slate-600 ml-2" />
+                    <div className="w-px h-8 bg-nog-300 dark:bg-nog-600 ml-2" />
                   </div>
 
-                  <div className="p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-                    <div className="text-sm font-medium text-amber-700 dark:text-amber-400 mb-2">
+                  <div className="p-4 bg-honey-50 dark:bg-honey-900/20 border border-honey-200 dark:border-honey-800 rounded-lg">
+                    <div className="text-sm font-medium text-honey-700 dark:text-honey-400 mb-2">
                       Copied From
                     </div>
 
                     {provenance.source_project_name && (
-                      <div className="text-sm text-slate-600 dark:text-slate-300 mb-1">
+                      <div className="text-sm text-nog-600 dark:text-nog-300 mb-1">
                         <span className="font-medium">Project:</span>{' '}
                         {provenance.source_project_name}
                       </div>
                     )}
 
-                    <div className="text-sm text-slate-600 dark:text-slate-300 mb-1">
+                    <div className="text-sm text-nog-600 dark:text-nog-300 mb-1">
                       <span className="font-medium">Dashboard:</span>{' '}
                       {provenance.source_dashboard_name}
                     </div>
 
                     {provenance.copied_at && (
-                      <div className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+                      <div className="text-xs text-nog-500 dark:text-nog-400 mt-2">
                         Copied on {new Date(provenance.copied_at).toLocaleString()}
                       </div>
                     )}
@@ -99,7 +99,7 @@ export function PanelProvenanceModal({
                         href={`/dashboards/${provenance.source_dashboard_id}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-sm text-amber-600 hover:text-amber-700 dark:text-amber-400 mt-3"
+                        className="inline-flex items-center gap-1 text-sm text-honey-600 hover:text-honey-700 dark:text-honey-400 mt-3"
                       >
                         View original dashboard
                         <ExternalLink className="w-3 h-3" />
@@ -108,8 +108,8 @@ export function PanelProvenanceModal({
                   </div>
                 </div>
               ) : (
-                <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg">
-                  <p className="text-sm text-slate-600 dark:text-slate-300">
+                <div className="p-4 bg-nog-50 dark:bg-nog-800 rounded-lg">
+                  <p className="text-sm text-nog-600 dark:text-nog-300">
                     This panel was created directly in this dashboard (not copied).
                   </p>
                 </div>

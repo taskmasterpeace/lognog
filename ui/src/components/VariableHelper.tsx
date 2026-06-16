@@ -92,25 +92,25 @@ export default function VariableHelper({ onInsert }: VariableHelperProps) {
       <button
         type="button"
         onClick={() => setShowHelper(!showHelper)}
-        className="flex items-center gap-2 px-3 py-2 text-sm text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800"
+        className="flex items-center gap-2 px-3 py-2 text-sm text-honey-600 dark:text-honey-400 hover:bg-honey-50 dark:hover:bg-honey-900/20 rounded-lg border border-honey-200 dark:border-honey-800"
       >
         <HelpCircle className="w-4 h-4" />
         Variable Helper
       </button>
 
       {showHelper && (
-        <div className="absolute top-full mt-2 left-0 z-50 w-[500px] bg-white dark:bg-nog-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 max-h-[500px] overflow-hidden flex flex-col">
-          <div className="p-4 border-b border-slate-200 dark:border-slate-700">
+        <div className="absolute top-full mt-2 left-0 z-50 w-[500px] bg-white dark:bg-nog-800 rounded-xl shadow-xl border border-nog-200 dark:border-nog-700 max-h-[500px] overflow-hidden flex flex-col">
+          <div className="p-4 border-b border-nog-200 dark:border-nog-700">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="font-semibold text-slate-900 dark:text-slate-100">Available Variables</h3>
+              <h3 className="font-semibold text-nog-900 dark:text-nog-100">Available Variables</h3>
               <button
                 onClick={() => setShowHelper(false)}
-                className="text-slate-400 hover:text-slate-600"
+                className="text-nog-400 hover:text-nog-600"
               >
                 ×
               </button>
             </div>
-            <p className="text-sm text-slate-500 dark:text-slate-400">
+            <p className="text-sm text-nog-500 dark:text-nog-400">
               Click any variable to copy it to your clipboard. Use <code className="px-1 py-0.5 bg-nog-100 dark:bg-nog-700 rounded">{'{{variable}}'}</code> syntax.
             </p>
           </div>
@@ -123,16 +123,16 @@ export default function VariableHelper({ onInsert }: VariableHelperProps) {
                 <div key={category.name} className="mb-4 last:mb-0">
                   <button
                     onClick={() => toggleCategory(category.name)}
-                    className="w-full flex items-center gap-2 p-2 hover:bg-nog-50 dark:hover:bg-slate-700/50 rounded-lg text-left"
+                    className="w-full flex items-center gap-2 p-2 hover:bg-nog-50 dark:hover:bg-nog-700/50 rounded-lg text-left"
                   >
                     {isExpanded ? (
-                      <ChevronDown className="w-4 h-4 text-slate-400" />
+                      <ChevronDown className="w-4 h-4 text-nog-400" />
                     ) : (
-                      <ChevronRight className="w-4 h-4 text-slate-400" />
+                      <ChevronRight className="w-4 h-4 text-nog-400" />
                     )}
                     <div className="flex-1">
-                      <div className="font-medium text-slate-900 dark:text-slate-100">{category.name}</div>
-                      <div className="text-xs text-slate-500 dark:text-slate-400">{category.description}</div>
+                      <div className="font-medium text-nog-900 dark:text-nog-100">{category.name}</div>
+                      <div className="text-xs text-nog-500 dark:text-nog-400">{category.description}</div>
                     </div>
                   </button>
 
@@ -145,24 +145,24 @@ export default function VariableHelper({ onInsert }: VariableHelperProps) {
                           <button
                             key={variable.name}
                             onClick={() => handleCopyVariable(variable.name)}
-                            className="w-full p-3 bg-nog-50 dark:bg-nog-700/50 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg text-left border border-transparent hover:border-amber-200 dark:hover:border-amber-800 transition-colors group"
+                            className="w-full p-3 bg-nog-50 dark:bg-nog-700/50 hover:bg-honey-50 dark:hover:bg-honey-900/20 rounded-lg text-left border border-transparent hover:border-honey-200 dark:hover:border-honey-800 transition-colors group"
                           >
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-center gap-2 mb-1">
-                                  <code className="text-sm font-mono text-amber-600 dark:text-amber-400">
+                                  <code className="text-sm font-mono text-honey-600 dark:text-honey-400">
                                     {'{{' + variable.name + '}}'}
                                   </code>
                                   {isCopied ? (
                                     <Check className="w-3 h-3 text-green-500" />
                                   ) : (
-                                    <Copy className="w-3 h-3 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    <Copy className="w-3 h-3 text-nog-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                                   )}
                                 </div>
-                                <div className="text-xs text-slate-600 dark:text-slate-300 mb-1">
+                                <div className="text-xs text-nog-600 dark:text-nog-300 mb-1">
                                   {variable.description}
                                 </div>
-                                <div className="text-xs text-slate-500 dark:text-slate-400">
+                                <div className="text-xs text-nog-500 dark:text-nog-400">
                                   Example: <span className="font-mono">{variable.example}</span>
                                 </div>
                               </div>
@@ -177,8 +177,8 @@ export default function VariableHelper({ onInsert }: VariableHelperProps) {
             })}
           </div>
 
-          <div className="p-4 bg-nog-50 dark:bg-nog-700/50 border-t border-slate-200 dark:border-slate-700">
-            <div className="text-xs text-slate-600 dark:text-slate-400">
+          <div className="p-4 bg-nog-50 dark:bg-nog-700/50 border-t border-nog-200 dark:border-nog-700">
+            <div className="text-xs text-nog-600 dark:text-nog-400">
               <strong>Tips:</strong>
               <ul className="list-disc list-inside mt-1 space-y-1">
                 <li>Variables are replaced with actual values when the alert triggers</li>

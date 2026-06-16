@@ -101,12 +101,12 @@ export function PanelCopyModal({ targetDashboardId, onClose, onSuccess }: PanelC
         <div className="modal-header">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Copy className="w-5 h-5 text-amber-500" />
+              <Copy className="w-5 h-5 text-honey-500" />
               <div>
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                <h3 className="text-lg font-semibold text-nog-900 dark:text-nog-100">
                   Copy Existing Panel
                 </h3>
-                <p className="text-sm text-slate-500 dark:text-slate-400">
+                <p className="text-sm text-nog-500 dark:text-nog-400">
                   Step {step} of 3: {step === 1 ? 'Select Project' : step === 2 ? 'Select Dashboard' : 'Select Panels'}
                 </p>
               </div>
@@ -121,12 +121,12 @@ export function PanelCopyModal({ targetDashboardId, onClose, onSuccess }: PanelC
           {/* Step 1: Select Project */}
           {step === 1 && (
             <div className="space-y-3">
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+              <label className="block text-sm font-medium text-nog-700 dark:text-nog-300">
                 Select a project
               </label>
               {loadingProjects ? (
                 <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-6 h-6 text-amber-500 animate-spin" />
+                  <Loader2 className="w-6 h-6 text-honey-500 animate-spin" />
                 </div>
               ) : (
                 <div className="space-y-2 max-h-96 overflow-y-auto">
@@ -139,8 +139,8 @@ export function PanelCopyModal({ targetDashboardId, onClose, onSuccess }: PanelC
                       }}
                       className={`w-full p-4 text-left rounded-lg border-2 transition-all ${
                         selectedProject?.id === project.id
-                          ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/20'
-                          : 'border-slate-200 dark:border-slate-600 hover:border-amber-300'
+                          ? 'border-honey-500 bg-honey-50 dark:bg-honey-900/20'
+                          : 'border-nog-200 dark:border-nog-600 hover:border-honey-300'
                       }`}
                     >
                       <div className="flex items-center gap-3">
@@ -148,15 +148,15 @@ export function PanelCopyModal({ targetDashboardId, onClose, onSuccess }: PanelC
                           <img
                             src={project.logo_url}
                             alt={project.name}
-                            className="w-10 h-10 rounded object-contain bg-white dark:bg-slate-800"
+                            className="w-10 h-10 rounded object-contain bg-white dark:bg-nog-800"
                           />
                         )}
                         <div>
-                          <div className="font-medium text-slate-900 dark:text-slate-100">
+                          <div className="font-medium text-nog-900 dark:text-nog-100">
                             {project.name}
                           </div>
                           {project.description && (
-                            <div className="text-sm text-slate-500 dark:text-slate-400">
+                            <div className="text-sm text-nog-500 dark:text-nog-400">
                               {project.description}
                             </div>
                           )}
@@ -173,7 +173,7 @@ export function PanelCopyModal({ targetDashboardId, onClose, onSuccess }: PanelC
           {step === 2 && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                <label className="block text-sm font-medium text-nog-700 dark:text-nog-300">
                   Select a dashboard from {selectedProject?.name}
                 </label>
                 <button
@@ -181,14 +181,14 @@ export function PanelCopyModal({ targetDashboardId, onClose, onSuccess }: PanelC
                     setStep(1);
                     setSelectedDashboard(null);
                   }}
-                  className="text-xs text-amber-600 hover:underline"
+                  className="text-xs text-honey-600 hover:underline"
                 >
                   Change project
                 </button>
               </div>
               {loadingDashboards ? (
                 <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-6 h-6 text-amber-500 animate-spin" />
+                  <Loader2 className="w-6 h-6 text-honey-500 animate-spin" />
                 </div>
               ) : (
                 <div className="space-y-2 max-h-96 overflow-y-auto">
@@ -201,19 +201,19 @@ export function PanelCopyModal({ targetDashboardId, onClose, onSuccess }: PanelC
                       }}
                       className={`w-full p-4 text-left rounded-lg border-2 transition-all ${
                         selectedDashboard?.dashboard_id === dashboard.dashboard_id
-                          ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/20'
-                          : 'border-slate-200 dark:border-slate-600 hover:border-amber-300'
+                          ? 'border-honey-500 bg-honey-50 dark:bg-honey-900/20'
+                          : 'border-nog-200 dark:border-nog-600 hover:border-honey-300'
                       }`}
                     >
-                      <div className="font-medium text-slate-900 dark:text-slate-100">
+                      <div className="font-medium text-nog-900 dark:text-nog-100">
                         {dashboard.dashboard_name}
                       </div>
                       {dashboard.description && (
-                        <div className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                        <div className="text-sm text-nog-500 dark:text-nog-400 mt-1">
                           {dashboard.description}
                         </div>
                       )}
-                      <div className="text-xs text-slate-400 mt-2">
+                      <div className="text-xs text-nog-400 mt-2">
                         {dashboard.panel_count || 0} panels
                       </div>
                     </button>
@@ -227,7 +227,7 @@ export function PanelCopyModal({ targetDashboardId, onClose, onSuccess }: PanelC
           {step === 3 && (
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300">
+                <label className="block text-sm font-medium text-nog-700 dark:text-nog-300">
                   Select panels to copy
                 </label>
                 <button
@@ -235,7 +235,7 @@ export function PanelCopyModal({ targetDashboardId, onClose, onSuccess }: PanelC
                     setStep(2);
                     setSelectedPanels(new Set());
                   }}
-                  className="text-xs text-amber-600 hover:underline"
+                  className="text-xs text-honey-600 hover:underline"
                 >
                   Change dashboard
                 </button>
@@ -243,7 +243,7 @@ export function PanelCopyModal({ targetDashboardId, onClose, onSuccess }: PanelC
 
               {/* Search */}
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-nog-400" />
                 <input
                   type="text"
                   placeholder="Search panels..."
@@ -256,7 +256,7 @@ export function PanelCopyModal({ targetDashboardId, onClose, onSuccess }: PanelC
               {/* Panels List */}
               {loadingPanels ? (
                 <div className="flex items-center justify-center py-8">
-                  <Loader2 className="w-6 h-6 text-amber-500 animate-spin" />
+                  <Loader2 className="w-6 h-6 text-honey-500 animate-spin" />
                 </div>
               ) : (
                 <div className="space-y-2 max-h-96 overflow-y-auto">
@@ -265,8 +265,8 @@ export function PanelCopyModal({ targetDashboardId, onClose, onSuccess }: PanelC
                       key={panel.id}
                       className={`flex items-start gap-3 p-4 rounded-lg border-2 cursor-pointer transition-all ${
                         selectedPanels.has(panel.id)
-                          ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/20'
-                          : 'border-slate-200 dark:border-slate-600 hover:border-amber-300'
+                          ? 'border-honey-500 bg-honey-50 dark:bg-honey-900/20'
+                          : 'border-nog-200 dark:border-nog-600 hover:border-honey-300'
                       }`}
                     >
                       <div className="flex items-center h-5">
@@ -274,28 +274,28 @@ export function PanelCopyModal({ targetDashboardId, onClose, onSuccess }: PanelC
                           type="checkbox"
                           checked={selectedPanels.has(panel.id)}
                           onChange={() => togglePanel(panel.id)}
-                          className="w-4 h-4 text-amber-600 border-slate-300 rounded focus:ring-amber-500"
+                          className="w-4 h-4 text-honey-600 border-nog-300 rounded focus:ring-honey-500"
                         />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="font-medium text-slate-900 dark:text-slate-100">
+                        <div className="font-medium text-nog-900 dark:text-nog-100">
                           {panel.title}
                         </div>
-                        <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                        <div className="text-xs text-nog-500 dark:text-nog-400 mt-1">
                           From: {panel.dashboard_name}
                           {panel.project_name && ` • ${panel.project_name}`}
                         </div>
-                        <div className="text-xs text-slate-400 mt-2 font-mono truncate">
+                        <div className="text-xs text-nog-400 mt-2 font-mono truncate">
                           {panel.query}
                         </div>
-                        <div className="text-xs text-slate-400 mt-1">
+                        <div className="text-xs text-nog-400 mt-1">
                           Type: {panel.visualization}
                         </div>
                       </div>
                     </label>
                   ))}
                   {filteredPanels.length === 0 && (
-                    <div className="text-center py-8 text-slate-500 dark:text-slate-400">
+                    <div className="text-center py-8 text-nog-500 dark:text-nog-400">
                       No panels found
                     </div>
                   )}
@@ -305,7 +305,7 @@ export function PanelCopyModal({ targetDashboardId, onClose, onSuccess }: PanelC
               {/* Custom title */}
               {selectedPanels.size === 1 && (
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                  <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">
                     Custom title (optional)
                   </label>
                   <input
@@ -319,8 +319,8 @@ export function PanelCopyModal({ targetDashboardId, onClose, onSuccess }: PanelC
               )}
 
               {selectedPanels.size > 0 && (
-                <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-                  <p className="text-sm text-amber-800 dark:text-amber-300">
+                <div className="p-3 bg-honey-50 dark:bg-honey-900/20 border border-honey-200 dark:border-honey-800 rounded-lg">
+                  <p className="text-sm text-honey-800 dark:text-honey-300">
                     {selectedPanels.size} panel{selectedPanels.size > 1 ? 's' : ''} selected
                   </p>
                 </div>

@@ -79,13 +79,13 @@ function NavLink({ to, icon: Icon, children, onClick }: NavLinkProps) {
       onClick={onClick}
       className={`group flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
         isActive
-          ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white shadow-md shadow-amber-500/25'
-          : 'text-slate-600 hover:bg-nog-100 hover:text-slate-900 hover:translate-x-0.5 dark:text-nog-400 dark:hover:bg-nog-800 dark:hover:text-nog-100'
+          ? 'bg-gradient-to-r from-honey-500 to-honey-600 text-nog-900 shadow-md shadow-honey-500/25'
+          : 'text-nog-600 hover:bg-nog-100 hover:text-nog-900 hover:translate-x-0.5 dark:text-nog-400 dark:hover:bg-nog-800 dark:hover:text-nog-100'
       }`}
     >
-      <Icon className={`w-5 h-5 flex-shrink-0 transition-transform duration-200 ${isActive ? '' : 'text-slate-400 group-hover:text-slate-600 group-hover:scale-110 dark:group-hover:text-nog-300'}`} />
+      <Icon className={`w-5 h-5 flex-shrink-0 transition-transform duration-200 ${isActive ? '' : 'text-nog-400 group-hover:text-nog-600 group-hover:scale-110 dark:group-hover:text-nog-300'}`} />
       <span className="font-medium truncate">{children}</span>
-      {isActive && <ChevronRight className="w-4 h-4 ml-auto opacity-75 animate-pulse flex-shrink-0" />}
+      {isActive && <ChevronRight className="w-4 h-4 ml-auto opacity-75 flex-shrink-0" />}
     </Link>
   );
 }
@@ -116,7 +116,7 @@ function NavGroup({ title, storageKey, defaultExpanded = true, children }: NavGr
     <div className="mb-2">
       <button
         onClick={toggleExpanded}
-        className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-slate-400 dark:text-nog-500 uppercase tracking-wider hover:text-slate-600 dark:hover:text-nog-300 transition-colors group"
+        className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-nog-400 dark:text-nog-500 uppercase tracking-wider hover:text-nog-600 dark:hover:text-nog-300 transition-colors group"
       >
         <span className="transition-transform duration-200" style={{ transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)' }}>
           <ChevronDown className="w-3.5 h-3.5" />
@@ -138,16 +138,16 @@ function UserMenu() {
   const { user, logout } = useAuth();
 
   return (
-    <div className="p-4 border-t border-slate-100 dark:border-nog-700">
+    <div className="p-4 border-t border-nog-100 dark:border-nog-700">
       <div className="flex items-center gap-3 mb-3">
-        <div className="w-8 h-8 bg-gradient-to-br from-amber-400 to-amber-600 rounded-full flex items-center justify-center">
+        <div className="w-8 h-8 bg-gradient-to-br from-honey-400 to-honey-600 rounded-full flex items-center justify-center">
           <User className="w-4 h-4 text-white" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-slate-900 dark:text-nog-100 truncate">
+          <p className="text-sm font-medium text-nog-900 dark:text-nog-100 truncate">
             {user?.username}
           </p>
-          <p className="text-xs text-slate-500 dark:text-nog-400 capitalize">
+          <p className="text-xs text-nog-500 dark:text-nog-400 capitalize">
             {user?.role}
           </p>
         </div>
@@ -155,7 +155,7 @@ function UserMenu() {
       <div className="flex gap-2">
         <Link
           to="/settings"
-          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm text-slate-600 hover:text-slate-900 dark:text-nog-400 dark:hover:text-nog-100 hover:bg-nog-100 dark:hover:bg-nog-700 rounded-lg transition-all duration-200 hover:scale-105 active:scale-95"
+          className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm text-nog-600 hover:text-nog-900 dark:text-nog-400 dark:hover:text-nog-100 hover:bg-nog-100 dark:hover:bg-nog-700 rounded-lg transition-all duration-200 hover:scale-105 active:scale-95"
         >
           <Settings className="w-4 h-4" />
           Settings
@@ -194,16 +194,16 @@ function Layout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen flex bg-nog-50 dark:bg-nog-900">
       {/* Mobile Header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-white dark:bg-nog-800 border-b border-slate-200 dark:border-nog-700 px-4 py-3 flex items-center gap-3">
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-40 bg-white dark:bg-nog-800 border-b border-nog-200 dark:border-nog-700 px-4 py-3 flex items-center gap-3">
         <button
           onClick={() => setSidebarOpen(true)}
           className="p-2 -ml-2 rounded-lg hover:bg-nog-100 dark:hover:bg-nog-700 transition-colors"
           aria-label="Open menu"
         >
-          <Menu className="w-6 h-6 text-slate-600 dark:text-nog-300" />
+          <Menu className="w-6 h-6 text-nog-600 dark:text-nog-300" />
         </button>
         <img src="/logo.png" alt="LogNog" className="w-8 h-8 rounded-lg shadow" />
-        <span className="font-bold text-lg text-slate-900 dark:text-nog-100">LogNog</span>
+        <span className="font-bold text-lg text-nog-900 dark:text-nog-100">LogNog</span>
         <div className="ml-auto">
           <ThemeToggle />
         </div>
@@ -222,13 +222,13 @@ function Layout({ children }: { children: React.ReactNode }) {
       <aside className={`
         fixed lg:static inset-y-0 left-0 z-50
         w-72 lg:w-64 bg-white dark:bg-nog-800
-        border-r border-slate-200 dark:border-nog-700
+        border-r border-nog-200 dark:border-nog-700
         flex flex-col shadow-sm
         transform transition-transform duration-300 ease-in-out
         ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
         {/* Logo */}
-        <div className="p-4 border-b border-slate-100 dark:border-nog-700">
+        <div className="p-4 border-b border-nog-100 dark:border-nog-700">
           <div className="flex items-center gap-3">
             <img
               src="/logo.png"
@@ -236,8 +236,8 @@ function Layout({ children }: { children: React.ReactNode }) {
               className="w-10 h-10 rounded-xl shadow-lg flex-shrink-0"
             />
             <div className="flex-1 min-w-0">
-              <h1 className="font-bold text-xl text-slate-900 dark:text-nog-100">LogNog</h1>
-              <p className="text-xs text-slate-500 dark:text-nog-400 truncate">Your Logs, Your Control</p>
+              <h1 className="font-bold text-xl text-nog-900 dark:text-nog-100">LogNog</h1>
+              <p className="text-xs text-nog-500 dark:text-nog-400 truncate">Your Logs, Your Control</p>
             </div>
             {/* Close button on mobile, theme toggle on desktop */}
             <button
@@ -245,7 +245,7 @@ function Layout({ children }: { children: React.ReactNode }) {
               className="lg:hidden p-2 -mr-2 rounded-lg hover:bg-nog-100 dark:hover:bg-nog-700 transition-colors"
               aria-label="Close menu"
             >
-              <X className="w-5 h-5 text-slate-600 dark:text-nog-300" />
+              <X className="w-5 h-5 text-nog-600 dark:text-nog-300" />
             </button>
             <div className="hidden lg:block">
               <ThemeToggle />
@@ -288,13 +288,13 @@ function Layout({ children }: { children: React.ReactNode }) {
         </nav>
 
         {/* Connection Status - hide on small screens to save space */}
-        <div className="hidden sm:block p-4 border-t border-slate-100 dark:border-nog-700">
+        <div className="hidden sm:block p-4 border-t border-nog-100 dark:border-nog-700">
           <div className="p-3 bg-nog-50 dark:bg-nog-900 rounded-lg">
-            <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-nog-400">
-              <Database className="w-4 h-4 text-amber-500 dark:text-amber-400 flex-shrink-0" />
+            <div className="flex items-center gap-2 text-xs text-nog-500 dark:text-nog-400">
+              <Database className="w-4 h-4 text-honey-500 dark:text-honey-400 flex-shrink-0" />
               <span className="truncate">ClickHouse Connected</span>
             </div>
-            <p className="text-xs text-slate-400 dark:text-nog-500 mt-1 truncate">
+            <p className="text-xs text-nog-400 dark:text-nog-500 mt-1 truncate">
               Ready to receive logs on port 514
             </p>
           </div>
@@ -304,14 +304,14 @@ function Layout({ children }: { children: React.ReactNode }) {
         <UserMenu />
 
         {/* Footer */}
-        <div className="p-4 border-t border-slate-100 dark:border-nog-700">
-          <div className="flex items-center justify-between text-xs text-slate-400 dark:text-nog-500">
+        <div className="p-4 border-t border-nog-100 dark:border-nog-700">
+          <div className="flex items-center justify-between text-xs text-nog-400 dark:text-nog-500">
             <span className="truncate">Machine King Labs</span>
             <a
               href="https://github.com/machinekinglabs/lognog"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1 hover:text-slate-600 dark:hover:text-nog-300 transition-colors flex-shrink-0"
+              className="flex items-center gap-1 hover:text-nog-600 dark:hover:text-nog-300 transition-colors flex-shrink-0"
             >
               <Github className="w-3.5 h-3.5" />
               <span className="hidden sm:inline">GitHub</span>
@@ -342,7 +342,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   if (isLoading || onboardingLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-nog-50 dark:bg-nog-900">
-        <div className="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-honey-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
@@ -378,7 +378,7 @@ function AppRoutes() {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-nog-50 dark:bg-nog-900">
-        <div className="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin" />
+        <div className="w-8 h-8 border-4 border-honey-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }

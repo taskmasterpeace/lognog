@@ -19,7 +19,7 @@ export interface WordCloudChartProps {
 }
 
 const DEFAULT_COLORS = [
-  '#f59e0b', // amber-500
+  '#f59e0b', // honey-500
   '#0ea5e9', // sky-500
   '#8b5cf6', // violet-500
   '#22c55e', // green-500
@@ -106,7 +106,7 @@ export const WordCloudChart: React.FC<WordCloudChartProps> = ({
   if (!data || data.length === 0) {
     return (
       <div
-        className="w-full flex items-center justify-center text-slate-400 dark:text-slate-500"
+        className="w-full flex items-center justify-center text-nog-400 dark:text-nog-500"
         style={{ height: `${height}px` }}
       >
         No data for word cloud

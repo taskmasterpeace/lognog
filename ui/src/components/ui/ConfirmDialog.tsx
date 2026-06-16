@@ -84,15 +84,15 @@ function ConfirmDialog({
       defaultIcon: <Trash2 className="w-6 h-6" />,
     },
     warning: {
-      iconBg: 'bg-amber-100 dark:bg-amber-900/30',
-      iconColor: 'text-amber-600 dark:text-amber-400',
-      button: 'bg-amber-600 hover:bg-amber-700 text-white',
+      iconBg: 'bg-honey-100 dark:bg-honey-900/30',
+      iconColor: 'text-honey-600 dark:text-honey-400',
+      button: 'bg-honey-500 hover:bg-honey-400 text-nog-900',
       defaultIcon: <AlertTriangle className="w-6 h-6" />,
     },
     default: {
-      iconBg: 'bg-blue-100 dark:bg-blue-900/30',
-      iconColor: 'text-blue-600 dark:text-blue-400',
-      button: 'bg-amber-600 hover:bg-amber-700 text-white',
+      iconBg: 'bg-honey-100 dark:bg-honey-900/30',
+      iconColor: 'text-honey-600 dark:text-honey-400',
+      button: 'bg-honey-500 hover:bg-honey-400 text-nog-900',
       defaultIcon: <AlertTriangle className="w-6 h-6" />,
     },
   };
@@ -111,10 +111,10 @@ function ConfirmDialog({
               {icon || styles.defaultIcon}
             </div>
             <div className="flex-1">
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+              <h3 className="text-lg font-semibold text-nog-900 dark:text-nog-100">
                 {title}
               </h3>
-              <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+              <p className="mt-2 text-sm text-nog-600 dark:text-nog-400">
                 {message}
               </p>
             </div>
@@ -122,14 +122,14 @@ function ConfirmDialog({
               onClick={onCancel}
               className="p-1 hover:bg-nog-100 dark:hover:bg-nog-700 rounded-lg transition-colors"
             >
-              <X className="w-5 h-5 text-slate-400" />
+              <X className="w-5 h-5 text-nog-400" />
             </button>
           </div>
         </div>
-        <div className="flex gap-3 p-4 border-t border-slate-200 dark:border-slate-700">
+        <div className="flex gap-3 p-4 border-t border-nog-200 dark:border-nog-700">
           <button
             onClick={onCancel}
-            className="flex-1 px-4 py-2 text-slate-700 dark:text-slate-300 bg-nog-100 dark:bg-nog-700 hover:bg-slate-200 dark:hover:bg-nog-600 rounded-lg font-medium transition-colors"
+            className="flex-1 px-4 py-2 text-nog-700 dark:text-nog-300 bg-nog-100 dark:bg-nog-700 hover:bg-nog-200 dark:hover:bg-nog-600 rounded-lg font-medium transition-colors"
           >
             {cancelText}
           </button>

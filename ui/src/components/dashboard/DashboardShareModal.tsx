@@ -56,8 +56,8 @@ export function DashboardShareModal({
         <div className="modal-header">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Link2 className="w-5 h-5 text-amber-500" />
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+              <Link2 className="w-5 h-5 text-honey-500" />
+              <h3 className="text-lg font-semibold text-nog-900 dark:text-nog-100">
                 Share "{dashboardName}"
               </h3>
             </div>
@@ -71,17 +71,17 @@ export function DashboardShareModal({
           {/* Public Toggle */}
           <div className="flex items-center justify-between p-3 bg-nog-50 dark:bg-nog-800 rounded-lg">
             <div>
-              <p className="font-medium text-slate-900 dark:text-slate-100">
+              <p className="font-medium text-nog-900 dark:text-nog-100">
                 Enable public sharing
               </p>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
+              <p className="text-sm text-nog-500 dark:text-nog-400">
                 Anyone with the link can view this dashboard
               </p>
             </div>
             <button
               onClick={() => setIsPublic(!isPublic)}
               className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                isPublic ? 'bg-amber-500' : 'bg-slate-300 dark:bg-nog-600'
+                isPublic ? 'bg-honey-500' : 'bg-nog-300 dark:bg-nog-600'
               }`}
             >
               <span
@@ -97,7 +97,7 @@ export function DashboardShareModal({
               {/* Public URL */}
               {publicUrl && (
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                  <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">
                     Public Link
                   </label>
                   <div className="flex gap-2">
@@ -124,7 +124,7 @@ export function DashboardShareModal({
 
               {/* Password Protection */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">
                   <div className="flex items-center gap-2">
                     <Shield className="w-4 h-4" />
                     Password Protection (optional)
@@ -154,7 +154,7 @@ export function DashboardShareModal({
 
               {/* Expiration */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">
                   <div className="flex items-center gap-2">
                     <Calendar className="w-4 h-4" />
                     Expiration Date (optional)
@@ -180,7 +180,7 @@ export function DashboardShareModal({
                           setExpiresAt(date.toISOString().slice(0, 16));
                         }
                       }}
-                      className="px-2 py-1 text-xs rounded bg-nog-100 dark:bg-nog-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300"
+                      className="px-2 py-1 text-xs rounded bg-nog-100 dark:bg-nog-700 hover:bg-nog-200 dark:hover:bg-nog-600 text-nog-700 dark:text-nog-300"
                     >
                       {label}
                     </button>
@@ -193,7 +193,7 @@ export function DashboardShareModal({
                   className="input"
                 />
                 {expiresAt && (
-                  <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                  <p className="mt-1 text-xs text-nog-500 dark:text-nog-400">
                     Expires {new Date(expiresAt).toLocaleDateString('en-US', {
                       weekday: 'short',
                       month: 'short',
@@ -207,8 +207,8 @@ export function DashboardShareModal({
               </div>
 
               {/* Warning */}
-              <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-                <p className="text-sm text-amber-800 dark:text-amber-200">
+              <div className="p-3 bg-honey-50 dark:bg-honey-900/20 border border-honey-200 dark:border-honey-800 rounded-lg">
+                <p className="text-sm text-honey-800 dark:text-honey-200">
                   <strong>Note:</strong> Public dashboards can be viewed by anyone with the link.
                   Data shown will be live and reflect current logs.
                 </p>

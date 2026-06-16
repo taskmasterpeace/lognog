@@ -106,24 +106,24 @@ export default function AiTab() {
   return (
     <div className="space-y-6">
       {/* Ollama Configuration */}
-      <section className="bg-white dark:bg-nog-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2 mb-4">
+      <section className="bg-white dark:bg-nog-800 rounded-xl shadow-sm border border-nog-200 dark:border-nog-700 p-6">
+        <h2 className="text-lg font-semibold text-nog-900 dark:text-nog-100 flex items-center gap-2 mb-4">
           <Bot className="w-5 h-5" />
           Ollama Configuration
         </h2>
 
-        <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+        <p className="text-sm text-nog-500 dark:text-nog-400 mb-6">
           Configure local Ollama instance for AI-powered features like natural language queries and dashboard insights.
         </p>
 
         {aiLoading ? (
           <div className="flex items-center justify-center py-8">
-            <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+            <Loader2 className="w-6 h-6 animate-spin text-nog-400" />
           </div>
         ) : (
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
                 Ollama URL
               </label>
               <input
@@ -131,13 +131,13 @@ export default function AiTab() {
                 value={localOllamaUrl}
                 onChange={(e) => setLocalOllamaUrl(e.target.value)}
                 placeholder="http://localhost:11434"
-                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-800 text-slate-900 dark:text-slate-100 font-mono text-sm"
+                className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-800 text-nog-900 dark:text-nog-100 font-mono text-sm"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
                   Chat Model
                 </label>
                 <input
@@ -145,11 +145,11 @@ export default function AiTab() {
                   value={localOllamaModel}
                   onChange={(e) => setLocalOllamaModel(e.target.value)}
                   placeholder="llama3.2"
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-800 text-slate-900 dark:text-slate-100"
+                  className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-800 text-nog-900 dark:text-nog-100"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
                   Reasoning Model (optional)
                 </label>
                 <input
@@ -157,13 +157,13 @@ export default function AiTab() {
                   value={localReasoningModel}
                   onChange={(e) => setLocalReasoningModel(e.target.value)}
                   placeholder="deepseek-r1"
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-800 text-slate-900 dark:text-slate-100"
+                  className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-800 text-nog-900 dark:text-nog-100"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
                 Embedding Model
               </label>
               <input
@@ -171,7 +171,7 @@ export default function AiTab() {
                 value={localEmbedModel}
                 onChange={(e) => setLocalEmbedModel(e.target.value)}
                 placeholder="nomic-embed-text"
-                className="w-full max-w-xs px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-800 text-slate-900 dark:text-slate-100"
+                className="w-full max-w-xs px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-800 text-nog-900 dark:text-nog-100"
               />
             </div>
 
@@ -179,7 +179,7 @@ export default function AiTab() {
               <button
                 onClick={handleSaveOllama}
                 disabled={aiSaving}
-                className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2 bg-honey-500 hover:bg-honey-600 text-nog-900 font-medium rounded-lg transition-colors disabled:opacity-50"
               >
                 {aiSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                 Save Ollama Settings
@@ -187,7 +187,7 @@ export default function AiTab() {
               <button
                 onClick={testAiConnection}
                 disabled={aiTesting}
-                className="flex items-center gap-2 px-4 py-2 border border-slate-300 dark:border-slate-600 text-slate-700 dark:text-slate-300 font-medium rounded-lg hover:bg-nog-50 dark:hover:bg-slate-700 transition-colors disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2 border border-nog-300 dark:border-nog-600 text-nog-700 dark:text-nog-300 font-medium rounded-lg hover:bg-nog-50 dark:hover:bg-nog-700 transition-colors disabled:opacity-50"
               >
                 {aiTesting ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
                 Test Connection
@@ -226,19 +226,19 @@ export default function AiTab() {
       </section>
 
       {/* OpenRouter Configuration */}
-      <section className="bg-white dark:bg-nog-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2 mb-4">
+      <section className="bg-white dark:bg-nog-800 rounded-xl shadow-sm border border-nog-200 dark:border-nog-700 p-6">
+        <h2 className="text-lg font-semibold text-nog-900 dark:text-nog-100 flex items-center gap-2 mb-4">
           <Zap className="w-5 h-5" />
           OpenRouter Configuration
         </h2>
 
-        <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+        <p className="text-sm text-nog-500 dark:text-nog-400 mb-6">
           Configure OpenRouter for cloud-based AI models. Use as fallback or alternative to local Ollama.
         </p>
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+            <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
               API Key
             </label>
             <div className="flex items-center gap-2">
@@ -249,7 +249,7 @@ export default function AiTab() {
                 value={localOpenrouterKey}
                 onChange={(e) => setLocalOpenrouterKey(e.target.value)}
                 placeholder={aiConfig?.openrouter?.api_key_set ? '••••••••' : 'Enter API key'}
-                className="flex-1 px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-800 text-slate-900 dark:text-slate-100"
+                className="flex-1 px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-800 text-nog-900 dark:text-nog-100"
               />
               {aiConfig?.openrouter?.api_key_set && (
                 <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs rounded">
@@ -260,7 +260,7 @@ export default function AiTab() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+            <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
               Model
             </label>
             <input
@@ -268,17 +268,17 @@ export default function AiTab() {
               value={localOpenrouterModel}
               onChange={(e) => setLocalOpenrouterModel(e.target.value)}
               placeholder="anthropic/claude-3.5-sonnet"
-              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-800 text-slate-900 dark:text-slate-100"
+              className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-800 text-nog-900 dark:text-nog-100"
             />
-            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-              See <a href="https://openrouter.ai/models" target="_blank" rel="noopener noreferrer" className="text-amber-500 hover:underline">openrouter.ai/models</a> for available models
+            <p className="mt-1 text-xs text-nog-500 dark:text-nog-400">
+              See <a href="https://openrouter.ai/models" target="_blank" rel="noopener noreferrer" className="text-honey-500 hover:underline">openrouter.ai/models</a> for available models
             </p>
           </div>
 
           <button
             onClick={handleSaveOpenrouter}
             disabled={aiSaving}
-            className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-2 bg-honey-500 hover:bg-honey-600 text-nog-900 font-medium rounded-lg transition-colors disabled:opacity-50"
           >
             {aiSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
             Save OpenRouter Settings

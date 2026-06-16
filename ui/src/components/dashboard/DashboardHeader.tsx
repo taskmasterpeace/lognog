@@ -38,7 +38,7 @@ export function DashboardHeader({
           {backLink && (
             <Link
               to={backLink}
-              className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-nog-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+              className="p-2 text-nog-400 hover:text-nog-600 dark:hover:text-nog-300 hover:bg-nog-100 dark:hover:bg-nog-700 rounded-lg transition-colors"
             >
               <ArrowLeft className="w-5 h-5" />
             </Link>
@@ -53,11 +53,11 @@ export function DashboardHeader({
           )}
 
           <div>
-            <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+            <h1 className="text-xl font-bold text-nog-900 dark:text-nog-100">
               {name}
             </h1>
             {description && (
-              <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+              <p className="text-sm text-nog-500 dark:text-nog-400 mt-0.5">
                 {description}
               </p>
             )}

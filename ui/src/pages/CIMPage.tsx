@@ -42,19 +42,19 @@ const categoryIcons: Record<string, React.ElementType> = {
 };
 
 const categoryColors: Record<string, string> = {
-  authentication: 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-900/30',
-  network: 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-900/30',
-  endpoint: 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-900/30',
-  web: 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-900/30',
-  custom: 'text-slate-600 bg-nog-100 dark:text-slate-400 dark:bg-nog-700',
+  authentication: 'text-honey-600 bg-honey-50 dark:text-honey-400 dark:bg-honey-900/30',
+  network: 'text-honey-600 bg-honey-50 dark:text-honey-400 dark:bg-honey-900/30',
+  endpoint: 'text-honey-600 bg-honey-50 dark:text-honey-400 dark:bg-honey-900/30',
+  web: 'text-honey-600 bg-honey-50 dark:text-honey-400 dark:bg-honey-900/30',
+  custom: 'text-nog-600 bg-nog-100 dark:text-nog-400 dark:bg-nog-700',
 };
 
 const fieldTypeColors: Record<string, string> = {
   string: 'text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-900/30',
-  number: 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-900/30',
-  boolean: 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-900/30',
-  timestamp: 'text-orange-600 bg-orange-50 dark:text-orange-400 dark:bg-orange-900/30',
-  ip: 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-900/30',
+  number: 'text-honey-600 bg-honey-50 dark:text-honey-400 dark:bg-honey-900/30',
+  boolean: 'text-honey-600 bg-honey-50 dark:text-honey-400 dark:bg-honey-900/30',
+  timestamp: 'text-honey-600 bg-honey-50 dark:text-honey-400 dark:bg-honey-900/30',
+  ip: 'text-honey-600 bg-honey-50 dark:text-honey-400 dark:bg-honey-900/30',
   array: 'text-pink-600 bg-pink-50 dark:text-pink-400 dark:bg-pink-900/30',
 };
 
@@ -124,10 +124,10 @@ export default function CIMPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+          <h1 className="text-2xl font-bold text-nog-900 dark:text-nog-100">
             Common Information Model
           </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <p className="text-sm text-nog-500 dark:text-nog-400">
             Normalize log fields for consistent queries across sources
           </p>
         </div>
@@ -136,48 +136,48 @@ export default function CIMPage() {
       {/* Stats Cards */}
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-white dark:bg-nog-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
+          <div className="bg-white dark:bg-nog-800 rounded-xl p-4 border border-nog-200 dark:border-nog-700">
             <div className="flex items-center gap-2">
-              <Database className="w-5 h-5 text-amber-500" />
-              <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+              <Database className="w-5 h-5 text-honey-500" />
+              <div className="text-2xl font-bold text-nog-900 dark:text-nog-100">
                 {stats.total_models}
               </div>
             </div>
-            <div className="text-sm text-slate-500 dark:text-slate-400">Data Models</div>
+            <div className="text-sm text-nog-500 dark:text-nog-400">Data Models</div>
           </div>
-          <div className="bg-white dark:bg-nog-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
+          <div className="bg-white dark:bg-nog-800 rounded-xl p-4 border border-nog-200 dark:border-nog-700">
             <div className="flex items-center gap-2">
-              <ArrowRightLeft className="w-5 h-5 text-amber-500" />
-              <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+              <ArrowRightLeft className="w-5 h-5 text-honey-500" />
+              <div className="text-2xl font-bold text-nog-900 dark:text-nog-100">
                 {stats.total_mappings}
               </div>
             </div>
-            <div className="text-sm text-slate-500 dark:text-slate-400">Field Mappings</div>
+            <div className="text-sm text-nog-500 dark:text-nog-400">Field Mappings</div>
           </div>
-          <div className="bg-white dark:bg-nog-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-            <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
+          <div className="bg-white dark:bg-nog-800 rounded-xl p-4 border border-nog-200 dark:border-nog-700">
+            <div className="text-2xl font-bold text-honey-600 dark:text-honey-400">
               {stats.by_category?.authentication || 0}
             </div>
-            <div className="text-sm text-slate-500 dark:text-slate-400">Auth Models</div>
+            <div className="text-sm text-nog-500 dark:text-nog-400">Auth Models</div>
           </div>
-          <div className="bg-white dark:bg-nog-800 rounded-xl p-4 border border-slate-200 dark:border-slate-700">
-            <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
+          <div className="bg-white dark:bg-nog-800 rounded-xl p-4 border border-nog-200 dark:border-nog-700">
+            <div className="text-2xl font-bold text-honey-600 dark:text-honey-400">
               {Object.keys(stats.mappings_by_source || {}).length}
             </div>
-            <div className="text-sm text-slate-500 dark:text-slate-400">Source Types</div>
+            <div className="text-sm text-nog-500 dark:text-nog-400">Source Types</div>
           </div>
         </div>
       )}
 
       {/* Tabs */}
-      <div className="border-b border-slate-200 dark:border-slate-700">
+      <div className="border-b border-nog-200 dark:border-nog-700">
         <div className="flex gap-4">
           <button
             onClick={() => setActiveTab('models')}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'models'
-                ? 'border-amber-500 text-amber-600 dark:text-amber-400'
-                : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                ? 'border-honey-500 text-honey-600 dark:text-honey-400'
+                : 'border-transparent text-nog-500 hover:text-nog-700 dark:hover:text-nog-300'
             }`}
           >
             <Database className="w-4 h-4 inline-block mr-2" />
@@ -187,8 +187,8 @@ export default function CIMPage() {
             onClick={() => setActiveTab('mappings')}
             className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'mappings'
-                ? 'border-amber-500 text-amber-600 dark:text-amber-400'
-                : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                ? 'border-honey-500 text-honey-600 dark:text-honey-400'
+                : 'border-transparent text-nog-500 hover:text-nog-700 dark:hover:text-nog-300'
             }`}
           >
             <ArrowRightLeft className="w-4 h-4 inline-block mr-2" />
@@ -203,20 +203,20 @@ export default function CIMPage() {
           {/* Filters */}
           <div className="flex flex-wrap gap-4">
             <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-nog-400" />
               <input
                 type="text"
                 placeholder="Search models..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-white dark:bg-nog-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className="w-full pl-10 pr-4 py-2 bg-white dark:bg-nog-800 border border-nog-200 dark:border-nog-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-honey-500"
               />
             </div>
             <div className="relative">
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
-                className="appearance-none pl-4 pr-10 py-2 bg-white dark:bg-nog-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className="appearance-none pl-4 pr-10 py-2 bg-white dark:bg-nog-800 border border-nog-200 dark:border-nog-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-honey-500"
               >
                 <option value="">All Categories</option>
                 <option value="authentication">Authentication</option>
@@ -225,11 +225,11 @@ export default function CIMPage() {
                 <option value="web">Web</option>
                 <option value="custom">Custom</option>
               </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-nog-400 pointer-events-none" />
             </div>
             <button
               onClick={() => { setEditingModel(null); setShowModelForm(true); }}
-              className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-medium transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-honey-500 hover:bg-honey-600 text-nog-900 rounded-lg text-sm font-medium transition-colors"
             >
               <Plus className="w-4 h-4" />
               Add Model
@@ -239,9 +239,9 @@ export default function CIMPage() {
           {/* Models List */}
           <div className="space-y-3">
             {modelsLoading ? (
-              <div className="text-center py-8 text-slate-500">Loading...</div>
+              <div className="text-center py-8 text-nog-500">Loading...</div>
             ) : filteredModels.length === 0 ? (
-              <div className="text-center py-8 text-slate-500">No data models found</div>
+              <div className="text-center py-8 text-nog-500">No data models found</div>
             ) : (
               filteredModels.map((model) => {
                 const Icon = categoryIcons[model.category] || Layers;
@@ -250,18 +250,18 @@ export default function CIMPage() {
                 return (
                   <div
                     key={model.id}
-                    className="bg-white dark:bg-nog-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden"
+                    className="bg-white dark:bg-nog-800 rounded-xl border border-nog-200 dark:border-nog-700 overflow-hidden"
                   >
                     <div
-                      className="flex items-center justify-between p-4 cursor-pointer hover:bg-nog-50 dark:hover:bg-slate-700/50"
+                      className="flex items-center justify-between p-4 cursor-pointer hover:bg-nog-50 dark:hover:bg-nog-700/50"
                       onClick={() => setExpandedModel(isExpanded ? null : model.name)}
                     >
                       <div className="flex items-center gap-3">
                         <button className="p-1">
                           {isExpanded ? (
-                            <ChevronDown className="w-4 h-4 text-slate-400" />
+                            <ChevronDown className="w-4 h-4 text-nog-400" />
                           ) : (
-                            <ChevronRight className="w-4 h-4 text-slate-400" />
+                            <ChevronRight className="w-4 h-4 text-nog-400" />
                           )}
                         </button>
                         <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${categoryColors[model.category]}`}>
@@ -269,31 +269,31 @@ export default function CIMPage() {
                         </div>
                         <div>
                           <div className="flex items-center gap-2">
-                            <span className="font-medium text-slate-900 dark:text-slate-100">
+                            <span className="font-medium text-nog-900 dark:text-nog-100">
                               {model.name}
                             </span>
                             {model.is_builtin && (
-                              <span className="text-xs px-2 py-0.5 rounded bg-nog-100 text-slate-600 dark:bg-nog-700 dark:text-slate-300">
+                              <span className="text-xs px-2 py-0.5 rounded bg-nog-100 text-nog-600 dark:bg-nog-700 dark:text-nog-300">
                                 Built-in
                               </span>
                             )}
                           </div>
-                          <div className="text-sm text-slate-500 dark:text-slate-400">
+                          <div className="text-sm text-nog-500 dark:text-nog-400">
                             {model.description}
                           </div>
                         </div>
                       </div>
                       <div className="flex items-center gap-4">
-                        <div className="text-sm text-slate-500">
+                        <div className="text-sm text-nog-500">
                           {model.fields.length} fields
                         </div>
                         {!model.is_builtin && (
                           <div className="flex items-center gap-1">
                             <button
                               onClick={(e) => { e.stopPropagation(); setEditingModel(model); setShowModelForm(true); }}
-                              className="p-1.5 hover:bg-nog-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                              className="p-1.5 hover:bg-nog-100 dark:hover:bg-nog-700 rounded-lg transition-colors"
                             >
-                              <Edit2 className="w-4 h-4 text-slate-500" />
+                              <Edit2 className="w-4 h-4 text-nog-500" />
                             </button>
                             <button
                               onClick={(e) => {
@@ -313,18 +313,18 @@ export default function CIMPage() {
 
                     {/* Expanded Fields */}
                     {isExpanded && (
-                      <div className="border-t border-slate-200 dark:border-slate-700 p-4 bg-nog-50 dark:bg-nog-900/50">
-                        <div className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">
+                      <div className="border-t border-nog-200 dark:border-nog-700 p-4 bg-nog-50 dark:bg-nog-900/50">
+                        <div className="text-sm font-medium text-nog-700 dark:text-nog-300 mb-3">
                           Fields
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                           {model.fields.map((field) => (
                             <div
                               key={field.name}
-                              className="bg-white dark:bg-nog-800 rounded-lg p-3 border border-slate-200 dark:border-slate-700"
+                              className="bg-white dark:bg-nog-800 rounded-lg p-3 border border-nog-200 dark:border-nog-700"
                             >
                               <div className="flex items-center justify-between mb-1">
-                                <span className="font-medium text-slate-900 dark:text-slate-100">
+                                <span className="font-medium text-nog-900 dark:text-nog-100">
                                   {field.name}
                                 </span>
                                 <span className={`text-xs px-2 py-0.5 rounded ${fieldTypeColors[field.type]}`}>
@@ -332,7 +332,7 @@ export default function CIMPage() {
                                 </span>
                               </div>
                               {field.description && (
-                                <div className="text-xs text-slate-500 dark:text-slate-400 mb-1">
+                                <div className="text-xs text-nog-500 dark:text-nog-400 mb-1">
                                   {field.description}
                                 </div>
                               )}
@@ -341,7 +341,7 @@ export default function CIMPage() {
                                   <span className="text-xs text-red-500">Required</span>
                                 )}
                                 {field.aliases && field.aliases.length > 0 && (
-                                  <span className="text-xs text-slate-400">
+                                  <span className="text-xs text-nog-400">
                                     Aliases: {field.aliases.slice(0, 3).join(', ')}
                                     {field.aliases.length > 3 && '...'}
                                   </span>
@@ -366,44 +366,44 @@ export default function CIMPage() {
           {/* Filters */}
           <div className="flex flex-wrap gap-4">
             <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-nog-400" />
               <input
                 type="text"
                 placeholder="Search mappings..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-white dark:bg-nog-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className="w-full pl-10 pr-4 py-2 bg-white dark:bg-nog-800 border border-nog-200 dark:border-nog-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-honey-500"
               />
             </div>
             <div className="relative">
               <select
                 value={sourceFilter}
                 onChange={(e) => setSourceFilter(e.target.value)}
-                className="appearance-none pl-4 pr-10 py-2 bg-white dark:bg-nog-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className="appearance-none pl-4 pr-10 py-2 bg-white dark:bg-nog-800 border border-nog-200 dark:border-nog-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-honey-500"
               >
                 <option value="">All Sources</option>
                 {uniqueSources.map(src => (
                   <option key={src} value={src}>{src}</option>
                 ))}
               </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-nog-400 pointer-events-none" />
             </div>
             <div className="relative">
               <select
                 value={modelFilter}
                 onChange={(e) => setModelFilter(e.target.value)}
-                className="appearance-none pl-4 pr-10 py-2 bg-white dark:bg-nog-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                className="appearance-none pl-4 pr-10 py-2 bg-white dark:bg-nog-800 border border-nog-200 dark:border-nog-700 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-honey-500"
               >
                 <option value="">All Models</option>
                 {models.map(m => (
                   <option key={m.name} value={m.name}>{m.name}</option>
                 ))}
               </select>
-              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-nog-400 pointer-events-none" />
             </div>
             <button
               onClick={() => { setEditingMapping(null); setShowMappingForm(true); }}
-              className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-medium transition-colors"
+              className="flex items-center gap-2 px-4 py-2 bg-honey-500 hover:bg-honey-600 text-nog-900 rounded-lg text-sm font-medium transition-colors"
             >
               <Plus className="w-4 h-4" />
               Add Mapping
@@ -411,83 +411,83 @@ export default function CIMPage() {
           </div>
 
           {/* Mappings Table */}
-          <div className="bg-white dark:bg-nog-800 rounded-xl border border-slate-200 dark:border-slate-700 overflow-hidden">
+          <div className="bg-white dark:bg-nog-800 rounded-xl border border-nog-200 dark:border-nog-700 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="bg-nog-50 dark:bg-nog-900/50 border-b border-slate-200 dark:border-slate-700">
+                <thead className="bg-nog-50 dark:bg-nog-900/50 border-b border-nog-200 dark:border-nog-700">
                   <tr>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Source Type</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Source Field</th>
-                    <th className="text-center px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase"></th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">CIM Field</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Data Model</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Transform</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Enabled</th>
-                    <th className="text-right px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">Actions</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-nog-500 dark:text-nog-400 uppercase">Source Type</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-nog-500 dark:text-nog-400 uppercase">Source Field</th>
+                    <th className="text-center px-4 py-3 text-xs font-semibold text-nog-500 dark:text-nog-400 uppercase"></th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-nog-500 dark:text-nog-400 uppercase">CIM Field</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-nog-500 dark:text-nog-400 uppercase">Data Model</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-nog-500 dark:text-nog-400 uppercase">Transform</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-nog-500 dark:text-nog-400 uppercase">Enabled</th>
+                    <th className="text-right px-4 py-3 text-xs font-semibold text-nog-500 dark:text-nog-400 uppercase">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                <tbody className="divide-y divide-nog-200 dark:divide-nog-700">
                   {mappingsLoading ? (
                     <tr>
-                      <td colSpan={8} className="px-4 py-8 text-center text-slate-500">
+                      <td colSpan={8} className="px-4 py-8 text-center text-nog-500">
                         Loading...
                       </td>
                     </tr>
                   ) : filteredMappings.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="px-4 py-8 text-center text-slate-500">
+                      <td colSpan={8} className="px-4 py-8 text-center text-nog-500">
                         No field mappings found. Add mappings to normalize your log sources.
                       </td>
                     </tr>
                   ) : (
                     filteredMappings.map((mapping) => (
-                      <tr key={mapping.id} className="hover:bg-nog-50 dark:hover:bg-slate-700/50">
+                      <tr key={mapping.id} className="hover:bg-nog-50 dark:hover:bg-nog-700/50">
                         <td className="px-4 py-3">
-                          <span className="px-2 py-1 rounded text-xs font-medium bg-nog-100 text-slate-700 dark:bg-nog-700 dark:text-slate-300">
+                          <span className="px-2 py-1 rounded text-xs font-medium bg-nog-100 text-nog-700 dark:bg-nog-700 dark:text-nog-300">
                             {mapping.source_type}
                           </span>
                         </td>
                         <td className="px-4 py-3">
-                          <span className="font-mono text-sm text-slate-900 dark:text-slate-100">
+                          <span className="font-mono text-sm text-nog-900 dark:text-nog-100">
                             {mapping.source_field}
                           </span>
                         </td>
                         <td className="px-4 py-3 text-center">
-                          <ArrowRightLeft className="w-4 h-4 text-slate-400 mx-auto" />
+                          <ArrowRightLeft className="w-4 h-4 text-nog-400 mx-auto" />
                         </td>
                         <td className="px-4 py-3">
-                          <span className="font-mono text-sm text-amber-600 dark:text-amber-400">
+                          <span className="font-mono text-sm text-honey-600 dark:text-honey-400">
                             {mapping.cim_field}
                           </span>
                         </td>
                         <td className="px-4 py-3">
-                          <span className="text-sm text-slate-600 dark:text-slate-300">
+                          <span className="text-sm text-nog-600 dark:text-nog-300">
                             {mapping.data_model}
                           </span>
                         </td>
                         <td className="px-4 py-3">
                           {mapping.transform ? (
-                            <span className="font-mono text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/30 px-2 py-1 rounded">
+                            <span className="font-mono text-xs text-honey-600 dark:text-honey-400 bg-honey-50 dark:bg-honey-900/30 px-2 py-1 rounded">
                               {mapping.transform}
                             </span>
                           ) : (
-                            <span className="text-slate-400">-</span>
+                            <span className="text-nog-400">-</span>
                           )}
                         </td>
                         <td className="px-4 py-3">
                           {mapping.enabled ? (
-                            <CheckCircle className="w-4 h-4 text-amber-500" />
+                            <CheckCircle className="w-4 h-4 text-honey-500" />
                           ) : (
-                            <XCircle className="w-4 h-4 text-slate-400" />
+                            <XCircle className="w-4 h-4 text-nog-400" />
                           )}
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center justify-end gap-2">
                             <button
                               onClick={() => { setEditingMapping(mapping); setShowMappingForm(true); }}
-                              className="p-1.5 hover:bg-nog-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+                              className="p-1.5 hover:bg-nog-100 dark:hover:bg-nog-700 rounded-lg transition-colors"
                             >
-                              <Edit2 className="w-4 h-4 text-slate-500" />
+                              <Edit2 className="w-4 h-4 text-nog-500" />
                             </button>
                             <button
                               onClick={() => {
@@ -597,18 +597,18 @@ function DataModelFormModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div className="bg-white dark:bg-nog-800 rounded-xl shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+        <div className="flex items-center justify-between p-4 border-b border-nog-200 dark:border-nog-700">
+          <h2 className="text-lg font-semibold text-nog-900 dark:text-nog-100">
             {model ? 'Edit Data Model' : 'Create Data Model'}
           </h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
+          <button onClick={onClose} className="text-nog-400 hover:text-nog-600">
             <XCircle className="w-5 h-5" />
           </button>
         </div>
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
                 Name *
               </label>
               <input
@@ -618,17 +618,17 @@ function DataModelFormModal({
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="e.g., My_Custom_Model"
-                className="w-full px-3 py-2 bg-white dark:bg-nog-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm disabled:opacity-50"
+                className="w-full px-3 py-2 bg-white dark:bg-nog-900 border border-nog-200 dark:border-nog-700 rounded-lg text-sm disabled:opacity-50"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
                 Category
               </label>
               <select
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value as DataModel['category'] })}
-                className="w-full px-3 py-2 bg-white dark:bg-nog-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
+                className="w-full px-3 py-2 bg-white dark:bg-nog-900 border border-nog-200 dark:border-nog-700 rounded-lg text-sm"
               >
                 <option value="authentication">Authentication</option>
                 <option value="network">Network</option>
@@ -639,27 +639,27 @@ function DataModelFormModal({
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+            <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
               Description
             </label>
             <textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               rows={2}
-              className="w-full px-3 py-2 bg-white dark:bg-nog-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
+              className="w-full px-3 py-2 bg-white dark:bg-nog-900 border border-nog-200 dark:border-nog-700 rounded-lg text-sm"
             />
           </div>
 
           {/* Fields */}
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+              <label className="text-sm font-medium text-nog-700 dark:text-nog-300">
                 Fields *
               </label>
               <button
                 type="button"
                 onClick={handleAddField}
-                className="text-sm text-amber-500 hover:text-amber-600"
+                className="text-sm text-honey-500 hover:text-honey-600"
               >
                 + Add Field
               </button>
@@ -673,12 +673,12 @@ function DataModelFormModal({
                     value={field.name}
                     onChange={(e) => handleFieldChange(index, 'name', e.target.value)}
                     placeholder="Field name"
-                    className="flex-1 px-3 py-2 bg-white dark:bg-nog-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
+                    className="flex-1 px-3 py-2 bg-white dark:bg-nog-900 border border-nog-200 dark:border-nog-700 rounded-lg text-sm"
                   />
                   <select
                     value={field.type}
                     onChange={(e) => handleFieldChange(index, 'type', e.target.value)}
-                    className="w-32 px-3 py-2 bg-white dark:bg-nog-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
+                    className="w-32 px-3 py-2 bg-white dark:bg-nog-900 border border-nog-200 dark:border-nog-700 rounded-lg text-sm"
                   >
                     <option value="string">string</option>
                     <option value="number">number</option>
@@ -692,7 +692,7 @@ function DataModelFormModal({
                     value={field.description || ''}
                     onChange={(e) => handleFieldChange(index, 'description', e.target.value)}
                     placeholder="Description"
-                    className="flex-1 px-3 py-2 bg-white dark:bg-nog-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
+                    className="flex-1 px-3 py-2 bg-white dark:bg-nog-900 border border-nog-200 dark:border-nog-700 rounded-lg text-sm"
                   />
                   {formData.fields.length > 1 && (
                     <button
@@ -712,14 +712,14 @@ function DataModelFormModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 dark:text-slate-300"
+              className="px-4 py-2 text-sm font-medium text-nog-600 hover:text-nog-800 dark:text-nog-300"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={mutation.isPending}
-              className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-medium disabled:opacity-50"
+              className="px-4 py-2 bg-honey-500 hover:bg-honey-600 text-nog-900 rounded-lg text-sm font-medium disabled:opacity-50"
             >
               {mutation.isPending ? 'Saving...' : model ? 'Update' : 'Create'}
             </button>
@@ -772,18 +772,18 @@ function FieldMappingFormModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div className="bg-white dark:bg-nog-800 rounded-xl shadow-xl w-full max-w-lg mx-4">
-        <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+        <div className="flex items-center justify-between p-4 border-b border-nog-200 dark:border-nog-700">
+          <h2 className="text-lg font-semibold text-nog-900 dark:text-nog-100">
             {mapping ? 'Edit Field Mapping' : 'Create Field Mapping'}
           </h2>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
+          <button onClick={onClose} className="text-nog-400 hover:text-nog-600">
             <XCircle className="w-5 h-5" />
           </button>
         </div>
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
                 Source Type *
               </label>
               <input
@@ -792,11 +792,11 @@ function FieldMappingFormModal({
                 value={formData.source_type}
                 onChange={(e) => setFormData({ ...formData, source_type: e.target.value })}
                 placeholder="e.g., nginx, sshd, sysmon"
-                className="w-full px-3 py-2 bg-white dark:bg-nog-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
+                className="w-full px-3 py-2 bg-white dark:bg-nog-900 border border-nog-200 dark:border-nog-700 rounded-lg text-sm"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
                 Source Field *
               </label>
               <input
@@ -805,19 +805,19 @@ function FieldMappingFormModal({
                 value={formData.source_field}
                 onChange={(e) => setFormData({ ...formData, source_field: e.target.value })}
                 placeholder="e.g., remote_addr, user"
-                className="w-full px-3 py-2 bg-white dark:bg-nog-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
+                className="w-full px-3 py-2 bg-white dark:bg-nog-900 border border-nog-200 dark:border-nog-700 rounded-lg text-sm"
               />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
                 Data Model *
               </label>
               <select
                 value={formData.data_model}
                 onChange={(e) => setFormData({ ...formData, data_model: e.target.value, cim_field: '' })}
-                className="w-full px-3 py-2 bg-white dark:bg-nog-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
+                className="w-full px-3 py-2 bg-white dark:bg-nog-900 border border-nog-200 dark:border-nog-700 rounded-lg text-sm"
               >
                 {models.map(m => (
                   <option key={m.name} value={m.name}>{m.name}</option>
@@ -825,13 +825,13 @@ function FieldMappingFormModal({
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
                 CIM Field *
               </label>
               <select
                 value={formData.cim_field}
                 onChange={(e) => setFormData({ ...formData, cim_field: e.target.value })}
-                className="w-full px-3 py-2 bg-white dark:bg-nog-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
+                className="w-full px-3 py-2 bg-white dark:bg-nog-900 border border-nog-200 dark:border-nog-700 rounded-lg text-sm"
               >
                 <option value="">Select field...</option>
                 {selectedModel?.fields.map(f => (
@@ -841,7 +841,7 @@ function FieldMappingFormModal({
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+            <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
               Transform (optional)
             </label>
             <input
@@ -849,22 +849,22 @@ function FieldMappingFormModal({
               value={formData.transform}
               onChange={(e) => setFormData({ ...formData, transform: e.target.value })}
               placeholder="e.g., lower(), int(), float() * 1000"
-              className="w-full px-3 py-2 bg-white dark:bg-nog-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
+              className="w-full px-3 py-2 bg-white dark:bg-nog-900 border border-nog-200 dark:border-nog-700 rounded-lg text-sm"
             />
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-nog-500 mt-1">
               Transforms: lower(), upper(), trim(), int(), float(), substr(0,10)
             </p>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
                 Priority
               </label>
               <input
                 type="number"
                 value={formData.priority}
                 onChange={(e) => setFormData({ ...formData, priority: Number(e.target.value) })}
-                className="w-full px-3 py-2 bg-white dark:bg-nog-900 border border-slate-200 dark:border-slate-700 rounded-lg text-sm"
+                className="w-full px-3 py-2 bg-white dark:bg-nog-900 border border-nog-200 dark:border-nog-700 rounded-lg text-sm"
               />
             </div>
             <div className="flex items-end">
@@ -873,9 +873,9 @@ function FieldMappingFormModal({
                   type="checkbox"
                   checked={formData.enabled}
                   onChange={(e) => setFormData({ ...formData, enabled: e.target.checked })}
-                  className="w-4 h-4 text-amber-500 rounded border-slate-300 focus:ring-amber-500"
+                  className="w-4 h-4 text-honey-500 rounded border-nog-300 focus:ring-honey-500"
                 />
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                <span className="text-sm font-medium text-nog-700 dark:text-nog-300">
                   Enabled
                 </span>
               </label>
@@ -885,14 +885,14 @@ function FieldMappingFormModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-slate-600 hover:text-slate-800 dark:text-slate-300"
+              className="px-4 py-2 text-sm font-medium text-nog-600 hover:text-nog-800 dark:text-nog-300"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={mutation.isPending}
-              className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg text-sm font-medium disabled:opacity-50"
+              className="px-4 py-2 bg-honey-500 hover:bg-honey-600 text-nog-900 rounded-lg text-sm font-medium disabled:opacity-50"
             >
               {mutation.isPending ? 'Saving...' : mapping ? 'Update' : 'Create'}
             </button>

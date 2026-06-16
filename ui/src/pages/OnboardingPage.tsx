@@ -575,8 +575,8 @@ function CopyButton({ text, label, size = 'md' }: { text: string; label?: string
       onClick={handleCopy}
       className={`flex items-center gap-2 ${sizeClasses} rounded-lg font-medium transition-all ${
         copied
-          ? 'bg-green-500 text-white'
-          : 'bg-amber-500 hover:bg-amber-600 text-white'
+          ? 'bg-green-500 text-nog-900'
+          : 'bg-honey-500 hover:bg-honey-600 text-nog-900'
       }`}
     >
       {copied ? (
@@ -605,36 +605,36 @@ interface SectionProps {
 
 function CopyableSection({ title, description, icon, content, isExpanded, onToggle }: SectionProps) {
   return (
-    <div className="bg-white dark:bg-nog-800 border border-slate-200 dark:border-nog-700 rounded-xl overflow-hidden">
+    <div className="bg-white dark:bg-nog-800 border border-nog-200 dark:border-nog-700 rounded-xl overflow-hidden">
       {/* Header - always visible */}
       <button
         onClick={onToggle}
         className="w-full flex items-center justify-between p-4 hover:bg-nog-50 dark:hover:bg-nog-700/50 transition-colors"
       >
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+          <div className="p-2 bg-honey-100 dark:bg-honey-900/30 rounded-lg">
             {icon}
           </div>
           <div className="text-left">
-            <h3 className="font-semibold text-slate-900 dark:text-nog-100">{title}</h3>
-            <p className="text-sm text-slate-600 dark:text-nog-400">{description}</p>
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100">{title}</h3>
+            <p className="text-sm text-nog-600 dark:text-nog-400">{description}</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
           <CopyButton text={content} label="Copy" size="sm" />
           {isExpanded ? (
-            <ChevronUp className="w-5 h-5 text-slate-400" />
+            <ChevronUp className="w-5 h-5 text-nog-400" />
           ) : (
-            <ChevronDown className="w-5 h-5 text-slate-400" />
+            <ChevronDown className="w-5 h-5 text-nog-400" />
           )}
         </div>
       </button>
 
       {/* Expandable Content */}
       {isExpanded && (
-        <div className="border-t border-slate-200 dark:border-nog-700">
+        <div className="border-t border-nog-200 dark:border-nog-700">
           <div className="p-4 max-h-[400px] overflow-y-auto bg-nog-50 dark:bg-nog-900">
-            <pre className="text-xs sm:text-sm text-slate-700 dark:text-nog-300 whitespace-pre-wrap font-mono">
+            <pre className="text-xs sm:text-sm text-nog-700 dark:text-nog-300 whitespace-pre-wrap font-mono">
               {content}
             </pre>
           </div>
@@ -668,35 +668,35 @@ export default function OnboardingPage() {
       id: 'overview',
       title: 'What is LogNog?',
       description: 'Overview of LogNog and what apps should send',
-      icon: <Sparkles className="w-5 h-5 text-amber-600 dark:text-amber-400" />,
+      icon: <Sparkles className="w-5 h-5 text-honey-600 dark:text-honey-400" />,
       content: OVERVIEW_CONTENT,
     },
     {
       id: 'code',
       title: 'Integration Code',
       description: 'TypeScript logger with env vars and examples',
-      icon: <Code className="w-5 h-5 text-amber-600 dark:text-amber-400" />,
+      icon: <Code className="w-5 h-5 text-honey-600 dark:text-honey-400" />,
       content: INTEGRATION_CODE_CONTENT,
     },
     {
       id: 'dashboards',
       title: 'Dashboard Strategy',
       description: 'Standard dashboards and panel recommendations',
-      icon: <LayoutDashboard className="w-5 h-5 text-amber-600 dark:text-amber-400" />,
+      icon: <LayoutDashboard className="w-5 h-5 text-honey-600 dark:text-honey-400" />,
       content: DASHBOARD_STRATEGY_CONTENT,
     },
     {
       id: 'alerts',
       title: 'Alert Templates',
       description: 'Critical, high, medium, and low priority alerts',
-      icon: <Bell className="w-5 h-5 text-amber-600 dark:text-amber-400" />,
+      icon: <Bell className="w-5 h-5 text-honey-600 dark:text-honey-400" />,
       content: ALERT_TEMPLATES_CONTENT,
     },
     {
       id: 'queries',
       title: 'Query Examples',
       description: 'Common DSL patterns and use cases',
-      icon: <Search className="w-5 h-5 text-amber-600 dark:text-amber-400" />,
+      icon: <Search className="w-5 h-5 text-honey-600 dark:text-honey-400" />,
       content: QUERY_EXAMPLES_CONTENT,
     },
   ];
@@ -704,17 +704,17 @@ export default function OnboardingPage() {
   return (
     <div className="min-h-full bg-nog-50 dark:bg-nog-900">
       {/* Header */}
-      <div className="bg-white dark:bg-nog-800 border-b border-slate-200 dark:border-nog-700 shadow-sm">
+      <div className="bg-white dark:bg-nog-800 border-b border-nog-200 dark:border-nog-700 shadow-sm">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
           <div className="flex items-center gap-3 mb-3">
-            <div className="p-2 bg-gradient-to-br from-amber-500 to-amber-500 rounded-xl">
+            <div className="p-2 bg-honey-500 rounded-xl">
               <Bot className="w-6 h-6 text-white" />
             </div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-nog-100">
+            <h1 className="text-2xl sm:text-3xl font-bold text-nog-900 dark:text-nog-100">
               AI Integration Kit
             </h1>
           </div>
-          <p className="text-slate-600 dark:text-nog-400">
+          <p className="text-nog-600 dark:text-nog-400">
             Copy these instructions and give them to any AI assistant to integrate your app with LogNog.
           </p>
         </div>
@@ -723,17 +723,17 @@ export default function OnboardingPage() {
       {/* Main Content */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
         {/* Master Copy All Button */}
-        <div className="bg-gradient-to-r from-amber-50 to-amber-50 dark:from-amber-900/20 dark:to-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-6 mb-8">
+        <div className="bg-honey-50 dark:from-honey-900/20 dark:to-honey-900/20 border border-honey-200 dark:border-honey-800 rounded-xl p-6 mb-8">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-start gap-4">
               <div className="p-3 bg-white dark:bg-nog-800 rounded-lg shadow-sm">
-                <Zap className="w-6 h-6 text-amber-500" />
+                <Zap className="w-6 h-6 text-honey-500" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-slate-900 dark:text-nog-100 mb-1">
+                <h2 className="text-lg font-semibold text-nog-900 dark:text-nog-100 mb-1">
                   Copy Everything for AI
                 </h2>
-                <p className="text-sm text-slate-600 dark:text-nog-400">
+                <p className="text-sm text-nog-600 dark:text-nog-400">
                   One click to copy all sections - overview, code, dashboards, alerts, and queries.
                   Give this to any AI assistant to fully integrate your app.
                 </p>
@@ -756,40 +756,40 @@ export default function OnboardingPage() {
         </div>
 
         {/* How to Use */}
-        <div className="bg-white dark:bg-nog-800 border border-slate-200 dark:border-nog-700 rounded-xl p-6">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-nog-100 mb-4">
+        <div className="bg-white dark:bg-nog-800 border border-nog-200 dark:border-nog-700 rounded-xl p-6">
+          <h2 className="text-lg font-semibold text-nog-900 dark:text-nog-100 mb-4">
             How to Use
           </h2>
           <ol className="space-y-3">
             <li className="flex items-start gap-3">
-              <span className="flex-shrink-0 w-6 h-6 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-full flex items-center justify-center text-sm font-medium">
+              <span className="flex-shrink-0 w-6 h-6 bg-honey-100 dark:bg-honey-900/30 text-honey-700 dark:text-honey-400 rounded-full flex items-center justify-center text-sm font-medium">
                 1
               </span>
-              <span className="text-slate-600 dark:text-nog-400">
+              <span className="text-nog-600 dark:text-nog-400">
                 Click <strong>"Copy All"</strong> to get the complete integration guide, or copy individual sections
               </span>
             </li>
             <li className="flex items-start gap-3">
-              <span className="flex-shrink-0 w-6 h-6 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-full flex items-center justify-center text-sm font-medium">
+              <span className="flex-shrink-0 w-6 h-6 bg-honey-100 dark:bg-honey-900/30 text-honey-700 dark:text-honey-400 rounded-full flex items-center justify-center text-sm font-medium">
                 2
               </span>
-              <span className="text-slate-600 dark:text-nog-400">
+              <span className="text-nog-600 dark:text-nog-400">
                 Paste into your AI assistant (Claude, ChatGPT, Cursor, Copilot)
               </span>
             </li>
             <li className="flex items-start gap-3">
-              <span className="flex-shrink-0 w-6 h-6 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-full flex items-center justify-center text-sm font-medium">
+              <span className="flex-shrink-0 w-6 h-6 bg-honey-100 dark:bg-honey-900/30 text-honey-700 dark:text-honey-400 rounded-full flex items-center justify-center text-sm font-medium">
                 3
               </span>
-              <span className="text-slate-600 dark:text-nog-400">
+              <span className="text-nog-600 dark:text-nog-400">
                 Tell the AI your app name (e.g., "Integrate LogNog into my app called directors-palette")
               </span>
             </li>
             <li className="flex items-start gap-3">
-              <span className="flex-shrink-0 w-6 h-6 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-full flex items-center justify-center text-sm font-medium">
+              <span className="flex-shrink-0 w-6 h-6 bg-honey-100 dark:bg-honey-900/30 text-honey-700 dark:text-honey-400 rounded-full flex items-center justify-center text-sm font-medium">
                 4
               </span>
-              <span className="text-slate-600 dark:text-nog-400">
+              <span className="text-nog-600 dark:text-nog-400">
                 Get your API key from <strong>Settings → API Keys</strong> and add it to your .env file
               </span>
             </li>
@@ -797,22 +797,22 @@ export default function OnboardingPage() {
         </div>
 
         {/* Current Integrations */}
-        <div className="mt-8 bg-white dark:bg-nog-800 border border-slate-200 dark:border-nog-700 rounded-xl p-6">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-nog-100 mb-4">
+        <div className="mt-8 bg-white dark:bg-nog-800 border border-nog-200 dark:border-nog-700 rounded-xl p-6">
+          <h2 className="text-lg font-semibold text-nog-900 dark:text-nog-100 mb-4">
             Current Integrations
           </h2>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-slate-200 dark:border-nog-700">
-                  <th className="text-left py-2 px-3 font-medium text-slate-700 dark:text-nog-300">App</th>
-                  <th className="text-left py-2 px-3 font-medium text-slate-700 dark:text-nog-300">Index Name</th>
-                  <th className="text-left py-2 px-3 font-medium text-slate-700 dark:text-nog-300">Status</th>
+                <tr className="border-b border-nog-200 dark:border-nog-700">
+                  <th className="text-left py-2 px-3 font-medium text-nog-700 dark:text-nog-300">App</th>
+                  <th className="text-left py-2 px-3 font-medium text-nog-700 dark:text-nog-300">Index Name</th>
+                  <th className="text-left py-2 px-3 font-medium text-nog-700 dark:text-nog-300">Status</th>
                 </tr>
               </thead>
               <tbody>
-                <tr className="border-b border-slate-100 dark:border-nog-700/50">
-                  <td className="py-2 px-3 text-slate-900 dark:text-nog-100">Hey You're Hired</td>
+                <tr className="border-b border-nog-100 dark:border-nog-700/50">
+                  <td className="py-2 px-3 text-nog-900 dark:text-nog-100">Hey You're Hired</td>
                   <td className="py-2 px-3">
                     <code className="text-xs bg-nog-100 dark:bg-nog-900 px-2 py-0.5 rounded">
                       hey-youre-hired
@@ -824,15 +824,15 @@ export default function OnboardingPage() {
                     </span>
                   </td>
                 </tr>
-                <tr className="border-b border-slate-100 dark:border-nog-700/50">
-                  <td className="py-2 px-3 text-slate-900 dark:text-nog-100">Directors Palette</td>
+                <tr className="border-b border-nog-100 dark:border-nog-700/50">
+                  <td className="py-2 px-3 text-nog-900 dark:text-nog-100">Directors Palette</td>
                   <td className="py-2 px-3">
                     <code className="text-xs bg-nog-100 dark:bg-nog-900 px-2 py-0.5 rounded">
                       directors-palette
                     </code>
                   </td>
                   <td className="py-2 px-3">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-honey-100 text-honey-700 dark:bg-honey-900/30 dark:text-honey-400">
                       Pending
                     </span>
                   </td>

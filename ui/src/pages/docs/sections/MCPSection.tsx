@@ -4,14 +4,14 @@ export default function MCPSection() {
   return (
     <div className="space-y-8">
       <section>
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">Claude Desktop Integration (MCP)</h2>
-        <p className="text-slate-600 dark:text-slate-400 mb-4">
+        <h2 className="text-2xl font-bold text-nog-900 dark:text-nog-100 mb-4">Claude Desktop Integration (MCP)</h2>
+        <p className="text-nog-600 dark:text-nog-400 mb-4">
           Connect LogNog to Claude Desktop for AI-powered log management. Ask Claude to search your logs,
           create dashboards, set up alerts, and more using natural language.
         </p>
 
-        <div className="card p-4 bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200 dark:from-amber-900/20 dark:to-orange-900/20 dark:border-amber-800 mb-6">
-          <p className="text-amber-800 dark:text-amber-300">
+        <div className="card p-4 bg-honey-50 border-honey-200 dark:from-honey-900/20 dark:to-honey-900/20 dark:border-honey-800 mb-6">
+          <p className="text-honey-800 dark:text-honey-300">
             <strong>Model Context Protocol (MCP)</strong> is an open standard that allows AI assistants like Claude
             to securely interact with external tools and data sources - all while keeping your data on your own infrastructure.
           </p>
@@ -19,18 +19,18 @@ export default function MCPSection() {
       </section>
 
       <section>
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">Quick Start</h2>
+        <h2 className="text-2xl font-bold text-nog-900 dark:text-nog-100 mb-4">Quick Start</h2>
         <div className="space-y-4">
           <div className="card p-4 dark:bg-nog-800">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">1. Generate an API Key</h3>
-            <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">1. Generate an API Key</h3>
+            <p className="text-sm text-nog-600 dark:text-nog-400 mb-2">
               Go to <strong>Settings → API Keys</strong> and create a new key for Claude Desktop.
             </p>
           </div>
 
           <div className="card p-4 dark:bg-nog-800">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">2. Configure Claude Desktop</h3>
-            <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">2. Configure Claude Desktop</h3>
+            <p className="text-sm text-nog-600 dark:text-nog-400 mb-2">
               Add this to your <code className="code">claude_desktop_config.json</code>:
             </p>
             <CodeBlock code={`{
@@ -45,23 +45,23 @@ export default function MCPSection() {
     }
   }
 }`} />
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+            <p className="text-xs text-nog-500 dark:text-nog-400 mt-2">
               <strong>macOS:</strong> ~/Library/Application Support/Claude/claude_desktop_config.json<br />
               <strong>Windows:</strong> %APPDATA%\Claude\claude_desktop_config.json
             </p>
           </div>
 
           <div className="card p-4 dark:bg-nog-800">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">3. Restart Claude Desktop</h3>
-            <p className="text-sm text-slate-600 dark:text-slate-400">
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">3. Restart Claude Desktop</h3>
+            <p className="text-sm text-nog-600 dark:text-nog-400">
               Close and reopen Claude Desktop. You should see LogNog in the MCP servers list.
             </p>
           </div>
 
           <div className="card p-4 dark:bg-nog-800">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">4. Start Chatting!</h3>
-            <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">Try these example prompts:</p>
-            <ul className="text-sm text-slate-600 dark:text-slate-400 space-y-1">
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">4. Start Chatting!</h3>
+            <p className="text-sm text-nog-600 dark:text-nog-400 mb-2">Try these example prompts:</p>
+            <ul className="text-sm text-nog-600 dark:text-nog-400 space-y-1">
               <li>• "Show me error logs from the last hour"</li>
               <li>• "Create a dashboard for nginx traffic"</li>
               <li>• "Set up an alert for failed SSH logins"</li>
@@ -72,8 +72,8 @@ export default function MCPSection() {
       </section>
 
       <section>
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">Available Tools</h2>
-        <p className="text-slate-600 dark:text-slate-400 mb-4">
+        <h2 className="text-2xl font-bold text-nog-900 dark:text-nog-100 mb-4">Available Tools</h2>
+        <p className="text-nog-600 dark:text-nog-400 mb-4">
           Claude can use these tools to interact with LogNog:
         </p>
 
@@ -124,8 +124,8 @@ export default function MCPSection() {
       </section>
 
       <section>
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">Available Resources</h2>
-        <p className="text-slate-600 dark:text-slate-400 mb-4">
+        <h2 className="text-2xl font-bold text-nog-900 dark:text-nog-100 mb-4">Available Resources</h2>
+        <p className="text-nog-600 dark:text-nog-400 mb-4">
           Claude can read these resources from LogNog:
         </p>
 
@@ -172,33 +172,33 @@ export default function MCPSection() {
       </section>
 
       <section>
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">Example Conversations</h2>
+        <h2 className="text-2xl font-bold text-nog-900 dark:text-nog-100 mb-4">Example Conversations</h2>
         <div className="space-y-4">
           <div className="card p-4 dark:bg-nog-800">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Investigating an Issue</h3>
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">Investigating an Issue</h3>
             <div className="space-y-2 text-sm">
-              <p className="text-slate-600 dark:text-slate-400">
+              <p className="text-nog-600 dark:text-nog-400">
                 <strong>You:</strong> "I'm seeing slow response times. Can you check the logs for any errors in the last 30 minutes?"
               </p>
-              <p className="text-slate-600 dark:text-slate-400">
+              <p className="text-nog-600 dark:text-nog-400">
                 <strong>Claude:</strong> <em>Searches logs for severity ≤ 3 in the last 30 minutes, summarizes findings</em>
               </p>
-              <p className="text-slate-600 dark:text-slate-400">
+              <p className="text-nog-600 dark:text-nog-400">
                 <strong>You:</strong> "Create a dashboard so I can monitor this going forward"
               </p>
-              <p className="text-slate-600 dark:text-slate-400">
+              <p className="text-nog-600 dark:text-nog-400">
                 <strong>Claude:</strong> <em>Creates a dashboard with relevant panels for monitoring</em>
               </p>
             </div>
           </div>
 
           <div className="card p-4 dark:bg-nog-800">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Setting Up Alerting</h3>
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">Setting Up Alerting</h3>
             <div className="space-y-2 text-sm">
-              <p className="text-slate-600 dark:text-slate-400">
+              <p className="text-nog-600 dark:text-nog-400">
                 <strong>You:</strong> "Set up an alert for when there are more than 10 failed SSH logins from the same IP in 5 minutes"
               </p>
-              <p className="text-slate-600 dark:text-slate-400">
+              <p className="text-nog-600 dark:text-nog-400">
                 <strong>Claude:</strong> <em>Creates an alert with the appropriate DSL query and threshold</em>
               </p>
             </div>
@@ -207,7 +207,7 @@ export default function MCPSection() {
       </section>
 
       <section>
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">API Endpoints</h2>
+        <h2 className="text-2xl font-bold text-nog-900 dark:text-nog-100 mb-4">API Endpoints</h2>
         <div className="overflow-x-auto">
           <table className="table card dark:bg-nog-800">
             <thead>
@@ -239,8 +239,8 @@ export default function MCPSection() {
       </section>
 
       <section>
-        <div className="card p-4 bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800">
-          <p className="text-amber-800 dark:text-amber-300 text-sm">
+        <div className="card p-4 bg-honey-50 border-honey-200 dark:bg-honey-900/20 dark:border-honey-800">
+          <p className="text-honey-800 dark:text-honey-300 text-sm">
             <strong>Full Documentation:</strong> For more details, troubleshooting, and advanced configuration,
             see the <a href="https://github.com/machinekinglabs/lognog/blob/main/docs/MCP-INTEGRATION.md" className="underline hover:no-underline" target="_blank" rel="noopener noreferrer">MCP Integration Guide</a> on GitHub.
           </p>

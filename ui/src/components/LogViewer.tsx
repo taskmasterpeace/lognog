@@ -42,12 +42,12 @@ interface LogViewerProps {
 const SEVERITY_CONFIG = {
   0: { name: 'Emergency', color: 'text-red-700 bg-red-100 ring-red-600/30', bgColor: 'bg-red-50/50' },
   1: { name: 'Alert', color: 'text-red-700 bg-red-100 ring-red-600/30', bgColor: 'bg-red-50/50' },
-  2: { name: 'Critical', color: 'text-orange-700 bg-orange-100 ring-orange-600/30', bgColor: 'bg-orange-50/50' },
+  2: { name: 'Critical', color: 'text-honey-700 bg-honey-100 ring-honey-600/30', bgColor: 'bg-honey-50/50' },
   3: { name: 'Error', color: 'text-red-700 bg-red-100 ring-red-600/30', bgColor: 'bg-red-50/50' },
-  4: { name: 'Warning', color: 'text-amber-700 bg-amber-100 ring-amber-600/30', bgColor: 'bg-amber-50/50' },
-  5: { name: 'Notice', color: 'text-amber-700 bg-amber-100 ring-amber-600/30', bgColor: 'bg-amber-50/50' },
-  6: { name: 'Info', color: 'text-amber-700 bg-amber-100 ring-amber-600/30', bgColor: 'bg-amber-50/50' },
-  7: { name: 'Debug', color: 'text-slate-700 dark:text-slate-300 bg-nog-100 dark:bg-nog-800 ring-slate-600/30', bgColor: 'bg-nog-50/50 dark:bg-nog-800/50' },
+  4: { name: 'Warning', color: 'text-honey-700 bg-honey-100 ring-honey-600/30', bgColor: 'bg-honey-50/50' },
+  5: { name: 'Notice', color: 'text-honey-700 bg-honey-100 ring-honey-600/30', bgColor: 'bg-honey-50/50' },
+  6: { name: 'Info', color: 'text-honey-700 bg-honey-100 ring-honey-600/30', bgColor: 'bg-honey-50/50' },
+  7: { name: 'Debug', color: 'text-nog-700 dark:text-nog-300 bg-nog-100 dark:bg-nog-800 ring-nog-600/30', bgColor: 'bg-nog-50/50 dark:bg-nog-800/50' },
 };
 
 // Helper function to get relative time
@@ -89,7 +89,7 @@ const highlightText = (text: string, searchTerms?: string[]): JSX.Element => {
         parts.forEach((p, i) => {
           if (p.toLowerCase() === term.toLowerCase()) {
             newResult.push(
-              <mark key={`${term}-${i}`} className="bg-yellow-200 dark:bg-yellow-500/30 text-slate-900 dark:text-yellow-200 px-0.5 rounded">
+              <mark key={`${term}-${i}`} className="bg-yellow-200 dark:bg-yellow-500/30 text-nog-900 dark:text-yellow-200 px-0.5 rounded">
                 {p}
               </mark>
             );
@@ -160,16 +160,16 @@ const FieldValue: React.FC<FieldValueProps> = ({ field, value, onAddFilter, sear
   const renderValue = () => {
     if (field === 'severity' && typeof value === 'number') {
       return (
-        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ring-1 ${SEVERITY_CONFIG[value as keyof typeof SEVERITY_CONFIG]?.color || 'text-slate-700 dark:text-slate-300 bg-nog-100 dark:bg-nog-800 ring-slate-600/30'}`}>
+        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ring-1 ${SEVERITY_CONFIG[value as keyof typeof SEVERITY_CONFIG]?.color || 'text-nog-700 dark:text-nog-300 bg-nog-100 dark:bg-nog-800 ring-nog-600/30'}`}>
           {SEVERITY_CONFIG[value as keyof typeof SEVERITY_CONFIG]?.name || value}
         </span>
       );
     }
     if (field === 'timestamp') {
       return (
-        <span className="text-slate-600 dark:text-slate-400 flex items-center gap-2">
+        <span className="text-nog-600 dark:text-nog-400 flex items-center gap-2">
           <span>{formatDate(valueStr)}</span>
-          <span className="text-xs text-slate-400">({getRelativeTime(valueStr)})</span>
+          <span className="text-xs text-nog-400">({getRelativeTime(valueStr)})</span>
         </span>
       );
     }
@@ -202,7 +202,7 @@ const FieldValue: React.FC<FieldValueProps> = ({ field, value, onAddFilter, sear
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
         >
-          <div className="bg-white dark:bg-nog-800 border border-slate-200 dark:border-nog-700 rounded-lg shadow-lg p-1 flex gap-1 whitespace-nowrap animate-fade-in">
+          <div className="bg-white dark:bg-nog-800 border border-nog-200 dark:border-nog-700 rounded-lg shadow-lg p-1 flex gap-1 whitespace-nowrap animate-fade-in">
             <button
               onClick={() => onAddFilter(field, valueStr, false)}
               className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-green-700 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 rounded transition-colors"
@@ -221,7 +221,7 @@ const FieldValue: React.FC<FieldValueProps> = ({ field, value, onAddFilter, sear
             </button>
             <button
               onClick={handleCopy}
-              className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-slate-700 dark:text-nog-300 hover:bg-nog-50 dark:hover:bg-nog-700 rounded transition-colors"
+              className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-nog-700 dark:text-nog-300 hover:bg-nog-50 dark:hover:bg-nog-700 rounded transition-colors"
               title="Copy value"
             >
               {copied ? (
@@ -334,7 +334,7 @@ const LogRow: React.FC<LogRowProps> = ({
   return (
     <div
       style={style}
-      className={`border-b border-slate-200 dark:border-nog-700 transition-colors ${
+      className={`border-b border-nog-200 dark:border-nog-700 transition-colors ${
         isExpanded ? severityConfig.bgColor : 'hover:bg-nog-50 dark:hover:bg-nog-800'
       }`}
     >
@@ -342,13 +342,13 @@ const LogRow: React.FC<LogRowProps> = ({
         {/* Expand/Collapse Button */}
         <button
           onClick={() => onToggleExpand(index)}
-          className="mt-1 p-1 hover:bg-slate-200 dark:hover:bg-nog-700 rounded transition-colors flex-shrink-0"
+          className="mt-1 p-1 hover:bg-nog-200 dark:hover:bg-nog-700 rounded transition-colors flex-shrink-0"
           aria-label={isExpanded ? 'Collapse' : 'Expand'}
         >
           {isExpanded ? (
-            <ChevronDown className="w-4 h-4 text-slate-600 dark:text-nog-400" />
+            <ChevronDown className="w-4 h-4 text-nog-600 dark:text-nog-400" />
           ) : (
-            <ChevronRight className="w-4 h-4 text-slate-600 dark:text-nog-400" />
+            <ChevronRight className="w-4 h-4 text-nog-600 dark:text-nog-400" />
           )}
         </button>
 
@@ -357,7 +357,7 @@ const LogRow: React.FC<LogRowProps> = ({
           {/* Collapsed View - Single Line */}
           {!isExpanded && (
             <div className="flex items-start gap-3 text-sm">
-              <span className="text-slate-500 dark:text-nog-400 font-mono text-xs whitespace-nowrap flex-shrink-0 w-40">
+              <span className="text-nog-500 dark:text-nog-400 font-mono text-xs whitespace-nowrap flex-shrink-0 w-40">
                 {log.timestamp ? formatDate(log.timestamp) : '—'}
               </span>
 
@@ -374,16 +374,16 @@ const LogRow: React.FC<LogRowProps> = ({
               )}
 
               {log.app_name && (
-                <span className="text-amber-600 dark:text-amber-400 font-mono text-xs flex-shrink-0">
+                <span className="text-honey-600 dark:text-honey-400 font-mono text-xs flex-shrink-0">
                   {log.app_name}
                 </span>
               )}
 
-              <span className="text-slate-700 dark:text-nog-200 font-mono text-xs truncate">
+              <span className="text-nog-700 dark:text-nog-200 font-mono text-xs truncate">
                 {log.message ? highlightText(log.message, searchTerms) : '—'}
               </span>
               {log.message_truncated && (
-                <span className="ml-2 text-amber-500 dark:text-amber-400 text-xs flex-shrink-0">[truncated]</span>
+                <span className="ml-2 text-honey-500 dark:text-honey-400 text-xs flex-shrink-0">[truncated]</span>
               )}
             </div>
           )}
@@ -392,14 +392,14 @@ const LogRow: React.FC<LogRowProps> = ({
           {isExpanded && (
             <div className="space-y-2">
               {/* View Toggle */}
-              <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-nog-700">
+              <div className="flex items-center justify-between pb-2 border-b border-nog-200 dark:border-nog-700">
                 <div className="flex items-center gap-1 bg-nog-100 dark:bg-nog-700 rounded-lg p-0.5">
                   <button
                     onClick={() => setShowJson(false)}
                     className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium transition-colors ${
                       !showJson
-                        ? 'bg-white dark:bg-nog-600 text-slate-900 dark:text-nog-100 shadow-sm'
-                        : 'text-slate-600 dark:text-nog-400 hover:text-slate-900 dark:hover:text-nog-100'
+                        ? 'bg-white dark:bg-nog-600 text-nog-900 dark:text-nog-100 shadow-sm'
+                        : 'text-nog-600 dark:text-nog-400 hover:text-nog-900 dark:hover:text-nog-100'
                     }`}
                   >
                     <List className="w-3 h-3" />
@@ -409,8 +409,8 @@ const LogRow: React.FC<LogRowProps> = ({
                     onClick={() => setShowJson(true)}
                     className={`flex items-center gap-1.5 px-2 py-1 rounded text-xs font-medium transition-colors ${
                       showJson
-                        ? 'bg-white dark:bg-nog-600 text-slate-900 dark:text-nog-100 shadow-sm'
-                        : 'text-slate-600 dark:text-nog-400 hover:text-slate-900 dark:hover:text-nog-100'
+                        ? 'bg-white dark:bg-nog-600 text-nog-900 dark:text-nog-100 shadow-sm'
+                        : 'text-nog-600 dark:text-nog-400 hover:text-nog-900 dark:hover:text-nog-100'
                     }`}
                   >
                     <Code className="w-3 h-3" />
@@ -419,7 +419,7 @@ const LogRow: React.FC<LogRowProps> = ({
                 </div>
                 <button
                   onClick={copyJson}
-                  className="flex items-center gap-1 px-2 py-1 text-xs text-slate-500 dark:text-nog-400 hover:text-slate-700 dark:hover:text-nog-200 hover:bg-nog-100 dark:hover:bg-nog-700 rounded transition-colors"
+                  className="flex items-center gap-1 px-2 py-1 text-xs text-nog-500 dark:text-nog-400 hover:text-nog-700 dark:hover:text-nog-200 hover:bg-nog-100 dark:hover:bg-nog-700 rounded transition-colors"
                   title="Copy as JSON"
                 >
                   {copied ? (
@@ -438,7 +438,7 @@ const LogRow: React.FC<LogRowProps> = ({
 
               {/* JSON View */}
               {showJson ? (
-                <pre className="text-xs font-mono text-slate-700 dark:text-nog-300 bg-slate-50 dark:bg-nog-900 p-3 rounded-lg overflow-x-auto whitespace-pre-wrap break-words max-h-96 overflow-y-auto">
+                <pre className="text-xs font-mono text-nog-700 dark:text-nog-300 bg-nog-50 dark:bg-nog-900 p-3 rounded-lg overflow-x-auto whitespace-pre-wrap break-words max-h-96 overflow-y-auto">
                   {JSON.stringify(log, null, 2)}
                 </pre>
               ) : (
@@ -449,7 +449,7 @@ const LogRow: React.FC<LogRowProps> = ({
                   if (log[field] === undefined) return null;
                   return (
                     <div key={field} className="flex items-start gap-2">
-                      <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase w-24 flex-shrink-0 mt-0.5">
+                      <span className="text-xs font-semibold text-nog-500 dark:text-nog-400 uppercase w-24 flex-shrink-0 mt-0.5">
                         {field}:
                       </span>
                       <div className="flex-1 min-w-0">
@@ -471,7 +471,7 @@ const LogRow: React.FC<LogRowProps> = ({
                 {log.message_truncated && log.id && onLoadFullMessage && (
                   <button
                     onClick={() => onLoadFullMessage(log.id!)}
-                    className="text-xs text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 flex items-center gap-1 font-medium"
+                    className="text-xs text-honey-600 hover:text-honey-700 dark:text-honey-400 dark:hover:text-honey-300 flex items-center gap-1 font-medium"
                   >
                     <Maximize2 className="w-3 h-3" />
                     Show full message
@@ -481,7 +481,7 @@ const LogRow: React.FC<LogRowProps> = ({
                 {log.id && onViewContext && (
                   <button
                     onClick={() => onViewContext(log.id!)}
-                    className="text-xs text-slate-600 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 flex items-center gap-1 font-medium"
+                    className="text-xs text-nog-600 hover:text-nog-700 dark:text-nog-400 dark:hover:text-nog-300 flex items-center gap-1 font-medium"
                   >
                     <Layers className="w-3 h-3" />
                     View context
@@ -492,7 +492,7 @@ const LogRow: React.FC<LogRowProps> = ({
                   <button
                     onClick={handleAiDiagnosis}
                     disabled={aiDiagnosis.loading}
-                    className="text-xs text-purple-600 hover:text-purple-700 dark:text-purple-400 dark:hover:text-purple-300 flex items-center gap-1 font-medium disabled:opacity-50"
+                    className="text-xs text-honey-600 hover:text-honey-700 dark:text-honey-400 dark:hover:text-honey-300 flex items-center gap-1 font-medium disabled:opacity-50"
                   >
                     {aiDiagnosis.loading ? (
                       <>
@@ -520,43 +520,43 @@ const LogRow: React.FC<LogRowProps> = ({
               )}
 
               {aiDiagnosis.data && (
-                <div className="mt-3 p-4 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg space-y-3">
+                <div className="mt-3 p-4 bg-honey-50 dark:bg-honey-900/20 border border-honey-200 dark:border-honey-800 rounded-lg space-y-3">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-purple-700 dark:text-purple-400">
+                    <div className="flex items-center gap-2 text-honey-700 dark:text-honey-400">
                       <Sparkles className="w-4 h-4" />
                       <span className="font-semibold text-sm">AI Error Analysis</span>
                       {aiDiagnosis.data.model && (
-                        <span className="text-xs text-purple-500 dark:text-purple-500">
+                        <span className="text-xs text-honey-500 dark:text-honey-500">
                           ({aiDiagnosis.data.model})
                         </span>
                       )}
                     </div>
                     <button
                       onClick={() => setAiDiagnosis({ loading: false, data: null, error: null })}
-                      className="p-1 hover:bg-purple-100 dark:hover:bg-purple-900/50 rounded"
+                      className="p-1 hover:bg-honey-100 dark:hover:bg-honey-900/50 rounded"
                       title="Dismiss"
                     >
-                      <X className="w-3 h-3 text-purple-500" />
+                      <X className="w-3 h-3 text-honey-500" />
                     </button>
                   </div>
 
                   {/* Summary */}
                   <div>
-                    <h4 className="text-xs font-semibold text-purple-700 dark:text-purple-400 uppercase mb-1">Summary</h4>
-                    <p className="text-sm text-slate-700 dark:text-slate-300">{aiDiagnosis.data.diagnosis.summary}</p>
+                    <h4 className="text-xs font-semibold text-honey-700 dark:text-honey-400 uppercase mb-1">Summary</h4>
+                    <p className="text-sm text-nog-700 dark:text-nog-300">{aiDiagnosis.data.diagnosis.summary}</p>
                   </div>
 
                   {/* Root Cause */}
                   <div>
-                    <h4 className="text-xs font-semibold text-purple-700 dark:text-purple-400 uppercase mb-1">Root Cause</h4>
-                    <p className="text-sm text-slate-700 dark:text-slate-300">{aiDiagnosis.data.diagnosis.root_cause}</p>
+                    <h4 className="text-xs font-semibold text-honey-700 dark:text-honey-400 uppercase mb-1">Root Cause</h4>
+                    <p className="text-sm text-nog-700 dark:text-nog-300">{aiDiagnosis.data.diagnosis.root_cause}</p>
                   </div>
 
                   {/* Severity Assessment */}
                   <div className="flex items-center gap-2">
-                    <h4 className="text-xs font-semibold text-purple-700 dark:text-purple-400 uppercase">Severity:</h4>
-                    <span className="text-sm text-slate-700 dark:text-slate-300">{aiDiagnosis.data.diagnosis.severity_assessment}</span>
-                    <span className="text-xs text-purple-500">
+                    <h4 className="text-xs font-semibold text-honey-700 dark:text-honey-400 uppercase">Severity:</h4>
+                    <span className="text-sm text-nog-700 dark:text-nog-300">{aiDiagnosis.data.diagnosis.severity_assessment}</span>
+                    <span className="text-xs text-honey-500">
                       ({Math.round(aiDiagnosis.data.diagnosis.confidence * 100)}% confidence)
                     </span>
                   </div>
@@ -564,10 +564,10 @@ const LogRow: React.FC<LogRowProps> = ({
                   {/* Suggested Fixes */}
                   {aiDiagnosis.data.diagnosis.suggested_fixes.length > 0 && (
                     <div>
-                      <h4 className="text-xs font-semibold text-purple-700 dark:text-purple-400 uppercase mb-1">Suggested Fixes</h4>
+                      <h4 className="text-xs font-semibold text-honey-700 dark:text-honey-400 uppercase mb-1">Suggested Fixes</h4>
                       <ul className="list-disc list-inside space-y-1">
                         {aiDiagnosis.data.diagnosis.suggested_fixes.map((fix, i) => (
-                          <li key={i} className="text-sm text-slate-700 dark:text-slate-300">{fix}</li>
+                          <li key={i} className="text-sm text-nog-700 dark:text-nog-300">{fix}</li>
                         ))}
                       </ul>
                     </div>
@@ -576,10 +576,10 @@ const LogRow: React.FC<LogRowProps> = ({
                   {/* Related Patterns */}
                   {aiDiagnosis.data.diagnosis.related_patterns.length > 0 && (
                     <div>
-                      <h4 className="text-xs font-semibold text-purple-700 dark:text-purple-400 uppercase mb-1">Related Patterns</h4>
+                      <h4 className="text-xs font-semibold text-honey-700 dark:text-honey-400 uppercase mb-1">Related Patterns</h4>
                       <div className="flex flex-wrap gap-1">
                         {aiDiagnosis.data.diagnosis.related_patterns.map((pattern, i) => (
-                          <span key={i} className="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/50 text-purple-700 dark:text-purple-300 rounded text-xs">
+                          <span key={i} className="px-2 py-0.5 bg-honey-100 dark:bg-honey-900/50 text-honey-700 dark:text-honey-300 rounded text-xs">
                             {pattern}
                           </span>
                         ))}
@@ -590,10 +590,10 @@ const LogRow: React.FC<LogRowProps> = ({
                   {/* Follow-up Questions */}
                   {aiDiagnosis.data.diagnosis.follow_up_questions.length > 0 && (
                     <div>
-                      <h4 className="text-xs font-semibold text-purple-700 dark:text-purple-400 uppercase mb-1">Questions to Investigate</h4>
+                      <h4 className="text-xs font-semibold text-honey-700 dark:text-honey-400 uppercase mb-1">Questions to Investigate</h4>
                       <ul className="list-decimal list-inside space-y-1">
                         {aiDiagnosis.data.diagnosis.follow_up_questions.map((q, i) => (
-                          <li key={i} className="text-sm text-slate-600 dark:text-slate-400">{q}</li>
+                          <li key={i} className="text-sm text-nog-600 dark:text-nog-400">{q}</li>
                         ))}
                       </ul>
                     </div>
@@ -604,15 +604,15 @@ const LogRow: React.FC<LogRowProps> = ({
               {/* Structured Data Fields (parsed from JSON) */}
               {structuredFields.length > 0 && (
                 <>
-                  <div className="border-t border-slate-200 dark:border-nog-700 pt-2 mt-2">
-                    <span className="text-xs font-semibold text-amber-600 dark:text-amber-400 uppercase">
+                  <div className="border-t border-nog-200 dark:border-nog-700 pt-2 mt-2">
+                    <span className="text-xs font-semibold text-honey-600 dark:text-honey-400 uppercase">
                       Custom Fields
                     </span>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {structuredFields.map((field) => (
-                      <div key={field} className="flex items-start gap-2 bg-amber-50/50 dark:bg-amber-900/20 rounded px-2 py-1">
-                        <span className="text-xs font-semibold text-amber-700 dark:text-amber-400 min-w-[100px] flex-shrink-0 mt-0.5">
+                      <div key={field} className="flex items-start gap-2 bg-honey-50/50 dark:bg-honey-900/20 rounded px-2 py-1">
+                        <span className="text-xs font-semibold text-honey-700 dark:text-honey-400 min-w-[100px] flex-shrink-0 mt-0.5">
                           {field}:
                         </span>
                         <div className="flex-1 min-w-0">
@@ -632,15 +632,15 @@ const LogRow: React.FC<LogRowProps> = ({
               {/* Additional Fields */}
               {additionalFields.length > 0 && (
                 <>
-                  <div className="border-t border-slate-200 dark:border-nog-700 pt-2 mt-2">
-                    <span className="text-xs font-semibold text-slate-400 dark:text-nog-500 uppercase">
+                  <div className="border-t border-nog-200 dark:border-nog-700 pt-2 mt-2">
+                    <span className="text-xs font-semibold text-nog-400 dark:text-nog-500 uppercase">
                       Additional Fields
                     </span>
                   </div>
                   <div className="grid grid-cols-1 gap-2">
                     {additionalFields.map((field) => (
                       <div key={field} className="flex items-start gap-2">
-                        <span className="text-xs font-semibold text-slate-500 dark:text-nog-400 w-24 flex-shrink-0 mt-0.5">
+                        <span className="text-xs font-semibold text-nog-500 dark:text-nog-400 w-24 flex-shrink-0 mt-0.5">
                           {field}:
                         </span>
                         <div className="flex-1 min-w-0">
@@ -793,10 +793,10 @@ export default function LogViewer({
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
         <div className="w-16 h-16 rounded-full bg-nog-100 dark:bg-nog-800 flex items-center justify-center mb-4">
-          <AlertCircle className="w-8 h-8 text-slate-400" />
+          <AlertCircle className="w-8 h-8 text-nog-400" />
         </div>
-        <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">No Logs Found</h3>
-        <p className="text-slate-500 dark:text-slate-400 max-w-md">
+        <h3 className="text-lg font-semibold text-nog-900 dark:text-nog-100 mb-2">No Logs Found</h3>
+        <p className="text-nog-500 dark:text-nog-400 max-w-md">
           No log entries match your search criteria. Try adjusting your filters or time range.
         </p>
       </div>
@@ -807,8 +807,8 @@ export default function LogViewer({
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
-        <Loader2 className="w-8 h-8 text-amber-500 animate-spin mb-4" />
-        <p className="text-slate-600 dark:text-slate-400">Loading logs...</p>
+        <Loader2 className="w-8 h-8 text-honey-500 animate-spin mb-4" />
+        <p className="text-nog-600 dark:text-nog-400">Loading logs...</p>
       </div>
     );
   }
@@ -816,13 +816,13 @@ export default function LogViewer({
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 bg-nog-50 dark:bg-nog-900 border-b border-slate-200 dark:border-nog-700">
+      <div className="flex items-center justify-between px-4 py-3 bg-nog-50 dark:bg-nog-900 border-b border-nog-200 dark:border-nog-700">
         <div className="flex items-center gap-4">
-          <span className="text-sm font-semibold text-slate-700 dark:text-nog-300">
+          <span className="text-sm font-semibold text-nog-700 dark:text-nog-300">
             {logs.length.toLocaleString()} {logs.length === 1 ? 'log' : 'logs'}
           </span>
           {expandedRows.size > 0 && (
-            <span className="text-xs text-slate-500 dark:text-nog-400">
+            <span className="text-xs text-nog-500 dark:text-nog-400">
               {expandedRows.size} expanded
             </span>
           )}
@@ -830,7 +830,7 @@ export default function LogViewer({
         {expandedRows.size > 0 && (
           <button
             onClick={() => setExpandedRows(new Set())}
-            className="text-xs text-amber-600 hover:text-amber-700 dark:text-amber-400 dark:hover:text-amber-300 font-medium"
+            className="text-xs text-honey-600 hover:text-honey-700 dark:text-honey-400 dark:hover:text-honey-300 font-medium"
           >
             Collapse All
           </button>
@@ -866,7 +866,7 @@ export default function LogViewer({
       </div>
 
       {/* Footer */}
-      <div className="px-4 py-2 bg-nog-50 dark:bg-nog-900 border-t border-slate-200 dark:border-nog-700 text-xs text-slate-500 dark:text-nog-400">
+      <div className="px-4 py-2 bg-nog-50 dark:bg-nog-900 border-t border-nog-200 dark:border-nog-700 text-xs text-nog-500 dark:text-nog-400">
         <span>Click any row to expand. Hover over field values for quick actions.</span>
       </div>
 
@@ -874,37 +874,37 @@ export default function LogViewer({
       {fullMessageModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="bg-white dark:bg-nog-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[80vh] flex flex-col mx-4">
-            <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-nog-700">
-              <h3 className="font-semibold text-slate-900 dark:text-slate-100">Full Message</h3>
+            <div className="flex items-center justify-between p-4 border-b border-nog-200 dark:border-nog-700">
+              <h3 className="font-semibold text-nog-900 dark:text-nog-100">Full Message</h3>
               <button
                 onClick={() => setFullMessageModal({ isOpen: false, logId: null, content: null, loading: false })}
-                className="p-1 hover:bg-slate-100 dark:hover:bg-nog-700 rounded transition-colors"
+                className="p-1 hover:bg-nog-100 dark:hover:bg-nog-700 rounded transition-colors"
               >
-                <X className="w-5 h-5 text-slate-500 dark:text-nog-400" />
+                <X className="w-5 h-5 text-nog-500 dark:text-nog-400" />
               </button>
             </div>
             <div className="flex-1 overflow-auto p-4">
               {fullMessageModal.loading ? (
                 <div className="flex items-center justify-center py-12">
-                  <Loader2 className="w-6 h-6 animate-spin text-amber-500" />
+                  <Loader2 className="w-6 h-6 animate-spin text-honey-500" />
                 </div>
               ) : (
-                <pre className="text-sm font-mono whitespace-pre-wrap break-words text-slate-700 dark:text-nog-200">
+                <pre className="text-sm font-mono whitespace-pre-wrap break-words text-nog-700 dark:text-nog-200">
                   {fullMessageModal.content}
                 </pre>
               )}
             </div>
-            <div className="p-4 border-t border-slate-200 dark:border-nog-700 flex justify-end gap-2">
+            <div className="p-4 border-t border-nog-200 dark:border-nog-700 flex justify-end gap-2">
               <button
                 onClick={() => copyToClipboard(fullMessageModal.content)}
-                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-700 dark:text-nog-300 hover:bg-slate-100 dark:hover:bg-nog-700 rounded transition-colors"
+                className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-nog-700 dark:text-nog-300 hover:bg-nog-100 dark:hover:bg-nog-700 rounded transition-colors"
               >
                 <Copy className="w-4 h-4" />
                 Copy
               </button>
               <button
                 onClick={() => setFullMessageModal({ isOpen: false, logId: null, content: null, loading: false })}
-                className="px-3 py-2 text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 rounded transition-colors"
+                className="px-3 py-2 text-sm font-medium text-nog-900 bg-honey-600 hover:bg-honey-700 rounded transition-colors"
               >
                 Close
               </button>
@@ -946,14 +946,14 @@ function LogContextModal({ data, loading, contextSize, onClose, onChangeSize }: 
 
     return (
       <div
-        className={`px-4 py-2 border-b border-slate-100 dark:border-nog-700 ${
+        className={`px-4 py-2 border-b border-nog-100 dark:border-nog-700 ${
           isTarget
-            ? 'bg-amber-50 dark:bg-amber-900/30 border-l-4 border-l-amber-500'
+            ? 'bg-honey-50 dark:bg-honey-900/30 border-l-4 border-l-honey-500'
             : 'hover:bg-nog-50 dark:hover:bg-nog-800'
         }`}
       >
         <div className="flex items-start gap-3 text-sm">
-          <span className="text-slate-500 dark:text-nog-400 font-mono text-xs whitespace-nowrap flex-shrink-0 w-36">
+          <span className="text-nog-500 dark:text-nog-400 font-mono text-xs whitespace-nowrap flex-shrink-0 w-36">
             {log.timestamp ? formatDate(log.timestamp as string) : '—'}
           </span>
 
@@ -962,17 +962,17 @@ function LogContextModal({ data, loading, contextSize, onClose, onChangeSize }: 
           </span>
 
           {log.app_name ? (
-            <span className="text-amber-600 dark:text-amber-400 font-mono text-xs flex-shrink-0">
+            <span className="text-honey-600 dark:text-honey-400 font-mono text-xs flex-shrink-0">
               {String(log.app_name)}
             </span>
           ) : null}
 
-          <span className="text-slate-700 dark:text-nog-200 font-mono text-xs truncate flex-1">
+          <span className="text-nog-700 dark:text-nog-200 font-mono text-xs truncate flex-1">
             {String(log.message ?? '—')}
           </span>
 
           {isTarget && (
-            <span className="text-amber-600 dark:text-amber-400 text-xs font-semibold flex-shrink-0">
+            <span className="text-honey-600 dark:text-honey-400 text-xs font-semibold flex-shrink-0">
               ← Target
             </span>
           )}
@@ -984,25 +984,25 @@ function LogContextModal({ data, loading, contextSize, onClose, onChangeSize }: 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
       <div className="bg-white dark:bg-nog-800 rounded-lg shadow-xl max-w-5xl w-full max-h-[85vh] flex flex-col mx-4">
-        <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-nog-700">
+        <div className="flex items-center justify-between p-4 border-b border-nog-200 dark:border-nog-700">
           <div className="flex items-center gap-4">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
-              <Layers className="w-5 h-5 text-amber-500" />
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 flex items-center gap-2">
+              <Layers className="w-5 h-5 text-honey-500" />
               Log Context
             </h3>
             {data && (
-              <span className="text-sm text-slate-500 dark:text-slate-400">
+              <span className="text-sm text-nog-500 dark:text-nog-400">
                 {data.hostname} • {data.beforeCount} before, {data.afterCount} after
               </span>
             )}
           </div>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2">
-              <span className="text-xs text-slate-500 dark:text-slate-400">Context:</span>
+              <span className="text-xs text-nog-500 dark:text-nog-400">Context:</span>
               <select
                 value={contextSize}
                 onChange={(e) => onChangeSize(parseInt(e.target.value, 10))}
-                className="text-sm px-2 py-1 border border-slate-200 dark:border-nog-700 rounded bg-white dark:bg-nog-700 text-slate-700 dark:text-slate-300"
+                className="text-sm px-2 py-1 border border-nog-200 dark:border-nog-700 rounded bg-white dark:bg-nog-700 text-nog-700 dark:text-nog-300"
               >
                 {contextSizeOptions.map(size => (
                   <option key={size} value={size}>±{size} logs</option>
@@ -1011,9 +1011,9 @@ function LogContextModal({ data, loading, contextSize, onClose, onChangeSize }: 
             </div>
             <button
               onClick={onClose}
-              className="p-1 hover:bg-slate-100 dark:hover:bg-nog-700 rounded transition-colors"
+              className="p-1 hover:bg-nog-100 dark:hover:bg-nog-700 rounded transition-colors"
             >
-              <X className="w-5 h-5 text-slate-500 dark:text-nog-400" />
+              <X className="w-5 h-5 text-nog-500 dark:text-nog-400" />
             </button>
           </div>
         </div>
@@ -1021,14 +1021,14 @@ function LogContextModal({ data, loading, contextSize, onClose, onChangeSize }: 
         <div className="flex-1 overflow-auto">
           {loading ? (
             <div className="flex items-center justify-center py-16">
-              <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
+              <Loader2 className="w-8 h-8 animate-spin text-honey-500" />
             </div>
           ) : data ? (
-            <div className="divide-y divide-slate-100 dark:divide-nog-700">
+            <div className="divide-y divide-nog-100 dark:divide-nog-700">
               {/* Logs before */}
               {data.before.length > 0 && (
                 <div>
-                  <div className="px-4 py-2 bg-slate-50 dark:bg-nog-900 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">
+                  <div className="px-4 py-2 bg-nog-50 dark:bg-nog-900 text-xs font-semibold text-nog-500 dark:text-nog-400 uppercase">
                     {data.before.length} logs before
                   </div>
                   {data.before.map((log, i) => (
@@ -1039,7 +1039,7 @@ function LogContextModal({ data, loading, contextSize, onClose, onChangeSize }: 
 
               {/* Target log */}
               <div>
-                <div className="px-4 py-2 bg-amber-100 dark:bg-amber-900/50 text-xs font-semibold text-amber-700 dark:text-amber-300 uppercase">
+                <div className="px-4 py-2 bg-honey-100 dark:bg-honey-900/50 text-xs font-semibold text-honey-700 dark:text-honey-300 uppercase">
                   Target Log
                 </div>
                 {renderLogEntry(data.target, true)}
@@ -1048,7 +1048,7 @@ function LogContextModal({ data, loading, contextSize, onClose, onChangeSize }: 
               {/* Logs after */}
               {data.after.length > 0 && (
                 <div>
-                  <div className="px-4 py-2 bg-slate-50 dark:bg-nog-900 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase">
+                  <div className="px-4 py-2 bg-nog-50 dark:bg-nog-900 text-xs font-semibold text-nog-500 dark:text-nog-400 uppercase">
                     {data.after.length} logs after
                   </div>
                   {data.after.map((log, i) => (
@@ -1058,16 +1058,16 @@ function LogContextModal({ data, loading, contextSize, onClose, onChangeSize }: 
               )}
             </div>
           ) : (
-            <div className="flex items-center justify-center py-16 text-slate-500">
+            <div className="flex items-center justify-center py-16 text-nog-500">
               No context data available
             </div>
           )}
         </div>
 
-        <div className="p-4 border-t border-slate-200 dark:border-nog-700 flex justify-end">
+        <div className="p-4 border-t border-nog-200 dark:border-nog-700 flex justify-end">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 rounded transition-colors"
+            className="px-4 py-2 text-sm font-medium text-nog-900 bg-honey-600 hover:bg-honey-700 rounded transition-colors"
           >
             Close
           </button>

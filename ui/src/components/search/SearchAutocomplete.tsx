@@ -158,7 +158,7 @@ export function SearchAutocomplete({
   return (
     <div ref={containerRef} className={`relative ${className}`}>
       {/* Search icon */}
-      <Search className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-slate-400 dark:text-slate-500 pointer-events-none" />
+      <Search className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-nog-400 dark:text-nog-500 pointer-events-none" />
 
       {/* Input */}
       <input
@@ -183,13 +183,13 @@ export function SearchAutocomplete({
           w-full h-11 sm:h-12
           pl-10 sm:pl-12 pr-4
           bg-nog-50 dark:bg-nog-900
-          border border-slate-200 dark:border-nog-700
+          border border-nog-200 dark:border-nog-700
           rounded-lg
-          text-slate-900 dark:text-white
-          placeholder-slate-400 dark:placeholder-slate-500
+          text-nog-900 dark:text-white
+          placeholder-nog-400 dark:placeholder-nog-500
           font-mono text-sm
           transition-all duration-200
-          focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent
+          focus:outline-none focus:ring-2 focus:ring-honey-500 focus:border-transparent
           focus:bg-white dark:focus:bg-nog-800
           disabled:opacity-50 disabled:cursor-not-allowed
         "

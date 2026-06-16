@@ -278,8 +278,8 @@ export default function SavedSearchesPage() {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-full">
-        <Loader2 className="w-10 h-10 text-amber-500 animate-spin mb-4" />
-        <p className="text-slate-600 dark:text-slate-400">Loading saved searches...</p>
+        <Loader2 className="w-10 h-10 text-honey-500 animate-spin mb-4" />
+        <p className="text-nog-600 dark:text-nog-400">Loading saved searches...</p>
       </div>
     );
   }
@@ -303,8 +303,8 @@ export default function SavedSearchesPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Saved Searches</h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-1">
+          <h1 className="text-2xl font-bold text-nog-900 dark:text-white">Saved Searches</h1>
+          <p className="text-nog-600 dark:text-nog-400 mt-1">
             Save, schedule, and reuse your search queries
           </p>
         </div>
@@ -322,7 +322,7 @@ export default function SavedSearchesPage() {
         <div className="flex items-center gap-4 flex-wrap">
           <div className="flex-1 min-w-[200px]">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-nog-400" />
               <input
                 type="text"
                 placeholder="Search by name, query, or description..."
@@ -338,8 +338,8 @@ export default function SavedSearchesPage() {
               onClick={() => setFilters(f => ({ ...f, owner: f.owner === 'mine' ? undefined : 'mine' }))}
               className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                 filters.owner === 'mine'
-                  ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200'
-                  : 'bg-nog-100 text-slate-600 hover:bg-slate-200 dark:bg-nog-800 dark:text-slate-300'
+                  ? 'bg-honey-100 text-honey-800 dark:bg-honey-900/30 dark:text-honey-200'
+                  : 'bg-nog-100 text-nog-600 hover:bg-nog-200 dark:bg-nog-800 dark:text-nog-300'
               }`}
             >
               My Searches
@@ -348,8 +348,8 @@ export default function SavedSearchesPage() {
               onClick={() => setFilters(f => ({ ...f, shared: f.shared ? undefined : true }))}
               className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                 filters.shared
-                  ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200'
-                  : 'bg-nog-100 text-slate-600 hover:bg-slate-200 dark:bg-nog-800 dark:text-slate-300'
+                  ? 'bg-honey-100 text-honey-800 dark:bg-honey-900/30 dark:text-honey-200'
+                  : 'bg-nog-100 text-nog-600 hover:bg-nog-200 dark:bg-nog-800 dark:text-nog-300'
               }`}
             >
               Shared
@@ -358,8 +358,8 @@ export default function SavedSearchesPage() {
               onClick={() => setFilters(f => ({ ...f, scheduled: f.scheduled ? undefined : true }))}
               className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                 filters.scheduled
-                  ? 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200'
-                  : 'bg-nog-100 text-slate-600 hover:bg-slate-200 dark:bg-nog-800 dark:text-slate-300'
+                  ? 'bg-honey-100 text-honey-800 dark:bg-honey-900/30 dark:text-honey-200'
+                  : 'bg-nog-100 text-nog-600 hover:bg-nog-200 dark:bg-nog-800 dark:text-nog-300'
               }`}
             >
               <Clock className="w-3 h-3 inline mr-1" />
@@ -370,7 +370,7 @@ export default function SavedSearchesPage() {
           {allTags.length > 0 && (
             <button
               onClick={() => setExpandedFilters(!expandedFilters)}
-              className="flex items-center gap-1 text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900"
+              className="flex items-center gap-1 text-sm text-nog-600 dark:text-nog-400 hover:text-nog-900"
             >
               <Filter className="w-4 h-4" />
               Tags
@@ -381,7 +381,7 @@ export default function SavedSearchesPage() {
 
         {/* Tag filter expansion */}
         {expandedFilters && allTags.length > 0 && (
-          <div className="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700">
+          <div className="mt-3 pt-3 border-t border-nog-200 dark:border-nog-700">
             <div className="flex flex-wrap gap-2">
               {allTags.map(tag => (
                 <button
@@ -393,8 +393,8 @@ export default function SavedSearchesPage() {
                   }}
                   className={`px-2 py-1 rounded-full text-xs font-medium transition-colors ${
                     selectedTags.includes(tag)
-                      ? 'bg-amber-500 text-white'
-                      : 'bg-nog-100 text-slate-600 hover:bg-slate-200 dark:bg-nog-700 dark:text-slate-300'
+                      ? 'bg-honey-500 text-nog-900'
+                      : 'bg-nog-100 text-nog-600 hover:bg-nog-200 dark:bg-nog-700 dark:text-nog-300'
                   }`}
                 >
                   <Tag className="w-3 h-3 inline mr-1" />
@@ -409,11 +409,11 @@ export default function SavedSearchesPage() {
       {/* Search List */}
       {searches.length === 0 ? (
         <div className="card p-12 text-center">
-          <Database className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+          <Database className="w-12 h-12 text-nog-300 dark:text-nog-600 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-nog-900 dark:text-white mb-2">
             No saved searches yet
           </h3>
-          <p className="text-slate-600 dark:text-slate-400 mb-4">
+          <p className="text-nog-600 dark:text-nog-400 mb-4">
             Create your first saved search to store and reuse your queries
           </p>
           <button
@@ -434,11 +434,11 @@ export default function SavedSearchesPage() {
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-slate-900 dark:text-white truncate">
+                    <h3 className="font-semibold text-nog-900 dark:text-white truncate">
                       {search.name}
                     </h3>
                     {search.schedule_enabled === 1 && (
-                      <span className="px-2 py-0.5 rounded-full text-xs bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">
+                      <span className="px-2 py-0.5 rounded-full text-xs bg-honey-100 text-honey-700 dark:bg-honey-900/30 dark:text-honey-300">
                         <Clock className="w-3 h-3 inline mr-1" />
                         {getScheduleLabel(search.schedule || '')}
                       </span>
@@ -451,12 +451,12 @@ export default function SavedSearchesPage() {
                   </div>
 
                   {search.description && (
-                    <p className="text-sm text-slate-600 dark:text-slate-400 mt-1 line-clamp-1">
+                    <p className="text-sm text-nog-600 dark:text-nog-400 mt-1 line-clamp-1">
                       {search.description}
                     </p>
                   )}
 
-                  <div className="flex items-center gap-4 mt-2 text-xs text-slate-500 dark:text-slate-400">
+                  <div className="flex items-center gap-4 mt-2 text-xs text-nog-500 dark:text-nog-400">
                     <code className="bg-nog-100 dark:bg-nog-800 px-2 py-0.5 rounded max-w-md truncate">
                       {search.query}
                     </code>
@@ -473,7 +473,7 @@ export default function SavedSearchesPage() {
                       {search.tags.map(tag => (
                         <span
                           key={tag}
-                          className="px-2 py-0.5 rounded-full text-xs bg-nog-100 text-slate-600 dark:bg-nog-700 dark:text-slate-300"
+                          className="px-2 py-0.5 rounded-full text-xs bg-nog-100 text-nog-600 dark:bg-nog-700 dark:text-nog-300"
                         >
                           {tag}
                         </span>
@@ -487,7 +487,7 @@ export default function SavedSearchesPage() {
                       <span className={`flex items-center gap-1 ${
                         search.is_cache_valid
                           ? 'text-green-600 dark:text-green-400'
-                          : 'text-orange-600 dark:text-orange-400'
+                          : 'text-honey-600 dark:text-honey-400'
                       }`}>
                         {search.is_cache_valid ? (
                           <CheckCircle className="w-3 h-3" />
@@ -497,7 +497,7 @@ export default function SavedSearchesPage() {
                         {search.cached_count} results cached {formatRelativeTime(search.cached_at)}
                       </span>
                     ) : (
-                      <span className="text-slate-400">Not yet run</span>
+                      <span className="text-nog-400">Not yet run</span>
                     )}
                     {search.last_error && (
                       <span className="text-red-600 dark:text-red-400 truncate max-w-xs">
@@ -529,38 +529,38 @@ export default function SavedSearchesPage() {
                     <button className="btn-secondary text-sm py-1.5">
                       <ChevronDown className="w-4 h-4" />
                     </button>
-                    <div className="absolute right-0 top-full mt-1 bg-white dark:bg-nog-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 py-1 min-w-[180px] hidden group-hover:block z-10">
+                    <div className="absolute right-0 top-full mt-1 bg-white dark:bg-nog-800 rounded-lg shadow-lg border border-nog-200 dark:border-nog-700 py-1 min-w-[180px] hidden group-hover:block z-10">
                       <button
                         onClick={() => {
                           setSelectedSearch(search);
                           runMutation.mutate({ id: search.id, forceRefresh: true });
                         }}
-                        className="w-full px-3 py-2 text-left text-sm hover:bg-nog-100 dark:hover:bg-slate-700 flex items-center gap-2"
+                        className="w-full px-3 py-2 text-left text-sm hover:bg-nog-100 dark:hover:bg-nog-700 flex items-center gap-2"
                       >
                         <RefreshCw className="w-4 h-4" />
                         Force Refresh
                       </button>
                       <button
                         onClick={() => handleEditClick(search)}
-                        className="w-full px-3 py-2 text-left text-sm hover:bg-nog-100 dark:hover:bg-slate-700 flex items-center gap-2"
+                        className="w-full px-3 py-2 text-left text-sm hover:bg-nog-100 dark:hover:bg-nog-700 flex items-center gap-2"
                       >
                         <Edit className="w-4 h-4" />
                         Edit
                       </button>
                       <button
                         onClick={() => duplicateMutation.mutate(search.id)}
-                        className="w-full px-3 py-2 text-left text-sm hover:bg-nog-100 dark:hover:bg-slate-700 flex items-center gap-2"
+                        className="w-full px-3 py-2 text-left text-sm hover:bg-nog-100 dark:hover:bg-nog-700 flex items-center gap-2"
                       >
                         <Copy className="w-4 h-4" />
                         Duplicate
                       </button>
-                      <hr className="my-1 border-slate-200 dark:border-slate-700" />
+                      <hr className="my-1 border-nog-200 dark:border-nog-700" />
                       <button
                         onClick={() => {
                           setSelectedSearch(search);
                           setShowCreateAlertModal(true);
                         }}
-                        className="w-full px-3 py-2 text-left text-sm hover:bg-nog-100 dark:hover:bg-slate-700 flex items-center gap-2"
+                        className="w-full px-3 py-2 text-left text-sm hover:bg-nog-100 dark:hover:bg-nog-700 flex items-center gap-2"
                       >
                         <Bell className="w-4 h-4" />
                         Create Alert
@@ -570,7 +570,7 @@ export default function SavedSearchesPage() {
                           setSelectedSearch(search);
                           setShowAddToDashboardModal(true);
                         }}
-                        className="w-full px-3 py-2 text-left text-sm hover:bg-nog-100 dark:hover:bg-slate-700 flex items-center gap-2"
+                        className="w-full px-3 py-2 text-left text-sm hover:bg-nog-100 dark:hover:bg-nog-700 flex items-center gap-2"
                       >
                         <LayoutDashboard className="w-4 h-4" />
                         Add to Dashboard
@@ -580,12 +580,12 @@ export default function SavedSearchesPage() {
                           setSelectedSearch(search);
                           setShowCreateReportModal(true);
                         }}
-                        className="w-full px-3 py-2 text-left text-sm hover:bg-nog-100 dark:hover:bg-slate-700 flex items-center gap-2"
+                        className="w-full px-3 py-2 text-left text-sm hover:bg-nog-100 dark:hover:bg-nog-700 flex items-center gap-2"
                       >
                         <FileBarChart className="w-4 h-4" />
                         Create Report
                       </button>
-                      <hr className="my-1 border-slate-200 dark:border-slate-700" />
+                      <hr className="my-1 border-nog-200 dark:border-nog-700" />
                       <button
                         onClick={() => {
                           if (confirm('Delete this saved search?')) {
@@ -610,8 +610,8 @@ export default function SavedSearchesPage() {
       {(showCreateModal || showEditModal) && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-nog-900 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
+            <div className="flex items-center justify-between p-4 border-b border-nog-200 dark:border-nog-700">
+              <h2 className="text-lg font-semibold text-nog-900 dark:text-white">
                 {showEditModal ? 'Edit Saved Search' : 'Create Saved Search'}
               </h2>
               <button
@@ -621,7 +621,7 @@ export default function SavedSearchesPage() {
                   setSelectedSearch(null);
                   resetForm();
                 }}
-                className="text-slate-400 hover:text-slate-600"
+                className="text-nog-400 hover:text-nog-600"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -629,7 +629,7 @@ export default function SavedSearchesPage() {
 
             <div className="p-4 space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
                   Name *
                 </label>
                 <input
@@ -642,7 +642,7 @@ export default function SavedSearchesPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
                   Query *
                 </label>
                 <textarea
@@ -655,7 +655,7 @@ export default function SavedSearchesPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
                   Description
                 </label>
                 <textarea
@@ -669,7 +669,7 @@ export default function SavedSearchesPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
                     Default Time Range
                   </label>
                   <select
@@ -684,7 +684,7 @@ export default function SavedSearchesPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
                     Cache TTL
                   </label>
                   <select
@@ -700,7 +700,7 @@ export default function SavedSearchesPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
                   Schedule (Optional)
                 </label>
                 <div className="flex items-center gap-4">
@@ -718,16 +718,16 @@ export default function SavedSearchesPage() {
                       type="checkbox"
                       checked={formData.schedule_enabled}
                       onChange={(e) => setFormData({ ...formData, schedule_enabled: e.target.checked })}
-                      className="rounded border-slate-300"
+                      className="rounded border-nog-300"
                       disabled={!formData.schedule}
                     />
-                    <span className="text-sm text-slate-600 dark:text-slate-400">Enabled</span>
+                    <span className="text-sm text-nog-600 dark:text-nog-400">Enabled</span>
                   </label>
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
                   Tags
                 </label>
                 <div className="flex items-center gap-2">
@@ -748,7 +748,7 @@ export default function SavedSearchesPage() {
                     {formData.tags.map(tag => (
                       <span
                         key={tag}
-                        className="px-2 py-1 rounded-full text-sm bg-nog-100 text-slate-600 dark:bg-nog-700 dark:text-slate-300 flex items-center gap-1"
+                        className="px-2 py-1 rounded-full text-sm bg-nog-100 text-nog-600 dark:bg-nog-700 dark:text-nog-300 flex items-center gap-1"
                       >
                         {tag}
                         <button onClick={() => handleRemoveTag(tag)} className="hover:text-red-500">
@@ -766,16 +766,16 @@ export default function SavedSearchesPage() {
                     type="checkbox"
                     checked={formData.is_shared}
                     onChange={(e) => setFormData({ ...formData, is_shared: e.target.checked })}
-                    className="rounded border-slate-300"
+                    className="rounded border-nog-300"
                   />
-                  <span className="text-sm text-slate-600 dark:text-slate-400">
+                  <span className="text-sm text-nog-600 dark:text-nog-400">
                     Share with all users
                   </span>
                 </label>
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 p-4 border-t border-slate-200 dark:border-slate-700">
+            <div className="flex justify-end gap-3 p-4 border-t border-nog-200 dark:border-nog-700">
               <button
                 onClick={() => {
                   setShowCreateModal(false);
@@ -811,12 +811,12 @@ export default function SavedSearchesPage() {
       {showResultsModal && runResults && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-nog-900 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-            <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
+            <div className="flex items-center justify-between p-4 border-b border-nog-200 dark:border-nog-700">
               <div>
-                <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
+                <h2 className="text-lg font-semibold text-nog-900 dark:text-white">
                   Search Results
                 </h2>
-                <p className="text-sm text-slate-600 dark:text-slate-400">
+                <p className="text-sm text-nog-600 dark:text-nog-400">
                   {runResults.count} results
                   {runResults.cached && ` (cached)`}
                   {runResults.execution_time_ms > 0 && ` in ${runResults.execution_time_ms}ms`}
@@ -827,7 +827,7 @@ export default function SavedSearchesPage() {
                   setShowResultsModal(false);
                   setRunResults(null);
                 }}
-                className="text-slate-400 hover:text-slate-600"
+                className="text-nog-400 hover:text-nog-600"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -835,29 +835,29 @@ export default function SavedSearchesPage() {
 
             <div className="flex-1 overflow-auto p-4">
               {runResults.results.length === 0 ? (
-                <p className="text-center text-slate-500 py-8">No results found</p>
+                <p className="text-center text-nog-500 py-8">No results found</p>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-slate-200 dark:divide-slate-700">
+                  <table className="min-w-full divide-y divide-nog-200 dark:divide-nog-700">
                     <thead className="bg-nog-50 dark:bg-nog-800">
                       <tr>
                         {Object.keys(runResults.results[0]).map(key => (
                           <th
                             key={key}
-                            className="px-4 py-2 text-left text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider"
+                            className="px-4 py-2 text-left text-xs font-medium text-nog-500 dark:text-nog-400 uppercase tracking-wider"
                           >
                             {key}
                           </th>
                         ))}
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                    <tbody className="divide-y divide-nog-200 dark:divide-nog-700">
                       {runResults.results.slice(0, 100).map((row, idx) => (
                         <tr key={idx} className="hover:bg-nog-50 dark:hover:bg-nog-800/50">
                           {Object.values(row).map((val, valIdx) => (
                             <td
                               key={valIdx}
-                              className="px-4 py-2 text-sm text-slate-900 dark:text-slate-100 whitespace-nowrap"
+                              className="px-4 py-2 text-sm text-nog-900 dark:text-nog-100 whitespace-nowrap"
                             >
                               {String(val)}
                             </td>
@@ -867,7 +867,7 @@ export default function SavedSearchesPage() {
                     </tbody>
                   </table>
                   {runResults.results.length > 100 && (
-                    <p className="text-center text-slate-500 py-4">
+                    <p className="text-center text-nog-500 py-4">
                       Showing 100 of {runResults.results.length} results
                     </p>
                   )}
@@ -875,7 +875,7 @@ export default function SavedSearchesPage() {
               )}
             </div>
 
-            <div className="flex justify-end gap-3 p-4 border-t border-slate-200 dark:border-slate-700">
+            <div className="flex justify-end gap-3 p-4 border-t border-nog-200 dark:border-nog-700">
               <button
                 onClick={() => {
                   setShowResultsModal(false);
@@ -894,8 +894,8 @@ export default function SavedSearchesPage() {
       {showCreateAlertModal && selectedSearch && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-nog-900 rounded-lg shadow-xl w-full max-w-md">
-            <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
+            <div className="flex items-center justify-between p-4 border-b border-nog-200 dark:border-nog-700">
+              <h2 className="text-lg font-semibold text-nog-900 dark:text-white">
                 Create Alert from Search
               </h2>
               <button
@@ -903,23 +903,23 @@ export default function SavedSearchesPage() {
                   setShowCreateAlertModal(false);
                   setSelectedSearch(null);
                 }}
-                className="text-slate-400 hover:text-slate-600"
+                className="text-nog-400 hover:text-nog-600"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <div className="p-4 space-y-4">
-              <p className="text-sm text-slate-600 dark:text-slate-400">
+              <p className="text-sm text-nog-600 dark:text-nog-400">
                 Creating alert from: <strong>{selectedSearch.name}</strong>
               </p>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
                   Trigger when results
                 </label>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-slate-600">greater than</span>
+                  <span className="text-sm text-nog-600">greater than</span>
                   <input
                     type="number"
                     value={alertThreshold}
@@ -931,7 +931,7 @@ export default function SavedSearchesPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
                   Severity
                 </label>
                 <select
@@ -948,7 +948,7 @@ export default function SavedSearchesPage() {
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 p-4 border-t border-slate-200 dark:border-slate-700">
+            <div className="flex justify-end gap-3 p-4 border-t border-nog-200 dark:border-nog-700">
               <button
                 onClick={() => {
                   setShowCreateAlertModal(false);
@@ -984,8 +984,8 @@ export default function SavedSearchesPage() {
       {showAddToDashboardModal && selectedSearch && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-nog-900 rounded-lg shadow-xl w-full max-w-md">
-            <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
+            <div className="flex items-center justify-between p-4 border-b border-nog-200 dark:border-nog-700">
+              <h2 className="text-lg font-semibold text-nog-900 dark:text-white">
                 Add to Dashboard
               </h2>
               <button
@@ -993,19 +993,19 @@ export default function SavedSearchesPage() {
                   setShowAddToDashboardModal(false);
                   setSelectedSearch(null);
                 }}
-                className="text-slate-400 hover:text-slate-600"
+                className="text-nog-400 hover:text-nog-600"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <div className="p-4 space-y-4">
-              <p className="text-sm text-slate-600 dark:text-slate-400">
+              <p className="text-sm text-nog-600 dark:text-nog-400">
                 Adding: <strong>{selectedSearch.name}</strong>
               </p>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
                   Dashboard *
                 </label>
                 <select
@@ -1021,7 +1021,7 @@ export default function SavedSearchesPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
                   Visualization
                 </label>
                 <select
@@ -1038,7 +1038,7 @@ export default function SavedSearchesPage() {
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 p-4 border-t border-slate-200 dark:border-slate-700">
+            <div className="flex justify-end gap-3 p-4 border-t border-nog-200 dark:border-nog-700">
               <button
                 onClick={() => {
                   setShowAddToDashboardModal(false);
@@ -1074,8 +1074,8 @@ export default function SavedSearchesPage() {
       {showCreateReportModal && selectedSearch && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
           <div className="bg-white dark:bg-nog-900 rounded-lg shadow-xl w-full max-w-md">
-            <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
+            <div className="flex items-center justify-between p-4 border-b border-nog-200 dark:border-nog-700">
+              <h2 className="text-lg font-semibold text-nog-900 dark:text-white">
                 Create Scheduled Report
               </h2>
               <button
@@ -1083,19 +1083,19 @@ export default function SavedSearchesPage() {
                   setShowCreateReportModal(false);
                   setSelectedSearch(null);
                 }}
-                className="text-slate-400 hover:text-slate-600"
+                className="text-nog-400 hover:text-nog-600"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <div className="p-4 space-y-4">
-              <p className="text-sm text-slate-600 dark:text-slate-400">
+              <p className="text-sm text-nog-600 dark:text-nog-400">
                 Creating report from: <strong>{selectedSearch.name}</strong>
               </p>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
                   Schedule
                 </label>
                 <select
@@ -1110,7 +1110,7 @@ export default function SavedSearchesPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
                   Recipients (comma-separated emails)
                 </label>
                 <input
@@ -1123,7 +1123,7 @@ export default function SavedSearchesPage() {
               </div>
             </div>
 
-            <div className="flex justify-end gap-3 p-4 border-t border-slate-200 dark:border-slate-700">
+            <div className="flex justify-end gap-3 p-4 border-t border-nog-200 dark:border-nog-700">
               <button
                 onClick={() => {
                   setShowCreateReportModal(false);

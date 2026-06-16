@@ -46,12 +46,12 @@ export default function SettingsPage() {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto">
-      <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 mb-6">
+      <h1 className="text-xl sm:text-2xl font-bold text-nog-900 dark:text-nog-100 mb-6">
         Settings
       </h1>
 
       {/* Tab Navigation */}
-      <div className="mb-6 border-b border-slate-200 dark:border-slate-700">
+      <div className="mb-6 border-b border-nog-200 dark:border-nog-700">
         <nav className="flex gap-1 overflow-x-auto pb-px -mb-px" aria-label="Settings tabs">
           {TABS.map((tab) => {
             const Icon = tab.icon;
@@ -62,8 +62,8 @@ export default function SettingsPage() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                   isActive
-                    ? 'border-amber-500 text-amber-600 dark:text-amber-400'
-                    : 'border-transparent text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600'
+                    ? 'border-honey-500 text-honey-600 dark:text-honey-400'
+                    : 'border-transparent text-nog-500 hover:text-nog-700 dark:text-nog-400 dark:hover:text-nog-300 hover:border-nog-300 dark:hover:border-nog-600'
                 }`}
               >
                 <Icon className="w-4 h-4" />

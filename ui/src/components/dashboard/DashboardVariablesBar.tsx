@@ -57,7 +57,7 @@ export function DashboardVariablesBar({
   }
 
   return (
-    <div className="flex items-center gap-3 px-4 py-2 bg-nog-50 dark:bg-nog-800/50 border-b border-slate-200 dark:border-slate-700 overflow-x-auto">
+    <div className="flex items-center gap-3 px-4 py-2 bg-nog-50 dark:bg-nog-800/50 border-b border-nog-200 dark:border-nog-700 overflow-x-auto">
       {variables.map((variable) => (
         <VariableDropdown
           key={variable.id}
@@ -72,7 +72,7 @@ export function DashboardVariablesBar({
       {editMode && onAddVariable && (
         <button
           onClick={onAddVariable}
-          className="flex items-center gap-1 px-3 py-1.5 text-sm text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded-lg transition-colors"
+          className="flex items-center gap-1 px-3 py-1.5 text-sm text-honey-600 hover:bg-honey-50 dark:hover:bg-honey-900/20 rounded-lg transition-colors"
         >
           <Plus className="w-4 h-4" />
           Add Variable
@@ -143,14 +143,14 @@ function VariableDropdown({
   if (variable.type === 'textbox') {
     return (
       <div className="flex items-center gap-2">
-        <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
+        <span className="text-sm font-medium text-nog-600 dark:text-nog-400">
           {variable.label || variable.name}:
         </span>
         <input
           type="text"
           value={typeof value === 'string' ? value : ''}
           onChange={(e) => onChange(e.target.value)}
-          className="px-2 py-1 text-sm border border-slate-200 dark:border-slate-600 rounded bg-white dark:bg-nog-700 min-w-[120px]"
+          className="px-2 py-1 text-sm border border-nog-200 dark:border-nog-600 rounded bg-white dark:bg-nog-700 min-w-[120px]"
           placeholder={variable.default_value || 'Enter value...'}
         />
       </div>
@@ -160,12 +160,12 @@ function VariableDropdown({
   return (
     <div className="relative">
       <div className="flex items-center gap-2">
-        <span className="text-sm font-medium text-slate-600 dark:text-slate-400">
+        <span className="text-sm font-medium text-nog-600 dark:text-nog-400">
           {variable.label || variable.name}:
         </span>
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className="flex items-center gap-2 px-3 py-1.5 text-sm bg-white dark:bg-nog-700 border border-slate-200 dark:border-slate-600 rounded-lg hover:border-slate-300 dark:hover:border-slate-500 transition-colors min-w-[120px]"
+          className="flex items-center gap-2 px-3 py-1.5 text-sm bg-white dark:bg-nog-700 border border-nog-200 dark:border-nog-600 rounded-lg hover:border-nog-300 dark:hover:border-nog-500 transition-colors min-w-[120px]"
         >
           <span className="truncate">{displayValue}</span>
           <ChevronDown className={`w-4 h-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
@@ -173,7 +173,7 @@ function VariableDropdown({
         {onEdit && (
           <button
             onClick={onEdit}
-            className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+            className="p-1 text-nog-400 hover:text-nog-600 dark:hover:text-nog-300"
             title="Edit variable"
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -186,15 +186,15 @@ function VariableDropdown({
       {isOpen && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
-          <div className="absolute top-full left-0 mt-1 z-20 w-64 bg-white dark:bg-nog-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg">
+          <div className="absolute top-full left-0 mt-1 z-20 w-64 bg-white dark:bg-nog-800 border border-nog-200 dark:border-nog-600 rounded-lg shadow-lg">
             {/* Search */}
-            <div className="p-2 border-b border-slate-100 dark:border-slate-700">
+            <div className="p-2 border-b border-nog-100 dark:border-nog-700">
               <input
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Search..."
-                className="w-full px-2 py-1.5 text-sm border border-slate-200 dark:border-slate-600 rounded bg-nog-50 dark:bg-nog-700"
+                className="w-full px-2 py-1.5 text-sm border border-nog-200 dark:border-nog-600 rounded bg-nog-50 dark:bg-nog-700"
                 autoFocus
               />
             </div>
@@ -202,18 +202,18 @@ function VariableDropdown({
             {/* Options */}
             <div className="max-h-48 overflow-y-auto">
               {loading ? (
-                <div className="p-3 text-center text-sm text-slate-500">Loading...</div>
+                <div className="p-3 text-center text-sm text-nog-500">Loading...</div>
               ) : filteredOptions.length === 0 ? (
-                <div className="p-3 text-center text-sm text-slate-500">No options</div>
+                <div className="p-3 text-center text-sm text-nog-500">No options</div>
               ) : (
                 <>
                   {variable.include_all && (
                     <button
                       onClick={() => handleSelect('*')}
-                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-nog-50 dark:hover:bg-slate-700"
+                      className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-nog-50 dark:hover:bg-nog-700"
                     >
                       {(Array.isArray(value) ? value.includes('*') : value === '*') && (
-                        <Check className="w-4 h-4 text-amber-500" />
+                        <Check className="w-4 h-4 text-honey-500" />
                       )}
                       <span className="font-medium">All</span>
                     </button>
@@ -226,20 +226,20 @@ function VariableDropdown({
                       <button
                         key={option}
                         onClick={() => handleSelect(option)}
-                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-nog-50 dark:hover:bg-slate-700"
+                        className="w-full flex items-center gap-2 px-3 py-2 text-sm text-left hover:bg-nog-50 dark:hover:bg-nog-700"
                       >
                         {variable.multi_select ? (
                           <div
                             className={`w-4 h-4 rounded border ${
                               isSelected
-                                ? 'bg-amber-500 border-amber-500'
-                                : 'border-slate-300 dark:border-slate-500'
+                                ? 'bg-honey-500 border-honey-500'
+                                : 'border-nog-300 dark:border-nog-500'
                             } flex items-center justify-center`}
                           >
                             {isSelected && <Check className="w-3 h-3 text-white" />}
                           </div>
                         ) : isSelected ? (
-                          <Check className="w-4 h-4 text-amber-500" />
+                          <Check className="w-4 h-4 text-honey-500" />
                         ) : (
                           <span className="w-4" />
                         )}
@@ -252,10 +252,10 @@ function VariableDropdown({
             </div>
 
             {variable.multi_select && (
-              <div className="p-2 border-t border-slate-100 dark:border-slate-700 flex justify-end">
+              <div className="p-2 border-t border-nog-100 dark:border-nog-700 flex justify-end">
                 <button
                   onClick={() => setIsOpen(false)}
-                  className="px-3 py-1 text-sm text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 rounded"
+                  className="px-3 py-1 text-sm text-honey-600 hover:bg-honey-50 dark:hover:bg-honey-900/20 rounded"
                 >
                   Done
                 </button>

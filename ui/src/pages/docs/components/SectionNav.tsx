@@ -29,8 +29,8 @@ export default function SectionNav({ active, onChange }: { active: DocSection; o
           onClick={() => onChange(s.id)}
           className={`flex items-center gap-1 sm:gap-2 px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-lg text-sm sm:text-base font-medium transition-all whitespace-nowrap flex-shrink-0 ${
             active === s.id
-              ? 'bg-amber-500 text-white shadow-md shadow-amber-500/25'
-              : 'bg-white dark:bg-nog-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 hover:bg-nog-50 dark:hover:bg-slate-700'
+              ? 'bg-honey-500 text-nog-900 shadow-md shadow-honey-500/25'
+              : 'bg-white dark:bg-nog-800 text-nog-600 dark:text-nog-300 border border-nog-200 dark:border-nog-700 hover:border-nog-300 dark:hover:border-nog-600 hover:bg-nog-50 dark:hover:bg-nog-700'
           }`}
         >
           <s.icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
