@@ -7,7 +7,24 @@ export default {
   darkMode: 'class',
   theme: {
     extend: {
+      fontFamily: {
+        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+        display: ['Fraunces', 'Georgia', 'serif'],
+      },
       colors: {
+        // Honey-gold accent (brand) — see ui/BRANDING.md
+        honey: {
+          50: '#FBF3E3',
+          100: '#F6E4C2',
+          200: '#EFD194',
+          300: '#E6BB63',
+          400: '#DCA23E',
+          500: '#C8862B',
+          600: '#A66A1E',
+          700: '#845117',
+          800: '#5E3A12',
+          900: '#3D260C',
+        },
         // LogNog brand teal accent (keep for accents)
         lognog: {
           50: '#f0f9ff',
