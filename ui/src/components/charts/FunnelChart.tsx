@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
+import { CHART_PALETTE } from './palette';
 
 export interface FunnelChartData {
   name: string;
@@ -150,10 +151,7 @@ export const FunnelChart: React.FC<FunnelChartProps> = ({
   );
 };
 
-// Color palette for funnel stages
-function getColorByIndex(index: number, darkMode: boolean): string {
-  const colors = darkMode
-    ? ['#60a5fa', '#34d399', '#fbbf24', '#f87171', '#a78bfa', '#fb923c', '#38bdf8', '#4ade80']
-    : ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#f97316', '#0ea5e9', '#22c55e'];
-  return colors[index % colors.length];
+// Color palette for funnel stages (shared brand palette)
+function getColorByIndex(index: number, _darkMode: boolean): string {
+  return CHART_PALETTE[index % CHART_PALETTE.length];
 }

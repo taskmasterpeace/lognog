@@ -85,12 +85,12 @@ export function Tooltip({
             {...getFloatingProps()}
             className="tooltip-floating"
           >
-            <div className="bg-gray-900 dark:bg-gray-800 text-white dark:text-gray-100 px-3 py-2 rounded-lg shadow-xl border border-gray-700 dark:border-gray-600 text-sm leading-relaxed animate-fade-in">
+            <div className="bg-nog-900 dark:bg-nog-800 text-white dark:text-nog-100 px-3 py-2 rounded-lg shadow-xl border border-nog-700 dark:border-nog-600 text-sm leading-relaxed animate-fade-in">
               {content}
               <FloatingArrow
                 ref={arrowRef}
                 context={context}
-                className="fill-gray-900 dark:fill-gray-800"
+                className="fill-nog-900 dark:fill-nog-800"
               />
             </div>
           </div>
@@ -119,7 +119,7 @@ export function TooltipWithCode({
         <div className="space-y-2">
           <div>{content}</div>
           {code && (
-            <pre className="bg-gray-950 dark:bg-gray-900 p-2 rounded text-xs font-mono overflow-x-auto border border-gray-700">
+            <pre className="bg-nog-950 dark:bg-nog-900 p-2 rounded text-xs font-mono overflow-x-auto border border-nog-700">
               <code>{code}</code>
             </pre>
           )}

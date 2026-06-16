@@ -16,7 +16,7 @@ export function InfoTip({ content, code, placement = 'top', className = '' }: In
     <TooltipComponent content={content} code={code} placement={placement}>
       <button
         type="button"
-        className={`inline-flex items-center justify-center w-4 h-4 rounded-full bg-gray-600 dark:bg-gray-500 text-white text-xs font-bold hover:bg-gray-500 dark:hover:bg-gray-400 transition-colors cursor-help ${className}`}
+        className={`inline-flex items-center justify-center w-4 h-4 rounded-full bg-nog-600 dark:bg-nog-500 text-white text-xs font-bold hover:bg-nog-500 dark:hover:bg-nog-400 transition-colors cursor-help ${className}`}
         aria-label="More information"
       >
         ?
@@ -38,7 +38,7 @@ export function InfoIcon({ content, code, placement = 'top', className = '' }: I
   return (
     <TooltipComponent content={content} code={code} placement={placement}>
       <span
-        className={`inline-flex items-center justify-center cursor-help text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors ${className}`}
+        className={`inline-flex items-center justify-center cursor-help text-nog-500 dark:text-nog-400 hover:text-nog-700 dark:hover:text-nog-300 transition-colors ${className}`}
       >
         <svg
           className="w-4 h-4"

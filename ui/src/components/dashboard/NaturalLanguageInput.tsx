@@ -84,8 +84,8 @@ export function NaturalLanguageInput({
   return (
     <div className="relative">
       {/* Main Input */}
-      <div className="flex items-center gap-2 p-3 bg-gradient-to-r from-amber-50 to-amber-50 dark:from-amber-900/20 dark:to-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg">
-        <Sparkles className="w-5 h-5 text-amber-500 flex-shrink-0" />
+      <div className="flex items-center gap-2 p-3 bg-honey-50 dark:from-honey-900/20 dark:to-honey-900/20 border border-honey-200 dark:border-honey-800 rounded-lg">
+        <Sparkles className="w-5 h-5 text-honey-500 flex-shrink-0" />
         <input
           ref={inputRef}
           type="text"
@@ -93,11 +93,11 @@ export function NaturalLanguageInput({
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
           placeholder={placeholder}
-          className="flex-1 bg-transparent border-none outline-none text-slate-900 dark:text-slate-100 placeholder:text-slate-400"
+          className="flex-1 bg-transparent border-none outline-none text-nog-900 dark:text-nog-100 placeholder:text-nog-400"
         />
         <button
           onClick={() => setShowExamples(!showExamples)}
-          className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded"
+          className="p-1.5 text-nog-400 hover:text-nog-600 dark:hover:text-nog-300 rounded"
           title="Show examples"
         >
           <History className="w-4 h-4" />
@@ -105,7 +105,7 @@ export function NaturalLanguageInput({
         <button
           onClick={handleSubmit}
           disabled={!input.trim() || loading}
-          className="p-1.5 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 text-white rounded transition-colors"
+          className="p-1.5 bg-honey-500 hover:bg-honey-600 disabled:bg-honey-300 text-nog-900 rounded transition-colors"
         >
           {loading ? (
             <Loader2 className="w-4 h-4 animate-spin" />
@@ -119,9 +119,9 @@ export function NaturalLanguageInput({
       {showExamples && (
         <>
           <div className="fixed inset-0 z-10" onClick={() => setShowExamples(false)} />
-          <div className="absolute top-full left-0 right-0 mt-1 z-20 bg-white dark:bg-nog-800 border border-slate-200 dark:border-slate-600 rounded-lg shadow-lg overflow-hidden">
-            <div className="px-3 py-2 border-b border-slate-100 dark:border-slate-700">
-              <span className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">
+          <div className="absolute top-full left-0 right-0 mt-1 z-20 bg-white dark:bg-nog-800 border border-nog-200 dark:border-nog-600 rounded-lg shadow-lg overflow-hidden">
+            <div className="px-3 py-2 border-b border-nog-100 dark:border-nog-700">
+              <span className="text-xs font-medium text-nog-500 dark:text-nog-400 uppercase tracking-wide">
                 Example queries
               </span>
             </div>
@@ -129,10 +129,10 @@ export function NaturalLanguageInput({
               <button
                 key={i}
                 onClick={() => handleExample(example)}
-                className="w-full px-3 py-2 text-left hover:bg-nog-50 dark:hover:bg-slate-700/50 transition-colors"
+                className="w-full px-3 py-2 text-left hover:bg-nog-50 dark:hover:bg-nog-700/50 transition-colors"
               >
-                <p className="text-sm text-slate-900 dark:text-slate-100">{example.text}</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5 truncate">
+                <p className="text-sm text-nog-900 dark:text-nog-100">{example.text}</p>
+                <p className="text-xs text-nog-500 dark:text-nog-400 font-mono mt-0.5 truncate">
                   {example.query}
                 </p>
               </button>
@@ -143,19 +143,19 @@ export function NaturalLanguageInput({
 
       {/* Generated Query */}
       {generatedQuery && (
-        <div className="mt-2 p-3 bg-white dark:bg-nog-800 border border-slate-200 dark:border-slate-600 rounded-lg">
+        <div className="mt-2 p-3 bg-white dark:bg-nog-800 border border-nog-200 dark:border-nog-600 rounded-lg">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
+              <p className="text-xs font-medium text-nog-500 dark:text-nog-400 mb-1">
                 Generated Query:
               </p>
-              <code className="block p-2 bg-nog-50 dark:bg-nog-900 rounded text-sm font-mono text-slate-800 dark:text-slate-200 overflow-x-auto">
+              <code className="block p-2 bg-nog-50 dark:bg-nog-900 rounded text-sm font-mono text-nog-800 dark:text-nog-200 overflow-x-auto">
                 {generatedQuery}
               </code>
             </div>
             <button
               onClick={() => setGeneratedQuery(null)}
-              className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+              className="p-1 text-nog-400 hover:text-nog-600 dark:hover:text-nog-300"
             >
               <X className="w-4 h-4" />
             </button>
@@ -166,13 +166,13 @@ export function NaturalLanguageInput({
                 setInput('');
                 setGeneratedQuery(null);
               }}
-              className="px-3 py-1.5 text-sm text-slate-600 dark:text-slate-400 hover:bg-nog-100 dark:hover:bg-slate-700 rounded"
+              className="px-3 py-1.5 text-sm text-nog-600 dark:text-nog-400 hover:bg-nog-100 dark:hover:bg-nog-700 rounded"
             >
               Cancel
             </button>
             <button
               onClick={handleUseQuery}
-              className="flex items-center gap-1 px-3 py-1.5 text-sm bg-amber-500 hover:bg-amber-600 text-white rounded transition-colors"
+              className="flex items-center gap-1 px-3 py-1.5 text-sm bg-honey-500 hover:bg-honey-600 text-nog-900 rounded transition-colors"
             >
               Use Query
               <ArrowRight className="w-4 h-4" />

@@ -29,25 +29,25 @@ const TEMPLATES = [
     name: 'System Overview',
     description: 'Monitor system health, log volume, and errors across all hosts',
     icon: '🖥️',
-    color: 'from-amber-500 to-amber-500',
+    color: 'from-honey-400 to-honey-600',
   },
   {
     name: 'Network Traffic',
     description: 'Firewall logs, connection states, and traffic patterns',
     icon: '🌐',
-    color: 'from-amber-500 to-pink-500',
+    color: 'from-honey-300 to-honey-500',
   },
   {
     name: 'Security Events',
     description: 'Authentication failures, security alerts, and access logs',
     icon: '🛡️',
-    color: 'from-red-500 to-orange-500',
+    color: 'from-honey-500 to-honey-700',
   },
   {
     name: 'Application Logs',
     description: 'Application performance, errors, and usage metrics',
     icon: '📱',
-    color: 'from-green-500 to-amber-500',
+    color: 'from-honey-400 to-honey-700',
   },
 ];
 
@@ -165,8 +165,8 @@ export default function DashboardsPage() {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-full">
-        <Loader2 className="w-10 h-10 text-amber-500 animate-spin mb-4" />
-        <p className="text-slate-600 dark:text-slate-400">Loading dashboards...</p>
+        <Loader2 className="w-10 h-10 text-honey-500 animate-spin mb-4" />
+        <p className="text-nog-600 dark:text-nog-400">Loading dashboards...</p>
       </div>
     );
   }
@@ -185,20 +185,20 @@ export default function DashboardsPage() {
   return (
     <div className="min-h-full bg-nog-50 dark:bg-nog-900">
       {/* Header */}
-      <div className="bg-white dark:bg-nog-800 border-b border-slate-200 dark:border-slate-700 shadow-sm">
+      <div className="bg-white dark:bg-nog-800 border-b border-nog-200 dark:border-nog-700 shadow-sm">
         <div className="p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100">Dashboards</h1>
-              <p className="text-slate-500 dark:text-slate-400 text-sm mt-1 hidden sm:block">Create and manage log visualization dashboards</p>
+              <h1 className="text-xl sm:text-2xl font-bold text-nog-900 dark:text-nog-100">Dashboards</h1>
+              <p className="text-nog-500 dark:text-nog-400 text-sm mt-1 hidden sm:block">Create and manage log visualization dashboards</p>
             </div>
             <div className="flex gap-2 w-full sm:w-auto items-center">
               <div className="flex items-center gap-2">
-                <Filter className="w-4 h-4 text-slate-400" />
+                <Filter className="w-4 h-4 text-nog-400" />
                 <AppScopeFilter value={appScope} onChange={setAppScope} />
               </div>
               <div className="flex items-center gap-1">
-                <ArrowUpDown className="w-4 h-4 text-slate-400" />
+                <ArrowUpDown className="w-4 h-4 text-nog-400" />
                 <select
                   value={`${sortBy}-${sortDir}`}
                   onChange={(e) => {
@@ -206,7 +206,7 @@ export default function DashboardsPage() {
                     setSortBy(field);
                     setSortDir(dir);
                   }}
-                  className="px-2 py-1.5 text-sm bg-white dark:bg-nog-800 border border-slate-200 dark:border-nog-700 rounded-lg text-slate-700 dark:text-slate-300"
+                  className="px-2 py-1.5 text-sm bg-white dark:bg-nog-800 border border-nog-200 dark:border-nog-700 rounded-lg text-nog-700 dark:text-nog-300"
                 >
                   <option value="name-asc">Name (A-Z)</option>
                   <option value="name-desc">Name (Z-A)</option>
@@ -248,20 +248,20 @@ export default function DashboardsPage() {
         {/* User Dashboards */}
         {sortedDashboards && sortedDashboards.length > 0 && (
           <section>
-            <h2 className="text-base sm:text-lg font-semibold text-slate-900 dark:text-slate-100 mb-3 sm:mb-4">Your Dashboards</h2>
+            <h2 className="text-base sm:text-lg font-semibold text-nog-900 dark:text-nog-100 mb-3 sm:mb-4">Your Dashboards</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
               {sortedDashboards.map((dashboard: Dashboard) => (
                 <div key={dashboard.id} className="card-hover group">
                   <div className="p-4 sm:p-5">
                     <div className="flex items-start justify-between mb-3 gap-2">
                       <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-                        <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-amber-400 to-amber-600 rounded-lg flex items-center justify-center shadow-md flex-shrink-0">
+                        <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-honey-400 to-honey-600 rounded-lg flex items-center justify-center shadow-md flex-shrink-0">
                           <LayoutDashboard className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                         </div>
                         <div className="min-w-0">
-                          <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-sm sm:text-base truncate">{dashboard.name}</h3>
+                          <h3 className="font-semibold text-nog-900 dark:text-nog-100 text-sm sm:text-base truncate">{dashboard.name}</h3>
                           {dashboard.description && (
-                            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 line-clamp-1">{dashboard.description}</p>
+                            <p className="text-xs sm:text-sm text-nog-500 dark:text-nog-400 line-clamp-1">{dashboard.description}</p>
                           )}
                         </div>
                       </div>
@@ -270,7 +270,7 @@ export default function DashboardsPage() {
                         <button
                           onClick={() => duplicateMutation.mutate(dashboard.id)}
                           disabled={duplicateMutation.isPending}
-                          className="p-1.5 text-slate-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded-lg sm:opacity-0 sm:group-hover:opacity-100 transition-all disabled:opacity-50"
+                          className="p-1.5 text-nog-400 hover:text-honey-500 hover:bg-honey-50 dark:hover:bg-honey-900/30 rounded-lg sm:opacity-0 sm:group-hover:opacity-100 transition-all disabled:opacity-50"
                           title="Duplicate dashboard"
                         >
                           <Copy className="w-4 h-4" />
@@ -288,7 +288,7 @@ export default function DashboardsPage() {
                               deleteMutation.mutate(dashboard.id);
                             }
                           }}
-                          className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg sm:opacity-0 sm:group-hover:opacity-100 transition-all"
+                          className="p-1.5 text-nog-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg sm:opacity-0 sm:group-hover:opacity-100 transition-all"
                           title="Delete dashboard"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -296,10 +296,10 @@ export default function DashboardsPage() {
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-700">
-                      <div className="flex items-center gap-3 sm:gap-4 text-xs text-slate-500 dark:text-slate-400">
+                    <div className="flex items-center justify-between pt-3 border-t border-nog-100 dark:border-nog-700">
+                      <div className="flex items-center gap-3 sm:gap-4 text-xs text-nog-500 dark:text-nog-400">
                         {dashboard.app_scope && dashboard.app_scope !== 'default' && (
-                          <span className="px-2 py-0.5 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded text-xs font-medium">
+                          <span className="px-2 py-0.5 bg-honey-100 dark:bg-honey-900/30 text-honey-700 dark:text-honey-400 rounded text-xs font-medium">
                             {dashboard.app_scope}
                           </span>
                         )}
@@ -312,7 +312,7 @@ export default function DashboardsPage() {
                           {dashboard.panel_count || 0} panels
                         </span>
                       </div>
-                      <Link to={`/dashboards/${dashboard.id}`} className="text-xs sm:text-sm font-medium text-amber-600 hover:text-amber-700 dark:text-amber-400">
+                      <Link to={`/dashboards/${dashboard.id}`} className="text-xs sm:text-sm font-medium text-honey-600 hover:text-honey-700 dark:text-honey-400">
                         Open →
                       </Link>
                     </div>
@@ -327,10 +327,10 @@ export default function DashboardsPage() {
         {(!isLoading && sortedDashboards.length === 0) && (
           <div className="text-center py-12">
             <div className="w-16 h-16 bg-nog-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <LayoutDashboard className="w-8 h-8 text-slate-400" />
+              <LayoutDashboard className="w-8 h-8 text-nog-400" />
             </div>
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">No dashboards yet</h3>
-            <p className="text-slate-500 dark:text-slate-400 mb-6">Create your first dashboard to start visualizing logs</p>
+            <h3 className="text-lg font-semibold text-nog-900 dark:text-nog-100 mb-2">No dashboards yet</h3>
+            <p className="text-nog-500 dark:text-nog-400 mb-6">Create your first dashboard to start visualizing logs</p>
             <button onClick={() => setShowCreateModal(true)} className="btn-primary">
               <Plus className="w-5 h-5" />
               Create Dashboard
@@ -341,10 +341,10 @@ export default function DashboardsPage() {
         {/* Templates */}
         <section>
           <div className="flex items-center gap-2 mb-4">
-            <Sparkles className="w-5 h-5 text-amber-500" />
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Starter Templates</h2>
+            <Sparkles className="w-5 h-5 text-honey-500" />
+            <h2 className="text-lg font-semibold text-nog-900 dark:text-nog-100">Starter Templates</h2>
           </div>
-          <p className="text-slate-500 dark:text-slate-400 text-sm mb-4">
+          <p className="text-nog-500 dark:text-nog-400 text-sm mb-4">
             Quick-start with pre-configured dashboards for common use cases
           </p>
 
@@ -359,8 +359,8 @@ export default function DashboardsPage() {
                   <div className={`w-12 h-12 bg-gradient-to-br ${template.color} rounded-xl flex items-center justify-center text-2xl mb-3 shadow-lg group-hover:scale-110 transition-transform`}>
                     {template.icon}
                   </div>
-                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-1">{template.name}</h4>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 line-clamp-2">{template.description}</p>
+                  <h4 className="font-semibold text-nog-900 dark:text-nog-100 mb-1">{template.name}</h4>
+                  <p className="text-sm text-nog-500 dark:text-nog-400 line-clamp-2">{template.description}</p>
                 </div>
               </button>
             ))}
@@ -368,23 +368,23 @@ export default function DashboardsPage() {
         </section>
 
         {/* Tips */}
-        <section className="card p-6 bg-gradient-to-r from-amber-50 to-amber-50 border-amber-100">
-          <h3 className="font-semibold text-amber-900 mb-3">Dashboard Tips</h3>
-          <ul className="space-y-2 text-sm text-amber-800">
+        <section className="card p-6 bg-honey-50 border-honey-100">
+          <h3 className="font-semibold text-honey-900 mb-3">Dashboard Tips</h3>
+          <ul className="space-y-2 text-sm text-honey-800">
             <li className="flex items-start gap-2">
-              <span className="text-amber-500 mt-0.5">•</span>
+              <span className="text-honey-500 mt-0.5">•</span>
               Use time filters to focus on relevant data and improve performance
             </li>
             <li className="flex items-start gap-2">
-              <span className="text-amber-500 mt-0.5">•</span>
+              <span className="text-honey-500 mt-0.5">•</span>
               Create saved searches first, then add them as dashboard panels
             </li>
             <li className="flex items-start gap-2">
-              <span className="text-amber-500 mt-0.5">•</span>
+              <span className="text-honey-500 mt-0.5">•</span>
               Use stats commands for aggregated views instead of raw log tables
             </li>
             <li className="flex items-start gap-2">
-              <span className="text-amber-500 mt-0.5">•</span>
+              <span className="text-honey-500 mt-0.5">•</span>
               Check the Documentation page for query language reference
             </li>
           </ul>
@@ -398,10 +398,10 @@ export default function DashboardsPage() {
             <div className="modal-header">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+                  <h3 className="text-lg font-semibold text-nog-900 dark:text-nog-100">
                     {selectedTemplate ? `Create ${selectedTemplate}` : 'New Dashboard'}
                   </h3>
-                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                  <p className="text-sm text-nog-500 dark:text-nog-400 mt-0.5">
                     Configure your dashboard settings
                   </p>
                 </div>
@@ -413,7 +413,7 @@ export default function DashboardsPage() {
 
             <div className="modal-body space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">
                   Dashboard Name
                 </label>
                 <input
@@ -427,8 +427,8 @@ export default function DashboardsPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
-                  Description <span className="text-slate-400 dark:text-slate-500 font-normal">(optional)</span>
+                <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">
+                  Description <span className="text-nog-400 dark:text-nog-500 font-normal">(optional)</span>
                 </label>
                 <textarea
                   value={newDashboardDescription}
@@ -440,8 +440,8 @@ export default function DashboardsPage() {
               </div>
 
               {selectedTemplate && (
-                <div className="p-3 bg-amber-50 rounded-lg border border-amber-100">
-                  <p className="text-sm text-amber-800">
+                <div className="p-3 bg-honey-50 rounded-lg border border-honey-100">
+                  <p className="text-sm text-honey-800">
                     <strong>Template:</strong> This will create an empty dashboard.
                     Add panels manually using queries from the Documentation.
                   </p>

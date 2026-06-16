@@ -208,10 +208,10 @@ export default function WelcomeWizard({ onComplete, onSkip }: WelcomeWizardProps
   const getSeverityColor = (severity: string) => {
     switch (severity) {
       case 'critical': return 'text-red-500 bg-red-50 dark:bg-red-900/20';
-      case 'high': return 'text-orange-500 bg-orange-50 dark:bg-orange-900/20';
-      case 'medium': return 'text-amber-500 bg-amber-50 dark:bg-amber-900/20';
-      case 'low': return 'text-amber-500 bg-amber-50 dark:bg-amber-900/20';
-      default: return 'text-slate-500 bg-nog-50 dark:bg-nog-700';
+      case 'high': return 'text-honey-500 bg-honey-50 dark:bg-honey-900/20';
+      case 'medium': return 'text-honey-500 bg-honey-50 dark:bg-honey-900/20';
+      case 'low': return 'text-honey-500 bg-honey-50 dark:bg-honey-900/20';
+      default: return 'text-nog-500 bg-nog-50 dark:bg-nog-700';
     }
   };
 
@@ -232,7 +232,7 @@ export default function WelcomeWizard({ onComplete, onSkip }: WelcomeWizardProps
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100] p-2 sm:p-4">
       <div className="bg-white dark:bg-nog-800 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] sm:max-h-[85vh] overflow-hidden flex flex-col safe-area-inset">
         {/* Header */}
-        <div className="p-3 sm:p-6 border-b border-slate-200 dark:border-nog-700 flex items-center justify-between">
+        <div className="p-3 sm:p-6 border-b border-nog-200 dark:border-nog-700 flex items-center justify-between">
           <div className="flex items-center gap-2 sm:gap-3">
             <img
               src="/logo.png"
@@ -240,10 +240,10 @@ export default function WelcomeWizard({ onComplete, onSkip }: WelcomeWizardProps
               className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl shadow-lg"
             />
             <div>
-              <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-100">
+              <h2 className="text-lg sm:text-xl font-bold text-nog-900 dark:text-nog-100">
                 Welcome to LogNog
               </h2>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+              <p className="text-xs sm:text-sm text-nog-500 dark:text-nog-400">
                 Your Logs, Your Control
               </p>
             </div>
@@ -253,7 +253,7 @@ export default function WelcomeWizard({ onComplete, onSkip }: WelcomeWizardProps
             className="p-2 hover:bg-nog-100 dark:hover:bg-nog-700 rounded-lg transition-colors"
             title="Skip setup"
           >
-            <X className="w-5 h-5 text-slate-500" />
+            <X className="w-5 h-5 text-nog-500" />
           </button>
         </div>
 
@@ -265,10 +265,10 @@ export default function WelcomeWizard({ onComplete, onSkip }: WelcomeWizardProps
                 <div
                   className={`w-6 h-6 sm:w-8 sm:h-8 text-xs sm:text-sm rounded-full flex items-center justify-center font-medium transition-colors ${
                     i === getCurrentStepIndex()
-                      ? 'bg-amber-500 text-white'
+                      ? 'bg-honey-500 text-nog-900'
                       : i < getCurrentStepIndex()
-                      ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'
-                      : 'bg-nog-100 text-slate-400 dark:bg-nog-700 dark:text-slate-500'
+                      ? 'bg-honey-100 text-honey-600 dark:bg-honey-900/30 dark:text-honey-400'
+                      : 'bg-nog-100 text-nog-400 dark:bg-nog-700 dark:text-nog-500'
                   }`}
                 >
                   {i < getCurrentStepIndex() ? <Check className="w-3 h-3 sm:w-4 sm:h-4" /> : i + 1}
@@ -276,14 +276,14 @@ export default function WelcomeWizard({ onComplete, onSkip }: WelcomeWizardProps
                 {i < STEPS.length - 1 && (
                   <div
                     className={`w-6 sm:w-12 h-0.5 mx-0.5 sm:mx-1 ${
-                      i < getCurrentStepIndex() ? 'bg-amber-500' : 'bg-slate-200 dark:bg-nog-600'
+                      i < getCurrentStepIndex() ? 'bg-honey-500' : 'bg-nog-200 dark:bg-nog-600'
                     }`}
                   />
                 )}
               </div>
             ))}
           </div>
-          <p className="text-center text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-2">
+          <p className="text-center text-xs sm:text-sm text-nog-500 dark:text-nog-400 mt-2">
             Step {getCurrentStepIndex() + 1} of {STEPS.length}
           </p>
         </div>
@@ -293,33 +293,33 @@ export default function WelcomeWizard({ onComplete, onSkip }: WelcomeWizardProps
           {/* Step 1: Welcome */}
           {currentStep === 'welcome' && (
             <div className="text-center py-4 sm:py-8">
-              <div className="w-14 h-14 sm:w-20 sm:h-20 mx-auto mb-4 sm:mb-6 bg-gradient-to-br from-amber-400 to-amber-600 rounded-2xl flex items-center justify-center shadow-lg">
+              <div className="w-14 h-14 sm:w-20 sm:h-20 mx-auto mb-4 sm:mb-6 bg-gradient-to-br from-honey-400 to-honey-600 rounded-2xl flex items-center justify-center shadow-lg">
                 <Sparkles className="w-7 h-7 sm:w-10 sm:h-10 text-white" />
               </div>
-              <h3 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 mb-3 sm:mb-4">
+              <h3 className="text-xl sm:text-2xl font-bold text-nog-900 dark:text-nog-100 mb-3 sm:mb-4">
                 Let's get you started!
               </h3>
-              <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 mb-4 sm:mb-8 max-w-md mx-auto px-2">
+              <p className="text-sm sm:text-base text-nog-600 dark:text-nog-400 mb-4 sm:mb-8 max-w-md mx-auto px-2">
                 LogNog is your self-hosted log management platform. This quick setup will help you:
               </p>
               <div className="space-y-2 sm:space-y-4 max-w-sm mx-auto text-left">
                 <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-nog-50 dark:bg-nog-700/50 rounded-lg">
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center flex-shrink-0">
-                    <Database className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-600 dark:text-amber-400" />
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 bg-honey-100 dark:bg-honey-900/30 rounded-full flex items-center justify-center flex-shrink-0">
+                    <Database className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-honey-600 dark:text-honey-400" />
                   </div>
-                  <span className="text-sm sm:text-base text-slate-700 dark:text-slate-300">Get sample data to explore</span>
+                  <span className="text-sm sm:text-base text-nog-700 dark:text-nog-300">Get sample data to explore</span>
                 </div>
                 <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-nog-50 dark:bg-nog-700/50 rounded-lg">
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center flex-shrink-0">
-                    <LayoutDashboard className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-600 dark:text-amber-400" />
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 bg-honey-100 dark:bg-honey-900/30 rounded-full flex items-center justify-center flex-shrink-0">
+                    <LayoutDashboard className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-honey-600 dark:text-honey-400" />
                   </div>
-                  <span className="text-sm sm:text-base text-slate-700 dark:text-slate-300">Create your first dashboard</span>
+                  <span className="text-sm sm:text-base text-nog-700 dark:text-nog-300">Create your first dashboard</span>
                 </div>
                 <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 bg-nog-50 dark:bg-nog-700/50 rounded-lg">
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 bg-amber-100 dark:bg-amber-900/30 rounded-full flex items-center justify-center flex-shrink-0">
-                    <Bell className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-amber-600 dark:text-amber-400" />
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 bg-honey-100 dark:bg-honey-900/30 rounded-full flex items-center justify-center flex-shrink-0">
+                    <Bell className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-honey-600 dark:text-honey-400" />
                   </div>
-                  <span className="text-sm sm:text-base text-slate-700 dark:text-slate-300">Set up optional alerts</span>
+                  <span className="text-sm sm:text-base text-nog-700 dark:text-nog-300">Set up optional alerts</span>
                 </div>
               </div>
             </div>
@@ -328,10 +328,10 @@ export default function WelcomeWizard({ onComplete, onSkip }: WelcomeWizardProps
           {/* Step 2: Data Source */}
           {currentStep === 'data-source' && (
             <div>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-2">
+              <h3 className="text-xl font-bold text-nog-900 dark:text-nog-100 mb-2">
                 Choose Your Data Source
               </h3>
-              <p className="text-slate-600 dark:text-slate-400 mb-6">
+              <p className="text-nog-600 dark:text-nog-400 mb-6">
                 Start with demo data to explore, or connect your real logs right away.
               </p>
 
@@ -342,28 +342,28 @@ export default function WelcomeWizard({ onComplete, onSkip }: WelcomeWizardProps
                   disabled={isLoading || demoGenerated}
                   className={`p-6 rounded-xl border-2 transition-all text-left ${
                     dataSourceChoice === 'demo' || demoGenerated
-                      ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/20'
-                      : 'border-slate-200 dark:border-nog-600 hover:border-slate-300 dark:hover:border-nog-500'
+                      ? 'border-honey-500 bg-honey-50 dark:bg-honey-900/20'
+                      : 'border-nog-200 dark:border-nog-600 hover:border-nog-300 dark:hover:border-nog-500'
                   } ${isLoading ? 'opacity-75' : ''}`}
                 >
                   <div className="flex items-start justify-between mb-3">
-                    <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-orange-600 rounded-xl flex items-center justify-center">
+                    <div className="w-12 h-12 bg-gradient-to-br from-honey-400 to-honey-600 rounded-xl flex items-center justify-center">
                       {isLoading ? (
-                        <Loader2 className="w-6 h-6 text-white animate-spin" />
+                        <Loader2 className="w-6 h-6 text-nog-900 animate-spin" />
                       ) : demoGenerated ? (
-                        <CheckCircle2 className="w-6 h-6 text-white" />
+                        <CheckCircle2 className="w-6 h-6 text-nog-900" />
                       ) : (
-                        <Play className="w-6 h-6 text-white" />
+                        <Play className="w-6 h-6 text-nog-900" />
                       )}
                     </div>
-                    <span className="px-2 py-0.5 text-xs bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 rounded-full">
+                    <span className="px-2 py-0.5 text-xs bg-honey-100 text-honey-700 dark:bg-honey-900/30 dark:text-honey-400 rounded-full">
                       Quick Start
                     </span>
                   </div>
-                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-1">
+                  <h4 className="font-semibold text-nog-900 dark:text-nog-100 mb-1">
                     Generate Demo Data
                   </h4>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                  <p className="text-sm text-nog-500 dark:text-nog-400">
                     {demoGenerated
                       ? '500 sample logs generated!'
                       : 'Create 500 sample logs to explore LogNog features'}
@@ -375,19 +375,19 @@ export default function WelcomeWizard({ onComplete, onSkip }: WelcomeWizardProps
                   onClick={() => setDataSourceChoice('real')}
                   className={`p-6 rounded-xl border-2 transition-all text-left ${
                     dataSourceChoice === 'real'
-                      ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/20'
-                      : 'border-slate-200 dark:border-nog-600 hover:border-slate-300 dark:hover:border-nog-500'
+                      ? 'border-honey-500 bg-honey-50 dark:bg-honey-900/20'
+                      : 'border-nog-200 dark:border-nog-600 hover:border-nog-300 dark:hover:border-nog-500'
                   }`}
                 >
                   <div className="flex items-start justify-between mb-3">
-                    <div className="w-12 h-12 bg-gradient-to-br from-amber-400 to-amber-600 rounded-xl flex items-center justify-center">
-                      <Server className="w-6 h-6 text-white" />
+                    <div className="w-12 h-12 bg-gradient-to-br from-honey-400 to-honey-600 rounded-xl flex items-center justify-center">
+                      <Server className="w-6 h-6 text-nog-900" />
                     </div>
                   </div>
-                  <h4 className="font-semibold text-slate-900 dark:text-slate-100 mb-1">
+                  <h4 className="font-semibold text-nog-900 dark:text-nog-100 mb-1">
                     Connect Real Logs
                   </h4>
-                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                  <p className="text-sm text-nog-500 dark:text-nog-400">
                     Set up syslog, HTTP ingestion, or the LogNog agent later
                   </p>
                 </button>
@@ -395,24 +395,24 @@ export default function WelcomeWizard({ onComplete, onSkip }: WelcomeWizardProps
 
               {dataSourceChoice === 'real' && (
                 <div className="mt-6 p-4 bg-nog-50 dark:bg-nog-700/50 rounded-lg">
-                  <h5 className="font-medium text-slate-700 dark:text-slate-300 mb-2">
+                  <h5 className="font-medium text-nog-700 dark:text-nog-300 mb-2">
                     Quick Setup Options:
                   </h5>
-                  <ul className="text-sm text-slate-600 dark:text-slate-400 space-y-1">
+                  <ul className="text-sm text-nog-600 dark:text-nog-400 space-y-1">
                     <li className="flex items-center gap-2">
                       <Clock className="w-4 h-4" />
-                      Syslog: Send to <code className="bg-slate-200 dark:bg-nog-600 px-1 rounded">UDP/TCP 514</code>
+                      Syslog: Send to <code className="bg-nog-200 dark:bg-nog-600 px-1 rounded">UDP/TCP 514</code>
                     </li>
                     <li className="flex items-center gap-2">
                       <Clock className="w-4 h-4" />
-                      HTTP: POST JSON to <code className="bg-slate-200 dark:bg-nog-600 px-1 rounded">/api/ingest/http</code>
+                      HTTP: POST JSON to <code className="bg-nog-200 dark:bg-nog-600 px-1 rounded">/api/ingest/http</code>
                     </li>
                     <li className="flex items-center gap-2">
                       <Clock className="w-4 h-4" />
                       Agent: Download LogNog In for Windows/Linux
                     </li>
                   </ul>
-                  <p className="text-xs text-slate-500 mt-2">
+                  <p className="text-xs text-nog-500 mt-2">
                     You can configure data sources anytime from the Data Sources page.
                   </p>
                 </div>
@@ -429,16 +429,16 @@ export default function WelcomeWizard({ onComplete, onSkip }: WelcomeWizardProps
           {/* Step 3: Dashboards */}
           {currentStep === 'dashboards' && (
             <div>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-2">
+              <h3 className="text-xl font-bold text-nog-900 dark:text-nog-100 mb-2">
                 Create Your First Dashboard
               </h3>
-              <p className="text-slate-600 dark:text-slate-400 mb-6">
+              <p className="text-nog-600 dark:text-nog-400 mb-6">
                 Select dashboard templates to get started quickly. You can customize them later.
               </p>
 
               {dashboardTemplates.length === 0 ? (
                 <div className="flex items-center justify-center py-12">
-                  <Loader2 className="w-8 h-8 text-amber-500 animate-spin" />
+                  <Loader2 className="w-8 h-8 text-honey-500 animate-spin" />
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -448,26 +448,26 @@ export default function WelcomeWizard({ onComplete, onSkip }: WelcomeWizardProps
                       onClick={() => toggleDashboard(template.name)}
                       className={`p-4 rounded-lg border-2 transition-all text-left ${
                         selectedDashboards.has(template.name)
-                          ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/20'
-                          : 'border-slate-200 dark:border-nog-600 hover:border-slate-300 dark:hover:border-nog-500'
+                          ? 'border-honey-500 bg-honey-50 dark:bg-honey-900/20'
+                          : 'border-nog-200 dark:border-nog-600 hover:border-nog-300 dark:hover:border-nog-500'
                       }`}
                     >
                       <div className="flex items-start justify-between">
                         <div className="flex items-center gap-2">
                           <LayoutDashboard className={`w-5 h-5 ${
                             selectedDashboards.has(template.name)
-                              ? 'text-amber-500'
-                              : 'text-slate-400'
+                              ? 'text-honey-500'
+                              : 'text-nog-400'
                           }`} />
-                          <h4 className="font-medium text-slate-900 dark:text-slate-100">
+                          <h4 className="font-medium text-nog-900 dark:text-nog-100">
                             {template.name}
                           </h4>
                         </div>
                         {selectedDashboards.has(template.name) && (
-                          <CheckCircle2 className="w-5 h-5 text-amber-500" />
+                          <CheckCircle2 className="w-5 h-5 text-honey-500" />
                         )}
                       </div>
-                      <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 ml-7">
+                      <p className="text-sm text-nog-500 dark:text-nog-400 mt-1 ml-7">
                         {template.description}
                       </p>
                     </button>
@@ -493,16 +493,16 @@ export default function WelcomeWizard({ onComplete, onSkip }: WelcomeWizardProps
           {/* Step 4: Alerts */}
           {currentStep === 'alerts' && (
             <div>
-              <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100 mb-2">
+              <h3 className="text-xl font-bold text-nog-900 dark:text-nog-100 mb-2">
                 Set Up Alerts (Optional)
               </h3>
-              <p className="text-slate-600 dark:text-slate-400 mb-6">
+              <p className="text-nog-600 dark:text-nog-400 mb-6">
                 Enable pre-built alerts to monitor common issues. You can skip this and configure alerts later.
               </p>
 
               {alertTemplates.length === 0 ? (
                 <div className="flex items-center justify-center py-12">
-                  <Loader2 className="w-8 h-8 text-amber-500 animate-spin" />
+                  <Loader2 className="w-8 h-8 text-honey-500 animate-spin" />
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -514,8 +514,8 @@ export default function WelcomeWizard({ onComplete, onSkip }: WelcomeWizardProps
                         onClick={() => toggleAlert(template.id)}
                         className={`w-full p-4 rounded-lg border-2 transition-all text-left ${
                           selectedAlerts.has(template.id)
-                            ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/20'
-                            : 'border-slate-200 dark:border-nog-600 hover:border-slate-300 dark:hover:border-nog-500'
+                            ? 'border-honey-500 bg-honey-50 dark:bg-honey-900/20'
+                            : 'border-nog-200 dark:border-nog-600 hover:border-nog-300 dark:hover:border-nog-500'
                         }`}
                       >
                         <div className="flex items-start justify-between">
@@ -524,17 +524,17 @@ export default function WelcomeWizard({ onComplete, onSkip }: WelcomeWizardProps
                               <Icon className="w-5 h-5" />
                             </div>
                             <div>
-                              <h4 className="font-medium text-slate-900 dark:text-slate-100">
+                              <h4 className="font-medium text-nog-900 dark:text-nog-100">
                                 {template.name}
                               </h4>
-                              <p className="text-sm text-slate-500 dark:text-slate-400">
+                              <p className="text-sm text-nog-500 dark:text-nog-400">
                                 {template.description}
                               </p>
                               <div className="flex items-center gap-2 mt-1">
                                 <span className={`text-xs px-2 py-0.5 rounded-full ${getSeverityColor(template.severity)}`}>
                                   {template.severity}
                                 </span>
-                                <span className="text-xs text-slate-400">
+                                <span className="text-xs text-nog-400">
                                   {template.category}
                                 </span>
                               </div>
@@ -542,11 +542,11 @@ export default function WelcomeWizard({ onComplete, onSkip }: WelcomeWizardProps
                           </div>
                           <div className={`w-6 h-6 rounded border-2 flex items-center justify-center transition-colors ${
                             selectedAlerts.has(template.id)
-                              ? 'border-amber-500 bg-amber-500'
-                              : 'border-slate-300 dark:border-nog-600'
+                              ? 'border-honey-500 bg-honey-500'
+                              : 'border-nog-300 dark:border-nog-600'
                           }`}>
                             {selectedAlerts.has(template.id) && (
-                              <Check className="w-4 h-4 text-white" />
+                              <Check className="w-4 h-4 text-nog-900" />
                             )}
                           </div>
                         </div>
@@ -569,8 +569,8 @@ export default function WelcomeWizard({ onComplete, onSkip }: WelcomeWizardProps
                 </div>
               )}
 
-              <div className="mt-6 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
-                <p className="text-sm text-amber-700 dark:text-amber-300">
+              <div className="mt-6 p-4 bg-honey-50 dark:bg-honey-900/20 rounded-lg">
+                <p className="text-sm text-honey-700 dark:text-honey-300">
                   <strong>Note:</strong> Alerts are created without notification channels. You can configure email, Slack, or webhook notifications in Settings.
                 </p>
               </div>
@@ -579,16 +579,16 @@ export default function WelcomeWizard({ onComplete, onSkip }: WelcomeWizardProps
         </div>
 
         {/* Footer */}
-        <div className="p-3 sm:p-6 border-t border-slate-200 dark:border-nog-700 flex flex-col sm:flex-row sm:items-center sm:justify-between bg-nog-50 dark:bg-nog-900 gap-2">
+        <div className="p-3 sm:p-6 border-t border-nog-200 dark:border-nog-700 flex flex-col sm:flex-row sm:items-center sm:justify-between bg-nog-50 dark:bg-nog-900 gap-2">
           {/* Don't show again checkbox */}
           <label className="flex items-center gap-2 cursor-pointer order-2 sm:order-1">
             <input
               type="checkbox"
               checked={dontShowAgain}
               onChange={(e) => setDontShowAgain(e.target.checked)}
-              className="w-4 h-4 rounded border-slate-300 dark:border-nog-600 text-amber-500 focus:ring-amber-500 focus:ring-offset-0 dark:bg-nog-700"
+              className="w-4 h-4 rounded border-nog-300 dark:border-nog-600 text-honey-500 focus:ring-honey-500 focus:ring-offset-0 dark:bg-nog-700"
             />
-            <span className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+            <span className="text-xs sm:text-sm text-nog-500 dark:text-nog-400">
               Don't show this again
             </span>
           </label>
@@ -597,7 +597,7 @@ export default function WelcomeWizard({ onComplete, onSkip }: WelcomeWizardProps
               <button
                 onClick={goToPreviousStep}
                 disabled={isLoading}
-                className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 text-sm sm:text-base text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 disabled:opacity-50"
+                className="flex items-center gap-1 sm:gap-2 px-2 sm:px-4 py-2 text-sm sm:text-base text-nog-600 dark:text-nog-400 hover:text-nog-900 dark:hover:text-nog-100 disabled:opacity-50"
               >
                 <ChevronLeft className="w-4 h-4" />
                 <span className="hidden sm:inline">Back</span>
@@ -605,7 +605,7 @@ export default function WelcomeWizard({ onComplete, onSkip }: WelcomeWizardProps
             )}
             <button
               onClick={handleSkip}
-              className="px-2 sm:px-4 py-2 text-xs sm:text-base text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
+              className="px-2 sm:px-4 py-2 text-xs sm:text-base text-nog-600 dark:text-nog-400 hover:text-nog-900 dark:hover:text-nog-100"
             >
               <span className="hidden sm:inline">Skip Setup</span>
               <span className="sm:hidden">Skip</span>
@@ -613,7 +613,7 @@ export default function WelcomeWizard({ onComplete, onSkip }: WelcomeWizardProps
             {currentStep === 'welcome' && (
               <button
                 onClick={goToNextStep}
-                className="flex items-center gap-2 px-6 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-lg font-medium shadow-lg shadow-amber-500/25 transition-all hover:shadow-amber-500/40"
+                className="flex items-center gap-2 px-6 py-2.5 bg-honey-500 hover:bg-honey-600 text-nog-900 rounded-lg font-medium shadow-lg shadow-honey-500/25 transition-all hover:shadow-honey-500/40"
               >
                 Get Started
                 <ChevronRight className="w-4 h-4" />
@@ -623,7 +623,7 @@ export default function WelcomeWizard({ onComplete, onSkip }: WelcomeWizardProps
               <button
                 onClick={goToNextStep}
                 disabled={isLoading}
-                className="flex items-center gap-2 px-6 py-2.5 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 text-white rounded-lg font-medium"
+                className="flex items-center gap-2 px-6 py-2.5 bg-honey-500 hover:bg-honey-600 disabled:bg-honey-300 text-nog-900 rounded-lg font-medium"
               >
                 Next
                 <ChevronRight className="w-4 h-4" />
@@ -633,7 +633,7 @@ export default function WelcomeWizard({ onComplete, onSkip }: WelcomeWizardProps
               <button
                 onClick={handleCreateDashboards}
                 disabled={isLoading}
-                className="flex items-center gap-2 px-6 py-2.5 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 text-white rounded-lg font-medium"
+                className="flex items-center gap-2 px-6 py-2.5 bg-honey-500 hover:bg-honey-600 disabled:bg-honey-300 text-nog-900 rounded-lg font-medium"
               >
                 {isLoading ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -654,7 +654,7 @@ export default function WelcomeWizard({ onComplete, onSkip }: WelcomeWizardProps
               <button
                 onClick={handleCreateAlerts}
                 disabled={isLoading}
-                className="flex items-center gap-2 px-6 py-2.5 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 text-white rounded-lg font-medium"
+                className="flex items-center gap-2 px-6 py-2.5 bg-honey-500 hover:bg-honey-600 disabled:bg-honey-300 text-nog-900 rounded-lg font-medium"
               >
                 {isLoading ? (
                   <Loader2 className="w-4 h-4 animate-spin" />

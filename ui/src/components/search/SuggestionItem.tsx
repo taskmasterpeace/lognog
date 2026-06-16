@@ -10,14 +10,14 @@ interface SuggestionItemProps {
 }
 
 const CATEGORY_STYLES: Record<SuggestionCategory, { bg: string; text: string; label: string }> = {
-  command: { bg: 'bg-amber-500/20', text: 'text-amber-400', label: 'Cmd' },
+  command: { bg: 'bg-honey-500/20', text: 'text-honey-400', label: 'Cmd' },
   aggregation: { bg: 'bg-purple-500/20', text: 'text-purple-400', label: 'Agg' },
   'eval-function': { bg: 'bg-green-500/20', text: 'text-green-400', label: 'Func' },
   field: { bg: 'bg-yellow-500/20', text: 'text-yellow-400', label: 'Field' },
   value: { bg: 'bg-cyan-500/20', text: 'text-cyan-400', label: 'Val' },
-  operator: { bg: 'bg-orange-500/20', text: 'text-orange-400', label: 'Op' },
+  operator: { bg: 'bg-honey-500/20', text: 'text-honey-400', label: 'Op' },
   keyword: { bg: 'bg-pink-500/20', text: 'text-pink-400', label: 'Key' },
-  history: { bg: 'bg-nog-500/20', text: 'text-slate-400', label: 'History' },
+  history: { bg: 'bg-nog-500/20', text: 'text-nog-400', label: 'History' },
 };
 
 export function SuggestionItem({ suggestion, isSelected, onClick }: SuggestionItemProps) {
@@ -29,7 +29,7 @@ export function SuggestionItem({ suggestion, isSelected, onClick }: SuggestionIt
         px-3 py-2 cursor-pointer flex items-start justify-between gap-2
         transition-colors duration-75
         ${isSelected
-          ? 'bg-amber-500/20 dark:bg-amber-500/10'
+          ? 'bg-honey-500/20 dark:bg-honey-500/10'
           : 'hover:bg-nog-100 dark:hover:bg-nog-700/50'
         }
       `}
@@ -39,7 +39,7 @@ export function SuggestionItem({ suggestion, isSelected, onClick }: SuggestionIt
     >
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="font-mono text-sm text-slate-900 dark:text-white truncate">
+          <span className="font-mono text-sm text-nog-900 dark:text-white truncate">
             {suggestion.label}
           </span>
           <span
@@ -53,14 +53,14 @@ export function SuggestionItem({ suggestion, isSelected, onClick }: SuggestionIt
         </div>
 
         {suggestion.description && (
-          <div className="text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
+          <div className="text-xs text-nog-500 dark:text-nog-400 truncate mt-0.5">
             {suggestion.description}
           </div>
         )}
 
         {/* Show syntax hint when selected */}
         {suggestion.syntax && isSelected && (
-          <div className="text-xs text-slate-400 dark:text-slate-500 font-mono mt-1.5 bg-nog-100 dark:bg-nog-900/50 px-2 py-1 rounded">
+          <div className="text-xs text-nog-400 dark:text-nog-500 font-mono mt-1.5 bg-nog-100 dark:bg-nog-900/50 px-2 py-1 rounded">
             {suggestion.syntax}
           </div>
         )}
@@ -68,7 +68,7 @@ export function SuggestionItem({ suggestion, isSelected, onClick }: SuggestionIt
 
       {/* Show example on hover for selected item */}
       {suggestion.example && isSelected && (
-        <div className="text-xs text-slate-400 dark:text-slate-500 hidden lg:block whitespace-nowrap">
+        <div className="text-xs text-nog-400 dark:text-nog-500 hidden lg:block whitespace-nowrap">
           {suggestion.example}
         </div>
       )}

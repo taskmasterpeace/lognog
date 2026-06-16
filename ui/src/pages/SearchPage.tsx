@@ -596,13 +596,13 @@ export default function SearchPage() {
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="bg-white dark:bg-nog-800 border-b border-slate-200 dark:border-nog-700 shadow-sm">
+      <div className="bg-white dark:bg-nog-800 border-b border-nog-200 dark:border-nog-700 shadow-sm">
         <div className="p-4 sm:p-6">
           {/* Title - responsive layout */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-nog-100 truncate">Search & Explore</h1>
+                <h1 className="text-xl sm:text-2xl font-bold text-nog-900 dark:text-nog-100 truncate">Search & Explore</h1>
                 <InfoIcon
                   content={
                     <div className="space-y-2">
@@ -614,7 +614,7 @@ export default function SearchPage() {
                   placement="right"
                 />
               </div>
-              <p className="text-slate-500 dark:text-nog-400 text-sm mt-1 hidden sm:block">
+              <p className="text-nog-500 dark:text-nog-400 text-sm mt-1 hidden sm:block">
                 {searchMode === 'ai'
                   ? 'Ask questions in plain English'
                   : 'Query your logs using LogNog Query Language'}
@@ -631,8 +631,8 @@ export default function SearchPage() {
                     onClick={() => setSearchMode('dsl')}
                     className={`flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                       searchMode === 'dsl'
-                        ? 'bg-white dark:bg-nog-600 text-slate-900 dark:text-nog-100 shadow-sm'
-                        : 'text-slate-600 dark:text-nog-400 hover:text-slate-900 dark:hover:text-nog-100'
+                        ? 'bg-white dark:bg-nog-600 text-nog-900 dark:text-nog-100 shadow-sm'
+                        : 'text-nog-600 dark:text-nog-400 hover:text-nog-900 dark:hover:text-nog-100'
                     }`}
                   >
                     <Code2 className="w-4 h-4" />
@@ -647,8 +647,8 @@ export default function SearchPage() {
                     onClick={() => setSearchMode('ai')}
                     className={`flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                       searchMode === 'ai'
-                        ? 'bg-white dark:bg-nog-600 text-slate-900 dark:text-nog-100 shadow-sm'
-                        : 'text-slate-600 dark:text-nog-400 hover:text-slate-900 dark:hover:text-nog-100'
+                        ? 'bg-white dark:bg-nog-600 text-nog-900 dark:text-nog-100 shadow-sm'
+                        : 'text-nog-600 dark:text-nog-400 hover:text-nog-900 dark:hover:text-nog-100'
                     }`}
                   >
                     <Wand2 className="w-4 h-4" />
@@ -673,14 +673,14 @@ export default function SearchPage() {
               {searchMode === 'ai' ? (
                 /* AI Search Input */
                 <div className="flex-1 relative">
-                  <MessageSquare className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 w-4 sm:w-5 h-4 sm:h-5 text-amber-400" />
+                  <MessageSquare className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 w-4 sm:w-5 h-4 sm:h-5 text-honey-400" />
                   <input
                     type="text"
                     value={aiQuestion}
                     onChange={(e) => setAiQuestion(e.target.value)}
                     onKeyDown={handleKeyDown}
                     placeholder="Show me all errors..."
-                    className="input-search h-11 sm:h-12 pl-10 sm:pl-12 pr-10 sm:pr-24 border-amber-200 focus:border-amber-400 focus:ring-amber-200 text-sm sm:text-base"
+                    className="input-search h-11 sm:h-12 pl-10 sm:pl-12 pr-10 sm:pr-24 border-honey-200 focus:border-honey-400 focus:ring-honey-200 text-sm sm:text-base"
                     autoFocus
                     data-search-input
                   />
@@ -688,13 +688,13 @@ export default function SearchPage() {
                     {aiQuestion && (
                       <button
                         onClick={() => setAiQuestion('')}
-                        className="p-1 text-slate-400 hover:text-slate-600 hover:bg-nog-100 rounded transition-colors"
+                        className="p-1 text-nog-400 hover:text-nog-600 hover:bg-nog-100 rounded transition-colors"
                         title="Clear"
                       >
                         <X className="w-4 h-4" />
                       </button>
                     )}
-                    <kbd className="hidden lg:inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-slate-400 bg-nog-100 dark:bg-nog-700 rounded" title="Ctrl/Cmd+Enter to run, Ctrl/Cmd+K to focus">
+                    <kbd className="hidden lg:inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-nog-400 bg-nog-100 dark:bg-nog-700 rounded" title="Ctrl/Cmd+Enter to run, Ctrl/Cmd+K to focus">
                       <span>⌘↵</span>
                     </kbd>
                   </div>
@@ -715,7 +715,7 @@ export default function SearchPage() {
                     {query && query !== 'search *' && (
                       <button
                         onClick={() => setQuery('search *')}
-                        className="p-1 text-slate-400 hover:text-slate-600 hover:bg-nog-100 rounded transition-colors pointer-events-auto"
+                        className="p-1 text-nog-400 hover:text-nog-600 hover:bg-nog-100 rounded transition-colors pointer-events-auto"
                         title="Clear search"
                       >
                         <X className="w-4 h-4" />
@@ -733,15 +733,15 @@ export default function SearchPage() {
                     className="btn-secondary h-11 sm:h-12 group"
                     title="Query history"
                   >
-                    <History className="w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-all duration-200 group-hover:scale-110" />
+                    <History className="w-4 h-4 text-nog-400 group-hover:text-nog-600 transition-all duration-200 group-hover:scale-110" />
                   </button>
 
                   {/* History Dropdown Menu */}
                   {showHistory && (
                     <div className="dropdown right-0 w-80 sm:w-96 animate-fade-in">
                       <div className="py-2">
-                        <div className="px-4 py-2 border-b border-slate-100 dark:border-nog-700">
-                          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                        <div className="px-4 py-2 border-b border-nog-100 dark:border-nog-700">
+                          <p className="text-xs font-semibold text-nog-400 uppercase tracking-wider">
                             Recent Queries
                           </p>
                         </div>
@@ -752,22 +752,22 @@ export default function SearchPage() {
                               setQuery(historyQuery);
                               setShowHistory(false);
                             }}
-                            className={`dropdown-item flex items-center gap-3 text-left transition-all duration-150 animate-fade-in text-slate-700 dark:text-nog-300 hover:bg-nog-50 dark:hover:bg-nog-700`}
+                            className={`dropdown-item flex items-center gap-3 text-left transition-all duration-150 animate-fade-in text-nog-700 dark:text-nog-300 hover:bg-nog-50 dark:hover:bg-nog-700`}
                             style={{ animationDelay: `${index * 30}ms` }}
                           >
-                            <History className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                            <History className="w-4 h-4 text-nog-400 flex-shrink-0" />
                             <span className="font-mono text-sm truncate flex-1">{historyQuery}</span>
                           </button>
                         ))}
                         {queryHistory.length > 0 && (
-                          <div className="border-t border-slate-100 dark:border-nog-700 mt-2 pt-2 px-4">
+                          <div className="border-t border-nog-100 dark:border-nog-700 mt-2 pt-2 px-4">
                             <button
                               onClick={() => {
                                 setQueryHistory([]);
                                 localStorage.removeItem('lognog_query_history');
                                 setShowHistory(false);
                               }}
-                              className="text-xs text-slate-500 hover:text-red-600 transition-colors"
+                              className="text-xs text-nog-500 hover:text-red-600 transition-colors"
                             >
                               Clear history
                             </button>
@@ -787,21 +787,21 @@ export default function SearchPage() {
                     className="btn-secondary h-11 sm:h-12 group"
                     title="Query templates"
                   >
-                    <BookTemplate className="w-4 h-4 text-slate-400 group-hover:text-slate-600 transition-all duration-200 group-hover:scale-110" />
+                    <BookTemplate className="w-4 h-4 text-nog-400 group-hover:text-nog-600 transition-all duration-200 group-hover:scale-110" />
                   </button>
 
                   {/* Templates Dropdown Menu */}
                   {showTemplates && (
                     <div className="dropdown right-0 w-96 max-h-[70vh] overflow-y-auto animate-fade-in">
                       <div className="py-2">
-                        <div className="px-4 py-2 border-b border-slate-100 dark:border-nog-700">
-                          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                        <div className="px-4 py-2 border-b border-nog-100 dark:border-nog-700">
+                          <p className="text-xs font-semibold text-nog-400 uppercase tracking-wider">
                             Query Templates
                           </p>
                         </div>
                         {QUERY_TEMPLATES.map((category, catIndex) => (
                           <div key={category.category}>
-                            <div className="px-4 py-2 text-xs font-semibold text-amber-600 dark:text-amber-400 bg-nog-50 dark:bg-nog-800/50">
+                            <div className="px-4 py-2 text-xs font-semibold text-honey-600 dark:text-honey-400 bg-nog-50 dark:bg-nog-800/50">
                               {category.category}
                             </div>
                             {category.templates.map((template, index) => (
@@ -811,10 +811,10 @@ export default function SearchPage() {
                                   setQuery(template.query);
                                   setShowTemplates(false);
                                 }}
-                                className="dropdown-item flex flex-col gap-0.5 text-left transition-all duration-150 text-slate-700 dark:text-nog-300 hover:bg-nog-50 dark:hover:bg-nog-700 w-full"
+                                className="dropdown-item flex flex-col gap-0.5 text-left transition-all duration-150 text-nog-700 dark:text-nog-300 hover:bg-nog-50 dark:hover:bg-nog-700 w-full"
                               >
                                 <span className="font-medium text-sm">{template.name}</span>
-                                <span className="font-mono text-xs text-slate-500 dark:text-nog-400 truncate">{template.query}</span>
+                                <span className="font-mono text-xs text-nog-500 dark:text-nog-400 truncate">{template.query}</span>
                               </button>
                             ))}
                           </div>
@@ -842,7 +842,7 @@ export default function SearchPage() {
                 <button
                   onClick={handleAISearch}
                   disabled={aiSearchMutation.isPending || !aiQuestion.trim()}
-                  className="btn-primary h-11 sm:h-12 px-4 sm:px-6 bg-amber-600 hover:bg-amber-700 flex-shrink-0"
+                  className="btn-primary h-11 sm:h-12 px-4 sm:px-6 bg-honey-600 hover:bg-honey-700 flex-shrink-0"
                 >
                   {aiSearchMutation.isPending ? (
                     <Loader2 className="w-4 sm:w-5 h-4 sm:h-5 animate-spin" />
@@ -877,7 +877,7 @@ export default function SearchPage() {
                     className={`h-11 sm:h-12 px-3 sm:px-4 rounded-lg font-medium transition-all flex items-center gap-2 flex-shrink-0 ${
                       liveTailEnabled
                         ? liveTail.isPaused
-                          ? 'bg-amber-100 text-amber-700 border-2 border-amber-300 hover:bg-amber-200'
+                          ? 'bg-honey-100 text-honey-700 border-2 border-honey-300 hover:bg-honey-200'
                           : 'bg-green-100 text-green-700 border-2 border-green-300 hover:bg-green-200 animate-pulse'
                         : 'btn-secondary'
                     }`}
@@ -913,12 +913,12 @@ export default function SearchPage() {
             {searchMode === 'ai' ? (
               /* AI Suggestions */
               <>
-                <span className="text-xs font-semibold text-amber-400 uppercase whitespace-nowrap hidden sm:inline">Try asking:</span>
+                <span className="text-xs font-semibold text-honey-400 uppercase whitespace-nowrap hidden sm:inline">Try asking:</span>
                 {aiSuggestions?.suggestions.slice(0, 3).map((suggestion, idx) => (
                   <button
                     key={idx}
                     onClick={() => setAiQuestion(suggestion.text)}
-                    className="flex items-center gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm bg-amber-50 text-amber-700 rounded-lg hover:bg-amber-100 transition-colors whitespace-nowrap flex-shrink-0"
+                    className="flex items-center gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm bg-honey-50 text-honey-700 rounded-lg hover:bg-honey-100 transition-colors whitespace-nowrap flex-shrink-0"
                     title={suggestion.description}
                   >
                     <Wand2 className="w-3 h-3" />
@@ -929,26 +929,26 @@ export default function SearchPage() {
             ) : (
               /* DSL Quick Searches */
               <>
-                <span className="text-xs font-semibold text-slate-400 uppercase whitespace-nowrap hidden sm:inline">Quick:</span>
+                <span className="text-xs font-semibold text-nog-400 uppercase whitespace-nowrap hidden sm:inline">Quick:</span>
                 {EXAMPLE_QUERIES.slice(0, 4).map((ex) => (
                   <button
                     key={ex.name}
                     onClick={() => setQuery(ex.query)}
-                    className="flex items-center gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm bg-nog-100 text-slate-700 rounded-lg hover:bg-slate-200 transition-colors whitespace-nowrap flex-shrink-0"
+                    className="flex items-center gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm bg-nog-100 text-nog-700 rounded-lg hover:bg-nog-200 transition-colors whitespace-nowrap flex-shrink-0"
                   >
-                    <Sparkles className="w-3 h-3 text-amber-500" />
+                    <Sparkles className="w-3 h-3 text-honey-500" />
                     {ex.name}
                   </button>
                 ))}
                 {savedSearches && savedSearches.length > 0 && (
                   <>
-                    <span className="text-slate-300 hidden sm:inline">|</span>
-                    <span className="text-xs font-semibold text-slate-400 uppercase whitespace-nowrap hidden sm:inline">Saved:</span>
+                    <span className="text-nog-300 hidden sm:inline">|</span>
+                    <span className="text-xs font-semibold text-nog-400 uppercase whitespace-nowrap hidden sm:inline">Saved:</span>
                     {savedSearches.slice(0, 2).map((search) => (
                       <button
                         key={search.id}
                         onClick={() => setQuery(search.query)}
-                        className="flex items-center gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm bg-amber-50 text-amber-700 rounded-lg hover:bg-amber-100 transition-colors whitespace-nowrap flex-shrink-0"
+                        className="flex items-center gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm bg-honey-50 text-honey-700 rounded-lg hover:bg-honey-100 transition-colors whitespace-nowrap flex-shrink-0"
                       >
                         <Bookmark className="w-3 h-3" />
                         {search.name}
@@ -966,7 +966,7 @@ export default function SearchPage() {
       <div className="flex-1 flex overflow-hidden">
         {/* Left Sidebar - Field Discovery (hidden on mobile) */}
         {sidebarOpen && (
-          <div className="hidden md:block w-64 flex-shrink-0 overflow-hidden border-r border-slate-200 dark:border-nog-700">
+          <div className="hidden md:block w-64 flex-shrink-0 overflow-hidden border-r border-nog-200 dark:border-nog-700">
             <FieldSidebar
               results={(searchMutation.data?.results || aiSearchMutation.data?.results || []) as Record<string, unknown>[]}
               selectedFilters={selectedFilters}
@@ -996,12 +996,12 @@ export default function SearchPage() {
 
         {/* AI Search Result Card */}
         {aiSearchMutation.data && (
-          <div className="card border-amber-200 bg-amber-50 p-4 mb-6 animate-fade-in">
+          <div className="card border-honey-200 bg-honey-50 p-4 mb-6 animate-fade-in">
             <div className="flex items-start gap-3">
-              <Wand2 className="w-5 h-5 text-amber-500 mt-0.5 flex-shrink-0" />
+              <Wand2 className="w-5 h-5 text-honey-500 mt-0.5 flex-shrink-0" />
               <div className="flex-1">
                 <div className="flex items-center justify-between mb-2">
-                  <p className="font-semibold text-amber-900">AI Generated Query</p>
+                  <p className="font-semibold text-honey-900">AI Generated Query</p>
                   <div className="flex items-center gap-2">
                     {aiSearchMutation.data.confidence >= 0.8 ? (
                       <span className="flex items-center gap-1 text-xs font-medium text-green-600 bg-green-100 px-2 py-1 rounded-full">
@@ -1009,7 +1009,7 @@ export default function SearchPage() {
                         High Confidence ({Math.round(aiSearchMutation.data.confidence * 100)}%)
                       </span>
                     ) : aiSearchMutation.data.confidence >= 0.5 ? (
-                      <span className="flex items-center gap-1 text-xs font-medium text-amber-600 bg-amber-100 px-2 py-1 rounded-full">
+                      <span className="flex items-center gap-1 text-xs font-medium text-honey-600 bg-honey-100 px-2 py-1 rounded-full">
                         <AlertTriangle className="w-3 h-3" />
                         Medium ({Math.round(aiSearchMutation.data.confidence * 100)}%)
                       </span>
@@ -1021,9 +1021,9 @@ export default function SearchPage() {
                     )}
                   </div>
                 </div>
-                <p className="text-sm text-amber-700 mb-3">{aiSearchMutation.data.explanation}</p>
+                <p className="text-sm text-honey-700 mb-3">{aiSearchMutation.data.explanation}</p>
                 <div className="flex items-center gap-2">
-                  <code className="flex-1 p-2 bg-white dark:bg-nog-800 rounded border border-amber-200 dark:border-amber-700 text-sm font-mono text-amber-900 dark:text-amber-200">
+                  <code className="flex-1 p-2 bg-white dark:bg-nog-800 rounded border border-honey-200 dark:border-honey-700 text-sm font-mono text-honey-900 dark:text-honey-200">
                     {aiSearchMutation.data.query}
                   </code>
                   <button
@@ -1048,18 +1048,18 @@ export default function SearchPage() {
         {/* Active Filter Chips */}
         {activeFilterChips.length > 0 && (
           <div className="mb-4 flex items-center gap-2 flex-wrap">
-            <span className="text-xs font-semibold text-slate-500 uppercase">Active Filters:</span>
+            <span className="text-xs font-semibold text-nog-500 uppercase">Active Filters:</span>
             {activeFilterChips.map((chip, idx) => (
               <span
                 key={`${chip.field}-${chip.value}-${idx}`}
-                className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-sm font-medium"
+                className="inline-flex items-center gap-1.5 px-3 py-1 bg-honey-100 text-honey-700 rounded-full text-sm font-medium"
               >
-                <span className="text-xs text-amber-500">{chip.field}</span>
-                <span className="text-amber-800">{chip.operator === '!=' ? '≠' : '='}</span>
+                <span className="text-xs text-honey-500">{chip.field}</span>
+                <span className="text-honey-800">{chip.operator === '!=' ? '≠' : '='}</span>
                 <span>{chip.value}</span>
                 <button
                   onClick={() => removeFilterChip(chip.field, chip.value)}
-                  className="ml-1 hover:bg-amber-200 rounded-full p-0.5 transition-colors"
+                  className="ml-1 hover:bg-honey-200 rounded-full p-0.5 transition-colors"
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -1071,7 +1071,7 @@ export default function SearchPage() {
                 setQuery('search *');
                 searchMutation.mutate();
               }}
-              className="text-xs text-amber-600 hover:text-amber-700 font-medium"
+              className="text-xs text-honey-600 hover:text-honey-700 font-medium"
             >
               Clear All
             </button>
@@ -1082,11 +1082,11 @@ export default function SearchPage() {
         {liveTailEnabled && (
           <div className={`mb-4 p-3 rounded-lg border-2 flex items-center justify-between animate-fade-in ${
             liveTail.isPaused
-              ? 'bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-700'
+              ? 'bg-honey-50 border-honey-200 dark:bg-honey-900/20 dark:border-honey-700'
               : 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-700'
           }`}>
             <div className="flex items-center gap-3">
-              <div className={`flex items-center gap-2 ${liveTail.isPaused ? 'text-amber-700' : 'text-green-700'}`}>
+              <div className={`flex items-center gap-2 ${liveTail.isPaused ? 'text-honey-700' : 'text-green-700'}`}>
                 {liveTail.isPaused ? (
                   <Pause className="w-5 h-5" />
                 ) : (
@@ -1096,7 +1096,7 @@ export default function SearchPage() {
                   {liveTail.isPaused ? 'Live tail paused' : 'Live tail active'}
                 </span>
               </div>
-              <div className="flex items-center gap-4 text-sm text-slate-600 dark:text-slate-300">
+              <div className="flex items-center gap-4 text-sm text-nog-600 dark:text-nog-300">
                 <span className="tabular-nums">
                   <Zap className="w-4 h-4 inline mr-1" />
                   {liveTail.logsPerSecond}/s
@@ -1146,9 +1146,9 @@ export default function SearchPage() {
 
         {/* Live Tail Error */}
         {liveTailEnabled && liveTail.error && (
-          <div className="card border-amber-200 bg-amber-50 p-3 mb-4 flex items-center gap-3 animate-fade-in">
-            <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0" />
-            <span className="text-sm text-amber-700">{liveTail.error}</span>
+          <div className="card border-honey-200 bg-honey-50 p-3 mb-4 flex items-center gap-3 animate-fade-in">
+            <AlertTriangle className="w-5 h-5 text-honey-500 flex-shrink-0" />
+            <span className="text-sm text-honey-700">{liveTail.error}</span>
           </div>
         )}
 
@@ -1163,21 +1163,21 @@ export default function SearchPage() {
             return (
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <div className="w-16 h-16 rounded-full bg-nog-100 flex items-center justify-center mb-4">
-                  <Search className="w-8 h-8 text-slate-400" />
+                  <Search className="w-8 h-8 text-nog-400" />
                 </div>
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-nog-100 mb-2">
+                <h3 className="text-lg font-semibold text-nog-900 dark:text-nog-100 mb-2">
                   No results found
                 </h3>
-                <p className="text-slate-500 dark:text-nog-400 max-w-md mb-6">
+                <p className="text-nog-500 dark:text-nog-400 max-w-md mb-6">
                   Your search didn't match any logs. Try adjusting your query or time range.
                 </p>
                 <div className="bg-nog-50 dark:bg-nog-800 rounded-lg p-4 max-w-md text-left">
-                  <p className="text-sm font-medium text-slate-700 dark:text-nog-300 mb-2">Suggestions:</p>
-                  <ul className="text-sm text-slate-600 dark:text-nog-400 space-y-1">
+                  <p className="text-sm font-medium text-nog-700 dark:text-nog-300 mb-2">Suggestions:</p>
+                  <ul className="text-sm text-nog-600 dark:text-nog-400 space-y-1">
                     <li>• Try a broader time range (e.g., "Last 7 days")</li>
-                    <li>• Use wildcards: <code className="text-xs bg-slate-200 dark:bg-nog-700 px-1 rounded">host=web*</code></li>
-                    <li>• Check field names: <code className="text-xs bg-slate-200 dark:bg-nog-700 px-1 rounded">hostname</code> vs <code className="text-xs bg-slate-200 dark:bg-nog-700 px-1 rounded">host</code></li>
-                    <li>• Try <code className="text-xs bg-slate-200 dark:bg-nog-700 px-1 rounded">search *</code> to see all logs</li>
+                    <li>• Use wildcards: <code className="text-xs bg-nog-200 dark:bg-nog-700 px-1 rounded">host=web*</code></li>
+                    <li>• Check field names: <code className="text-xs bg-nog-200 dark:bg-nog-700 px-1 rounded">hostname</code> vs <code className="text-xs bg-nog-200 dark:bg-nog-700 px-1 rounded">host</code></li>
+                    <li>• Try <code className="text-xs bg-nog-200 dark:bg-nog-700 px-1 rounded">search *</code> to see all logs</li>
                   </ul>
                 </div>
               </div>
@@ -1204,13 +1204,13 @@ export default function SearchPage() {
                       <PanelLeft className="w-5 h-5" />
                     )}
                   </button>
-                  <p className="text-sm font-medium text-slate-700 dark:text-nog-300">
-                    <span className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-nog-100">
+                  <p className="text-sm font-medium text-nog-700 dark:text-nog-300">
+                    <span className="text-xl sm:text-2xl font-bold text-nog-900 dark:text-nog-100">
                       {count.toLocaleString()}
                     </span>
                     {' '}results
                     {executionTime !== undefined && (
-                      <span className="text-slate-500 dark:text-nog-400 hidden sm:inline">
+                      <span className="text-nog-500 dark:text-nog-400 hidden sm:inline">
                         {' '}in {executionTime.toLocaleString()}ms
                       </span>
                     )}
@@ -1225,8 +1225,8 @@ export default function SearchPage() {
                       onClick={() => setViewMode('log')}
                       className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-xs font-medium transition-colors ${
                         viewMode === 'log'
-                          ? 'bg-white dark:bg-nog-600 text-slate-900 dark:text-nog-100 shadow-sm'
-                          : 'text-slate-600 dark:text-nog-400 hover:text-slate-900 dark:hover:text-nog-100'
+                          ? 'bg-white dark:bg-nog-600 text-nog-900 dark:text-nog-100 shadow-sm'
+                          : 'text-nog-600 dark:text-nog-400 hover:text-nog-900 dark:hover:text-nog-100'
                       }`}
                       title="Log View"
                     >
@@ -1237,8 +1237,8 @@ export default function SearchPage() {
                       onClick={() => setViewMode('table')}
                       className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-xs font-medium transition-colors ${
                         viewMode === 'table'
-                          ? 'bg-white dark:bg-nog-600 text-slate-900 dark:text-nog-100 shadow-sm'
-                          : 'text-slate-600 dark:text-nog-400 hover:text-slate-900 dark:hover:text-nog-100'
+                          ? 'bg-white dark:bg-nog-600 text-nog-900 dark:text-nog-100 shadow-sm'
+                          : 'text-nog-600 dark:text-nog-400 hover:text-nog-900 dark:hover:text-nog-100'
                       }`}
                       title="Table View"
                     >
@@ -1249,8 +1249,8 @@ export default function SearchPage() {
                       onClick={() => setViewMode('json')}
                       className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-xs font-medium transition-colors ${
                         viewMode === 'json'
-                          ? 'bg-white dark:bg-nog-600 text-slate-900 dark:text-nog-100 shadow-sm'
-                          : 'text-slate-600 dark:text-nog-400 hover:text-slate-900 dark:hover:text-nog-100'
+                          ? 'bg-white dark:bg-nog-600 text-nog-900 dark:text-nog-100 shadow-sm'
+                          : 'text-nog-600 dark:text-nog-400 hover:text-nog-900 dark:hover:text-nog-100'
                       }`}
                       title="JSON View"
                     >
@@ -1291,7 +1291,7 @@ export default function SearchPage() {
                   </button>
 
                   {/* Divider - hidden on mobile */}
-                  <div className="hidden sm:block w-px h-6 bg-slate-200 dark:bg-nog-600 flex-shrink-0" />
+                  <div className="hidden sm:block w-px h-6 bg-nog-200 dark:bg-nog-600 flex-shrink-0" />
 
                   {/* Create Alert Button */}
                   <button
@@ -1303,7 +1303,7 @@ export default function SearchPage() {
                       });
                       navigate(`/alerts?${params.toString()}`);
                     }}
-                    className="btn-ghost text-xs text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-900/20 flex-shrink-0"
+                    className="btn-ghost text-xs text-honey-600 hover:text-honey-700 hover:bg-honey-50 dark:text-honey-400 dark:hover:bg-honey-900/20 flex-shrink-0"
                     title="Create an alert from this search"
                   >
                     <Bell className="w-4 h-4" />
@@ -1320,7 +1320,7 @@ export default function SearchPage() {
                       });
                       navigate(`/reports?${params.toString()}`);
                     }}
-                    className="btn-ghost text-xs text-amber-600 hover:text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-900/20 flex-shrink-0"
+                    className="btn-ghost text-xs text-honey-600 hover:text-honey-700 hover:bg-honey-50 dark:text-honey-400 dark:hover:bg-honey-900/20 flex-shrink-0"
                     title="Create a scheduled report from this search"
                   >
                     <FileText className="w-4 h-4" />
@@ -1331,7 +1331,7 @@ export default function SearchPage() {
 
               {/* SQL Preview */}
               {showSqlPreview && sql && (
-                <div className="card p-4 mb-4 bg-nog-900 text-slate-100 animate-fade-in">
+                <div className="card p-4 mb-4 bg-nog-900 text-nog-100 animate-fade-in">
                   <pre className="text-sm font-mono overflow-x-auto whitespace-pre-wrap">
                     {sql}
                   </pre>
@@ -1340,12 +1340,12 @@ export default function SearchPage() {
 
               {/* Timeline Histogram */}
               {searchMutation.data?.histogram && searchMutation.data.histogram.buckets.length > 0 && (
-                <div className="mb-4 bg-white dark:bg-nog-800 rounded-lg border border-slate-200 dark:border-nog-700 p-3">
+                <div className="mb-4 bg-white dark:bg-nog-800 rounded-lg border border-nog-200 dark:border-nog-700 p-3">
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-xs text-slate-500 dark:text-nog-400">
+                    <span className="text-xs text-nog-500 dark:text-nog-400">
                       Events over time
                     </span>
-                    <span className="text-xs text-slate-400 dark:text-nog-500">
+                    <span className="text-xs text-nog-400 dark:text-nog-500">
                       Click bar to zoom, drag to select range
                     </span>
                   </div>
@@ -1413,11 +1413,11 @@ export default function SearchPage() {
                                     {SEVERITY_NAMES[Number(value)] || String(value)}
                                   </span>
                                 ) : key === 'timestamp' ? (
-                                  <span className="text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                                  <span className="text-nog-600 dark:text-nog-300 whitespace-nowrap">
                                     {new Date(String(value)).toLocaleString()}
                                   </span>
                                 ) : key === 'message' ? (
-                                  <span className="font-mono text-xs text-slate-700 dark:text-slate-300 max-w-md truncate block">
+                                  <span className="font-mono text-xs text-nog-700 dark:text-nog-300 max-w-md truncate block">
                                     {String(value)}
                                   </span>
                                 ) : key === 'hostname' || key === 'app_name' ? (
@@ -1437,7 +1437,7 @@ export default function SearchPage() {
                 /* JSON View */
                 <div className="card overflow-hidden bg-nog-900">
                   <div className="overflow-auto p-4" style={{ maxHeight: '600px' }}>
-                    <pre className="text-sm font-mono text-slate-100 whitespace-pre-wrap">
+                    <pre className="text-sm font-mono text-nog-100 whitespace-pre-wrap">
                       {JSON.stringify(results, null, 2)}
                     </pre>
                   </div>
@@ -1453,14 +1453,14 @@ export default function SearchPage() {
           <div className="animate-slide-up">
             <div className="flex items-center justify-between mb-4">
               <div className="flex items-center gap-4">
-                <p className="text-sm font-medium text-slate-700 dark:text-nog-300">
-                  <span className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-nog-100">
+                <p className="text-sm font-medium text-nog-700 dark:text-nog-300">
+                  <span className="text-xl sm:text-2xl font-bold text-nog-900 dark:text-nog-100">
                     {liveTail.logs.length.toLocaleString()}
                   </span>
                   {' '}live logs
                 </p>
               </div>
-              <div className="flex items-center gap-2 text-xs text-slate-500">
+              <div className="flex items-center gap-2 text-xs text-nog-500">
                 <span>Scroll to pause • Auto-resumes in 5s</span>
               </div>
             </div>
@@ -1481,22 +1481,22 @@ export default function SearchPage() {
         {!searchMutation.data && !aiSearchMutation.data && !searchMutation.isPending && !aiSearchMutation.isPending && !searchMutation.isError && !aiSearchMutation.isError && !liveTailEnabled && (
           <div className="flex flex-col items-center justify-center py-20">
             <div className={`w-16 h-16 rounded-full flex items-center justify-center mb-4 ${
-              searchMode === 'ai' ? 'bg-amber-100' : 'bg-nog-100'
+              searchMode === 'ai' ? 'bg-honey-100' : 'bg-nog-100'
             }`}>
               {searchMode === 'ai' ? (
-                <Wand2 className="w-8 h-8 text-amber-400" />
+                <Wand2 className="w-8 h-8 text-honey-400" />
               ) : (
-                <Table2 className="w-8 h-8 text-slate-400" />
+                <Table2 className="w-8 h-8 text-nog-400" />
               )}
             </div>
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">
+            <h3 className="text-lg font-semibold text-nog-900 dark:text-nog-100 mb-2">
               {searchMode === 'ai' ? 'Ask a Question' : 'Ready to Search'}
             </h3>
-            <p className="text-slate-500 dark:text-slate-400 text-center max-w-md mb-6">
+            <p className="text-nog-500 dark:text-nog-400 text-center max-w-md mb-6">
               {searchMode === 'ai' ? (
                 <>Type a question in plain English and AI will translate it to a query</>
               ) : (
-                <>Enter a query above and press Search or use <kbd className="code dark:bg-nog-700 dark:text-amber-400">Ctrl+Enter</kbd></>
+                <>Enter a query above and press Search or use <kbd className="code dark:bg-nog-700 dark:text-honey-400">Ctrl+Enter</kbd></>
               )}
             </p>
 
@@ -1510,13 +1510,13 @@ export default function SearchPage() {
                       setAiQuestion(suggestion.text);
                       aiSearchMutation.mutate(suggestion.text);
                     }}
-                    className="card-hover p-3 sm:p-4 text-left border-amber-200 dark:border-amber-800 hover:border-amber-300 dark:hover:border-amber-700"
+                    className="card-hover p-3 sm:p-4 text-left border-honey-200 dark:border-honey-800 hover:border-honey-300 dark:hover:border-honey-700"
                   >
                     <div className="flex items-start gap-2">
-                      <Wand2 className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                      <Wand2 className="w-4 h-4 text-honey-500 mt-0.5 flex-shrink-0" />
                       <div className="min-w-0">
-                        <p className="font-medium text-slate-900 dark:text-slate-100 text-sm sm:text-base truncate">{suggestion.text}</p>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">{suggestion.description}</p>
+                        <p className="font-medium text-nog-900 dark:text-nog-100 text-sm sm:text-base truncate">{suggestion.text}</p>
+                        <p className="text-xs text-nog-500 dark:text-nog-400 mt-1 line-clamp-2">{suggestion.description}</p>
                       </div>
                     </div>
                   </button>
@@ -1533,9 +1533,9 @@ export default function SearchPage() {
                     }}
                     className="card-hover p-3 sm:p-4 text-left"
                   >
-                    <p className="font-medium text-slate-900 dark:text-slate-100 text-sm sm:text-base">{ex.name}</p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">{ex.desc}</p>
-                    <code className="text-xs text-amber-600 dark:text-amber-400 mt-2 block truncate">{ex.query}</code>
+                    <p className="font-medium text-nog-900 dark:text-nog-100 text-sm sm:text-base">{ex.name}</p>
+                    <p className="text-xs text-nog-500 dark:text-nog-400 mt-1">{ex.desc}</p>
+                    <code className="text-xs text-honey-600 dark:text-honey-400 mt-2 block truncate">{ex.query}</code>
                   </button>
                 ))}
               </div>
@@ -1547,9 +1547,9 @@ export default function SearchPage() {
         {(searchMutation.isPending || aiSearchMutation.isPending) && (
           <div className="flex flex-col items-center justify-center py-20">
             <Loader2 className={`w-8 h-8 animate-spin mb-4 ${
-              searchMode === 'ai' ? 'text-amber-500' : 'text-amber-500'
+              searchMode === 'ai' ? 'text-honey-500' : 'text-honey-500'
             }`} />
-            <p className="text-slate-600">
+            <p className="text-nog-600">
               {searchMode === 'ai' ? 'AI is translating your question...' : 'Searching logs...'}
             </p>
           </div>
@@ -1563,7 +1563,7 @@ export default function SearchPage() {
           <div className="modal animate-slide-up max-w-lg" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-nog-100">Save Search</h3>
+                <h3 className="text-lg font-semibold text-nog-900 dark:text-nog-100">Save Search</h3>
                 <button onClick={() => setShowSaveModal(false)} className="btn-ghost p-1">
                   <X className="w-5 h-5" />
                 </button>
@@ -1571,7 +1571,7 @@ export default function SearchPage() {
             </div>
             <div className="modal-body space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-nog-300 mb-1.5">
+                <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">
                   Name <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -1584,7 +1584,7 @@ export default function SearchPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-nog-300 mb-1.5">
+                <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">
                   Description
                 </label>
                 <textarea
@@ -1596,16 +1596,16 @@ export default function SearchPage() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-nog-300 mb-1.5">
+                <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">
                   Query
                 </label>
-                <code className="block p-3 bg-nog-50 dark:bg-nog-900 rounded-lg text-sm text-slate-700 dark:text-nog-300 font-mono overflow-x-auto">
+                <code className="block p-3 bg-nog-50 dark:bg-nog-900 rounded-lg text-sm text-nog-700 dark:text-nog-300 font-mono overflow-x-auto">
                   {query}
                 </code>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-nog-300 mb-1.5">
+                  <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">
                     Time Range
                   </label>
                   <input
@@ -1614,10 +1614,10 @@ export default function SearchPage() {
                     disabled
                     className="input bg-nog-50 dark:bg-nog-900 cursor-not-allowed"
                   />
-                  <p className="text-xs text-slate-500 mt-1">From search settings</p>
+                  <p className="text-xs text-nog-500 mt-1">From search settings</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 dark:text-nog-300 mb-1.5">
+                  <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">
                     Folder
                   </label>
                   <input
@@ -1633,11 +1633,11 @@ export default function SearchPage() {
                       <option key={folder} value={folder} />
                     ))}
                   </datalist>
-                  <p className="text-xs text-slate-500 mt-1">Organize searches by folder</p>
+                  <p className="text-xs text-nog-500 mt-1">Organize searches by folder</p>
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-nog-300 mb-1.5">
+                <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">
                   Tags
                 </label>
                 <input
@@ -1647,21 +1647,21 @@ export default function SearchPage() {
                   placeholder="security, errors, network"
                   className="input"
                 />
-                <p className="text-xs text-slate-500 mt-1">Comma-separated</p>
+                <p className="text-xs text-nog-500 mt-1">Comma-separated</p>
               </div>
-              <div className="border-t border-slate-200 dark:border-nog-700 pt-4">
+              <div className="border-t border-nog-200 dark:border-nog-700 pt-4">
                 <div className="flex items-center justify-between mb-3">
                   <div>
-                    <label className="text-sm font-medium text-slate-700 dark:text-nog-300">
+                    <label className="text-sm font-medium text-nog-700 dark:text-nog-300">
                       Schedule Search
                     </label>
-                    <p className="text-xs text-slate-500">Precompute results on a schedule</p>
+                    <p className="text-xs text-nog-500">Precompute results on a schedule</p>
                   </div>
                   <button
                     type="button"
                     onClick={() => setSaveScheduleEnabled(!saveScheduleEnabled)}
-                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 ${
-                      saveScheduleEnabled ? 'bg-amber-500' : 'bg-slate-200 dark:bg-nog-600'
+                    className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-honey-500 focus:ring-offset-2 ${
+                      saveScheduleEnabled ? 'bg-honey-500' : 'bg-nog-200 dark:bg-nog-600'
                     }`}
                   >
                     <span
@@ -1673,7 +1673,7 @@ export default function SearchPage() {
                 </div>
                 {saveScheduleEnabled && (
                   <div className="animate-fade-in">
-                    <label className="block text-sm font-medium text-slate-700 dark:text-nog-300 mb-1.5">
+                    <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">
                       Cron Schedule
                     </label>
                     <select

@@ -5,10 +5,10 @@ import {
   Lock,
   AlertCircle,
 } from 'lucide-react';
-import { AreaChart, BarChart, PieChart, HeatmapChart, GaugeChart, WordCloudChart } from '../components/charts';
+import { AreaChart, BarChart, PieChart, HeatmapChart, GaugeChart, WordCloudChart, CHART_PALETTE } from '../components/charts';
 import { executeSearch } from '../api/client';
 
-const CHART_COLORS = ['#0ea5e9', '#8b5cf6', '#22c55e', '#f59e0b', '#ef4444', '#ec4899', '#06b6d4', '#84cc16'];
+const CHART_COLORS = CHART_PALETTE;
 
 interface DashboardPanel {
   id: string;
@@ -104,8 +104,8 @@ export default function PublicDashboardPage() {
     return (
       <div className="min-h-screen bg-nog-50 dark:bg-nog-900 flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 text-amber-500 animate-spin mx-auto mb-4" />
-          <p className="text-slate-600 dark:text-slate-400">Loading dashboard...</p>
+          <Loader2 className="w-12 h-12 text-honey-500 animate-spin mx-auto mb-4" />
+          <p className="text-nog-600 dark:text-nog-400">Loading dashboard...</p>
         </div>
       </div>
     );
@@ -116,11 +116,11 @@ export default function PublicDashboardPage() {
       <div className="min-h-screen bg-nog-50 dark:bg-nog-900 flex items-center justify-center p-4">
         <div className="card max-w-md w-full p-8">
           <div className="text-center mb-6">
-            <Lock className="w-12 h-12 text-amber-500 mx-auto mb-4" />
-            <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+            <Lock className="w-12 h-12 text-honey-500 mx-auto mb-4" />
+            <h1 className="text-2xl font-bold text-nog-900 dark:text-nog-100">
               Password Protected
             </h1>
-            <p className="text-slate-500 dark:text-slate-400 mt-2">
+            <p className="text-nog-500 dark:text-nog-400 mt-2">
               This dashboard requires a password to view
             </p>
           </div>
@@ -150,10 +150,10 @@ export default function PublicDashboardPage() {
       <div className="min-h-screen bg-nog-50 dark:bg-nog-900 flex items-center justify-center p-4">
         <div className="card max-w-md w-full p-8 text-center">
           <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-2">
+          <h1 className="text-2xl font-bold text-nog-900 dark:text-nog-100 mb-2">
             Dashboard Unavailable
           </h1>
-          <p className="text-slate-500 dark:text-slate-400">{error}</p>
+          <p className="text-nog-500 dark:text-nog-400">{error}</p>
         </div>
       </div>
     );
@@ -169,7 +169,7 @@ export default function PublicDashboardPage() {
     <div className="min-h-screen bg-nog-50 dark:bg-nog-900">
       {/* Header */}
       <header
-        className="border-b border-slate-200 dark:border-slate-700 px-6 py-4"
+        className="border-b border-nog-200 dark:border-nog-700 px-6 py-4"
         style={{ backgroundColor: dashboard.header_color || undefined }}
       >
         <div className="flex items-center gap-4">
@@ -177,11 +177,11 @@ export default function PublicDashboardPage() {
             <img src={dashboard.logo_url} alt="" className="h-8" />
           )}
           <div>
-            <h1 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+            <h1 className="text-xl font-bold text-nog-900 dark:text-nog-100">
               {dashboard.name}
             </h1>
             {dashboard.description && (
-              <p className="text-sm text-slate-500 dark:text-slate-400">
+              <p className="text-sm text-nog-500 dark:text-nog-400">
                 {dashboard.description}
               </p>
             )}
@@ -204,15 +204,15 @@ export default function PublicDashboardPage() {
                   gridColumn: `span ${pos.w}`,
                 }}
               >
-                <div className="p-4 border-b border-slate-100 dark:border-slate-700">
-                  <h3 className="font-semibold text-slate-900 dark:text-slate-100">
+                <div className="p-4 border-b border-nog-100 dark:border-nog-700">
+                  <h3 className="font-semibold text-nog-900 dark:text-nog-100">
                     {panel.title}
                   </h3>
                 </div>
                 <div className="p-4" style={{ height: pos.h * 80 }}>
                   {data?.loading ? (
                     <div className="flex items-center justify-center h-full">
-                      <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+                      <Loader2 className="w-6 h-6 animate-spin text-nog-400" />
                     </div>
                   ) : (
                     <PanelVisualization
@@ -229,7 +229,7 @@ export default function PublicDashboardPage() {
       </div>
 
       {/* Footer */}
-      <footer className="text-center py-4 text-sm text-slate-400">
+      <footer className="text-center py-4 text-sm text-nog-400">
         Powered by LogNog
       </footer>
     </div>
@@ -247,7 +247,7 @@ function PanelVisualization({
 }) {
   if (!data.length) {
     return (
-      <div className="flex items-center justify-center h-full text-slate-400">
+      <div className="flex items-center justify-center h-full text-nog-400">
         No data
       </div>
     );
@@ -259,9 +259,9 @@ function PanelVisualization({
         <div className="overflow-auto h-full">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-200 dark:border-slate-700">
+              <tr className="border-b border-nog-200 dark:border-nog-700">
                 {Object.keys(data[0]).slice(0, 5).map((key) => (
-                  <th key={key} className="text-left p-2 font-medium text-slate-600 dark:text-slate-400">
+                  <th key={key} className="text-left p-2 font-medium text-nog-600 dark:text-nog-400">
                     {key}
                   </th>
                 ))}
@@ -269,9 +269,9 @@ function PanelVisualization({
             </thead>
             <tbody>
               {data.slice(0, 10).map((row, i) => (
-                <tr key={i} className="border-b border-slate-100 dark:border-slate-800">
+                <tr key={i} className="border-b border-nog-100 dark:border-nog-800">
                   {Object.keys(row).slice(0, 5).map((key) => (
-                    <td key={key} className="p-2 text-slate-900 dark:text-slate-100">
+                    <td key={key} className="p-2 text-nog-900 dark:text-nog-100">
                       {String(row[key])}
                     </td>
                   ))}
@@ -358,7 +358,7 @@ function PanelVisualization({
 
     default:
       return (
-        <div className="flex items-center justify-center h-full text-slate-400">
+        <div className="flex items-center justify-center h-full text-nog-400">
           Unsupported visualization: {type}
         </div>
       );

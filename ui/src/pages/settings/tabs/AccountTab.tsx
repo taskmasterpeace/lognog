@@ -148,37 +148,37 @@ export default function AccountTab() {
   return (
     <>
       {/* User Profile Section */}
-      <section className="bg-white dark:bg-nog-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-4 sm:p-6 mb-6">
-        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2 mb-4">
+      <section className="bg-white dark:bg-nog-800 rounded-xl shadow-sm border border-nog-200 dark:border-nog-700 p-4 sm:p-6 mb-6">
+        <h2 className="text-lg font-semibold text-nog-900 dark:text-nog-100 flex items-center gap-2 mb-4">
           <User className="w-5 h-5" />
           Profile
         </h2>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
-            <label className="text-sm text-slate-500 dark:text-slate-400">Username</label>
-            <p className="font-medium text-slate-900 dark:text-slate-100">{user?.username}</p>
+            <label className="text-sm text-nog-500 dark:text-nog-400">Username</label>
+            <p className="font-medium text-nog-900 dark:text-nog-100">{user?.username}</p>
           </div>
           <div>
-            <label className="text-sm text-slate-500 dark:text-slate-400">Email</label>
-            <p className="font-medium text-slate-900 dark:text-slate-100">{user?.email}</p>
+            <label className="text-sm text-nog-500 dark:text-nog-400">Email</label>
+            <p className="font-medium text-nog-900 dark:text-nog-100">{user?.email}</p>
           </div>
           <div>
-            <label className="text-sm text-slate-500 dark:text-slate-400">Role</label>
-            <p className="font-medium text-slate-900 dark:text-slate-100 capitalize flex items-center gap-2">
-              <Shield className={`w-4 h-4 ${user?.role === 'admin' ? 'text-amber-500' : 'text-slate-400'}`} />
+            <label className="text-sm text-nog-500 dark:text-nog-400">Role</label>
+            <p className="font-medium text-nog-900 dark:text-nog-100 capitalize flex items-center gap-2">
+              <Shield className={`w-4 h-4 ${user?.role === 'admin' ? 'text-honey-500' : 'text-nog-400'}`} />
               {user?.role}
             </p>
           </div>
           <div>
-            <label className="text-sm text-slate-500 dark:text-slate-400">Last Login</label>
-            <p className="font-medium text-slate-900 dark:text-slate-100">
+            <label className="text-sm text-nog-500 dark:text-nog-400">Last Login</label>
+            <p className="font-medium text-nog-900 dark:text-nog-100">
               {formatDate(user?.last_login || null)}
             </p>
           </div>
         </div>
 
-        <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
+        <div className="mt-6 pt-6 border-t border-nog-200 dark:border-nog-700">
           <button
             onClick={logout}
             className="px-4 py-2 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 font-medium transition-colors"
@@ -189,8 +189,8 @@ export default function AccountTab() {
       </section>
 
       {/* Password Change Section */}
-      <section className="bg-white dark:bg-nog-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-4 sm:p-6 mb-6">
-        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2 mb-4">
+      <section className="bg-white dark:bg-nog-800 rounded-xl shadow-sm border border-nog-200 dark:border-nog-700 p-4 sm:p-6 mb-6">
+        <h2 className="text-lg font-semibold text-nog-900 dark:text-nog-100 flex items-center gap-2 mb-4">
           <Lock className="w-5 h-5" />
           Change Password
         </h2>
@@ -211,7 +211,7 @@ export default function AccountTab() {
 
         <form onSubmit={handlePasswordChange} className="space-y-4 max-w-md">
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+            <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
               Current Password
             </label>
             <input
@@ -221,11 +221,11 @@ export default function AccountTab() {
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
               required
-              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-800 text-slate-900 dark:text-slate-100"
+              className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-800 text-nog-900 dark:text-nog-100"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+            <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
               New Password
             </label>
             <input
@@ -236,14 +236,14 @@ export default function AccountTab() {
               onChange={(e) => setNewPassword(e.target.value)}
               required
               minLength={8}
-              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-800 text-slate-900 dark:text-slate-100"
+              className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-800 text-nog-900 dark:text-nog-100"
             />
-            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+            <p className="mt-1 text-xs text-nog-500 dark:text-nog-400">
               Minimum 8 characters
             </p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+            <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
               Confirm New Password
             </label>
             <input
@@ -253,13 +253,13 @@ export default function AccountTab() {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
-              className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-800 text-slate-900 dark:text-slate-100"
+              className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-800 text-nog-900 dark:text-nog-100"
             />
           </div>
           <button
             type="submit"
             disabled={passwordChanging || !currentPassword || !newPassword || !confirmPassword}
-            className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-2 bg-honey-500 hover:bg-honey-600 text-nog-900 font-medium rounded-lg transition-colors disabled:opacity-50"
           >
             {passwordChanging ? (
               <>
@@ -274,22 +274,22 @@ export default function AccountTab() {
       </section>
 
       {/* API Keys Section */}
-      <section className="bg-white dark:bg-nog-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-4 sm:p-6">
+      <section className="bg-white dark:bg-nog-800 rounded-xl shadow-sm border border-nog-200 dark:border-nog-700 p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+          <h2 className="text-lg font-semibold text-nog-900 dark:text-nog-100 flex items-center gap-2">
             <Key className="w-5 h-5" />
             API Keys
           </h2>
           <button
             onClick={() => setShowNewKeyForm(true)}
-            className="flex items-center justify-center gap-2 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium rounded-lg transition-colors w-full sm:w-auto"
+            className="flex items-center justify-center gap-2 px-3 py-1.5 bg-honey-500 hover:bg-honey-600 text-nog-900 text-sm font-medium rounded-lg transition-colors w-full sm:w-auto"
           >
             <Plus className="w-4 h-4" />
             New Key
           </button>
         </div>
 
-        <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+        <p className="text-sm text-nog-500 dark:text-nog-400 mb-6">
           API keys allow external applications (like LogNog In agents) to authenticate with your account.
         </p>
 
@@ -303,27 +303,27 @@ export default function AccountTab() {
 
         {/* Newly created key warning */}
         {newlyCreatedKey && (
-          <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
-            <h3 className="font-semibold text-amber-800 dark:text-amber-200 mb-2">
+          <div className="mb-6 p-4 bg-honey-50 dark:bg-honey-900/20 rounded-lg border border-honey-200 dark:border-honey-800">
+            <h3 className="font-semibold text-honey-800 dark:text-honey-200 mb-2">
               Save your API key now!
             </h3>
-            <p className="text-sm text-amber-700 dark:text-amber-300 mb-3">
+            <p className="text-sm text-honey-700 dark:text-honey-300 mb-3">
               This is the only time you'll see this key. Store it securely.
             </p>
             <div className="flex items-center gap-2">
-              <code className="flex-1 p-3 bg-white dark:bg-nog-900 rounded border border-amber-300 dark:border-amber-700 text-sm font-mono break-all">
+              <code className="flex-1 p-3 bg-white dark:bg-nog-900 rounded border border-honey-300 dark:border-honey-700 text-sm font-mono break-all">
                 {newlyCreatedKey}
               </code>
               <button
                 onClick={() => copyToClipboard(newlyCreatedKey)}
-                className="p-2 text-amber-700 hover:bg-amber-100 dark:text-amber-300 dark:hover:bg-amber-900/40 rounded-lg transition-colors"
+                className="p-2 text-honey-700 hover:bg-honey-100 dark:text-honey-300 dark:hover:bg-honey-900/40 rounded-lg transition-colors"
               >
                 {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
               </button>
             </div>
             <button
               onClick={() => setNewlyCreatedKey(null)}
-              className="mt-3 text-sm text-amber-600 hover:text-amber-700 dark:text-amber-400"
+              className="mt-3 text-sm text-honey-600 hover:text-honey-700 dark:text-honey-400"
             >
               I've saved the key
             </button>
@@ -332,14 +332,14 @@ export default function AccountTab() {
 
         {/* New key form */}
         {showNewKeyForm && (
-          <div className="mb-6 p-4 bg-nog-50 dark:bg-nog-900/50 rounded-lg border border-slate-200 dark:border-slate-700">
-            <h3 className="font-medium text-slate-900 dark:text-slate-100 mb-4">
+          <div className="mb-6 p-4 bg-nog-50 dark:bg-nog-900/50 rounded-lg border border-nog-200 dark:border-nog-700">
+            <h3 className="font-medium text-nog-900 dark:text-nog-100 mb-4">
               Create New API Key
             </h3>
 
             <div className="space-y-4">
               <div>
-                <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                <label className="flex items-center gap-2 text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
                   Key Name
                   <InfoTip
                     content="Descriptive name to identify this API key (e.g., production server, testing environment)"
@@ -351,12 +351,12 @@ export default function AccountTab() {
                   value={newKeyName}
                   onChange={(e) => setNewKeyName(e.target.value)}
                   placeholder="e.g., LogNog In Agent - Server 1"
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-800 text-slate-900 dark:text-slate-100"
+                  className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-800 text-nog-900 dark:text-nog-100"
                 />
               </div>
 
               <div>
-                <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                <label className="flex items-center gap-2 text-sm font-medium text-nog-700 dark:text-nog-300 mb-2">
                   Permissions
                   <InfoTip
                     content={
@@ -377,8 +377,8 @@ export default function AccountTab() {
                       onClick={() => togglePermission(perm)}
                       className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                         newKeyPermissions.includes(perm)
-                          ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
-                          : 'bg-nog-100 text-slate-600 dark:bg-nog-700 dark:text-slate-400'
+                          ? 'bg-honey-100 text-honey-700 dark:bg-honey-900/40 dark:text-honey-300'
+                          : 'bg-nog-100 text-nog-600 dark:bg-nog-700 dark:text-nog-400'
                       }`}
                     >
                       {perm}
@@ -388,7 +388,7 @@ export default function AccountTab() {
               </div>
 
               <div>
-                <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                <label className="flex items-center gap-2 text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
                   Expires In (days, optional)
                   <InfoTip
                     content="Set an expiration time for automatic key rotation. Leave empty for keys that never expire."
@@ -401,7 +401,7 @@ export default function AccountTab() {
                   onChange={(e) => setNewKeyExpiry(e.target.value)}
                   placeholder="Leave empty for no expiry"
                   min="1"
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-800 text-slate-900 dark:text-slate-100"
+                  className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-800 text-nog-900 dark:text-nog-100"
                 />
               </div>
 
@@ -409,7 +409,7 @@ export default function AccountTab() {
                 <button
                   onClick={handleCreateKey}
                   disabled={creatingKey || !newKeyName.trim()}
-                  className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+                  className="flex items-center gap-2 px-4 py-2 bg-honey-500 hover:bg-honey-600 text-nog-900 font-medium rounded-lg transition-colors disabled:opacity-50"
                 >
                   {creatingKey ? (
                     <>
@@ -422,7 +422,7 @@ export default function AccountTab() {
                 </button>
                 <button
                   onClick={() => setShowNewKeyForm(false)}
-                  className="px-4 py-2 text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 font-medium transition-colors"
+                  className="px-4 py-2 text-nog-600 hover:text-nog-800 dark:text-nog-400 dark:hover:text-nog-200 font-medium transition-colors"
                 >
                   Cancel
                 </button>
@@ -434,10 +434,10 @@ export default function AccountTab() {
         {/* API Keys list */}
         {loading ? (
           <div className="flex items-center justify-center py-8">
-            <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+            <Loader2 className="w-6 h-6 animate-spin text-nog-400" />
           </div>
         ) : apiKeys.length === 0 ? (
-          <div className="text-center py-8 text-slate-500 dark:text-slate-400">
+          <div className="text-center py-8 text-nog-500 dark:text-nog-400">
             No API keys yet. Create one to connect LogNog In agents.
           </div>
         ) : (
@@ -447,14 +447,14 @@ export default function AccountTab() {
                 key={key.id}
                 className={`p-3 sm:p-4 rounded-lg border ${
                   key.is_active
-                    ? 'bg-white dark:bg-nog-900 border-slate-200 dark:border-slate-700'
-                    : 'bg-nog-50 dark:bg-nog-900/50 border-slate-200 dark:border-slate-700 opacity-60'
+                    ? 'bg-white dark:bg-nog-900 border-nog-200 dark:border-nog-700'
+                    : 'bg-nog-50 dark:bg-nog-900/50 border-nog-200 dark:border-nog-700 opacity-60'
                 }`}
               >
                 <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h4 className="font-medium text-slate-900 dark:text-slate-100 truncate">
+                      <h4 className="font-medium text-nog-900 dark:text-nog-100 truncate">
                         {key.name}
                       </h4>
                       {!key.is_active && (
@@ -465,12 +465,12 @@ export default function AccountTab() {
                       )}
                     </div>
                     <div className="flex items-center gap-1">
-                      <code className="text-sm text-slate-500 dark:text-slate-400 font-mono">
+                      <code className="text-sm text-nog-500 dark:text-nog-400 font-mono">
                         {key.key_prefix}...
                       </code>
                       <button
                         onClick={() => copyPrefixToClipboard(key.key_prefix)}
-                        className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-nog-100 dark:hover:bg-slate-700 rounded transition-colors"
+                        className="p-1 text-nog-400 hover:text-nog-600 dark:hover:text-nog-300 hover:bg-nog-100 dark:hover:bg-nog-700 rounded transition-colors"
                         title="Copy prefix"
                       >
                         {copiedPrefix === key.key_prefix ? (
@@ -493,7 +493,7 @@ export default function AccountTab() {
                   )}
                 </div>
 
-                <div className="mt-3 flex flex-wrap gap-4 text-sm text-slate-500 dark:text-slate-400">
+                <div className="mt-3 flex flex-wrap gap-4 text-sm text-nog-500 dark:text-nog-400">
                   <span className="flex items-center gap-1">
                     <Shield className="w-4 h-4" />
                     {JSON.parse(key.permissions).join(', ')}

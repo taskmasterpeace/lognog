@@ -186,8 +186,8 @@ export default function ReportsPage() {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-full">
-        <Loader2 className="w-10 h-10 text-amber-500 animate-spin mb-4" />
-        <p className="text-slate-600 dark:text-slate-400">Loading reports...</p>
+        <Loader2 className="w-10 h-10 text-honey-500 animate-spin mb-4" />
+        <p className="text-nog-600 dark:text-nog-400">Loading reports...</p>
       </div>
     );
   }
@@ -206,16 +206,16 @@ export default function ReportsPage() {
   return (
     <div className="min-h-full bg-nog-50 dark:bg-nog-900">
       {/* Header */}
-      <div className="bg-white dark:bg-nog-800 border-b border-slate-200 dark:border-slate-700 shadow-sm">
+      <div className="bg-white dark:bg-nog-800 border-b border-nog-200 dark:border-nog-700 shadow-sm">
         <div className="p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100">Reports</h1>
-              <p className="text-slate-500 dark:text-slate-400 text-sm mt-1 hidden sm:block">Generate and schedule log reports</p>
+              <h1 className="text-xl sm:text-2xl font-bold text-nog-900 dark:text-nog-100">Reports</h1>
+              <p className="text-nog-500 dark:text-nog-400 text-sm mt-1 hidden sm:block">Generate and schedule log reports</p>
             </div>
             <div className="flex items-center gap-2">
               <div className="flex items-center gap-2">
-                <Filter className="w-4 h-4 text-slate-400" />
+                <Filter className="w-4 h-4 text-nog-400" />
                 <AppScopeFilter value={appScope} onChange={setAppScope} />
               </div>
               <button onClick={() => setShowGenerateModal(true)} className="btn-secondary flex-1 sm:flex-none justify-center">
@@ -235,12 +235,12 @@ export default function ReportsPage() {
         {/* Quick Export Section */}
         <section className="card p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row items-start gap-3 sm:gap-4">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-amber-400 to-amber-600 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-br from-honey-400 to-honey-600 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
               <FileCode className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
             </div>
             <div className="flex-1">
-              <h2 className="font-semibold text-slate-900 dark:text-slate-100 mb-1 text-sm sm:text-base">Generate & View Reports</h2>
-              <p className="text-xs sm:text-sm text-slate-500 mb-3">
+              <h2 className="font-semibold text-nog-900 dark:text-nog-100 mb-1 text-sm sm:text-base">Generate & View Reports</h2>
+              <p className="text-xs sm:text-sm text-nog-500 mb-3">
                 Create reports from any query. Preview in browser, print to PDF, or download as HTML.
               </p>
               <button onClick={() => setShowGenerateModal(true)} className="btn-primary w-full sm:w-auto justify-center">
@@ -253,15 +253,15 @@ export default function ReportsPage() {
 
         {/* Last Generated Report */}
         {reportPreview && (
-          <section className="card p-4 sm:p-6 border-amber-200 bg-amber-50">
+          <section className="card p-4 sm:p-6 border-honey-200 bg-honey-50">
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 sm:w-10 sm:h-10 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600" />
+                <div className="w-9 h-9 sm:w-10 sm:h-10 bg-honey-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-honey-600" />
                 </div>
                 <div className="min-w-0">
-                  <h3 className="font-semibold text-slate-900 text-sm sm:text-base">Last Generated Report</h3>
-                  <p className="text-xs sm:text-sm text-slate-500 truncate">{generateTitle}</p>
+                  <h3 className="font-semibold text-nog-900 text-sm sm:text-base">Last Generated Report</h3>
+                  <p className="text-xs sm:text-sm text-nog-500 truncate">{generateTitle}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2 ml-12 sm:ml-0">
@@ -291,7 +291,7 @@ export default function ReportsPage() {
 
         {/* Scheduled Reports */}
         <section>
-          <h2 className="text-base sm:text-lg font-semibold text-slate-900 dark:text-slate-100 mb-3 sm:mb-4">Scheduled Reports</h2>
+          <h2 className="text-base sm:text-lg font-semibold text-nog-900 dark:text-nog-100 mb-3 sm:mb-4">Scheduled Reports</h2>
 
           {reports && reports.length > 0 ? (
             <div className="space-y-3">
@@ -300,18 +300,18 @@ export default function ReportsPage() {
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-start gap-2 sm:gap-3 min-w-0 flex-1">
                       <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                        report.enabled ? 'bg-amber-100' : 'bg-nog-100'
+                        report.enabled ? 'bg-honey-100' : 'bg-nog-100'
                       }`}>
                         <FileText className={`w-4 h-4 sm:w-5 sm:h-5 ${
-                          report.enabled ? 'text-amber-600' : 'text-slate-400'
+                          report.enabled ? 'text-honey-600' : 'text-nog-400'
                         }`} />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-sm sm:text-base truncate">{report.name}</h3>
-                        <code className="text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 bg-nog-100 dark:bg-nog-700 px-1.5 sm:px-2 py-0.5 rounded mt-1 inline-block max-w-full truncate">
+                        <h3 className="font-semibold text-nog-900 dark:text-nog-100 text-sm sm:text-base truncate">{report.name}</h3>
+                        <code className="text-[10px] sm:text-xs text-nog-500 dark:text-nog-400 bg-nog-100 dark:bg-nog-700 px-1.5 sm:px-2 py-0.5 rounded mt-1 inline-block max-w-full truncate">
                           {report.query}
                         </code>
-                        <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 text-[10px] sm:text-xs text-slate-500">
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 text-[10px] sm:text-xs text-nog-500">
                           <span className="flex items-center gap-1">
                             <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                             {getScheduleLabel(report.schedule)}
@@ -334,8 +334,8 @@ export default function ReportsPage() {
                         onClick={() => toggleMutation.mutate({ id: report.id, enabled: !report.enabled })}
                         className={`p-1.5 sm:p-2 rounded-lg transition-colors ${
                           report.enabled
-                            ? 'text-amber-600 bg-amber-50 hover:bg-amber-100'
-                            : 'text-slate-400 bg-nog-100 hover:bg-slate-200'
+                            ? 'text-honey-600 bg-honey-50 hover:bg-honey-100'
+                            : 'text-nog-400 bg-nog-100 hover:bg-nog-200'
                         }`}
                         title={report.enabled ? 'Pause schedule' : 'Enable schedule'}
                       >
@@ -343,7 +343,7 @@ export default function ReportsPage() {
                       </button>
                       <button
                         onClick={() => deleteMutation.mutate(report.id)}
-                        className="p-1.5 sm:p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                        className="p-1.5 sm:p-2 text-nog-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -355,10 +355,10 @@ export default function ReportsPage() {
           ) : (
             <div className="card p-6 sm:p-8 text-center">
               <div className="w-10 h-10 sm:w-12 sm:h-12 bg-nog-100 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
-                <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-slate-400" />
+                <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-nog-400" />
               </div>
-              <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-1 text-sm sm:text-base">No scheduled reports</h3>
-              <p className="text-xs sm:text-sm text-slate-500 mb-4">
+              <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-1 text-sm sm:text-base">No scheduled reports</h3>
+              <p className="text-xs sm:text-sm text-nog-500 mb-4">
                 Schedule reports to be generated and emailed automatically
               </p>
               <button onClick={() => setShowCreateModal(true)} className="btn-primary w-full sm:w-auto justify-center">
@@ -370,15 +370,15 @@ export default function ReportsPage() {
         </section>
 
         {/* Info Section */}
-        <section className="card p-4 sm:p-6 bg-gradient-to-r from-amber-50 to-orange-50 border-amber-100">
+        <section className="card p-4 sm:p-6 bg-honey-50 border-honey-100">
           <div className="flex items-start gap-2 sm:gap-3">
-            <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+            <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-honey-600 mt-0.5 flex-shrink-0" />
             <div>
-              <h3 className="font-semibold text-amber-900 mb-1 text-sm sm:text-base">Email Delivery</h3>
-              <p className="text-xs sm:text-sm text-amber-800">
+              <h3 className="font-semibold text-honey-900 mb-1 text-sm sm:text-base">Email Delivery</h3>
+              <p className="text-xs sm:text-sm text-honey-800">
                 Scheduled reports require SMTP configuration. Set these environment variables:
               </p>
-              <code className="block mt-2 text-[10px] sm:text-xs bg-amber-100 text-amber-900 p-2 rounded font-mono overflow-x-auto">
+              <code className="block mt-2 text-[10px] sm:text-xs bg-honey-100 text-honey-900 p-2 rounded font-mono overflow-x-auto">
                 SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM
               </code>
             </div>
@@ -392,7 +392,7 @@ export default function ReportsPage() {
           <div className="modal animate-slide-up w-[calc(100%-2rem)] max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Schedule Report</h3>
+                <h3 className="text-lg font-semibold text-nog-900 dark:text-nog-100">Schedule Report</h3>
                 <button onClick={() => setShowCreateModal(false)} className="btn-ghost p-1">
                   <X className="w-5 h-5" />
                 </button>
@@ -401,7 +401,7 @@ export default function ReportsPage() {
 
             <div className="modal-body space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Report Name</label>
+                <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">Report Name</label>
                 <input
                   type="text"
                   value={reportName}
@@ -413,7 +413,7 @@ export default function ReportsPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Query</label>
+                <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">Query</label>
                 <textarea
                   value={reportQuery}
                   onChange={(e) => setReportQuery(e.target.value)}
@@ -424,7 +424,7 @@ export default function ReportsPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Schedule</label>
+                <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">Schedule</label>
                 <select
                   value={reportSchedule}
                   onChange={(e) => setReportSchedule(e.target.value)}
@@ -439,7 +439,7 @@ export default function ReportsPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Recipients</label>
+                <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">Recipients</label>
                 <input
                   type="text"
                   value={reportRecipients}
@@ -447,7 +447,7 @@ export default function ReportsPage() {
                   placeholder="admin@example.com, team@example.com"
                   className="input"
                 />
-                <p className="text-xs text-slate-500 mt-1">Comma-separated email addresses</p>
+                <p className="text-xs text-nog-500 mt-1">Comma-separated email addresses</p>
               </div>
             </div>
 
@@ -474,7 +474,7 @@ export default function ReportsPage() {
           <div className="modal animate-slide-up w-[calc(100%-2rem)] max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Generate Report</h3>
+                <h3 className="text-lg font-semibold text-nog-900 dark:text-nog-100">Generate Report</h3>
                 <button onClick={() => setShowGenerateModal(false)} className="btn-ghost p-1">
                   <X className="w-5 h-5" />
                 </button>
@@ -483,7 +483,7 @@ export default function ReportsPage() {
 
             <div className="modal-body space-y-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Report Title</label>
+                <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">Report Title</label>
                 <input
                   type="text"
                   value={generateTitle}
@@ -495,7 +495,7 @@ export default function ReportsPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Query</label>
+                <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">Query</label>
                 <textarea
                   value={generateQuery}
                   onChange={(e) => setGenerateQuery(e.target.value)}
@@ -506,7 +506,7 @@ export default function ReportsPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Time Range</label>
+                <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">Time Range</label>
                 <div className="flex flex-wrap gap-2">
                   {TIME_PRESETS.map(preset => (
                     <button
@@ -514,8 +514,8 @@ export default function ReportsPage() {
                       onClick={() => setGenerateTimeRange(preset.value)}
                       className={`px-2.5 sm:px-3 py-1.5 text-xs sm:text-sm rounded-lg border transition-colors ${
                         generateTimeRange === preset.value
-                          ? 'border-amber-500 bg-amber-50 text-amber-700'
-                          : 'border-slate-200 hover:border-slate-300 text-slate-600'
+                          ? 'border-honey-500 bg-honey-50 text-honey-700'
+                          : 'border-nog-200 hover:border-nog-300 text-nog-600'
                       }`}
                     >
                       {preset.label}
@@ -562,10 +562,10 @@ export default function ReportsPage() {
             onClick={(e) => e.stopPropagation()}
           >
             {/* Preview Header */}
-            <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700 flex-shrink-0">
+            <div className="flex items-center justify-between p-4 border-b border-nog-200 dark:border-nog-700 flex-shrink-0">
               <div>
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Report Preview</h3>
-                <p className="text-sm text-slate-500">{generateTitle}</p>
+                <h3 className="text-lg font-semibold text-nog-900 dark:text-nog-100">Report Preview</h3>
+                <p className="text-sm text-nog-500">{generateTitle}</p>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -605,7 +605,7 @@ export default function ReportsPage() {
             <div className="flex-1 overflow-auto bg-nog-100 dark:bg-nog-900 p-4">
               <iframe
                 srcDoc={reportPreview}
-                className="w-full h-full min-h-[500px] bg-white rounded-lg shadow-inner border border-slate-200"
+                className="w-full h-full min-h-[500px] bg-white rounded-lg shadow-inner border border-nog-200"
                 title="Report Preview"
               />
             </div>

@@ -131,7 +131,7 @@ function PanelVisualization({
   if (data.loading) {
     return (
       <div className="flex items-center justify-center h-full">
-        <Loader2 className="w-6 h-6 text-amber-500 animate-spin" />
+        <Loader2 className="w-6 h-6 text-honey-500 animate-spin" />
       </div>
     );
   }
@@ -141,7 +141,7 @@ function PanelVisualization({
       <div className="flex flex-col items-center justify-center h-full p-4 text-center">
         <AlertCircle className="w-8 h-8 text-red-400 mb-2" />
         <p className="text-sm text-red-600">{data.error}</p>
-        <button onClick={onRefresh} className="mt-2 text-xs text-amber-600 hover:underline">
+        <button onClick={onRefresh} className="mt-2 text-xs text-honey-600 hover:underline">
           Retry
         </button>
       </div>
@@ -150,7 +150,7 @@ function PanelVisualization({
 
   if (!data.results || data.results.length === 0) {
     return (
-      <div className="flex items-center justify-center h-full text-slate-400">
+      <div className="flex items-center justify-center h-full text-nog-400">
         No data
       </div>
     );
@@ -213,7 +213,7 @@ function PanelVisualization({
             {pieData.slice(0, 6).map((entry, i) => (
               <div key={entry.name} className="flex items-center gap-2 text-xs">
                 <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }} />
-                <span className="truncate text-slate-600">{entry.name}</span>
+                <span className="truncate text-nog-600">{entry.name}</span>
               </div>
             ))}
           </div>
@@ -242,7 +242,7 @@ function PanelVisualization({
       const statValue = results[0] ? Object.values(results[0])[0] : 0;
       return (
         <div className="flex flex-col items-center justify-center h-full">
-          <p className="text-4xl font-bold text-slate-900 dark:text-slate-100">
+          <p className="text-4xl font-bold text-nog-900 dark:text-nog-100">
             {typeof statValue === 'number' ? statValue.toLocaleString() : String(statValue)}
           </p>
         </div>
@@ -452,37 +452,37 @@ function PanelCard({
 
   return (
     <div className="card flex flex-col h-full group">
-      <div className={`flex items-center justify-between p-3 border-b border-slate-100 dark:border-nog-700 ${editMode ? 'panel-drag-handle cursor-move' : ''}`}>
+      <div className={`flex items-center justify-between p-3 border-b border-nog-100 dark:border-nog-700 ${editMode ? 'panel-drag-handle cursor-move' : ''}`}>
         <div className="flex items-center gap-2 min-w-0 flex-1 mr-2">
-          {editMode && <Move className="w-4 h-4 text-slate-400 dark:text-nog-400 flex-shrink-0" />}
-          <VizIcon className="w-4 h-4 text-slate-400 dark:text-nog-400 flex-shrink-0" />
+          {editMode && <Move className="w-4 h-4 text-nog-400 dark:text-nog-400 flex-shrink-0" />}
+          <VizIcon className="w-4 h-4 text-nog-400 dark:text-nog-400 flex-shrink-0" />
           <div className="min-w-0 flex-1">
-            <h3 className="font-medium text-slate-900 dark:text-nog-100 text-sm leading-tight break-words" title={panel.title}>{panel.title}</h3>
+            <h3 className="font-medium text-nog-900 dark:text-nog-100 text-sm leading-tight break-words" title={panel.title}>{panel.title}</h3>
             {panel.description && (
-              <p className="text-xs text-slate-500 dark:text-nog-400 truncate" title={panel.description}>
+              <p className="text-xs text-nog-500 dark:text-nog-400 truncate" title={panel.description}>
                 {panel.description}
               </p>
             )}
           </div>
         </div>
         <div className={`flex items-center gap-1 flex-shrink-0 ${editMode ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`} ref={menuRef}>
-          <button onClick={onRefresh} className="p-1.5 text-slate-400 dark:text-nog-400 hover:text-slate-600 dark:hover:text-nog-200 hover:bg-nog-100 dark:hover:bg-nog-700 rounded" title="Refresh">
+          <button onClick={onRefresh} className="p-1.5 text-nog-400 dark:text-nog-400 hover:text-nog-600 dark:hover:text-nog-200 hover:bg-nog-100 dark:hover:bg-nog-700 rounded" title="Refresh">
             <RefreshCw className="w-3.5 h-3.5" />
           </button>
           <div className="relative">
             <button
               onClick={() => setShowMenu(!showMenu)}
-              className="p-1.5 text-slate-400 dark:text-nog-400 hover:text-slate-600 dark:hover:text-nog-200 hover:bg-nog-100 dark:hover:bg-nog-700 rounded"
+              className="p-1.5 text-nog-400 dark:text-nog-400 hover:text-nog-600 dark:hover:text-nog-200 hover:bg-nog-100 dark:hover:bg-nog-700 rounded"
               title="More actions"
             >
               <MoreVertical className="w-3.5 h-3.5" />
             </button>
             {showMenu && (
-              <div className="absolute right-0 top-full mt-1 w-40 bg-white dark:bg-nog-800 border border-slate-200 dark:border-nog-600 rounded-lg shadow-lg z-50 py-1 animate-fade-in">
+              <div className="absolute right-0 top-full mt-1 w-40 bg-white dark:bg-nog-800 border border-nog-200 dark:border-nog-600 rounded-lg shadow-lg z-50 py-1 animate-fade-in">
                 {onFullscreen && (
                   <button
                     onClick={() => { onFullscreen(); setShowMenu(false); }}
-                    className="w-full px-3 py-2 text-left text-sm text-slate-700 dark:text-nog-200 hover:bg-slate-100 dark:hover:bg-nog-700 flex items-center gap-2"
+                    className="w-full px-3 py-2 text-left text-sm text-nog-700 dark:text-nog-200 hover:bg-nog-100 dark:hover:bg-nog-700 flex items-center gap-2"
                   >
                     <Maximize2 className="w-4 h-4" />
                     Fullscreen
@@ -491,7 +491,7 @@ function PanelCard({
                 {onViewOrigin && (
                   <button
                     onClick={() => { onViewOrigin(); setShowMenu(false); }}
-                    className="w-full px-3 py-2 text-left text-sm text-slate-700 dark:text-nog-200 hover:bg-slate-100 dark:hover:bg-nog-700 flex items-center gap-2"
+                    className="w-full px-3 py-2 text-left text-sm text-nog-700 dark:text-nog-200 hover:bg-nog-100 dark:hover:bg-nog-700 flex items-center gap-2"
                   >
                     <GitMerge className="w-4 h-4" />
                     View Origin
@@ -499,19 +499,19 @@ function PanelCard({
                 )}
                 <button
                   onClick={() => { onEdit(); setShowMenu(false); }}
-                  className="w-full px-3 py-2 text-left text-sm text-slate-700 dark:text-nog-200 hover:bg-slate-100 dark:hover:bg-nog-700 flex items-center gap-2"
+                  className="w-full px-3 py-2 text-left text-sm text-nog-700 dark:text-nog-200 hover:bg-nog-100 dark:hover:bg-nog-700 flex items-center gap-2"
                 >
                   <Edit3 className="w-4 h-4" />
                   Edit
                 </button>
                 <button
                   onClick={() => { onDuplicate(); setShowMenu(false); }}
-                  className="w-full px-3 py-2 text-left text-sm text-slate-700 dark:text-nog-200 hover:bg-slate-100 dark:hover:bg-nog-700 flex items-center gap-2"
+                  className="w-full px-3 py-2 text-left text-sm text-nog-700 dark:text-nog-200 hover:bg-nog-100 dark:hover:bg-nog-700 flex items-center gap-2"
                 >
                   <Copy className="w-4 h-4" />
                   Duplicate
                 </button>
-                <div className="border-t border-slate-200 dark:border-nog-600 my-1" />
+                <div className="border-t border-nog-200 dark:border-nog-600 my-1" />
                 <button
                   onClick={() => { onDelete(); setShowMenu(false); }}
                   className="w-full px-3 py-2 text-left text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 flex items-center gap-2"
@@ -549,7 +549,7 @@ function PageEditorModal({
       <div className="modal animate-slide-up max-w-md" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-nog-100">
+            <h3 className="text-lg font-semibold text-nog-900 dark:text-nog-100">
               {page ? 'Edit Page' : 'Add Page'}
             </h3>
             <button onClick={onCancel} className="btn-ghost p-1">
@@ -559,7 +559,7 @@ function PageEditorModal({
         </div>
         <div className="modal-body space-y-4">
           <div>
-            <label className="text-sm font-medium text-slate-700 dark:text-nog-200 mb-1.5 block">
+            <label className="text-sm font-medium text-nog-700 dark:text-nog-200 mb-1.5 block">
               Page Name
             </label>
             <input
@@ -572,7 +572,7 @@ function PageEditorModal({
             />
           </div>
           <div>
-            <label className="text-sm font-medium text-slate-700 dark:text-nog-200 mb-1.5 block">
+            <label className="text-sm font-medium text-nog-700 dark:text-nog-200 mb-1.5 block">
               Icon (optional emoji)
             </label>
             <input
@@ -626,7 +626,7 @@ function PanelEditor({ panel, onSave, onCancel, saving }: PanelEditorProps) {
       <div className="modal animate-slide-up max-w-xl" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+            <h3 className="text-lg font-semibold text-nog-900 dark:text-nog-100">
               {panel ? 'Edit Panel' : 'Add Panel'}
             </h3>
             <button onClick={onCancel} className="btn-ghost p-1">
@@ -637,7 +637,7 @@ function PanelEditor({ panel, onSave, onCancel, saving }: PanelEditorProps) {
 
         <div className="modal-body space-y-4">
           <div>
-            <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+            <label className="flex items-center gap-2 text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">
               Title
               <InfoTip
                 content="Display name for this panel shown in the dashboard"
@@ -655,7 +655,7 @@ function PanelEditor({ panel, onSave, onCancel, saving }: PanelEditorProps) {
           </div>
 
           <div>
-            <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-nog-200 mb-1.5">
+            <label className="flex items-center gap-2 text-sm font-medium text-nog-700 dark:text-nog-200 mb-1.5">
               Description
               <InfoTip
                 content="Optional description shown below the panel title"
@@ -672,13 +672,13 @@ function PanelEditor({ panel, onSave, onCancel, saving }: PanelEditorProps) {
           </div>
 
           <div>
-            <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+            <label className="flex items-center gap-2 text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">
               Query
               <InfoTip
                 content={
                   <div className="space-y-1">
                     <p>DSL query to fetch data for this panel. Use aggregation queries for charts.</p>
-                    <p className="text-xs opacity-80 mt-2">Tip: Use <code className="bg-gray-800 px-1 rounded">$variable$</code> syntax to reference dashboard variables</p>
+                    <p className="text-xs opacity-80 mt-2">Tip: Use <code className="bg-nog-800 px-1 rounded">$variable$</code> syntax to reference dashboard variables</p>
                   </div>
                 }
                 code="search * | stats count by hostname
@@ -693,13 +693,13 @@ search error | timechart span=1h count"
               rows={3}
               className="input font-mono text-sm resize-none"
             />
-            <p className="text-xs text-slate-500 mt-1">
+            <p className="text-xs text-nog-500 mt-1">
               Use $variable$ syntax to reference dashboard variables. Use aggregation queries for charts.
             </p>
           </div>
 
           <div>
-            <label className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+            <label className="flex items-center gap-2 text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">
               Visualization
               <InfoTip
                 content={
@@ -730,8 +730,8 @@ search error | timechart span=1h count"
                       onClick={() => setVisualization(option.value)}
                       className={`flex flex-col items-center gap-1 p-3 rounded-lg border-2 transition-all ${
                         visualization === option.value
-                          ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300'
-                          : 'border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500 text-slate-600 dark:text-slate-400'
+                          ? 'border-honey-500 bg-honey-50 dark:bg-honey-900/30 text-honey-700 dark:text-honey-300'
+                          : 'border-nog-200 dark:border-nog-600 hover:border-nog-300 dark:hover:border-nog-500 text-nog-600 dark:text-nog-400'
                       }`}
                     >
                       <Icon className="w-5 h-5" />
@@ -1166,8 +1166,8 @@ export default function DashboardViewPage() {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-full">
-        <Loader2 className="w-10 h-10 text-amber-500 animate-spin mb-4" />
-        <p className="text-slate-600">Loading dashboard...</p>
+        <Loader2 className="w-10 h-10 text-honey-500 animate-spin mb-4" />
+        <p className="text-nog-600">Loading dashboard...</p>
       </div>
     );
   }
@@ -1178,7 +1178,7 @@ export default function DashboardViewPage() {
         <div className="card border-red-200 bg-red-50 p-6">
           <p className="font-semibold text-red-900">Failed to load dashboard</p>
           <p className="text-sm text-red-700 mt-1">{String(error)}</p>
-          <Link to="/dashboards" className="mt-4 inline-block text-sm text-amber-600 hover:underline">
+          <Link to="/dashboards" className="mt-4 inline-block text-sm text-honey-600 hover:underline">
             Back to Dashboards
           </Link>
         </div>
@@ -1194,7 +1194,7 @@ export default function DashboardViewPage() {
     <div className="min-h-full bg-nog-50 dark:bg-nog-900 flex flex-col">
       {/* Default Dashboard Banner */}
       {isDefaultDashboard && (
-        <div className="bg-gradient-to-r from-amber-500 to-amber-600 text-white px-4 py-2 flex items-center justify-between text-sm">
+        <div className="bg-gradient-to-r from-honey-500 to-honey-600 text-nog-900 px-4 py-2 flex items-center justify-between text-sm">
           <div className="flex items-center gap-2">
             <Star className="w-4 h-4 fill-current" />
             <span>This is your default dashboard</span>
@@ -1253,16 +1253,16 @@ export default function DashboardViewPage() {
             <div className="relative">
               <button
                 onClick={() => setShowAutoRefreshDropdown(!showAutoRefreshDropdown)}
-                className={`btn-secondary ${autoRefreshInterval > 0 ? (isRefreshPaused ? 'text-amber-600 border-amber-300' : 'text-green-600 border-green-300') : ''}`}
+                className={`btn-secondary ${autoRefreshInterval > 0 ? (isRefreshPaused ? 'text-honey-600 border-honey-300' : 'text-green-600 border-green-300') : ''}`}
               >
                 {autoRefreshInterval > 0 ? (
                   isRefreshPaused ? (
-                    <Pause className="w-4 h-4 text-amber-500" />
+                    <Pause className="w-4 h-4 text-honey-500" />
                   ) : (
                     <Play className="w-4 h-4 text-green-500" />
                   )
                 ) : (
-                  <Pause className="w-4 h-4 text-slate-400" />
+                  <Pause className="w-4 h-4 text-nog-400" />
                 )}
                 <span className="hidden sm:inline">
                   {autoRefreshInterval > 0 && countdownSeconds > 0 ? (
@@ -1273,7 +1273,7 @@ export default function DashboardViewPage() {
                     AUTO_REFRESH_OPTIONS.find(o => o.value === autoRefreshInterval)?.label || 'Auto-refresh'
                   )}
                 </span>
-                <ChevronDown className="w-4 h-4 text-slate-400" />
+                <ChevronDown className="w-4 h-4 text-nog-400" />
               </button>
 
               {showAutoRefreshDropdown && (
@@ -1287,7 +1287,7 @@ export default function DashboardViewPage() {
                         setShowAutoRefreshDropdown(false);
                       }}
                       className={`dropdown-item ${
-                        autoRefreshInterval === option.value ? 'bg-amber-50 dark:bg-amber-900/30 text-amber-600 font-medium' : ''
+                        autoRefreshInterval === option.value ? 'bg-honey-50 dark:bg-honey-900/30 text-honey-600 font-medium' : ''
                       }`}
                     >
                       {option.label}
@@ -1295,7 +1295,7 @@ export default function DashboardViewPage() {
                   ))}
                   {autoRefreshInterval > 0 && (
                     <>
-                      <div className="border-t border-slate-100 dark:border-nog-700 my-1" />
+                      <div className="border-t border-nog-100 dark:border-nog-700 my-1" />
                       <button
                         onClick={() => {
                           setIsRefreshPaused(!isRefreshPaused);
@@ -1310,7 +1310,7 @@ export default function DashboardViewPage() {
                           </>
                         ) : (
                           <>
-                            <Pause className="w-4 h-4 text-amber-500" />
+                            <Pause className="w-4 h-4 text-honey-500" />
                             Pause
                           </>
                         )}
@@ -1329,7 +1329,7 @@ export default function DashboardViewPage() {
             {/* Share button - prominent */}
             <button
               onClick={() => setShowShareModal(true)}
-              className="btn-secondary text-amber-600 border-amber-200 hover:bg-amber-50 dark:text-amber-400 dark:border-amber-800 dark:hover:bg-amber-900/30"
+              className="btn-secondary text-honey-600 border-honey-200 hover:bg-honey-50 dark:text-honey-400 dark:border-honey-800 dark:hover:bg-honey-900/30"
             >
               <Share2 className="w-4 h-4" />
               <span className="hidden sm:inline">Share</span>
@@ -1342,7 +1342,7 @@ export default function DashboardViewPage() {
                 className="btn-secondary"
               >
                 <Settings className="w-4 h-4" />
-                <ChevronDown className="w-4 h-4 text-slate-400" />
+                <ChevronDown className="w-4 h-4 text-nog-400" />
               </button>
 
               {showActionsDropdown && (
@@ -1407,7 +1407,7 @@ export default function DashboardViewPage() {
                     }}
                     className="dropdown-item"
                   >
-                    <Star className={`w-4 h-4 ${isDefaultDashboard ? 'fill-amber-500 text-amber-500' : ''}`} />
+                    <Star className={`w-4 h-4 ${isDefaultDashboard ? 'fill-honey-500 text-honey-500' : ''}`} />
                     {isDefaultDashboard ? 'Remove Default' : 'Set as Default'}
                   </button>
                   <button
@@ -1455,14 +1455,14 @@ export default function DashboardViewPage() {
 
       {/* Page Tabs */}
       {(dashboard.pages && dashboard.pages.length > 0 || editMode) && (
-        <div className="bg-white dark:bg-nog-800 border-b border-slate-200 dark:border-nog-700 px-4">
+        <div className="bg-white dark:bg-nog-800 border-b border-nog-200 dark:border-nog-700 px-4">
           <div className="flex items-center gap-1 overflow-x-auto">
             <button
               onClick={() => setSelectedPageId(null)}
               className={`px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
                 selectedPageId === null
-                  ? 'border-amber-500 text-amber-600 dark:text-amber-400'
-                  : 'border-transparent text-slate-600 dark:text-nog-300 hover:text-slate-900 dark:hover:text-nog-100'
+                  ? 'border-honey-500 text-honey-600 dark:text-honey-400'
+                  : 'border-transparent text-nog-600 dark:text-nog-300 hover:text-nog-900 dark:hover:text-nog-100'
               }`}
             >
               All Panels
@@ -1473,8 +1473,8 @@ export default function DashboardViewPage() {
                   onClick={() => setSelectedPageId(page.id)}
                   className={`px-4 py-2.5 text-sm font-medium whitespace-nowrap border-b-2 transition-colors ${
                     selectedPageId === page.id
-                      ? 'border-amber-500 text-amber-600 dark:text-amber-400'
-                      : 'border-transparent text-slate-600 dark:text-nog-300 hover:text-slate-900 dark:hover:text-nog-100'
+                      ? 'border-honey-500 text-honey-600 dark:text-honey-400'
+                      : 'border-transparent text-nog-600 dark:text-nog-300 hover:text-nog-900 dark:hover:text-nog-100'
                   }`}
                 >
                   {page.icon && <span className="mr-1.5">{page.icon}</span>}
@@ -1488,7 +1488,7 @@ export default function DashboardViewPage() {
                         setEditingPage(page);
                         setShowPageEditor(true);
                       }}
-                      className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-nog-200"
+                      className="p-1 text-nog-400 hover:text-nog-600 dark:hover:text-nog-200"
                       title="Edit Page"
                     >
                       <Edit3 className="w-3 h-3" />
@@ -1500,7 +1500,7 @@ export default function DashboardViewPage() {
                           deletePageMutation.mutate(page.id);
                         }
                       }}
-                      className="p-1 text-slate-400 hover:text-red-500"
+                      className="p-1 text-nog-400 hover:text-red-500"
                       title="Delete Page"
                     >
                       <Trash2 className="w-3 h-3" />
@@ -1515,7 +1515,7 @@ export default function DashboardViewPage() {
                   setEditingPage(null);
                   setShowPageEditor(true);
                 }}
-                className="px-3 py-2.5 text-sm text-slate-400 hover:text-slate-600 dark:hover:text-nog-200"
+                className="px-3 py-2.5 text-sm text-nog-400 hover:text-nog-600 dark:hover:text-nog-200"
                 title="Add Page"
               >
                 <Plus className="w-4 h-4" />
@@ -1527,14 +1527,14 @@ export default function DashboardViewPage() {
 
       {/* Edit Mode Banner */}
       {editMode && (
-        <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-amber-800">
+        <div className="bg-honey-50 border-b border-honey-200 px-4 py-2 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-honey-800">
             <Move className="w-4 h-4" />
             <span className="text-sm font-medium">Edit Mode: Drag panels to rearrange, resize from corners</span>
           </div>
           <button
             onClick={() => setEditMode(false)}
-            className="text-sm text-amber-600 hover:text-amber-800 font-medium"
+            className="text-sm text-honey-600 hover:text-honey-800 font-medium"
           >
             Done Editing
           </button>
@@ -1543,7 +1543,7 @@ export default function DashboardViewPage() {
 
       {/* AI Insights Panel */}
       {showAIInsights && (
-        <div className="p-4 border-b border-slate-200 bg-white">
+        <div className="p-4 border-b border-nog-200 bg-white">
           <AIInsightsPanel dashboardId={id!} timeRange={timeRange} />
         </div>
       )}
@@ -1553,10 +1553,10 @@ export default function DashboardViewPage() {
         {dashboard.panels.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full py-20">
             <div className="w-16 h-16 bg-nog-100 dark:bg-nog-800 rounded-full flex items-center justify-center mb-4">
-              <BarChart3 className="w-8 h-8 text-slate-400" />
+              <BarChart3 className="w-8 h-8 text-nog-400" />
             </div>
-            <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">No panels yet</h3>
-            <p className="text-slate-500 dark:text-slate-400 text-center max-w-md mb-6">
+            <h3 className="text-lg font-semibold text-nog-900 dark:text-nog-100 mb-2">No panels yet</h3>
+            <p className="text-nog-500 dark:text-nog-400 text-center max-w-md mb-6">
               Add panels to visualize your log data with charts, tables, and stats
             </p>
             <button
@@ -1709,13 +1709,13 @@ export default function DashboardViewPage() {
           <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" onClick={() => setFullscreenPanel(null)}>
             <div className="bg-white dark:bg-nog-800 rounded-xl shadow-2xl w-full h-full max-w-[95vw] max-h-[95vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
               {/* Header */}
-              <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-nog-700">
+              <div className="flex items-center justify-between p-4 border-b border-nog-200 dark:border-nog-700">
                 <div className="flex items-center gap-3">
-                  <VizIcon className="w-5 h-5 text-slate-400 dark:text-nog-400" />
+                  <VizIcon className="w-5 h-5 text-nog-400 dark:text-nog-400" />
                   <div>
-                    <h2 className="text-lg font-semibold text-slate-900 dark:text-nog-100">{panel.title}</h2>
+                    <h2 className="text-lg font-semibold text-nog-900 dark:text-nog-100">{panel.title}</h2>
                     {panel.description && (
-                      <p className="text-sm text-slate-500 dark:text-nog-400">{panel.description}</p>
+                      <p className="text-sm text-nog-500 dark:text-nog-400">{panel.description}</p>
                     )}
                   </div>
                 </div>

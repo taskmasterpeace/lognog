@@ -19,19 +19,19 @@ export default function ImagePlaceholder({
 }: ImagePlaceholderProps) {
   return (
     <div
-      className={`relative bg-nog-800/50 border-2 border-dashed border-slate-600 rounded-xl overflow-hidden ${className}`}
+      className={`relative bg-nog-800/50 border-2 border-dashed border-nog-600 rounded-xl overflow-hidden ${className}`}
       style={{ aspectRatio }}
     >
       <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
-        <Image className="w-16 h-16 text-slate-600 mb-4" />
+        <Image className="w-16 h-16 text-nog-600 mb-4" />
         <div className="space-y-2">
-          <p className="text-slate-400 font-medium">{alt}</p>
-          <p className="text-sm text-slate-500">{description}</p>
+          <p className="text-nog-400 font-medium">{alt}</p>
+          <p className="text-sm text-nog-500">{description}</p>
           <div className="flex items-center justify-center gap-4 mt-3">
-            <span className="px-3 py-1 bg-slate-700/50 text-slate-400 text-xs rounded-full font-mono">
+            <span className="px-3 py-1 bg-nog-700/50 text-nog-400 text-xs rounded-full font-mono">
               {aspectRatio}
             </span>
-            <span className="px-3 py-1 bg-slate-700/50 text-slate-400 text-xs rounded-full font-mono">
+            <span className="px-3 py-1 bg-nog-700/50 text-nog-400 text-xs rounded-full font-mono">
               {width}x{height}
             </span>
           </div>

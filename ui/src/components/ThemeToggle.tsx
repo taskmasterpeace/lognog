@@ -7,14 +7,14 @@ export default function ThemeToggle() {
   return (
     <button
       onClick={toggleTheme}
-      className="relative p-2 rounded-lg bg-nog-100 dark:bg-nog-700 hover:bg-slate-200 dark:hover:bg-slate-600 transition-all duration-300 group"
+      className="relative p-2 rounded-lg bg-nog-100 dark:bg-nog-700 hover:bg-nog-200 dark:hover:bg-nog-600 transition-all duration-300 group"
       aria-label="Toggle theme"
       title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
     >
       <div className="relative w-5 h-5">
         {/* Sun icon */}
         <Sun
-          className={`absolute inset-0 w-5 h-5 text-amber-500 transition-all duration-300 ${
+          className={`absolute inset-0 w-5 h-5 text-honey-500 transition-all duration-300 ${
             theme === 'light'
               ? 'rotate-0 scale-100 opacity-100'
               : 'rotate-90 scale-0 opacity-0'
@@ -22,7 +22,7 @@ export default function ThemeToggle() {
         />
         {/* Moon icon */}
         <Moon
-          className={`absolute inset-0 w-5 h-5 text-amber-400 transition-all duration-300 ${
+          className={`absolute inset-0 w-5 h-5 text-honey-400 transition-all duration-300 ${
             theme === 'dark'
               ? 'rotate-0 scale-100 opacity-100'
               : '-rotate-90 scale-0 opacity-0'

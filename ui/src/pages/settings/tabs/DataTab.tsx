@@ -225,13 +225,13 @@ const DataTab = () => {
   };
 
   return (
-    <section className="bg-white dark:bg-nog-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
-      <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2 mb-4">
+    <section className="bg-white dark:bg-nog-800 rounded-xl shadow-sm border border-nog-200 dark:border-nog-700 p-6">
+      <h2 className="text-lg font-semibold text-nog-900 dark:text-nog-100 flex items-center gap-2 mb-4">
         <Database className="w-5 h-5" />
         Data Management
       </h2>
 
-      <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+      <p className="text-sm text-nog-500 dark:text-nog-400 mb-6">
         Generate realistic test data for demos, screenshots, and testing. Export and import log data as JSON.
       </p>
 
@@ -243,7 +243,7 @@ const DataTab = () => {
         </div>
       )}
       {clearDataResult && (
-        <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800 flex items-center gap-2 text-amber-700 dark:text-amber-300 text-sm">
+        <div className="mb-4 p-3 bg-honey-50 dark:bg-honey-900/20 rounded-lg border border-honey-200 dark:border-honey-800 flex items-center gap-2 text-honey-700 dark:text-honey-300 text-sm">
           <Check className="w-4 h-4" />
           {clearDataResult}
         </div>
@@ -257,15 +257,15 @@ const DataTab = () => {
 
       {/* Current Stats */}
       {demoStats && (
-        <div className="mb-6 p-4 bg-nog-50 dark:bg-nog-900/50 rounded-lg border border-slate-200 dark:border-slate-700">
+        <div className="mb-6 p-4 bg-nog-50 dark:bg-nog-900/50 rounded-lg border border-nog-200 dark:border-nog-700">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+            <h3 className="text-sm font-semibold text-nog-900 dark:text-nog-100">
               Current Database Stats
             </h3>
             <button
               onClick={loadDemoStats}
               disabled={loadingStats}
-              className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+              className="p-1 text-nog-400 hover:text-nog-600 dark:hover:text-nog-300 transition-colors"
               title="Refresh stats"
             >
               <RefreshCw className={`w-4 h-4 ${loadingStats ? 'animate-spin' : ''}`} />
@@ -273,15 +273,15 @@ const DataTab = () => {
           </div>
           <div className="grid grid-cols-2 gap-4 text-sm">
             <div>
-              <span className="text-slate-500 dark:text-slate-400">Total Logs:</span>
-              <div className="font-semibold text-slate-900 dark:text-slate-100">
+              <span className="text-nog-500 dark:text-nog-400">Total Logs:</span>
+              <div className="font-semibold text-nog-900 dark:text-nog-100">
                 {demoStats.total.toLocaleString()}
               </div>
             </div>
             {demoStats.oldest && (
               <div>
-                <span className="text-slate-500 dark:text-slate-400">Time Range:</span>
-                <div className="font-mono text-xs text-slate-900 dark:text-slate-100">
+                <span className="text-nog-500 dark:text-nog-400">Time Range:</span>
+                <div className="font-mono text-xs text-nog-900 dark:text-nog-100">
                   {new Date(demoStats.oldest).toLocaleDateString()} - {new Date(demoStats.newest).toLocaleDateString()}
                 </div>
               </div>
@@ -292,14 +292,14 @@ const DataTab = () => {
 
       {/* Generate Demo Data */}
       <div className="mb-6">
-        <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">
+        <h3 className="text-sm font-semibold text-nog-900 dark:text-nog-100 mb-3">
           Generate Demo Data
         </h3>
 
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
                 Number of Logs
               </label>
               <input
@@ -308,17 +308,17 @@ const DataTab = () => {
                 onChange={(e) => setDemoDataCount(e.target.value)}
                 min="10"
                 max="10000"
-                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-800 text-slate-900 dark:text-slate-100"
+                className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-800 text-nog-900 dark:text-nog-100"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+              <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
                 Time Range
               </label>
               <select
                 value={demoDataTimeRange}
                 onChange={(e) => setDemoDataTimeRange(e.target.value)}
-                className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-800 text-slate-900 dark:text-slate-100"
+                className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-800 text-nog-900 dark:text-nog-100"
               >
                 <option value="-1h">Last Hour</option>
                 <option value="-6h">Last 6 Hours</option>
@@ -330,7 +330,7 @@ const DataTab = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+            <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-2">
               Log Types
             </label>
             <div className="flex flex-wrap gap-2">
@@ -341,8 +341,8 @@ const DataTab = () => {
                   onClick={() => toggleDemoType(type)}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                     demoDataTypes.includes(type)
-                      ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300'
-                      : 'bg-nog-100 text-slate-600 dark:bg-nog-700 dark:text-slate-400'
+                      ? 'bg-honey-100 text-honey-700 dark:bg-honey-900/40 dark:text-honey-300'
+                      : 'bg-nog-100 text-nog-600 dark:bg-nog-700 dark:text-nog-400'
                   }`}
                 >
                   {type}
@@ -354,7 +354,7 @@ const DataTab = () => {
           <button
             onClick={handleGenerateDemoData}
             disabled={generatingData || demoDataTypes.length === 0}
-            className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 px-4 py-2 bg-honey-500 hover:bg-honey-600 text-nog-900 font-medium rounded-lg transition-colors disabled:opacity-50"
           >
             {generatingData ? (
               <>
@@ -370,15 +370,15 @@ const DataTab = () => {
           </button>
         </div>
 
-        <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
+        <p className="mt-3 text-xs text-nog-400 dark:text-nog-500">
           Generates realistic logs from various sources including web servers, databases, firewalls, and more.
           Includes security events, errors, warnings, and info messages distributed across your selected time range.
         </p>
       </div>
 
       {/* Export/Import Controls */}
-      <div className="pt-6 border-t border-slate-200 dark:border-slate-700">
-        <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 mb-3">
+      <div className="pt-6 border-t border-nog-200 dark:border-nog-700">
+        <h3 className="text-sm font-semibold text-nog-900 dark:text-nog-100 mb-3">
           Data Export & Clear
         </h3>
 
@@ -420,21 +420,21 @@ const DataTab = () => {
           </button>
         </div>
 
-        <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
+        <p className="mt-3 text-xs text-nog-400 dark:text-nog-500">
           Export downloads the last 24 hours of data (max 1000 logs) as JSON. Clear removes all logs from the database (requires confirmation).
         </p>
       </div>
 
       {/* Log Management - Delete by Criteria */}
-      <div className="pt-6 border-t border-slate-200 dark:border-slate-700">
+      <div className="pt-6 border-t border-nog-200 dark:border-nog-700">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+          <h3 className="text-sm font-semibold text-nog-900 dark:text-nog-100">
             Delete Logs by Criteria
           </h3>
           <button
             onClick={loadLogStats}
             disabled={logStatsLoading}
-            className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
+            className="p-1 text-nog-400 hover:text-nog-600 dark:hover:text-nog-300 transition-colors"
             title="Refresh stats"
           >
             <RefreshCw className={`w-4 h-4 ${logStatsLoading ? 'animate-spin' : ''}`} />
@@ -455,10 +455,10 @@ const DataTab = () => {
 
         {/* Log stats table */}
         {logStats.length > 0 && (
-          <div className="mb-4 max-h-48 overflow-y-auto border border-slate-200 dark:border-slate-700 rounded-lg">
+          <div className="mb-4 max-h-48 overflow-y-auto border border-nog-200 dark:border-nog-700 rounded-lg">
             <table className="w-full text-sm">
               <thead className="bg-nog-50 dark:bg-nog-900/50 sticky top-0">
-                <tr className="text-left text-slate-600 dark:text-slate-400">
+                <tr className="text-left text-nog-600 dark:text-nog-400">
                   <th className="px-3 py-2">Index</th>
                   <th className="px-3 py-2">App</th>
                   <th className="px-3 py-2 text-right">Count</th>
@@ -467,14 +467,14 @@ const DataTab = () => {
               </thead>
               <tbody>
                 {logStats.map((stat, idx) => (
-                  <tr key={idx} className="border-t border-slate-100 dark:border-slate-800">
-                    <td className="px-3 py-2 font-mono text-xs text-slate-900 dark:text-slate-100">
+                  <tr key={idx} className="border-t border-nog-100 dark:border-nog-800">
+                    <td className="px-3 py-2 font-mono text-xs text-nog-900 dark:text-nog-100">
                       {stat.index_name || '(default)'}
                     </td>
-                    <td className="px-3 py-2 font-mono text-xs text-slate-600 dark:text-slate-400">
+                    <td className="px-3 py-2 font-mono text-xs text-nog-600 dark:text-nog-400">
                       {stat.app_name || '-'}
                     </td>
-                    <td className="px-3 py-2 text-right font-semibold text-slate-900 dark:text-slate-100">
+                    <td className="px-3 py-2 text-right font-semibold text-nog-900 dark:text-nog-100">
                       {stat.count.toLocaleString()}
                     </td>
                     <td className="px-3 py-2">
@@ -496,7 +496,7 @@ const DataTab = () => {
         {/* Delete filters */}
         <div className="grid grid-cols-2 gap-3 mb-4">
           <div>
-            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+            <label className="block text-xs font-medium text-nog-600 dark:text-nog-400 mb-1">
               Index Name
             </label>
             <input
@@ -504,11 +504,11 @@ const DataTab = () => {
               value={deleteFilter.index_name}
               onChange={(e) => setDeleteFilter(f => ({ ...f, index_name: e.target.value }))}
               placeholder="e.g., lognog-internal"
-              className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-800 text-slate-900 dark:text-slate-100"
+              className="w-full px-3 py-2 text-sm border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-800 text-nog-900 dark:text-nog-100"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+            <label className="block text-xs font-medium text-nog-600 dark:text-nog-400 mb-1">
               App Name
             </label>
             <input
@@ -516,11 +516,11 @@ const DataTab = () => {
               value={deleteFilter.app_name}
               onChange={(e) => setDeleteFilter(f => ({ ...f, app_name: e.target.value }))}
               placeholder="e.g., lognog-internal"
-              className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-800 text-slate-900 dark:text-slate-100"
+              className="w-full px-3 py-2 text-sm border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-800 text-nog-900 dark:text-nog-100"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+            <label className="block text-xs font-medium text-nog-600 dark:text-nog-400 mb-1">
               App Scope
             </label>
             <input
@@ -528,11 +528,11 @@ const DataTab = () => {
               value={deleteFilter.app_scope}
               onChange={(e) => setDeleteFilter(f => ({ ...f, app_scope: e.target.value }))}
               placeholder="e.g., lognog"
-              className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-800 text-slate-900 dark:text-slate-100"
+              className="w-full px-3 py-2 text-sm border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-800 text-nog-900 dark:text-nog-100"
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+            <label className="block text-xs font-medium text-nog-600 dark:text-nog-400 mb-1">
               Older Than (days)
             </label>
             <input
@@ -541,7 +541,7 @@ const DataTab = () => {
               onChange={(e) => setDeleteFilter(f => ({ ...f, older_than_days: e.target.value }))}
               placeholder="e.g., 7"
               min="1"
-              className="w-full px-3 py-2 text-sm border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-800 text-slate-900 dark:text-slate-100"
+              className="w-full px-3 py-2 text-sm border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-800 text-nog-900 dark:text-nog-100"
             />
           </div>
         </div>
@@ -564,7 +564,7 @@ const DataTab = () => {
           )}
         </button>
 
-        <p className="mt-3 text-xs text-slate-400 dark:text-slate-500">
+        <p className="mt-3 text-xs text-nog-400 dark:text-nog-500">
           Delete logs by index, app name, app scope, or age. At least one filter is required.
           In ClickHouse, deletions are async and may take a moment to complete.
         </p>

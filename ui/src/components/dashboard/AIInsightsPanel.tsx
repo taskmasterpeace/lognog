@@ -85,28 +85,28 @@ export function AIInsightsPanel({
       case 'anomaly':
         return <AlertTriangle className={`w-4 h-4 ${
           severity === 'critical' ? 'text-red-500' :
-          severity === 'warning' ? 'text-amber-500' : 'text-amber-500'
+          severity === 'warning' ? 'text-honey-500' : 'text-honey-500'
         }`} />;
       case 'trend':
         return severity === 'warning'
-          ? <TrendingDown className="w-4 h-4 text-amber-500" />
+          ? <TrendingDown className="w-4 h-4 text-honey-500" />
           : <TrendingUp className="w-4 h-4 text-green-500" />;
       case 'suggestion':
-        return <Lightbulb className="w-4 h-4 text-amber-500" />;
+        return <Lightbulb className="w-4 h-4 text-honey-500" />;
       default:
-        return <Sparkles className="w-4 h-4 text-amber-500" />;
+        return <Sparkles className="w-4 h-4 text-honey-500" />;
     }
   };
 
   return (
-    <div className="bg-white dark:bg-nog-800 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden">
+    <div className="bg-white dark:bg-nog-800 border border-nog-200 dark:border-nog-700 rounded-lg overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200 dark:border-slate-700 bg-gradient-to-r from-amber-50 to-amber-50 dark:from-amber-900/20 dark:to-amber-900/20">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-nog-200 dark:border-nog-700 bg-honey-50 dark:from-honey-900/20 dark:to-honey-900/20">
         <div className="flex items-center gap-2">
-          <Sparkles className="w-5 h-5 text-amber-500" />
-          <h3 className="font-semibold text-slate-900 dark:text-slate-100">AI Insights</h3>
+          <Sparkles className="w-5 h-5 text-honey-500" />
+          <h3 className="font-semibold text-nog-900 dark:text-nog-100">AI Insights</h3>
           {ollamaAvailable === false && (
-            <span className="px-2 py-0.5 text-xs bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 rounded-full">
+            <span className="px-2 py-0.5 text-xs bg-honey-100 dark:bg-honey-900/30 text-honey-700 dark:text-honey-400 rounded-full">
               Demo Mode
             </span>
           )}
@@ -115,7 +115,7 @@ export function AIInsightsPanel({
           <button
             onClick={fetchInsights}
             disabled={loading}
-            className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-white/50 dark:hover:bg-slate-700/50 rounded transition-colors"
+            className="p-1.5 text-nog-400 hover:text-nog-600 dark:hover:text-nog-300 hover:bg-white/50 dark:hover:bg-nog-700/50 rounded transition-colors"
             title="Refresh insights"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -123,7 +123,7 @@ export function AIInsightsPanel({
           {onConfigureAI && (
             <button
               onClick={onConfigureAI}
-              className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-white/50 dark:hover:bg-slate-700/50 rounded transition-colors"
+              className="p-1.5 text-nog-400 hover:text-nog-600 dark:hover:text-nog-300 hover:bg-white/50 dark:hover:bg-nog-700/50 rounded transition-colors"
               title="Configure AI"
             >
               <Settings className="w-4 h-4" />
@@ -136,14 +136,14 @@ export function AIInsightsPanel({
       <div className="p-4">
         {loading && insights.length === 0 ? (
           <div className="flex items-center justify-center py-8">
-            <Loader2 className="w-6 h-6 text-amber-500 animate-spin" />
+            <Loader2 className="w-6 h-6 text-honey-500 animate-spin" />
           </div>
         ) : error ? (
           <div className="text-center py-4 text-red-600 dark:text-red-400">
             <p>{error}</p>
           </div>
         ) : insights.length === 0 ? (
-          <div className="text-center py-4 text-slate-500 dark:text-slate-400">
+          <div className="text-center py-4 text-nog-500 dark:text-nog-400">
             <Sparkles className="w-8 h-8 mx-auto mb-2 opacity-50" />
             <p>No insights available for this time range</p>
           </div>
@@ -156,8 +156,8 @@ export function AIInsightsPanel({
                   insight.severity === 'critical'
                     ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
                     : insight.severity === 'warning'
-                    ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800'
-                    : 'bg-nog-50 dark:bg-nog-700/50 border-slate-200 dark:border-slate-600'
+                    ? 'bg-honey-50 dark:bg-honey-900/20 border-honey-200 dark:border-honey-800'
+                    : 'bg-nog-50 dark:bg-nog-700/50 border-nog-200 dark:border-nog-600'
                 }`}
               >
                 <div className="flex items-start gap-3">
@@ -165,10 +165,10 @@ export function AIInsightsPanel({
                     {getInsightIcon(insight.type, insight.severity)}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-slate-900 dark:text-slate-100">
+                    <p className="font-medium text-nog-900 dark:text-nog-100">
                       {insight.title}
                     </p>
-                    <p className="text-sm text-slate-600 dark:text-slate-400 mt-0.5">
+                    <p className="text-sm text-nog-600 dark:text-nog-400 mt-0.5">
                       {insight.description}
                     </p>
                     {insight.action && (
@@ -180,7 +180,7 @@ export function AIInsightsPanel({
                             window.location.href = `/search?query=${encodeURIComponent(insight.action.query)}`;
                           }
                         }}
-                        className="mt-2 text-sm text-amber-600 dark:text-amber-400 hover:underline"
+                        className="mt-2 text-sm text-honey-600 dark:text-honey-400 hover:underline"
                       >
                         {insight.action.label} →
                       </button>

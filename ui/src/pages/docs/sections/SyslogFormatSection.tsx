@@ -5,14 +5,14 @@ export default function SyslogFormatSection() {
   return (
     <div className="space-y-8">
       <section>
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">Understanding Syslog</h2>
-        <p className="text-slate-600 dark:text-slate-400 mb-4">
+        <h2 className="text-2xl font-bold text-nog-900 dark:text-nog-100 mb-4">Understanding Syslog</h2>
+        <p className="text-nog-600 dark:text-nog-400 mb-4">
           Syslog is a standard protocol for message logging. LogNog supports both major syslog formats:
           RFC 3164 (BSD syslog) and RFC 5424 (modern syslog). Understanding these formats helps you
           parse logs correctly and write effective queries.
         </p>
-        <div className="card p-4 bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800">
-          <p className="text-amber-800 dark:text-amber-300 text-sm">
+        <div className="card p-4 bg-honey-50 border-honey-200 dark:bg-honey-900/20 dark:border-honey-800">
+          <p className="text-honey-800 dark:text-honey-300 text-sm">
             <strong>LogNog Auto-Detection:</strong> LogNog automatically detects and parses both RFC 3164 and RFC 5424
             formats. You do not need to configure anything - just send your logs!
           </p>
@@ -20,18 +20,18 @@ export default function SyslogFormatSection() {
       </section>
 
       <section>
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">Priority Value (PRI)</h2>
-        <p className="text-slate-600 dark:text-slate-400 mb-4">
+        <h2 className="text-2xl font-bold text-nog-900 dark:text-nog-100 mb-4">Priority Value (PRI)</h2>
+        <p className="text-nog-600 dark:text-nog-400 mb-4">
           Both syslog formats begin with a priority value enclosed in angle brackets. The priority is calculated as:
         </p>
         <div className="card p-4 dark:bg-nog-800 mb-4">
           <div className="text-center">
-            <code className="text-lg font-mono text-amber-600 dark:text-amber-400">
+            <code className="text-lg font-mono text-honey-600 dark:text-honey-400">
               Priority = (Facility x 8) + Severity
             </code>
           </div>
         </div>
-        <p className="text-slate-600 dark:text-slate-400 mb-4">
+        <p className="text-nog-600 dark:text-nog-400 mb-4">
           For example, a local0 facility (16) with warning severity (4) produces priority 132:
         </p>
         <CodeBlock code={`# Priority calculation example
@@ -44,8 +44,8 @@ Priority: (16 x 8) + 4 = 132
       </section>
 
       <section>
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">Severity Levels (0-7)</h2>
-        <p className="text-slate-600 dark:text-slate-400 mb-4">
+        <h2 className="text-2xl font-bold text-nog-900 dark:text-nog-100 mb-4">Severity Levels (0-7)</h2>
+        <p className="text-nog-600 dark:text-nog-400 mb-4">
           Syslog defines 8 severity levels, from most severe (0) to least severe (7):
         </p>
         <div className="overflow-x-auto">
@@ -71,13 +71,13 @@ Priority: (16 x 8) + 4 = 132
                 <td>Immediate action required</td>
                 <td>Database corruption, loss of connectivity</td>
               </tr>
-              <tr className="bg-orange-50 dark:bg-orange-900/20">
+              <tr className="bg-honey-50 dark:bg-honey-900/20">
                 <td><code className="code">2</code></td>
                 <td><strong>Critical</strong></td>
                 <td>Critical conditions</td>
                 <td>Hardware errors, failed backups</td>
               </tr>
-              <tr className="bg-orange-50 dark:bg-orange-900/20">
+              <tr className="bg-honey-50 dark:bg-honey-900/20">
                 <td><code className="code">3</code></td>
                 <td><strong>Error</strong></td>
                 <td>Error conditions</td>
@@ -95,7 +95,7 @@ Priority: (16 x 8) + 4 = 132
                 <td>Normal but significant</td>
                 <td>Service started, configuration changed</td>
               </tr>
-              <tr className="bg-amber-50 dark:bg-amber-900/20">
+              <tr className="bg-honey-50 dark:bg-honey-900/20">
                 <td><code className="code">6</code></td>
                 <td><strong>Informational</strong></td>
                 <td>Informational messages</td>
@@ -110,50 +110,50 @@ Priority: (16 x 8) + 4 = 132
             </tbody>
           </table>
         </div>
-        <div className="card p-4 bg-amber-50 border-amber-200 dark:bg-amber-900/20 dark:border-amber-800 mt-4">
-          <p className="text-amber-800 dark:text-amber-300 text-sm">
+        <div className="card p-4 bg-honey-50 border-honey-200 dark:bg-honey-900/20 dark:border-honey-800 mt-4">
+          <p className="text-honey-800 dark:text-honey-300 text-sm">
             <strong>Query Tip:</strong> Use severity names in your queries! LogNog understands both numeric codes and names:<br />
-            <code className="bg-amber-100 dark:bg-amber-900 px-2 py-0.5 rounded">search severity&lt;=warning</code> is equivalent to <code className="bg-amber-100 dark:bg-amber-900 px-2 py-0.5 rounded">search severity&lt;=4</code>
+            <code className="bg-honey-100 dark:bg-honey-900 px-2 py-0.5 rounded">search severity&lt;=warning</code> is equivalent to <code className="bg-honey-100 dark:bg-honey-900 px-2 py-0.5 rounded">search severity&lt;=4</code>
           </p>
         </div>
       </section>
 
       <section>
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">Facility Codes (0-23)</h2>
-        <p className="text-slate-600 dark:text-slate-400 mb-4">
+        <h2 className="text-2xl font-bold text-nog-900 dark:text-nog-100 mb-4">Facility Codes (0-23)</h2>
+        <p className="text-nog-600 dark:text-nog-400 mb-4">
           Facility codes indicate the type of program or system that generated the message:
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="card p-4 dark:bg-nog-800">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-3">System Facilities (0-11)</h3>
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-3">System Facilities (0-11)</h3>
             <div className="space-y-1 text-sm">
-              <div className="flex justify-between"><span>0 - kernel</span><span className="text-slate-500">Kernel messages</span></div>
-              <div className="flex justify-between"><span>1 - user</span><span className="text-slate-500">User-level messages</span></div>
-              <div className="flex justify-between"><span>2 - mail</span><span className="text-slate-500">Mail system</span></div>
-              <div className="flex justify-between"><span>3 - daemon</span><span className="text-slate-500">System daemons</span></div>
-              <div className="flex justify-between"><span>4 - auth</span><span className="text-slate-500">Security/auth</span></div>
-              <div className="flex justify-between"><span>5 - syslog</span><span className="text-slate-500">Syslogd internal</span></div>
-              <div className="flex justify-between"><span>6 - lpr</span><span className="text-slate-500">Printing</span></div>
-              <div className="flex justify-between"><span>7 - news</span><span className="text-slate-500">Network news</span></div>
-              <div className="flex justify-between"><span>8 - uucp</span><span className="text-slate-500">UUCP</span></div>
-              <div className="flex justify-between"><span>9 - cron</span><span className="text-slate-500">Clock daemon</span></div>
-              <div className="flex justify-between"><span>10 - authpriv</span><span className="text-slate-500">Private auth</span></div>
-              <div className="flex justify-between"><span>11 - ftp</span><span className="text-slate-500">FTP daemon</span></div>
+              <div className="flex justify-between"><span>0 - kernel</span><span className="text-nog-500">Kernel messages</span></div>
+              <div className="flex justify-between"><span>1 - user</span><span className="text-nog-500">User-level messages</span></div>
+              <div className="flex justify-between"><span>2 - mail</span><span className="text-nog-500">Mail system</span></div>
+              <div className="flex justify-between"><span>3 - daemon</span><span className="text-nog-500">System daemons</span></div>
+              <div className="flex justify-between"><span>4 - auth</span><span className="text-nog-500">Security/auth</span></div>
+              <div className="flex justify-between"><span>5 - syslog</span><span className="text-nog-500">Syslogd internal</span></div>
+              <div className="flex justify-between"><span>6 - lpr</span><span className="text-nog-500">Printing</span></div>
+              <div className="flex justify-between"><span>7 - news</span><span className="text-nog-500">Network news</span></div>
+              <div className="flex justify-between"><span>8 - uucp</span><span className="text-nog-500">UUCP</span></div>
+              <div className="flex justify-between"><span>9 - cron</span><span className="text-nog-500">Clock daemon</span></div>
+              <div className="flex justify-between"><span>10 - authpriv</span><span className="text-nog-500">Private auth</span></div>
+              <div className="flex justify-between"><span>11 - ftp</span><span className="text-nog-500">FTP daemon</span></div>
             </div>
           </div>
           <div className="card p-4 dark:bg-nog-800">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-3">Local Facilities (16-23)</h3>
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-3">Local Facilities (16-23)</h3>
             <div className="space-y-1 text-sm">
-              <div className="flex justify-between"><span>16 - local0</span><span className="text-slate-500">Custom use</span></div>
-              <div className="flex justify-between"><span>17 - local1</span><span className="text-slate-500">Custom use</span></div>
-              <div className="flex justify-between"><span>18 - local2</span><span className="text-slate-500">Custom use</span></div>
-              <div className="flex justify-between"><span>19 - local3</span><span className="text-slate-500">Custom use</span></div>
-              <div className="flex justify-between"><span>20 - local4</span><span className="text-slate-500">Custom use</span></div>
-              <div className="flex justify-between"><span>21 - local5</span><span className="text-slate-500">Custom use</span></div>
-              <div className="flex justify-between"><span>22 - local6</span><span className="text-slate-500">Custom use</span></div>
-              <div className="flex justify-between"><span>23 - local7</span><span className="text-slate-500">Custom use</span></div>
+              <div className="flex justify-between"><span>16 - local0</span><span className="text-nog-500">Custom use</span></div>
+              <div className="flex justify-between"><span>17 - local1</span><span className="text-nog-500">Custom use</span></div>
+              <div className="flex justify-between"><span>18 - local2</span><span className="text-nog-500">Custom use</span></div>
+              <div className="flex justify-between"><span>19 - local3</span><span className="text-nog-500">Custom use</span></div>
+              <div className="flex justify-between"><span>20 - local4</span><span className="text-nog-500">Custom use</span></div>
+              <div className="flex justify-between"><span>21 - local5</span><span className="text-nog-500">Custom use</span></div>
+              <div className="flex justify-between"><span>22 - local6</span><span className="text-nog-500">Custom use</span></div>
+              <div className="flex justify-between"><span>23 - local7</span><span className="text-nog-500">Custom use</span></div>
             </div>
-            <p className="text-xs text-slate-500 mt-3">
+            <p className="text-xs text-nog-500 mt-3">
               Local facilities (local0-local7) are commonly used for custom applications, network devices, and third-party software.
             </p>
           </div>
@@ -161,13 +161,13 @@ Priority: (16 x 8) + 4 = 132
       </section>
 
       <section>
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">RFC 3164 (BSD Syslog)</h2>
-        <p className="text-slate-600 dark:text-slate-400 mb-4">
+        <h2 className="text-2xl font-bold text-nog-900 dark:text-nog-100 mb-4">RFC 3164 (BSD Syslog)</h2>
+        <p className="text-nog-600 dark:text-nog-400 mb-4">
           RFC 3164 is the traditional BSD syslog format, widely used by Unix/Linux systems and network devices.
           It is simple but has limitations like no timezone support and ambiguous parsing.
         </p>
         <div className="card p-4 dark:bg-nog-800 mb-4">
-          <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Format Structure</h3>
+          <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">Format Structure</h3>
           <CodeBlock code={`<PRI>TIMESTAMP HOSTNAME TAG: MESSAGE
 
 Components:
@@ -178,7 +178,7 @@ Components:
   MESSAGE   = The actual log message`} />
         </div>
         <div className="card p-4 dark:bg-nog-800">
-          <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Example Messages</h3>
+          <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">Example Messages</h3>
           <CodeBlock code={`# Basic message from sshd
 <38>Jan 15 10:30:45 server01 sshd[12345]: Accepted password for user from 192.168.1.100 port 52413
 
@@ -201,13 +201,13 @@ Components:
       </section>
 
       <section>
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">RFC 5424 (Modern Syslog)</h2>
-        <p className="text-slate-600 dark:text-slate-400 mb-4">
+        <h2 className="text-2xl font-bold text-nog-900 dark:text-nog-100 mb-4">RFC 5424 (Modern Syslog)</h2>
+        <p className="text-nog-600 dark:text-nog-400 mb-4">
           RFC 5424 is the modern syslog standard with improved structure, ISO 8601 timestamps with timezone,
           structured data support, and better parsing reliability.
         </p>
         <div className="card p-4 dark:bg-nog-800 mb-4">
-          <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Format Structure</h3>
+          <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">Format Structure</h3>
           <CodeBlock code={`<PRI>VERSION TIMESTAMP HOSTNAME APP-NAME PROCID MSGID STRUCTURED-DATA MSG
 
 Components:
@@ -222,7 +222,7 @@ Components:
   MSG             = UTF-8 message content (optional BOM)`} />
         </div>
         <div className="card p-4 dark:bg-nog-800">
-          <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Example Messages</h3>
+          <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">Example Messages</h3>
           <CodeBlock code={`# Basic RFC 5424 message
 <34>1 2024-01-15T10:30:45.123Z server01.example.com sshd 12345 AUTH_SUCCESS - User admin logged in
 
@@ -249,13 +249,13 @@ Components:
       </section>
 
       <section>
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">Structured Data (SD) Elements</h2>
-        <p className="text-slate-600 dark:text-slate-400 mb-4">
+        <h2 className="text-2xl font-bold text-nog-900 dark:text-nog-100 mb-4">Structured Data (SD) Elements</h2>
+        <p className="text-nog-600 dark:text-nog-400 mb-4">
           RFC 5424 supports structured data elements - key-value pairs that can be parsed automatically.
           LogNog extracts these into queryable fields.
         </p>
         <div className="card p-4 dark:bg-nog-800 mb-4">
-          <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">SD-ELEMENT Format</h3>
+          <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">SD-ELEMENT Format</h3>
           <CodeBlock code={`[SD-ID PARAM-NAME="PARAM-VALUE" ...]
 
 SD-ID Format:
@@ -279,8 +279,8 @@ Examples:
       </section>
 
       <section>
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">How LogNog Parses Syslog</h2>
-        <p className="text-slate-600 dark:text-slate-400 mb-4">
+        <h2 className="text-2xl font-bold text-nog-900 dark:text-nog-100 mb-4">How LogNog Parses Syslog</h2>
+        <p className="text-nog-600 dark:text-nog-400 mb-4">
           LogNog uses Vector for syslog ingestion and automatically parses incoming messages into structured fields:
         </p>
         <div className="overflow-x-auto">
@@ -354,13 +354,13 @@ Examples:
       </section>
 
       <section>
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">Sending Test Messages</h2>
-        <p className="text-slate-600 dark:text-slate-400 mb-4">
+        <h2 className="text-2xl font-bold text-nog-900 dark:text-nog-100 mb-4">Sending Test Messages</h2>
+        <p className="text-nog-600 dark:text-nog-400 mb-4">
           Use these commands to send test syslog messages to LogNog:
         </p>
         <div className="space-y-4">
           <div className="card p-4 dark:bg-nog-800">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Using netcat (nc)</h3>
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">Using netcat (nc)</h3>
             <CodeBlock code={`# RFC 3164 format (UDP)
 echo "<14>$(date +'%b %d %H:%M:%S') $(hostname) myapp[$$]: Test message from LogNog" | nc -u localhost 514
 
@@ -371,7 +371,7 @@ echo "<14>$(date +'%b %d %H:%M:%S') $(hostname) myapp[$$]: Test message from Log
 echo "<14>1 $(date -u +'%Y-%m-%dT%H:%M:%SZ') $(hostname) myapp $$ TEST - Test message RFC 5424" | nc -u localhost 514`} />
           </div>
           <div className="card p-4 dark:bg-nog-800">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Using logger (Linux/macOS)</h3>
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">Using logger (Linux/macOS)</h3>
             <CodeBlock code={`# Local syslog (forwarded to LogNog if configured)
 logger -p local0.info "Test message from logger"
 
@@ -382,7 +382,7 @@ logger -n localhost -P 514 -p user.notice "Direct test to LogNog"
 logger -t myapp -p local0.warning "Warning from myapp"`} />
           </div>
           <div className="card p-4 dark:bg-nog-800">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">PowerShell (Windows)</h3>
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">PowerShell (Windows)</h3>
             <CodeBlock code={`# Send UDP syslog message
 $message = "<14>Jan 15 10:30:00 $(hostname) myapp[1234]: Test from PowerShell"
 $udpClient = New-Object System.Net.Sockets.UdpClient
@@ -394,76 +394,76 @@ $udpClient.Close()`} />
       </section>
 
       <section>
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">Common Device Formats</h2>
-        <p className="text-slate-600 dark:text-slate-400 mb-4">
+        <h2 className="text-2xl font-bold text-nog-900 dark:text-nog-100 mb-4">Common Device Formats</h2>
+        <p className="text-nog-600 dark:text-nog-400 mb-4">
           Many network devices and applications have their own syslog message formats. Here are some common examples:
         </p>
         <div className="space-y-4">
           <div className="card p-4 dark:bg-nog-800">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Cisco IOS</h3>
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">Cisco IOS</h3>
             <CodeBlock code={`<189>Jan 15 10:30:45 router01 %SYS-5-CONFIG_I: Configured from console by admin
 <190>Jan 15 10:30:46 router01 %LINEPROTO-5-UPDOWN: Line protocol on Interface GigabitEthernet0/1, changed state to up
 <187>Jan 15 10:30:47 router01 %SEC-6-IPACCESSLOGP: list 101 denied tcp 10.0.0.1(12345) -> 192.168.1.1(80), 1 packet`} />
           </div>
           <div className="card p-4 dark:bg-nog-800">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Linux sshd</h3>
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">Linux sshd</h3>
             <CodeBlock code={`<38>Jan 15 10:30:45 server sshd[12345]: Accepted publickey for admin from 10.0.0.50 port 52413 ssh2: RSA SHA256:abc123...
 <38>Jan 15 10:30:46 server sshd[12346]: Failed password for invalid user test from 192.168.1.100 port 54321 ssh2
 <86>Jan 15 10:30:47 server sshd[12345]: pam_unix(sshd:session): session opened for user admin by (uid=0)`} />
           </div>
           <div className="card p-4 dark:bg-nog-800">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">nginx</h3>
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">nginx</h3>
             <CodeBlock code={`<134>Jan 15 10:30:45 webserver nginx: 192.168.1.100 - - [15/Jan/2024:10:30:45 +0000] "GET /api/users HTTP/1.1" 200 1234 "-" "Mozilla/5.0"
 <131>Jan 15 10:30:46 webserver nginx: 2024/01/15 10:30:46 [error] 1234#0: *5678 connect() failed (111: Connection refused)`} />
           </div>
           <div className="card p-4 dark:bg-nog-800">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">pfSense/OPNsense Firewall</h3>
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">pfSense/OPNsense Firewall</h3>
             <CodeBlock code={`<134>Jan 15 10:30:45 firewall filterlog[12345]: 5,,,1000000103,em0,match,block,in,4,0x0,,64,12345,0,DF,6,tcp,60,192.168.1.100,10.0.0.1,54321,22,0,S,1234567890,,65535,,`} />
           </div>
         </div>
       </section>
 
       <section>
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">Troubleshooting</h2>
+        <h2 className="text-2xl font-bold text-nog-900 dark:text-nog-100 mb-4">Troubleshooting</h2>
         <div className="space-y-4">
           <div className="card p-4 dark:bg-nog-800">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Logs Not Appearing?</h3>
-            <ul className="space-y-2 text-sm text-slate-600 dark:text-slate-400">
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">Logs Not Appearing?</h3>
+            <ul className="space-y-2 text-sm text-nog-600 dark:text-nog-400">
               <li className="flex items-start gap-2">
-                <ChevronRight className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                <ChevronRight className="w-4 h-4 text-honey-500 mt-0.5 flex-shrink-0" />
                 <span>Check that Vector is running: <code className="code">docker-compose ps vector</code></span>
               </li>
               <li className="flex items-start gap-2">
-                <ChevronRight className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                <ChevronRight className="w-4 h-4 text-honey-500 mt-0.5 flex-shrink-0" />
                 <span>Verify port 514 is accessible: <code className="code">nc -vz localhost 514</code></span>
               </li>
               <li className="flex items-start gap-2">
-                <ChevronRight className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                <ChevronRight className="w-4 h-4 text-honey-500 mt-0.5 flex-shrink-0" />
                 <span>Check Vector logs: <code className="code">docker-compose logs vector</code></span>
               </li>
               <li className="flex items-start gap-2">
-                <ChevronRight className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                <ChevronRight className="w-4 h-4 text-honey-500 mt-0.5 flex-shrink-0" />
                 <span>Ensure firewall allows UDP/TCP 514</span>
               </li>
             </ul>
           </div>
           <div className="card p-4 dark:bg-nog-800">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">Parsing Issues?</h3>
-            <ul className="space-y-2 text-sm text-slate-600 dark:text-slate-400">
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">Parsing Issues?</h3>
+            <ul className="space-y-2 text-sm text-nog-600 dark:text-nog-400">
               <li className="flex items-start gap-2">
-                <ChevronRight className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                <ChevronRight className="w-4 h-4 text-honey-500 mt-0.5 flex-shrink-0" />
                 <span>Check the <code className="code">raw</code> field to see the original message</span>
               </li>
               <li className="flex items-start gap-2">
-                <ChevronRight className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                <ChevronRight className="w-4 h-4 text-honey-500 mt-0.5 flex-shrink-0" />
                 <span>Verify the priority value is enclosed in angle brackets</span>
               </li>
               <li className="flex items-start gap-2">
-                <ChevronRight className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                <ChevronRight className="w-4 h-4 text-honey-500 mt-0.5 flex-shrink-0" />
                 <span>Ensure timestamp format matches RFC 3164 or 5424</span>
               </li>
               <li className="flex items-start gap-2">
-                <ChevronRight className="w-4 h-4 text-amber-500 mt-0.5 flex-shrink-0" />
+                <ChevronRight className="w-4 h-4 text-honey-500 mt-0.5 flex-shrink-0" />
                 <span>Use <code className="code">rex</code> command to extract custom fields from non-standard formats</span>
               </li>
             </ul>

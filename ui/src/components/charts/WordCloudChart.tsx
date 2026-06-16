@@ -2,6 +2,7 @@ import React from 'react';
 import ReactECharts from 'echarts-for-react';
 import * as echarts from 'echarts';
 import 'echarts-wordcloud';
+import { CHART_PALETTE } from './palette';
 
 export interface WordCloudData {
   name: string;
@@ -18,16 +19,7 @@ export interface WordCloudChartProps {
   maxWords?: number;
 }
 
-const DEFAULT_COLORS = [
-  '#f59e0b', // amber-500
-  '#0ea5e9', // sky-500
-  '#8b5cf6', // violet-500
-  '#22c55e', // green-500
-  '#ef4444', // red-500
-  '#ec4899', // pink-500
-  '#06b6d4', // cyan-500
-  '#84cc16', // lime-500
-];
+const DEFAULT_COLORS = CHART_PALETTE;
 
 export const WordCloudChart: React.FC<WordCloudChartProps> = ({
   data,
@@ -56,10 +48,10 @@ export const WordCloudChart: React.FC<WordCloudChartProps> = ({
       formatter: (params: any) => {
         return `<strong>${params.name}</strong>: ${params.value.toLocaleString()}`;
       },
-      backgroundColor: darkMode ? '#1e293b' : '#fff',
-      borderColor: darkMode ? '#334155' : '#e2e8f0',
+      backgroundColor: darkMode ? 'rgba(45, 31, 19, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+      borderColor: darkMode ? '#5A3F24' : '#E8DFD0',
       textStyle: {
-        color: darkMode ? '#e2e8f0' : '#1e293b',
+        color: darkMode ? '#D4C4B0' : '#5A3F24',
       },
     },
     series: [
@@ -106,7 +98,7 @@ export const WordCloudChart: React.FC<WordCloudChartProps> = ({
   if (!data || data.length === 0) {
     return (
       <div
-        className="w-full flex items-center justify-center text-slate-400 dark:text-slate-500"
+        className="w-full flex items-center justify-center text-nog-400 dark:text-nog-500"
         style={{ height: `${height}px` }}
       >
         No data for word cloud

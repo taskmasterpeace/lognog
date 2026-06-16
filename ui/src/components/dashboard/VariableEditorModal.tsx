@@ -87,8 +87,8 @@ export function VariableEditorModal({
         <div className="modal-header">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Variable className="w-5 h-5 text-amber-500" />
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+              <Variable className="w-5 h-5 text-honey-500" />
+              <h3 className="text-lg font-semibold text-nog-900 dark:text-nog-100">
                 {variable ? 'Edit Variable' : 'Add Variable'}
               </h3>
             </div>
@@ -102,7 +102,7 @@ export function VariableEditorModal({
           {/* Name */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+              <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">
                 Name <span className="text-red-500">*</span>
               </label>
               <input
@@ -112,10 +112,10 @@ export function VariableEditorModal({
                 placeholder="hostname"
                 className="input font-mono"
               />
-              <p className="text-xs text-slate-500 mt-1">Use in queries as ${`{${name || 'name'}}`}</p>
+              <p className="text-xs text-nog-500 mt-1">Use in queries as ${`{${name || 'name'}}`}</p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+              <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">
                 Label
               </label>
               <input
@@ -130,7 +130,7 @@ export function VariableEditorModal({
 
           {/* Type */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+            <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">
               Type
             </label>
             <div className="grid grid-cols-4 gap-2">
@@ -145,8 +145,8 @@ export function VariableEditorModal({
                   onClick={() => setType(t.value as typeof type)}
                   className={`py-2 px-3 rounded-lg border-2 text-sm font-medium transition-colors ${
                     type === t.value
-                      ? 'border-amber-500 bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400'
-                      : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:border-slate-300'
+                      ? 'border-honey-500 bg-honey-50 text-honey-700 dark:bg-honey-900/20 dark:text-honey-400'
+                      : 'border-nog-200 dark:border-nog-600 text-nog-600 dark:text-nog-400 hover:border-nog-300'
                   }`}
                 >
                   {t.label}
@@ -158,7 +158,7 @@ export function VariableEditorModal({
           {/* Query (for query type) */}
           {type === 'query' && (
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+              <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">
                 Query
               </label>
               <textarea
@@ -168,7 +168,7 @@ export function VariableEditorModal({
                 rows={3}
                 className="input font-mono text-sm resize-none"
               />
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-nog-500 mt-1">
                 Query should return a single column with the values for the dropdown
               </p>
 
@@ -194,20 +194,20 @@ export function VariableEditorModal({
 
                   {testResults.length > 0 && (
                     <div className="mt-2 p-2 bg-nog-50 dark:bg-nog-800 rounded-lg max-h-32 overflow-y-auto">
-                      <p className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                      <p className="text-xs font-medium text-nog-600 dark:text-nog-400 mb-1">
                         Preview ({testResults.length} values):
                       </p>
                       <div className="flex flex-wrap gap-1">
                         {testResults.slice(0, 20).map((v, i) => (
                           <span
                             key={i}
-                            className="px-2 py-0.5 text-xs bg-white dark:bg-nog-700 rounded border border-slate-200 dark:border-slate-600"
+                            className="px-2 py-0.5 text-xs bg-white dark:bg-nog-700 rounded border border-nog-200 dark:border-nog-600"
                           >
                             {v}
                           </span>
                         ))}
                         {testResults.length > 20 && (
-                          <span className="px-2 py-0.5 text-xs text-slate-500">
+                          <span className="px-2 py-0.5 text-xs text-nog-500">
                             +{testResults.length - 20} more
                           </span>
                         )}
@@ -222,7 +222,7 @@ export function VariableEditorModal({
           {/* Custom Values (for custom type) */}
           {type === 'custom' && (
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+              <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">
                 Values (one per line)
               </label>
               <textarea
@@ -238,7 +238,7 @@ export function VariableEditorModal({
           {/* Interval Options (for interval type) */}
           {type === 'interval' && (
             <div className="p-3 bg-nog-50 dark:bg-nog-800 rounded-lg">
-              <p className="text-sm text-slate-600 dark:text-slate-400">
+              <p className="text-sm text-nog-600 dark:text-nog-400">
                 Interval variables provide time span options: 1m, 5m, 15m, 1h, 4h, 1d
               </p>
             </div>
@@ -246,7 +246,7 @@ export function VariableEditorModal({
 
           {/* Default Value */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+            <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">
               Default Value
             </label>
             <input
@@ -265,9 +265,9 @@ export function VariableEditorModal({
                 type="checkbox"
                 checked={multiSelect}
                 onChange={(e) => setMultiSelect(e.target.checked)}
-                className="w-4 h-4 rounded border-slate-300 text-amber-500 focus:ring-amber-500"
+                className="w-4 h-4 rounded border-nog-300 text-honey-500 focus:ring-honey-500"
               />
-              <span className="text-sm text-slate-700 dark:text-slate-300">Allow multi-select</span>
+              <span className="text-sm text-nog-700 dark:text-nog-300">Allow multi-select</span>
             </label>
 
             <label className="flex items-center gap-2 cursor-pointer">
@@ -275,9 +275,9 @@ export function VariableEditorModal({
                 type="checkbox"
                 checked={includeAll}
                 onChange={(e) => setIncludeAll(e.target.checked)}
-                className="w-4 h-4 rounded border-slate-300 text-amber-500 focus:ring-amber-500"
+                className="w-4 h-4 rounded border-nog-300 text-honey-500 focus:ring-honey-500"
               />
-              <span className="text-sm text-slate-700 dark:text-slate-300">Include "All" option</span>
+              <span className="text-sm text-nog-700 dark:text-nog-300">Include "All" option</span>
             </label>
           </div>
         </div>

@@ -4,28 +4,28 @@ export default function GettingStartedSection() {
   return (
     <div className="space-y-6 sm:space-y-8">
       <section>
-        <h2 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-100 mb-3 sm:mb-4">Quick Start</h2>
-        <p className="text-slate-600 dark:text-slate-400 mb-4">
+        <h2 className="text-xl sm:text-2xl font-bold text-nog-900 dark:text-nog-100 mb-3 sm:mb-4">Quick Start</h2>
+        <p className="text-nog-600 dark:text-nog-400 mb-4">
           Get LogNog running in under 10 minutes with Docker Compose.
         </p>
 
         <div className="space-y-4">
           <div className="card p-4 dark:bg-nog-800">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">1. Clone and Start</h3>
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">1. Clone and Start</h3>
             <CodeBlock code={`git clone https://github.com/machinekinglabs/lognog.git
 cd lognog
 docker-compose up -d`} />
           </div>
 
           <div className="card p-4 dark:bg-nog-800">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">2. Access the UI</h3>
-            <p className="text-slate-600 dark:text-slate-400 mb-2">
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">2. Access the UI</h3>
+            <p className="text-nog-600 dark:text-nog-400 mb-2">
               Open <code className="code">http://localhost</code> in your browser.
             </p>
           </div>
 
           <div className="card p-4 dark:bg-nog-800">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 mb-2">3. Send Test Logs</h3>
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">3. Send Test Logs</h3>
             <CodeBlock code={`# Send a test syslog message
 echo "<14>$(date) myhost myapp[1234]: Test log message" | nc -u localhost 514`} />
           </div>
@@ -33,9 +33,9 @@ echo "<14>$(date) myhost myapp[1234]: Test log message" | nc -u localhost 514`} 
       </section>
 
       <section>
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">Architecture</h2>
+        <h2 className="text-2xl font-bold text-nog-900 dark:text-nog-100 mb-4">Architecture</h2>
         <div className="card p-6 bg-nog-50 dark:bg-nog-800/50">
-          <pre className="text-sm text-slate-600 dark:text-slate-300 overflow-x-auto">{`
+          <pre className="text-sm text-nog-600 dark:text-nog-300 overflow-x-auto">{`
 ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
 │   Syslog     │────▶│   Vector     │────▶│  ClickHouse  │
 │   Clients    │     │   (ingest)   │     │   (storage)  │
@@ -54,7 +54,7 @@ echo "<14>$(date) myhost myapp[1234]: Test log message" | nc -u localhost 514`} 
       </section>
 
       <section>
-        <h2 className="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-4">Ports Reference</h2>
+        <h2 className="text-2xl font-bold text-nog-900 dark:text-nog-100 mb-4">Ports Reference</h2>
         <div className="overflow-x-auto">
           <table className="table card dark:bg-nog-800">
             <thead>

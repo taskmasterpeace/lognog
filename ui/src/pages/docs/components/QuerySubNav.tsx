@@ -21,15 +21,15 @@ export default function QuerySubNav({ active, onChange }: { active: QuerySubsect
   ];
 
   return (
-    <div className="flex flex-nowrap sm:flex-wrap gap-1.5 sm:gap-2 mb-4 sm:mb-6 pl-2 sm:pl-4 border-l-2 border-amber-200 dark:border-amber-800 overflow-x-auto pb-2 scrollbar-hide -mr-4 pr-4">
+    <div className="flex flex-nowrap sm:flex-wrap gap-1.5 sm:gap-2 mb-4 sm:mb-6 pl-2 sm:pl-4 border-l-2 border-honey-200 dark:border-honey-800 overflow-x-auto pb-2 scrollbar-hide -mr-4 pr-4">
       {subsections.map((s) => (
         <button
           key={s.id}
           onClick={() => onChange(s.id)}
           className={`flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-xs sm:text-sm font-medium transition-all whitespace-nowrap flex-shrink-0 ${
             active === s.id
-              ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300'
-              : 'text-slate-600 dark:text-slate-400 hover:bg-nog-100 dark:hover:bg-nog-800'
+              ? 'bg-honey-100 dark:bg-honey-900/40 text-honey-700 dark:text-honey-300'
+              : 'text-nog-600 dark:text-nog-400 hover:bg-nog-100 dark:hover:bg-nog-800'
           }`}
         >
           <s.icon className="w-3 h-3 sm:w-3.5 sm:h-3.5" />

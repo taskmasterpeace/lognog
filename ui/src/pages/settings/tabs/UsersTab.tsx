@@ -113,20 +113,20 @@ export default function UsersTab() {
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
       case 'admin':
-        return 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400';
+        return 'bg-honey-100 text-honey-800 dark:bg-honey-900/30 dark:text-honey-400';
       case 'user':
-        return 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400';
+        return 'bg-honey-100 text-honey-800 dark:bg-honey-900/30 dark:text-honey-400';
       case 'readonly':
-        return 'bg-nog-100 text-slate-600 dark:bg-nog-700 dark:text-slate-400';
+        return 'bg-nog-100 text-nog-600 dark:bg-nog-700 dark:text-nog-400';
       default:
-        return 'bg-nog-100 text-slate-600 dark:bg-nog-700 dark:text-slate-400';
+        return 'bg-nog-100 text-nog-600 dark:bg-nog-700 dark:text-nog-400';
     }
   };
 
   return (
-    <section className="bg-white dark:bg-nog-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-6">
+    <section className="bg-white dark:bg-nog-800 rounded-xl shadow-sm border border-nog-200 dark:border-nog-700 p-6">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
+        <h2 className="text-lg font-semibold text-nog-900 dark:text-nog-100 flex items-center gap-2">
           <Users className="w-5 h-5" />
           User Management
         </h2>
@@ -134,14 +134,14 @@ export default function UsersTab() {
           <button
             onClick={loadUsers}
             disabled={usersLoading}
-            className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-nog-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+            className="p-2 text-nog-400 hover:text-nog-600 dark:hover:text-nog-300 hover:bg-nog-100 dark:hover:bg-nog-700 rounded-lg transition-colors"
             title="Refresh users"
           >
             <RefreshCw className={`w-4 h-4 ${usersLoading ? 'animate-spin' : ''}`} />
           </button>
           <button
             onClick={() => setShowCreateUser(true)}
-            className="flex items-center gap-2 px-3 py-1.5 bg-amber-500 hover:bg-amber-600 text-white text-sm font-medium rounded-lg transition-colors"
+            className="flex items-center gap-2 px-3 py-1.5 bg-honey-500 hover:bg-honey-600 text-nog-900 text-sm font-medium rounded-lg transition-colors"
           >
             <UserPlus className="w-4 h-4" />
             Add User
@@ -149,7 +149,7 @@ export default function UsersTab() {
         </div>
       </div>
 
-      <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
+      <p className="text-sm text-nog-500 dark:text-nog-400 mb-6">
         Manage user accounts, roles, and access permissions.
       </p>
 
@@ -171,15 +171,15 @@ export default function UsersTab() {
 
       {/* Create user form */}
       {showCreateUser && (
-        <div className="mb-6 p-4 bg-nog-50 dark:bg-nog-900/50 rounded-lg border border-slate-200 dark:border-slate-700">
-          <h3 className="font-medium text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
+        <div className="mb-6 p-4 bg-nog-50 dark:bg-nog-900/50 rounded-lg border border-nog-200 dark:border-nog-700">
+          <h3 className="font-medium text-nog-900 dark:text-nog-100 mb-4 flex items-center gap-2">
             <UserPlus className="w-4 h-4" />
             Create New User
           </h3>
           <form onSubmit={handleCreateUser} className="space-y-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
                   Username
                 </label>
                 <input
@@ -188,12 +188,12 @@ export default function UsersTab() {
                   onChange={(e) => setNewUsername(e.target.value)}
                   required
                   pattern="[a-zA-Z0-9_-]+"
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-800 text-slate-900 dark:text-slate-100"
+                  className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-800 text-nog-900 dark:text-nog-100"
                   placeholder="johndoe"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
                   Email
                 </label>
                 <input
@@ -201,14 +201,14 @@ export default function UsersTab() {
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
                   required
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-800 text-slate-900 dark:text-slate-100"
+                  className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-800 text-nog-900 dark:text-nog-100"
                   placeholder="john@example.com"
                 />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
                   Password
                 </label>
                 <input
@@ -219,18 +219,18 @@ export default function UsersTab() {
                   onChange={(e) => setNewUserPassword(e.target.value)}
                   required
                   minLength={8}
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-800 text-slate-900 dark:text-slate-100"
+                  className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-800 text-nog-900 dark:text-nog-100"
                   placeholder="Min 8 characters"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
                   Role
                 </label>
                 <select
                   value={newUserRole}
                   onChange={(e) => setNewUserRole(e.target.value)}
-                  className="w-full px-3 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-800 text-slate-900 dark:text-slate-100"
+                  className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-800 text-nog-900 dark:text-nog-100"
                 >
                   <option value="user">User</option>
                   <option value="readonly">Read Only</option>
@@ -242,7 +242,7 @@ export default function UsersTab() {
               <button
                 type="submit"
                 disabled={creatingUser}
-                className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+                className="flex items-center gap-2 px-4 py-2 bg-honey-500 hover:bg-honey-600 text-nog-900 font-medium rounded-lg transition-colors disabled:opacity-50"
               >
                 {creatingUser ? (
                   <>
@@ -256,7 +256,7 @@ export default function UsersTab() {
               <button
                 type="button"
                 onClick={() => setShowCreateUser(false)}
-                className="px-4 py-2 text-slate-600 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200 font-medium transition-colors"
+                className="px-4 py-2 text-nog-600 hover:text-nog-800 dark:text-nog-400 dark:hover:text-nog-200 font-medium transition-colors"
               >
                 Cancel
               </button>
@@ -268,10 +268,10 @@ export default function UsersTab() {
       {/* Users list */}
       {usersLoading ? (
         <div className="flex items-center justify-center py-8">
-          <Loader2 className="w-6 h-6 animate-spin text-slate-400" />
+          <Loader2 className="w-6 h-6 animate-spin text-nog-400" />
         </div>
       ) : allUsers.length === 0 ? (
-        <div className="text-center py-8 text-slate-500 dark:text-slate-400">
+        <div className="text-center py-8 text-nog-500 dark:text-nog-400">
           No users found
         </div>
       ) : (
@@ -283,17 +283,17 @@ export default function UsersTab() {
                 key={u.id}
                 className={`p-4 rounded-lg border ${
                   u.is_active
-                    ? 'bg-white dark:bg-nog-900 border-slate-200 dark:border-slate-700'
-                    : 'bg-nog-50 dark:bg-nog-900/50 border-slate-200 dark:border-slate-700 opacity-60'
+                    ? 'bg-white dark:bg-nog-900 border-nog-200 dark:border-nog-700'
+                    : 'bg-nog-50 dark:bg-nog-900/50 border-nog-200 dark:border-nog-700 opacity-60'
                 }`}
               >
                 <div className="flex items-start justify-between gap-4">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h4 className="font-medium text-slate-900 dark:text-slate-100">
+                      <h4 className="font-medium text-nog-900 dark:text-nog-100">
                         {u.username}
                         {isCurrentUser && (
-                          <span className="ml-2 text-xs text-slate-500 dark:text-slate-400">(you)</span>
+                          <span className="ml-2 text-xs text-nog-500 dark:text-nog-400">(you)</span>
                         )}
                       </h4>
                       <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${getRoleBadgeColor(u.role)}`}>
@@ -306,8 +306,8 @@ export default function UsersTab() {
                         </span>
                       )}
                     </div>
-                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{u.email}</p>
-                    <div className="flex items-center gap-4 mt-2 text-xs text-slate-400 dark:text-slate-500">
+                    <p className="text-sm text-nog-500 dark:text-nog-400 mt-1">{u.email}</p>
+                    <div className="flex items-center gap-4 mt-2 text-xs text-nog-400 dark:text-nog-500">
                       <span className="flex items-center gap-1">
                         <Clock className="w-3 h-3" />
                         Last login: {u.last_login ? new Date(u.last_login).toLocaleString() : 'Never'}
@@ -325,7 +325,7 @@ export default function UsersTab() {
                       <select
                         value={u.role}
                         onChange={(e) => handleRoleChange(u.id, e.target.value)}
-                        className="px-2 py-1 text-sm border border-slate-300 dark:border-slate-600 rounded bg-white dark:bg-nog-800 text-slate-700 dark:text-slate-300"
+                        className="px-2 py-1 text-sm border border-nog-300 dark:border-nog-600 rounded bg-white dark:bg-nog-800 text-nog-700 dark:text-nog-300"
                       >
                         <option value="user">User</option>
                         <option value="readonly">Read Only</option>
@@ -358,8 +358,8 @@ export default function UsersTab() {
       )}
 
       {/* Info footer */}
-      <div className="mt-6 pt-4 border-t border-slate-200 dark:border-slate-700">
-        <p className="text-xs text-slate-500 dark:text-slate-400">
+      <div className="mt-6 pt-4 border-t border-nog-200 dark:border-nog-700">
+        <p className="text-xs text-nog-500 dark:text-nog-400">
           <strong>Roles:</strong> Admin has full access. User can search and view dashboards. Read Only can only view data.
         </p>
       </div>

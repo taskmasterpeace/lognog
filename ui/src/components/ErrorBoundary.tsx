@@ -48,10 +48,10 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
               </svg>
             </div>
             <div>
-              <h2 className="text-xl font-semibold text-slate-900 dark:text-white mb-2">
+              <h2 className="text-xl font-semibold text-nog-900 dark:text-white mb-2">
                 Something went wrong
               </h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
+              <p className="text-sm text-nog-500 dark:text-nog-400">
                 An unexpected error occurred while rendering this page.
               </p>
             </div>
@@ -64,7 +64,7 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
             )}
             <button
               onClick={this.handleReload}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-medium rounded-lg transition-colors"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-honey-500 hover:bg-honey-600 text-nog-900 font-medium rounded-lg transition-colors"
             >
               Reload Page
             </button>

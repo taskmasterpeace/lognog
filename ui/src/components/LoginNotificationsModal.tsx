@@ -24,10 +24,10 @@ interface LoginNotificationsModalProps {
 }
 
 const SEVERITY_CONFIG = {
-  info: { icon: Info, color: 'text-amber-500', bg: 'bg-amber-100 dark:bg-amber-900/30', border: 'border-amber-200 dark:border-amber-800' },
-  low: { icon: AlertCircle, color: 'text-slate-500', bg: 'bg-nog-100 dark:bg-nog-700', border: 'border-slate-200 dark:border-slate-700' },
+  info: { icon: Info, color: 'text-honey-500', bg: 'bg-honey-100 dark:bg-honey-900/30', border: 'border-honey-200 dark:border-honey-800' },
+  low: { icon: AlertCircle, color: 'text-nog-500', bg: 'bg-nog-100 dark:bg-nog-700', border: 'border-nog-200 dark:border-nog-700' },
   medium: { icon: AlertTriangle, color: 'text-yellow-500', bg: 'bg-yellow-100 dark:bg-yellow-900/30', border: 'border-yellow-200 dark:border-yellow-800' },
-  high: { icon: AlertTriangle, color: 'text-orange-500', bg: 'bg-orange-100 dark:bg-orange-900/30', border: 'border-orange-200 dark:border-orange-800' },
+  high: { icon: AlertTriangle, color: 'text-honey-500', bg: 'bg-honey-100 dark:bg-honey-900/30', border: 'border-honey-200 dark:border-honey-800' },
   critical: { icon: Zap, color: 'text-red-500', bg: 'bg-red-100 dark:bg-red-900/30', border: 'border-red-200 dark:border-red-800' },
 };
 
@@ -102,23 +102,23 @@ export default function LoginNotificationsModal({
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white dark:bg-nog-800 rounded-xl shadow-xl w-full max-w-lg max-h-[80vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+        <div className="p-4 border-b border-nog-200 dark:border-nog-700 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
-              <Bell className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+            <div className="p-2 bg-honey-100 dark:bg-honey-900/30 rounded-lg">
+              <Bell className="w-5 h-5 text-honey-600 dark:text-honey-400" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+              <h2 className="text-lg font-semibold text-nog-900 dark:text-nog-100">
                 Alert Notifications
               </h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
+              <p className="text-sm text-nog-500 dark:text-nog-400">
                 {localNotifications.length} notification{localNotifications.length !== 1 ? 's' : ''} while you were away
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-nog-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+            className="p-2 hover:bg-nog-100 dark:hover:bg-nog-700 rounded-lg transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -144,30 +144,30 @@ export default function LoginNotificationsModal({
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
-                      <h3 className="font-medium text-slate-900 dark:text-slate-100 truncate">
+                      <h3 className="font-medium text-nog-900 dark:text-nog-100 truncate">
                         {notification.title}
                       </h3>
                       <button
                         onClick={() => dismissOneMutation.mutate(notification.id)}
                         disabled={isDismissing}
-                        className="p-1 hover:bg-slate-200 dark:hover:bg-slate-600 rounded transition-colors flex-shrink-0"
+                        className="p-1 hover:bg-nog-200 dark:hover:bg-nog-600 rounded transition-colors flex-shrink-0"
                         title="Dismiss"
                       >
-                        <XCircle className="w-4 h-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300" />
+                        <XCircle className="w-4 h-4 text-nog-400 hover:text-nog-600 dark:hover:text-nog-300" />
                       </button>
                     </div>
                     {notification.message && (
-                      <p className="text-sm text-slate-600 dark:text-slate-400 mt-1">
+                      <p className="text-sm text-nog-600 dark:text-nog-400 mt-1">
                         {notification.message}
                       </p>
                     )}
-                    <div className="flex items-center gap-3 mt-2 text-xs text-slate-500 dark:text-slate-400">
+                    <div className="flex items-center gap-3 mt-2 text-xs text-nog-500 dark:text-nog-400">
                       <span>Alert: {notification.alert_name}</span>
                       <span>{formatTimeAgo(notification.created_at)}</span>
                       {notification.alert_id && (
                         <a
                           href={`/alerts?highlight=${notification.alert_id}`}
-                          className="flex items-center gap-1 text-amber-500 hover:text-amber-600"
+                          className="flex items-center gap-1 text-honey-500 hover:text-honey-600"
                           onClick={(e) => {
                             e.preventDefault();
                             // Navigate to alerts page with this alert highlighted
@@ -186,10 +186,10 @@ export default function LoginNotificationsModal({
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between">
+        <div className="p-4 border-t border-nog-200 dark:border-nog-700 flex items-center justify-between">
           <button
             onClick={onClose}
-            className="px-4 py-2 text-slate-700 dark:text-slate-200 hover:bg-nog-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+            className="px-4 py-2 text-nog-700 dark:text-nog-200 hover:bg-nog-100 dark:hover:bg-nog-700 rounded-lg transition-colors"
           >
             Close
           </button>
@@ -197,7 +197,7 @@ export default function LoginNotificationsModal({
             <button
               onClick={() => dismissAllMutation.mutate()}
               disabled={dismissAllMutation.isPending}
-              className="px-4 py-2 bg-nog-100 hover:bg-slate-200 dark:bg-nog-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50"
+              className="px-4 py-2 bg-nog-100 hover:bg-nog-200 dark:bg-nog-700 dark:hover:bg-nog-600 text-nog-700 dark:text-nog-200 rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50"
             >
               <CheckCircle className="w-4 h-4" />
               Dismiss All

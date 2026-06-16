@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
+import { CHART_PALETTE } from './palette';
 
 export interface PieChartData {
   name: string;
@@ -20,17 +21,7 @@ export interface PieChartProps {
   colors?: string[];
 }
 
-const DEFAULT_COLORS = [
-  '#5470c6',
-  '#91cc75',
-  '#fac858',
-  '#ee6666',
-  '#73c0de',
-  '#3ba272',
-  '#fc8452',
-  '#9a60b4',
-  '#ea7ccc',
-];
+const DEFAULT_COLORS = CHART_PALETTE;
 
 export const PieChart: React.FC<PieChartProps> = ({
   data,

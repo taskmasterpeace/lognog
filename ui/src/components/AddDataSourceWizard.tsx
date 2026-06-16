@@ -296,7 +296,7 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white dark:bg-nog-800 rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header with Logo */}
-        <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+        <div className="p-6 border-b border-nog-200 dark:border-nog-700 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img
               src="/lognotext.png"
@@ -308,16 +308,16 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
                 (e.target as HTMLImageElement).className = 'h-8 w-8';
               }}
             />
-            <div className="h-6 w-px bg-slate-300 dark:bg-nog-600" />
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+            <div className="h-6 w-px bg-nog-300 dark:bg-nog-600" />
+            <h2 className="text-lg font-semibold text-nog-900 dark:text-nog-100">
               Add Data Source
             </h2>
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-nog-100 dark:hover:bg-slate-700 rounded-lg transition-colors"
+            className="p-2 hover:bg-nog-100 dark:hover:bg-nog-700 rounded-lg transition-colors"
           >
-            <X className="w-5 h-5 text-slate-500" />
+            <X className="w-5 h-5 text-nog-500" />
           </button>
         </div>
 
@@ -329,10 +329,10 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
                 <div
                   className={`w-8 h-8 rounded-full flex items-center justify-center font-medium transition-colors ${
                     s === step
-                      ? 'bg-amber-500 text-white'
+                      ? 'bg-honey-500 text-nog-900'
                       : s < step
-                      ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400'
-                      : 'bg-nog-100 text-slate-400 dark:bg-nog-700 dark:text-slate-500'
+                      ? 'bg-honey-100 text-honey-600 dark:bg-honey-900/30 dark:text-honey-400'
+                      : 'bg-nog-100 text-nog-400 dark:bg-nog-700 dark:text-nog-500'
                   }`}
                 >
                   {s < step ? <Check className="w-4 h-4" /> : s}
@@ -340,14 +340,14 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
                 {s < 3 && (
                   <div
                     className={`w-12 h-0.5 mx-1 ${
-                      s < step ? 'bg-amber-500' : 'bg-slate-200 dark:bg-nog-600'
+                      s < step ? 'bg-honey-500' : 'bg-nog-200 dark:bg-nog-600'
                     }`}
                   />
                 )}
               </div>
             ))}
           </div>
-          <p className="text-center text-sm text-slate-500 dark:text-slate-400 mt-2">
+          <p className="text-center text-sm text-nog-500 dark:text-nog-400 mt-2">
             Step {step} of 3:{' '}
             {step === 1 && 'Choose Type'}
             {step === 2 && 'Configure'}
@@ -360,7 +360,7 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
           {/* Step 1: Choose Source Type */}
           {step === 1 && (
             <div className="space-y-4">
-              <p className="text-slate-600 dark:text-slate-400 mb-4">
+              <p className="text-nog-600 dark:text-nog-400 mb-4">
                 Select how you want to send logs to LogNog:
               </p>
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -370,18 +370,18 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
                     onClick={() => setSourceType(type.id)}
                     className={`p-4 rounded-xl border-2 transition-all text-left ${
                       sourceType === type.id
-                        ? 'border-amber-500 bg-amber-50 dark:bg-amber-900/20'
-                        : 'border-slate-200 dark:border-slate-600 hover:border-slate-300 dark:hover:border-slate-500'
+                        ? 'border-honey-500 bg-honey-50 dark:bg-honey-900/20'
+                        : 'border-nog-200 dark:border-nog-600 hover:border-nog-300 dark:hover:border-nog-500'
                     }`}
                   >
                     <div className="flex items-start justify-between mb-2">
                       <type.icon
                         className={`w-8 h-8 ${
-                          sourceType === type.id ? 'text-amber-500' : 'text-slate-400'
+                          sourceType === type.id ? 'text-honey-500' : 'text-nog-400'
                         }`}
                       />
                       {type.popular && (
-                        <span className="px-2 py-0.5 text-xs bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 rounded-full">
+                        <span className="px-2 py-0.5 text-xs bg-honey-100 text-honey-700 dark:bg-honey-900/30 dark:text-honey-400 rounded-full">
                           Popular
                         </span>
                       )}
@@ -389,13 +389,13 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
                     <h3
                       className={`font-semibold mb-1 ${
                         sourceType === type.id
-                          ? 'text-amber-700 dark:text-amber-300'
-                          : 'text-slate-900 dark:text-slate-100'
+                          ? 'text-honey-700 dark:text-honey-300'
+                          : 'text-nog-900 dark:text-nog-100'
                       }`}
                     >
                       {type.name}
                     </h3>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
+                    <p className="text-sm text-nog-500 dark:text-nog-400">
                       {type.description}
                     </p>
                   </button>
@@ -409,7 +409,7 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
             <div className="space-y-6">
               {/* Endpoint URL */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-2">
                   Endpoint URL
                 </label>
                 <div className="flex items-center gap-2">
@@ -417,16 +417,16 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
                     type="text"
                     value={getEndpointUrl()}
                     readOnly
-                    className="flex-1 px-4 py-2 bg-nog-100 dark:bg-nog-900 border border-slate-200 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 font-mono text-sm"
+                    className="flex-1 px-4 py-2 bg-nog-100 dark:bg-nog-900 border border-nog-200 dark:border-nog-600 rounded-lg text-nog-700 dark:text-nog-300 font-mono text-sm"
                   />
                   <button
                     onClick={() => handleCopy(getEndpointUrl(), 'endpoint')}
-                    className="p-2 bg-nog-100 dark:bg-nog-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg transition-colors"
+                    className="p-2 bg-nog-100 dark:bg-nog-700 hover:bg-nog-200 dark:hover:bg-nog-600 rounded-lg transition-colors"
                   >
                     {copiedSection === 'endpoint' ? (
                       <Check className="w-5 h-5 text-green-500" />
                     ) : (
-                      <Copy className="w-5 h-5 text-slate-500" />
+                      <Copy className="w-5 h-5 text-nog-500" />
                     )}
                   </button>
                 </div>
@@ -434,7 +434,7 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
 
               {/* API Key */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-2">
                   API Key
                 </label>
                 {showCreateKey ? (
@@ -444,12 +444,12 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
                       value={newApiKeyName}
                       onChange={(e) => setNewApiKeyName(e.target.value)}
                       placeholder="Enter key name (e.g., my-app)"
-                      className="flex-1 px-4 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-900 text-slate-900 dark:text-slate-100"
+                      className="flex-1 px-4 py-2 border border-nog-200 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-900 text-nog-900 dark:text-nog-100"
                     />
                     <button
                       onClick={handleCreateApiKey}
                       disabled={creatingKey || !newApiKeyName.trim()}
-                      className="px-4 py-2 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 text-white rounded-lg flex items-center gap-2"
+                      className="px-4 py-2 bg-honey-500 hover:bg-honey-600 disabled:bg-honey-300 text-nog-900 rounded-lg flex items-center gap-2"
                     >
                       {creatingKey ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
@@ -460,7 +460,7 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
                     </button>
                     <button
                       onClick={() => setShowCreateKey(false)}
-                      className="px-4 py-2 text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100"
+                      className="px-4 py-2 text-nog-600 hover:text-nog-900 dark:text-nog-400 dark:hover:text-nog-100"
                     >
                       Cancel
                     </button>
@@ -471,16 +471,16 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
                       type="text"
                       value={selectedApiKey}
                       readOnly
-                      className="flex-1 px-4 py-2 bg-nog-100 dark:bg-nog-900 border border-slate-200 dark:border-slate-600 rounded-lg text-slate-700 dark:text-slate-300 font-mono text-sm"
+                      className="flex-1 px-4 py-2 bg-nog-100 dark:bg-nog-900 border border-nog-200 dark:border-nog-600 rounded-lg text-nog-700 dark:text-nog-300 font-mono text-sm"
                     />
                     <button
                       onClick={() => handleCopy(selectedApiKey, 'apikey')}
-                      className="p-2 bg-nog-100 dark:bg-nog-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg transition-colors"
+                      className="p-2 bg-nog-100 dark:bg-nog-700 hover:bg-nog-200 dark:hover:bg-nog-600 rounded-lg transition-colors"
                     >
                       {copiedSection === 'apikey' ? (
                         <Check className="w-5 h-5 text-green-500" />
                       ) : (
-                        <Copy className="w-5 h-5 text-slate-500" />
+                        <Copy className="w-5 h-5 text-nog-500" />
                       )}
                     </button>
                     <button
@@ -488,7 +488,7 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
                         setSelectedApiKey('');
                         setShowCreateKey(true);
                       }}
-                      className="text-sm text-amber-500 hover:text-amber-600"
+                      className="text-sm text-honey-500 hover:text-honey-600"
                     >
                       Change
                     </button>
@@ -497,45 +497,45 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => setShowCreateKey(true)}
-                      className="flex-1 px-4 py-2 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg text-slate-600 dark:text-slate-400 hover:border-amber-500 hover:text-amber-500 transition-colors flex items-center justify-center gap-2"
+                      className="flex-1 px-4 py-2 border-2 border-dashed border-nog-300 dark:border-nog-600 rounded-lg text-nog-600 dark:text-nog-400 hover:border-honey-500 hover:text-honey-500 transition-colors flex items-center justify-center gap-2"
                     >
                       <Plus className="w-4 h-4" />
                       Create New API Key
                     </button>
                   </div>
                 )}
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                <p className="text-xs text-nog-500 dark:text-nog-400 mt-1">
                   API keys are used to authenticate your log ingestion requests
                 </p>
               </div>
 
               {/* Index Name */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  Index Name <span className="text-slate-400">(optional)</span>
+                <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-2">
+                  Index Name <span className="text-nog-400">(optional)</span>
                 </label>
                 <input
                   type="text"
                   value={indexName}
                   onChange={(e) => setIndexName(e.target.value)}
                   placeholder="e.g., my-app"
-                  className="w-full px-4 py-2 border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-900 text-slate-900 dark:text-slate-100"
+                  className="w-full px-4 py-2 border border-nog-200 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-900 text-nog-900 dark:text-nog-100"
                 />
                 {indexName && (
-                  <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
-                    Logs will be searchable as: <code className="bg-amber-50 dark:bg-amber-900/30 px-1 rounded">search index={indexName}</code>
+                  <p className="text-xs text-honey-600 dark:text-honey-400 mt-1">
+                    Logs will be searchable as: <code className="bg-honey-50 dark:bg-honey-900/30 px-1 rounded">search index={indexName}</code>
                   </p>
                 )}
               </div>
 
               {/* Syslog-specific info */}
               {sourceType === 'syslog' && (
-                <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
-                  <h4 className="font-medium text-amber-700 dark:text-amber-300 mb-2">Syslog Configuration</h4>
-                  <p className="text-sm text-amber-600 dark:text-amber-400">
-                    LogNog listens for syslog on <code className="bg-amber-100 dark:bg-amber-900/50 px-1 rounded">UDP/TCP port 514</code>
+                <div className="p-4 bg-honey-50 dark:bg-honey-900/20 rounded-lg">
+                  <h4 className="font-medium text-honey-700 dark:text-honey-300 mb-2">Syslog Configuration</h4>
+                  <p className="text-sm text-honey-600 dark:text-honey-400">
+                    LogNog listens for syslog on <code className="bg-honey-100 dark:bg-honey-900/50 px-1 rounded">UDP/TCP port 514</code>
                   </p>
-                  <p className="text-sm text-amber-600 dark:text-amber-400 mt-1">
+                  <p className="text-sm text-honey-600 dark:text-honey-400 mt-1">
                     Point your routers, firewalls, or servers to send syslog to your LogNog server.
                   </p>
                 </div>
@@ -543,16 +543,16 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
 
               {/* Agent-specific info */}
               {sourceType === 'agent' && (
-                <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg">
-                  <h4 className="font-medium text-amber-700 dark:text-amber-300 mb-2">LogNog In Agent</h4>
-                  <p className="text-sm text-amber-600 dark:text-amber-400">
+                <div className="p-4 bg-honey-50 dark:bg-honey-900/20 rounded-lg">
+                  <h4 className="font-medium text-honey-700 dark:text-honey-300 mb-2">LogNog In Agent</h4>
+                  <p className="text-sm text-honey-600 dark:text-honey-400">
                     Download the LogNog In agent for Windows or Linux to collect log files and Windows Event Logs.
                   </p>
                   <a
                     href="https://github.com/machinekinglabs/lognog/releases"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-1 text-sm text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300 mt-2"
+                    className="inline-flex items-center gap-1 text-sm text-honey-600 dark:text-honey-400 hover:text-honey-700 dark:hover:text-honey-300 mt-2"
                   >
                     Download Agent
                     <ExternalLink className="w-3 h-3" />
@@ -567,7 +567,7 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
             <div className="space-y-6">
               {/* Sample JSON */}
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+                <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-2">
                   Paste sample JSON to preview extracted fields:
                 </label>
                 <textarea
@@ -578,7 +578,7 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
                     setPreviewError(null);
                   }}
                   rows={6}
-                  className="w-full px-4 py-3 font-mono text-sm border border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-900 text-slate-900 dark:text-slate-100"
+                  className="w-full px-4 py-3 font-mono text-sm border border-nog-200 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-900 text-nog-900 dark:text-nog-100"
                 />
               </div>
 
@@ -587,7 +587,7 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
                 <button
                   onClick={handlePreview}
                   disabled={validating}
-                  className="px-4 py-2 bg-nog-100 dark:bg-nog-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-300 rounded-lg flex items-center gap-2"
+                  className="px-4 py-2 bg-nog-100 dark:bg-nog-700 hover:bg-nog-200 dark:hover:bg-nog-600 text-nog-700 dark:text-nog-300 rounded-lg flex items-center gap-2"
                 >
                   {validating ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -600,7 +600,7 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
                 <button
                   onClick={handleSendTest}
                   disabled={testStatus === 'sending' || !selectedApiKey}
-                  className="px-4 py-2 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 text-white rounded-lg flex items-center gap-2"
+                  className="px-4 py-2 bg-honey-500 hover:bg-honey-600 disabled:bg-honey-300 text-nog-900 rounded-lg flex items-center gap-2"
                 >
                   {testStatus === 'sending' ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -634,7 +634,7 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
 
               {previewResult && (
                 <div className="p-4 bg-nog-50 dark:bg-nog-900 rounded-lg space-y-3">
-                  <h4 className="font-medium text-slate-700 dark:text-slate-300">Extracted Fields:</h4>
+                  <h4 className="font-medium text-nog-700 dark:text-nog-300">Extracted Fields:</h4>
 
                   {/* Standard Fields */}
                   <div className="space-y-2">
@@ -643,15 +643,15 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
                         {field.value ? (
                           <CheckCircle2 className="w-4 h-4 text-green-500" />
                         ) : (
-                          <AlertCircle className="w-4 h-4 text-amber-500" />
+                          <AlertCircle className="w-4 h-4 text-honey-500" />
                         )}
-                        <span className="font-mono text-slate-600 dark:text-slate-400">{key}</span>
-                        <span className="text-slate-400">:</span>
-                        <span className="text-slate-900 dark:text-slate-100">
+                        <span className="font-mono text-nog-600 dark:text-nog-400">{key}</span>
+                        <span className="text-nog-400">:</span>
+                        <span className="text-nog-900 dark:text-nog-100">
                           {field.value !== null ? String(field.value) : '(not detected)'}
                         </span>
                         {field.detected_from && (
-                          <span className="text-xs text-slate-400">
+                          <span className="text-xs text-nog-400">
                             from {field.detected_from}
                           </span>
                         )}
@@ -662,18 +662,18 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
                   {/* Custom Fields */}
                   {previewResult.extracted.custom_field_count > 0 && (
                     <>
-                      <div className="border-t border-slate-200 dark:border-slate-700 pt-3">
-                        <h5 className="text-sm font-medium text-slate-600 dark:text-slate-400 mb-2">
+                      <div className="border-t border-nog-200 dark:border-nog-700 pt-3">
+                        <h5 className="text-sm font-medium text-nog-600 dark:text-nog-400 mb-2">
                           Custom Fields ({previewResult.extracted.custom_field_count}):
                         </h5>
                         <div className="space-y-1">
                           {Object.entries(previewResult.extracted.custom_fields).map(([key, field]) => (
                             <div key={key} className="flex items-center gap-2 text-sm">
                               <CheckCircle2 className="w-4 h-4 text-green-500" />
-                              <span className="font-mono text-slate-600 dark:text-slate-400">{key}</span>
-                              <span className="text-xs text-slate-400">({field.type})</span>
-                              <span className="text-slate-400">:</span>
-                              <span className="text-slate-900 dark:text-slate-100">
+                              <span className="font-mono text-nog-600 dark:text-nog-400">{key}</span>
+                              <span className="text-xs text-nog-400">({field.type})</span>
+                              <span className="text-nog-400">:</span>
+                              <span className="text-nog-900 dark:text-nog-100">
                                 {JSON.stringify(field.value)}
                               </span>
                             </div>
@@ -685,9 +685,9 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
 
                   {/* Warnings */}
                   {previewResult.warnings.length > 0 && (
-                    <div className="border-t border-slate-200 dark:border-slate-700 pt-3">
+                    <div className="border-t border-nog-200 dark:border-nog-700 pt-3">
                       {previewResult.warnings.map((warning, i) => (
-                        <div key={i} className="flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
+                        <div key={i} className="flex items-center gap-2 text-sm text-honey-600 dark:text-honey-400">
                           <AlertCircle className="w-4 h-4" />
                           {warning}
                         </div>
@@ -698,8 +698,8 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
               )}
 
               {/* Code Snippets */}
-              <div className="border-t border-slate-200 dark:border-slate-700 pt-6">
-                <h4 className="font-medium text-slate-700 dark:text-slate-300 mb-3">Code Snippets:</h4>
+              <div className="border-t border-nog-200 dark:border-nog-700 pt-6">
+                <h4 className="font-medium text-nog-700 dark:text-nog-300 mb-3">Code Snippets:</h4>
                 <div className="flex gap-2 mb-3">
                   {(['curl', 'nodejs', 'python', 'go'] as const).map((lang) => (
                     <button
@@ -707,8 +707,8 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
                       onClick={() => setActiveSnippet(lang)}
                       className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
                         activeSnippet === lang
-                          ? 'bg-amber-500 text-white'
-                          : 'bg-nog-100 dark:bg-nog-700 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600'
+                          ? 'bg-honey-500 text-nog-900'
+                          : 'bg-nog-100 dark:bg-nog-700 text-nog-600 dark:text-nog-400 hover:bg-nog-200 dark:hover:bg-nog-600'
                       }`}
                     >
                       {lang === 'nodejs' ? 'Node.js' : lang.charAt(0).toUpperCase() + lang.slice(1)}
@@ -716,17 +716,17 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
                   ))}
                 </div>
                 <div className="relative">
-                  <pre className="bg-nog-900 dark:bg-black rounded-lg p-4 overflow-x-auto text-sm text-slate-100 font-mono">
+                  <pre className="bg-nog-900 dark:bg-black rounded-lg p-4 overflow-x-auto text-sm text-nog-100 font-mono">
                     {getCodeSnippet()}
                   </pre>
                   <button
                     onClick={() => handleCopy(getCodeSnippet(), 'snippet')}
-                    className="absolute top-3 right-3 p-2 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors"
+                    className="absolute top-3 right-3 p-2 bg-nog-700 hover:bg-nog-600 rounded-lg transition-colors"
                   >
                     {copiedSection === 'snippet' ? (
                       <Check className="w-4 h-4 text-green-400" />
                     ) : (
-                      <Copy className="w-4 h-4 text-slate-300" />
+                      <Copy className="w-4 h-4 text-nog-300" />
                     )}
                   </button>
                 </div>
@@ -736,12 +736,12 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
         </div>
 
         {/* Footer */}
-        <div className="p-6 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between bg-nog-50 dark:bg-nog-900">
+        <div className="p-6 border-t border-nog-200 dark:border-nog-700 flex items-center justify-between bg-nog-50 dark:bg-nog-900">
           <div>
             {step > 1 && (
               <button
                 onClick={() => setStep(step - 1)}
-                className="flex items-center gap-2 px-4 py-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
+                className="flex items-center gap-2 px-4 py-2 text-nog-600 dark:text-nog-400 hover:text-nog-900 dark:hover:text-nog-100"
               >
                 <ChevronLeft className="w-4 h-4" />
                 Back
@@ -751,7 +751,7 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
           <div className="flex items-center gap-3">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100"
+              className="px-4 py-2 text-nog-600 dark:text-nog-400 hover:text-nog-900 dark:hover:text-nog-100"
             >
               Cancel
             </button>
@@ -759,7 +759,7 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
               <button
                 onClick={() => setStep(step + 1)}
                 disabled={step === 1 && !sourceType}
-                className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-300 text-white rounded-lg"
+                className="flex items-center gap-2 px-4 py-2 bg-honey-500 hover:bg-honey-600 disabled:bg-honey-300 text-nog-900 rounded-lg"
               >
                 Next
                 <ChevronRight className="w-4 h-4" />
@@ -770,7 +770,7 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
                   onComplete();
                   onClose();
                 }}
-                className="flex items-center gap-2 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-lg"
+                className="flex items-center gap-2 px-4 py-2 bg-honey-500 hover:bg-honey-600 text-nog-900 rounded-lg"
               >
                 <Check className="w-4 h-4" />
                 Done

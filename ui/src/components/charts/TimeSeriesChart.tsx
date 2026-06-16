@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
+import { CHART_ACCENT } from './palette';
 
 export interface TimeSeriesData {
   timestamp: string | number;
@@ -40,7 +41,7 @@ export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
   onBrushEnd,
   chartType = 'line',
   onBarClick,
-  barColor = '#f59e0b', // amber-500
+  barColor = CHART_ACCENT, // honey-500
   barHoverColor,
 }) => {
   const seriesMap = React.useMemo(() => {
@@ -63,7 +64,7 @@ export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
   }, [data]);
 
   // Calculate hover color based on dark mode
-  const computedHoverColor = barHoverColor || (darkMode ? '#fbbf24' : '#d97706');
+  const computedHoverColor = barHoverColor || (darkMode ? '#DCA23E' : '#A66A1E');
 
   const option: EChartsOption = React.useMemo(() => {
     const seriesConfig = Array.from(seriesMap.entries()).map(([name, { timestamps, values }]) => {

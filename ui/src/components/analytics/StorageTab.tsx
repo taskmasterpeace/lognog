@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { CHART_PALETTE } from '../charts/palette';
 import {
   HardDrive,
   Database,
@@ -49,19 +50,16 @@ function StatCard({ icon: Icon, label, value, subValue, color, iconBg }: StatCar
         </div>
       </div>
       <div className="mt-3 sm:mt-4">
-        <p className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100">{value}</p>
-        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">{label}</p>
-        {subValue && <p className="text-[10px] sm:text-xs text-slate-400 dark:text-slate-500 mt-0.5">{subValue}</p>}
+        <p className="text-2xl sm:text-3xl font-bold text-nog-900 dark:text-nog-100">{value}</p>
+        <p className="text-xs sm:text-sm text-nog-500 dark:text-nog-400 mt-1">{label}</p>
+        {subValue && <p className="text-[10px] sm:text-xs text-nog-400 dark:text-nog-500 mt-0.5">{subValue}</p>}
       </div>
     </div>
   );
 }
 
-// Colors for the index bar chart
-const INDEX_COLORS = [
-  '#f59e0b', '#3b82f6', '#10b981', '#8b5cf6', '#ec4899',
-  '#06b6d4', '#84cc16', '#f97316', '#6366f1', '#14b8a6',
-];
+// Colors for the index bar chart (shared brand palette)
+const INDEX_COLORS = CHART_PALETTE;
 
 export default function StorageTab() {
   const queryClient = useQueryClient();
@@ -96,8 +94,8 @@ export default function StorageTab() {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-64">
-        <Loader2 className="w-10 h-10 text-amber-500 animate-spin mb-4" />
-        <p className="text-slate-600 dark:text-slate-400">Loading storage metrics...</p>
+        <Loader2 className="w-10 h-10 text-honey-500 animate-spin mb-4" />
+        <p className="text-nog-600 dark:text-nog-400">Loading storage metrics...</p>
       </div>
     );
   }
@@ -106,10 +104,10 @@ export default function StorageTab() {
     return (
       <div className="flex flex-col items-center justify-center h-64">
         <AlertTriangle className="w-10 h-10 text-red-500 mb-4" />
-        <p className="text-slate-600 dark:text-slate-400">Failed to load storage metrics</p>
+        <p className="text-nog-600 dark:text-nog-400">Failed to load storage metrics</p>
         <button
           onClick={() => refetch()}
-          className="mt-4 px-4 py-2 bg-amber-500 text-white rounded-lg hover:bg-amber-600"
+          className="mt-4 px-4 py-2 bg-honey-500 text-nog-900 rounded-lg hover:bg-honey-600"
         >
           Retry
         </button>
@@ -152,15 +150,15 @@ export default function StorageTab() {
       {/* Header with actions */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">Storage Overview</h2>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+          <h2 className="text-lg font-semibold text-nog-900 dark:text-nog-100">Storage Overview</h2>
+          <p className="text-sm text-nog-500 dark:text-nog-400">
             Monitor disk usage and configure retention policies
           </p>
         </div>
         <div className="flex gap-2">
           <button
             onClick={() => refetch()}
-            className="flex items-center gap-2 px-3 py-2 text-sm bg-nog-100 dark:bg-nog-700 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-600"
+            className="flex items-center gap-2 px-3 py-2 text-sm bg-nog-100 dark:bg-nog-700 text-nog-700 dark:text-nog-300 rounded-lg hover:bg-nog-200 dark:hover:bg-nog-600"
           >
             <RefreshCw className="w-4 h-4" />
             Refresh
@@ -168,7 +166,7 @@ export default function StorageTab() {
           <button
             onClick={() => cleanupMutation.mutate()}
             disabled={cleanupMutation.isPending}
-            className="flex items-center gap-2 px-3 py-2 text-sm bg-amber-500 text-white rounded-lg hover:bg-amber-600 disabled:opacity-50"
+            className="flex items-center gap-2 px-3 py-2 text-sm bg-honey-500 text-nog-900 rounded-lg hover:bg-honey-600 disabled:opacity-50"
           >
             {cleanupMutation.isPending ? (
               <Loader2 className="w-4 h-4 animate-spin" />
@@ -187,16 +185,16 @@ export default function StorageTab() {
           label="Total Disk Usage"
           value={formatBytes(storage.total_disk_bytes)}
           subValue="Actual on disk"
-          color="text-amber-600"
-          iconBg="bg-amber-50 dark:bg-amber-900/30"
+          color="text-honey-600"
+          iconBg="bg-honey-50 dark:bg-honey-900/30"
         />
         <StatCard
           icon={Database}
           label="Total Logs"
           value={formatNumber(storage.total_rows)}
           subValue="All indexes"
-          color="text-amber-600"
-          iconBg="bg-amber-50 dark:bg-amber-900/30"
+          color="text-honey-600"
+          iconBg="bg-honey-50 dark:bg-honey-900/30"
         />
         <StatCard
           icon={TrendingUp}
@@ -211,8 +209,8 @@ export default function StorageTab() {
           label="Data Age"
           value={`${daysOfData} days`}
           subValue={oldestDate ? `Since ${oldestDate.toLocaleDateString()}` : 'No data'}
-          color="text-purple-600"
-          iconBg="bg-purple-50 dark:bg-purple-900/30"
+          color="text-honey-600"
+          iconBg="bg-honey-50 dark:bg-honey-900/30"
         />
       </div>
 
@@ -221,10 +219,10 @@ export default function StorageTab() {
         {/* Daily Growth Trend */}
         <div className="card p-4 sm:p-5">
           <div className="mb-3 sm:mb-4">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-sm sm:text-base">
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 text-sm sm:text-base">
               Storage Trend (7 Days)
             </h3>
-            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+            <p className="text-xs sm:text-sm text-nog-500 dark:text-nog-400">
               Daily data volume
             </p>
           </div>
@@ -240,10 +238,10 @@ export default function StorageTab() {
         {/* Index Sizes */}
         <div className="card p-4 sm:p-5">
           <div className="mb-3 sm:mb-4">
-            <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-sm sm:text-base">
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 text-sm sm:text-base">
               Storage by Index
             </h3>
-            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+            <p className="text-xs sm:text-sm text-nog-500 dark:text-nog-400">
               Click to configure retention
             </p>
           </div>
@@ -264,23 +262,23 @@ export default function StorageTab() {
 
       {/* Index Details Table */}
       <div className="card overflow-hidden">
-        <div className="p-4 border-b border-slate-200 dark:border-slate-700">
-          <h3 className="font-semibold text-slate-900 dark:text-slate-100">Index Details</h3>
+        <div className="p-4 border-b border-nog-200 dark:border-nog-700">
+          <h3 className="font-semibold text-nog-900 dark:text-nog-100">Index Details</h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-nog-50 dark:bg-nog-800">
               <tr>
-                <th className="px-4 py-3 text-left font-medium text-slate-600 dark:text-slate-300">Index</th>
-                <th className="px-4 py-3 text-right font-medium text-slate-600 dark:text-slate-300">Size</th>
-                <th className="px-4 py-3 text-right font-medium text-slate-600 dark:text-slate-300">Logs</th>
-                <th className="px-4 py-3 text-right font-medium text-slate-600 dark:text-slate-300">Retention</th>
-                <th className="px-4 py-3 text-right font-medium text-slate-600 dark:text-slate-300">Expires In</th>
-                <th className="px-4 py-3 text-right font-medium text-slate-600 dark:text-slate-300">Daily Growth</th>
-                <th className="px-4 py-3 text-center font-medium text-slate-600 dark:text-slate-300">Actions</th>
+                <th className="px-4 py-3 text-left font-medium text-nog-600 dark:text-nog-300">Index</th>
+                <th className="px-4 py-3 text-right font-medium text-nog-600 dark:text-nog-300">Size</th>
+                <th className="px-4 py-3 text-right font-medium text-nog-600 dark:text-nog-300">Logs</th>
+                <th className="px-4 py-3 text-right font-medium text-nog-600 dark:text-nog-300">Retention</th>
+                <th className="px-4 py-3 text-right font-medium text-nog-600 dark:text-nog-300">Expires In</th>
+                <th className="px-4 py-3 text-right font-medium text-nog-600 dark:text-nog-300">Daily Growth</th>
+                <th className="px-4 py-3 text-center font-medium text-nog-600 dark:text-nog-300">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+            <tbody className="divide-y divide-nog-200 dark:divide-nog-700">
               {storage.indexes.map((idx, i) => (
                 <tr
                   key={idx.index_name}
@@ -292,19 +290,19 @@ export default function StorageTab() {
                         className="w-3 h-3 rounded-full"
                         style={{ backgroundColor: INDEX_COLORS[i % INDEX_COLORS.length] }}
                       />
-                      <span className="font-medium text-slate-900 dark:text-slate-100">
+                      <span className="font-medium text-nog-900 dark:text-nog-100">
                         {idx.index_name}
                       </span>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-right text-slate-600 dark:text-slate-400">
+                  <td className="px-4 py-3 text-right text-nog-600 dark:text-nog-400">
                     {formatBytes(idx.size_bytes)}
                   </td>
-                  <td className="px-4 py-3 text-right text-slate-600 dark:text-slate-400">
+                  <td className="px-4 py-3 text-right text-nog-600 dark:text-nog-400">
                     {formatNumber(idx.row_count)}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-honey-100 text-honey-700 dark:bg-honey-900/30 dark:text-honey-400">
                       <Clock className="w-3 h-3" />
                       {idx.retention_days} days
                     </span>
@@ -315,20 +313,20 @@ export default function StorageTab() {
                         idx.days_until_expiry <= 7
                           ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
                           : idx.days_until_expiry <= 30
-                          ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                          ? 'bg-honey-100 text-honey-700 dark:bg-honey-900/30 dark:text-honey-400'
                           : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400'
                       }`}
                     >
                       {idx.days_until_expiry} days
                     </span>
                   </td>
-                  <td className="px-4 py-3 text-right text-slate-600 dark:text-slate-400">
+                  <td className="px-4 py-3 text-right text-nog-600 dark:text-nog-400">
                     {formatBytes(idx.growth_rate_daily)}/day
                   </td>
                   <td className="px-4 py-3 text-center">
                     <button
                       onClick={() => handleIndexClick(idx.index_name)}
-                      className="p-1.5 text-slate-500 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded-lg transition-colors"
+                      className="p-1.5 text-nog-500 hover:text-honey-600 hover:bg-honey-50 dark:hover:bg-honey-900/30 rounded-lg transition-colors"
                       title="Configure retention"
                     >
                       <Settings className="w-4 h-4" />

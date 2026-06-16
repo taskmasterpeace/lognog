@@ -29,7 +29,7 @@ export function DashboardBrandingModal({
   const [logoPosition, setLogoPosition] = useState<'left' | 'center' | 'right'>(
     branding.logo_position || 'left'
   );
-  const [accentColor, setAccentColor] = useState(branding.accent_color || '#0ea5e9');
+  const [accentColor, setAccentColor] = useState(branding.accent_color || '#C8862B');
   const [headerColor, setHeaderColor] = useState(branding.header_color || '#ffffff');
   const [description, setDescription] = useState(branding.description || '');
   const [uploadError, setUploadError] = useState<string | null>(null);
@@ -101,8 +101,8 @@ export function DashboardBrandingModal({
         <div className="modal-header">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Palette className="w-5 h-5 text-amber-500" />
-              <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">
+              <Palette className="w-5 h-5 text-honey-500" />
+              <h3 className="text-lg font-semibold text-nog-900 dark:text-nog-100">
                 Dashboard Branding
               </h3>
             </div>
@@ -115,7 +115,7 @@ export function DashboardBrandingModal({
         <div className="modal-body space-y-4">
           {/* Logo Upload */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+            <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">
               Logo
             </label>
 
@@ -130,7 +130,7 @@ export function DashboardBrandingModal({
 
             {logoUrl ? (
               /* Logo Preview */
-              <div className="border-2 border-dashed border-slate-200 dark:border-slate-600 rounded-lg p-4">
+              <div className="border-2 border-dashed border-nog-200 dark:border-nog-600 rounded-lg p-4">
                 <div className="flex items-center gap-4">
                   <div className="flex-shrink-0 w-20 h-20 bg-nog-100 dark:bg-nog-700 rounded-lg flex items-center justify-center overflow-hidden">
                     <img
@@ -144,11 +144,11 @@ export function DashboardBrandingModal({
                     />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">
+                    <p className="text-sm font-medium text-nog-900 dark:text-nog-100 truncate">
                       {isBase64Logo ? 'Uploaded image' : 'External URL'}
                     </p>
                     {!isBase64Logo && (
-                      <p className="text-xs text-slate-500 dark:text-slate-400 truncate" title={logoUrl}>
+                      <p className="text-xs text-nog-500 dark:text-nog-400 truncate" title={logoUrl}>
                         {logoUrl}
                       </p>
                     )}
@@ -156,7 +156,7 @@ export function DashboardBrandingModal({
                       <button
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
-                        className="text-xs text-amber-600 hover:text-amber-700 dark:text-amber-400 font-medium"
+                        className="text-xs text-honey-600 hover:text-honey-700 dark:text-honey-400 font-medium"
                         disabled={uploading}
                       >
                         Replace
@@ -178,24 +178,24 @@ export function DashboardBrandingModal({
                 type="button"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={uploading}
-                className="w-full border-2 border-dashed border-slate-200 dark:border-slate-600 rounded-lg p-6 hover:border-amber-400 dark:hover:border-amber-500 hover:bg-amber-50/50 dark:hover:bg-amber-900/10 transition-colors group"
+                className="w-full border-2 border-dashed border-nog-200 dark:border-nog-600 rounded-lg p-6 hover:border-honey-400 dark:hover:border-honey-500 hover:bg-honey-50/50 dark:hover:bg-honey-900/10 transition-colors group"
               >
                 <div className="flex flex-col items-center gap-2">
                   {uploading ? (
                     <>
-                      <div className="w-8 h-8 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
-                      <span className="text-sm text-slate-500 dark:text-slate-400">Uploading...</span>
+                      <div className="w-8 h-8 border-2 border-honey-500 border-t-transparent rounded-full animate-spin" />
+                      <span className="text-sm text-nog-500 dark:text-nog-400">Uploading...</span>
                     </>
                   ) : (
                     <>
-                      <div className="w-12 h-12 bg-nog-100 dark:bg-nog-700 rounded-full flex items-center justify-center group-hover:bg-amber-100 dark:group-hover:bg-amber-900/30 transition-colors">
-                        <Image className="w-6 h-6 text-slate-400 group-hover:text-amber-500 transition-colors" />
+                      <div className="w-12 h-12 bg-nog-100 dark:bg-nog-700 rounded-full flex items-center justify-center group-hover:bg-honey-100 dark:group-hover:bg-honey-900/30 transition-colors">
+                        <Image className="w-6 h-6 text-nog-400 group-hover:text-honey-500 transition-colors" />
                       </div>
                       <div className="text-center">
-                        <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                        <span className="text-sm font-medium text-nog-700 dark:text-nog-300">
                           Click to upload logo
                         </span>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                        <p className="text-xs text-nog-500 dark:text-nog-400 mt-1">
                           PNG, JPEG, GIF, WebP, or SVG (max 500KB)
                         </p>
                       </div>
@@ -224,7 +224,7 @@ export function DashboardBrandingModal({
                     setUploadError(null);
                   }
                 }}
-                className="text-xs text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-300"
+                className="text-xs text-nog-500 hover:text-nog-700 dark:text-nog-400 dark:hover:text-nog-300"
               >
                 Or enter URL manually →
               </button>
@@ -233,7 +233,7 @@ export function DashboardBrandingModal({
 
           {/* Logo Position */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+            <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">
               Logo Position
             </label>
             <div className="flex gap-2">
@@ -243,8 +243,8 @@ export function DashboardBrandingModal({
                   onClick={() => setLogoPosition(pos)}
                   className={`flex-1 py-2 px-3 rounded-lg border-2 text-sm font-medium transition-colors ${
                     logoPosition === pos
-                      ? 'border-amber-500 bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400'
-                      : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-400 hover:border-slate-300'
+                      ? 'border-honey-500 bg-honey-50 text-honey-700 dark:bg-honey-900/20 dark:text-honey-400'
+                      : 'border-nog-200 dark:border-nog-600 text-nog-600 dark:text-nog-400 hover:border-nog-300'
                   }`}
                 >
                   {pos.charAt(0).toUpperCase() + pos.slice(1)}
@@ -256,7 +256,7 @@ export function DashboardBrandingModal({
           {/* Colors */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+              <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">
                 Accent Color
               </label>
               <div className="flex gap-2 items-center">
@@ -264,7 +264,7 @@ export function DashboardBrandingModal({
                   type="color"
                   value={accentColor}
                   onChange={(e) => setAccentColor(e.target.value)}
-                  className="w-10 h-10 rounded cursor-pointer border border-slate-200"
+                  className="w-10 h-10 rounded cursor-pointer border border-nog-200"
                 />
                 <input
                   type="text"
@@ -275,7 +275,7 @@ export function DashboardBrandingModal({
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+              <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">
                 Header Background
               </label>
               <div className="flex gap-2 items-center">
@@ -283,7 +283,7 @@ export function DashboardBrandingModal({
                   type="color"
                   value={headerColor}
                   onChange={(e) => setHeaderColor(e.target.value)}
-                  className="w-10 h-10 rounded cursor-pointer border border-slate-200"
+                  className="w-10 h-10 rounded cursor-pointer border border-nog-200"
                 />
                 <input
                   type="text"
@@ -297,7 +297,7 @@ export function DashboardBrandingModal({
 
           {/* Description */}
           <div>
-            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+            <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">
               Description
             </label>
             <textarea

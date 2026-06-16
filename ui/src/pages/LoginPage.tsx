@@ -70,7 +70,7 @@ export default function LoginPage() {
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-nog-100 dark:bg-nog-950">
-        <Loader2 className="w-8 h-8 animate-spin text-amber-500" />
+        <Loader2 className="w-8 h-8 animate-spin text-honey-500" />
       </div>
     );
   }
@@ -80,7 +80,7 @@ export default function LoginPage() {
       {/* Back to Landing */}
       <Link
         to="/"
-        className="absolute top-4 sm:top-6 left-4 sm:left-6 flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-200/50 dark:hover:bg-slate-700/50 rounded-lg transition-all text-sm sm:text-base"
+        className="absolute top-4 sm:top-6 left-4 sm:left-6 flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 text-nog-600 dark:text-nog-400 hover:text-nog-900 dark:hover:text-nog-100 hover:bg-nog-200/50 dark:hover:bg-nog-700/50 rounded-lg transition-all text-sm sm:text-base"
       >
         <ArrowLeft className="w-4 sm:w-5 h-4 sm:h-5" />
         <span className="font-medium hidden sm:inline">Back to Home</span>
@@ -95,10 +95,10 @@ export default function LoginPage() {
             alt="LogNog"
             className="w-20 h-20 sm:w-24 sm:h-24 mx-auto rounded-2xl shadow-xl object-cover"
           />
-          <h1 className="mt-3 sm:mt-4 text-2xl sm:text-3xl font-bold text-slate-900 dark:text-slate-100">
+          <h1 className="mt-3 sm:mt-4 text-2xl sm:text-3xl font-bold text-nog-900 dark:text-nog-100">
             LogNog
           </h1>
-          <p className="text-slate-500 dark:text-slate-400">
+          <p className="text-nog-500 dark:text-nog-400">
             {isSetupMode ? 'Create your admin account' : 'Sign in to continue'}
           </p>
         </div>
@@ -107,11 +107,11 @@ export default function LoginPage() {
         <div className="bg-white dark:bg-nog-800 rounded-2xl shadow-xl p-8">
           {/* Setup notice */}
           {setupRequired && (
-            <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
-              <h3 className="font-semibold text-amber-800 dark:text-amber-200">
+            <div className="mb-6 p-4 bg-honey-50 dark:bg-honey-900/20 rounded-lg border border-honey-200 dark:border-honey-800">
+              <h3 className="font-semibold text-honey-800 dark:text-honey-200">
                 Welcome to LogNog!
               </h3>
-              <p className="text-sm text-amber-600 dark:text-amber-300 mt-1">
+              <p className="text-sm text-honey-600 dark:text-honey-300 mt-1">
                 Create your administrator account to get started.
               </p>
             </div>
@@ -129,11 +129,11 @@ export default function LoginPage() {
             /* Setup Form */
             <form onSubmit={handleSetup} className="space-y-5">
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">
                   Username
                 </label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-nog-400" />
                   <input
                     type="text"
                     value={username}
@@ -142,34 +142,34 @@ export default function LoginPage() {
                     required
                     minLength={3}
                     maxLength={50}
-                    className="w-full pl-10 pr-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-900 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
+                    className="w-full pl-10 pr-4 py-2.5 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-900 text-nog-900 dark:text-nog-100 placeholder-nog-400 focus:ring-2 focus:ring-honey-500 focus:border-transparent transition-all"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">
                   Email
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-nog-400" />
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="admin@example.com"
                     required
-                    className="w-full pl-10 pr-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-900 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
+                    className="w-full pl-10 pr-4 py-2.5 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-900 text-nog-900 dark:text-nog-100 placeholder-nog-400 focus:ring-2 focus:ring-honey-500 focus:border-transparent transition-all"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">
                   Password
                 </label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-nog-400" />
                   <input
                     type="password"
                     value={password}
@@ -177,17 +177,17 @@ export default function LoginPage() {
                     placeholder="At least 8 characters"
                     required
                     minLength={8}
-                    className="w-full pl-10 pr-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-900 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
+                    className="w-full pl-10 pr-4 py-2.5 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-900 text-nog-900 dark:text-nog-100 placeholder-nog-400 focus:ring-2 focus:ring-honey-500 focus:border-transparent transition-all"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">
                   Confirm Password
                 </label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-nog-400" />
                   <input
                     type="password"
                     value={confirmPassword}
@@ -195,7 +195,7 @@ export default function LoginPage() {
                     placeholder="Confirm your password"
                     required
                     minLength={8}
-                    className="w-full pl-10 pr-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-900 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
+                    className="w-full pl-10 pr-4 py-2.5 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-900 text-nog-900 dark:text-nog-100 placeholder-nog-400 focus:ring-2 focus:ring-honey-500 focus:border-transparent transition-all"
                   />
                 </div>
               </div>
@@ -203,7 +203,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full py-3 px-4 bg-gradient-to-r from-amber-500 to-amber-600 text-white font-medium rounded-lg shadow-lg shadow-amber-500/30 hover:from-amber-600 hover:to-amber-700 focus:ring-4 focus:ring-amber-500/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full py-3 px-4 bg-gradient-to-r from-honey-500 to-honey-600 text-nog-900 font-medium rounded-lg shadow-lg shadow-honey-500/30 hover:from-honey-600 hover:to-honey-700 focus:ring-4 focus:ring-honey-500/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {submitting ? (
                   <>
@@ -219,35 +219,35 @@ export default function LoginPage() {
             /* Login Form */
             <form onSubmit={handleLogin} className="space-y-5">
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">
                   Username or Email
                 </label>
                 <div className="relative">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-nog-400" />
                   <input
                     type="text"
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     placeholder="Enter your username or email"
                     required
-                    className="w-full pl-10 pr-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-900 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
+                    className="w-full pl-10 pr-4 py-2.5 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-900 text-nog-900 dark:text-nog-100 placeholder-nog-400 focus:ring-2 focus:ring-honey-500 focus:border-transparent transition-all"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">
                   Password
                 </label>
                 <div className="relative">
-                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-nog-400" />
                   <input
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter your password"
                     required
-                    className="w-full pl-10 pr-4 py-2.5 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-nog-900 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:ring-2 focus:ring-amber-500 focus:border-transparent transition-all"
+                    className="w-full pl-10 pr-4 py-2.5 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-900 text-nog-900 dark:text-nog-100 placeholder-nog-400 focus:ring-2 focus:ring-honey-500 focus:border-transparent transition-all"
                   />
                 </div>
               </div>
@@ -255,7 +255,7 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={submitting}
-                className="w-full py-3 px-4 bg-gradient-to-r from-amber-500 to-amber-600 text-white font-medium rounded-lg shadow-lg shadow-amber-500/30 hover:from-amber-600 hover:to-amber-700 focus:ring-4 focus:ring-amber-500/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full py-3 px-4 bg-gradient-to-r from-honey-500 to-honey-600 text-nog-900 font-medium rounded-lg shadow-lg shadow-honey-500/30 hover:from-honey-600 hover:to-honey-700 focus:ring-4 focus:ring-honey-500/50 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {submitting ? (
                   <>
@@ -271,7 +271,7 @@ export default function LoginPage() {
         </div>
 
         {/* Footer */}
-        <p className="mt-6 text-center text-sm text-slate-500 dark:text-slate-400">
+        <p className="mt-6 text-center text-sm text-nog-500 dark:text-nog-400">
           LogNog - Your Logs, Your Control
         </p>
       </div>
