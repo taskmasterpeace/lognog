@@ -411,26 +411,26 @@ export default function FieldSidebar({
             {fieldStats.totalValues > 0 && (
               <div className="mb-2 pb-2 border-b border-nog-200 dark:border-nog-700">
                 <div className="grid grid-cols-3 gap-1 text-xs">
-                  <div className="flex items-center gap-1 text-nog-500 dark:text-nog-400" title="Number of unique values">
-                    <Hash className="w-3 h-3" />
-                    <span className="font-medium text-nog-700 dark:text-nog-300">{fieldStats.uniqueValues}</span>
-                    <span className="hidden sm:inline">unique</span>
+                  <div className="flex items-center gap-1 min-w-0 text-nog-500 dark:text-nog-400" title="Number of unique values">
+                    <Hash className="w-3 h-3 flex-shrink-0" />
+                    <span className="font-medium text-nog-700 dark:text-nog-300 flex-shrink-0">{fieldStats.uniqueValues}</span>
+                    <span className="hidden sm:inline truncate">unique</span>
                   </div>
-                  <div className="flex items-center gap-1 text-nog-500 dark:text-nog-400" title="Coverage: percentage of results with this field">
-                    <Percent className="w-3 h-3" />
-                    <span className="font-medium text-nog-700 dark:text-nog-300">{fieldStats.coverage.toFixed(0)}%</span>
-                    <span className="hidden sm:inline">coverage</span>
+                  <div className="flex items-center gap-1 min-w-0 text-nog-500 dark:text-nog-400" title="Coverage: percentage of results with this field">
+                    <Percent className="w-3 h-3 flex-shrink-0" />
+                    <span className="font-medium text-nog-700 dark:text-nog-300 flex-shrink-0">{fieldStats.coverage.toFixed(0)}%</span>
+                    <span className="hidden sm:inline truncate">coverage</span>
                   </div>
-                  <div className="flex items-center gap-1 text-nog-500 dark:text-nog-400" title="Total values in results">
-                    <BarChart3 className="w-3 h-3" />
-                    <span className="font-medium text-nog-700 dark:text-nog-300">{fieldStats.totalValues.toLocaleString()}</span>
+                  <div className="flex items-center gap-1 min-w-0 text-nog-500 dark:text-nog-400" title="Total values in results">
+                    <BarChart3 className="w-3 h-3 flex-shrink-0" />
+                    <span className="font-medium text-nog-700 dark:text-nog-300 truncate">{fieldStats.totalValues.toLocaleString()}</span>
                   </div>
                 </div>
                 {/* Numeric stats row */}
                 {fieldStats.isNumeric && fieldStats.min !== undefined && fieldStats.max !== undefined && (
                   <div className="grid grid-cols-3 gap-1 mt-1 text-xs">
                     <div className="flex items-center gap-1 text-nog-500 dark:text-nog-400" title="Minimum value">
-                      <TrendingDown className="w-3 h-3 text-blue-500" />
+                      <TrendingDown className="w-3 h-3 text-nog-400 dark:text-nog-500 flex-shrink-0" />
                       <span className="font-medium text-nog-700 dark:text-nog-300">{fieldStats.min.toLocaleString()}</span>
                       <span className="hidden sm:inline">min</span>
                     </div>

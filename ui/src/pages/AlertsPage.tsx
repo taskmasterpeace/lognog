@@ -91,7 +91,7 @@ const SEVERITIES = [
   { value: 'info', label: 'Info', icon: Info, color: 'text-honey-500', bg: 'bg-honey-100' },
   { value: 'low', label: 'Low', icon: AlertCircle, color: 'text-nog-500', bg: 'bg-nog-100' },
   { value: 'medium', label: 'Medium', icon: AlertTriangle, color: 'text-yellow-500', bg: 'bg-yellow-100' },
-  { value: 'high', label: 'High', icon: AlertTriangle, color: 'text-honey-500', bg: 'bg-honey-100' },
+  { value: 'high', label: 'High', icon: AlertTriangle, color: 'text-orange-500', bg: 'bg-orange-100' },
   { value: 'critical', label: 'Critical', icon: Zap, color: 'text-red-500', bg: 'bg-red-100' },
 ];
 
@@ -497,7 +497,7 @@ export default function AlertsPage() {
 
   if (error) {
     return (
-      <div className="p-4 bg-red-50 text-red-700 rounded-lg">
+      <div className="p-4 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 rounded-lg">
         Error loading alerts: {error instanceof Error ? error.message : 'Unknown error'}
       </div>
     );
@@ -637,6 +637,8 @@ export default function AlertsPage() {
                     />
                     <button
                       onClick={() => toggleExpand(alert.id)}
+                      aria-label={isExpanded ? 'Collapse alert details' : 'Expand alert details'}
+                      aria-expanded={isExpanded}
                       className="text-nog-400 hover:text-nog-600 flex-shrink-0"
                     >
                       {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
@@ -675,6 +677,7 @@ export default function AlertsPage() {
                     <button
                       onClick={() => evaluateMutation.mutate(alert.id)}
                       disabled={evaluateMutation.isPending}
+                      aria-label={`Run alert "${alert.name}" now`}
                       className="p-1.5 sm:p-2 text-nog-400 hover:text-honey-500 hover:bg-honey-50 rounded-lg flex-shrink-0"
                       title="Run Now"
                     >
@@ -690,6 +693,7 @@ export default function AlertsPage() {
                     />
                     <button
                       onClick={() => toggleMutation.mutate(alert.id)}
+                      aria-label={alert.enabled ? `Disable alert "${alert.name}"` : `Enable alert "${alert.name}"`}
                       className={`p-1.5 sm:p-2 rounded-lg flex-shrink-0 ${
                         alert.enabled
                           ? 'text-green-500 hover:bg-green-50'
@@ -701,6 +705,7 @@ export default function AlertsPage() {
                     </button>
                     <button
                       onClick={() => handleEdit(alert)}
+                      aria-label={`Edit alert "${alert.name}"`}
                       className="p-1.5 sm:p-2 text-nog-400 hover:text-nog-600 hover:bg-nog-100 rounded-lg flex-shrink-0"
                       title="Edit"
                     >
@@ -722,6 +727,7 @@ export default function AlertsPage() {
                           });
                         }
                       }}
+                      aria-label={`Delete alert "${alert.name}"`}
                       className="p-1.5 sm:p-2 text-nog-400 hover:text-red-500 hover:bg-red-50 rounded-lg flex-shrink-0"
                       title="Delete"
                     >
@@ -810,7 +816,7 @@ export default function AlertsPage() {
 
       {/* Create/Edit Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="modal-overlay p-4">
           <div className="bg-white dark:bg-nog-800 rounded-xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-nog-200 dark:border-nog-700 flex items-center justify-between">
               <h2 className="text-xl font-semibold text-nog-900 dark:text-nog-100">
@@ -1450,8 +1456,8 @@ export default function AlertsPage() {
 
               {/* Test Result */}
               {testResult && (
-                <div className={`rounded-lg overflow-hidden ${testResult.wouldTrigger ? 'bg-honey-50 dark:bg-honey-900/20' : 'bg-green-50 dark:bg-green-900/20'}`}>
-                  <div className={`p-4 ${testResult.wouldTrigger ? 'text-honey-800 dark:text-honey-300' : 'text-green-800 dark:text-green-300'}`}>
+                <div className={`rounded-lg overflow-hidden ${testResult.wouldTrigger ? 'bg-orange-50 dark:bg-orange-900/20' : 'bg-green-50 dark:bg-green-900/20'}`}>
+                  <div className={`p-4 ${testResult.wouldTrigger ? 'text-orange-800 dark:text-orange-300' : 'text-green-800 dark:text-green-300'}`}>
                     <div className="font-medium flex items-center gap-2">
                       {testResult.wouldTrigger ? <AlertTriangle className="w-4 h-4" /> : <CheckCircle2 className="w-4 h-4" />}
                       {testResult.wouldTrigger ? 'Alert Would Trigger' : 'Alert Would Not Trigger'}
@@ -1461,11 +1467,12 @@ export default function AlertsPage() {
                     </div>
                   </div>
                   {testResult.sampleResults && testResult.sampleResults.length > 0 && (
-                    <div className="border-t border-honey-200 dark:border-honey-800">
+                    <div className={`border-t ${testResult.wouldTrigger ? 'border-orange-200 dark:border-orange-800' : 'border-green-200 dark:border-green-800'}`}>
                       <button
                         type="button"
                         onClick={() => setShowSampleResults(!showSampleResults)}
-                        className={`w-full px-4 py-2 text-sm flex items-center justify-between ${testResult.wouldTrigger ? 'text-honey-700 dark:text-honey-400 hover:bg-honey-100 dark:hover:bg-honey-900/30' : 'text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30'}`}
+                        aria-expanded={showSampleResults}
+                        className={`w-full px-4 py-2 text-sm flex items-center justify-between ${testResult.wouldTrigger ? 'text-orange-700 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/30' : 'text-green-700 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/30'}`}
                       >
                         <span>View Sample Results ({Math.min(testResult.sampleResults.length, 10)} of {testResult.resultCount})</span>
                         <ChevronDown className={`w-4 h-4 transition-transform ${showSampleResults ? 'rotate-180' : ''}`} />
@@ -1541,7 +1548,7 @@ export default function AlertsPage() {
 
       {/* History Modal */}
       {showHistoryModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="modal-overlay p-4">
           <div className="bg-white dark:bg-nog-800 rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
             <div className="p-6 border-b border-nog-200 dark:border-nog-700 flex items-center justify-between">
               <h2 className="text-xl font-semibold text-nog-900 dark:text-nog-100 flex items-center gap-2">
@@ -1769,7 +1776,7 @@ function QuickSilenceModal({ alertId, alertName, onClose }: QuickSilenceModalPro
   ];
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="modal-overlay">
       <div className="bg-white dark:bg-nog-800 rounded-lg shadow-xl max-w-md w-full mx-4">
         <div className="p-6 border-b border-nog-200 dark:border-nog-700">
           <div className="flex items-center justify-between">

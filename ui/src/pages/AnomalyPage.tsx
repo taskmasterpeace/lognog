@@ -21,6 +21,7 @@ import {
 import { AreaChart, BarChart } from '../components/charts';
 import { useTheme } from '../contexts/ThemeContext';
 import { authFetch } from '../contexts/AuthContext';
+import { useToast } from '../contexts/ToastContext';
 
 // Types
 interface AnomalyEvent {
@@ -87,18 +88,35 @@ async function submitFeedback(id: string, isFalsePositive: boolean): Promise<voi
   if (!response.ok) throw new Error('Failed to submit feedback');
 }
 
-async function analyzeAnomaly(id: string): Promise<{ analysis: unknown }> {
+interface AnomalyAnalysis {
+  riskScore: number;
+  explanation: string;
+  suggestedActions: string[];
+  relatedThreatTypes: string[];
+  confidence: number;
+}
+
+async function analyzeAnomaly(id: string): Promise<{ anomalyId: string; analysis: AnomalyAnalysis; provider?: string }> {
   const response = await authFetch(`/anomaly/analyze/${id}`, { method: 'POST' });
-  if (!response.ok) throw new Error('Failed to analyze anomaly');
+  if (!response.ok) {
+    let message = 'Failed to analyze anomaly';
+    try {
+      const body = await response.json();
+      message = body.message || body.error || message;
+    } catch {
+      // ignore JSON parse errors
+    }
+    throw new Error(message);
+  }
   return response.json();
 }
 
 // Severity colors
 const SEVERITY_CONFIG = {
-  critical: { bg: 'bg-red-100', text: 'text-red-700', border: 'border-red-200', icon: AlertTriangle },
-  high: { bg: 'bg-honey-100', text: 'text-honey-700', border: 'border-honey-200', icon: AlertTriangle },
-  medium: { bg: 'bg-yellow-100', text: 'text-yellow-700', border: 'border-yellow-200', icon: Activity },
-  low: { bg: 'bg-honey-100', text: 'text-honey-700', border: 'border-honey-200', icon: Activity },
+  critical: { bg: 'bg-red-100 dark:bg-red-900/20', text: 'text-red-700 dark:text-red-400', border: 'border-red-200 dark:border-red-800', icon: AlertTriangle },
+  high: { bg: 'bg-orange-100 dark:bg-orange-900/20', text: 'text-orange-700 dark:text-orange-400', border: 'border-orange-200 dark:border-orange-800', icon: AlertTriangle },
+  medium: { bg: 'bg-honey-100 dark:bg-honey-900/20', text: 'text-honey-700 dark:text-honey-400', border: 'border-honey-200 dark:border-honey-800', icon: Activity },
+  low: { bg: 'bg-green-100 dark:bg-green-900/20', text: 'text-green-700 dark:text-green-400', border: 'border-green-200 dark:border-green-800', icon: Activity },
 };
 
 const ENTITY_ICONS = {
@@ -159,10 +177,12 @@ function AnomalyRow({
   anomaly,
   onFeedback,
   onAnalyze,
+  isAnalyzing,
 }: {
   anomaly: AnomalyEvent;
   onFeedback: (id: string, isFalsePositive: boolean) => void;
   onAnalyze: (id: string) => void;
+  isAnalyzing: boolean;
 }) {
   const config = SEVERITY_CONFIG[anomaly.severity];
   const EntityIcon = ENTITY_ICONS[anomaly.entityType] || Server;
@@ -187,7 +207,7 @@ function AnomalyRow({
               </span>
             </div>
             <p className="text-sm text-nog-600 dark:text-nog-400 mt-1">
-              {anomaly.metricName}: {anomaly.observedValue.toFixed(1)} (expected {anomaly.expectedValue.toFixed(1)})
+              {anomaly.metricName}: {(anomaly.observedValue ?? 0).toFixed(1)} (expected {(anomaly.expectedValue ?? 0).toFixed(1)})
             </p>
             <div className="flex items-center gap-3 mt-2 text-xs text-nog-500">
               <span className="flex items-center gap-1">
@@ -198,7 +218,7 @@ function AnomalyRow({
                 {anomaly.deviationScore > 0 ? (
                   <TrendingUp className="w-3 h-3 text-red-500" />
                 ) : (
-                  <TrendingDown className="w-3 h-3 text-honey-500" />
+                  <TrendingDown className="w-3 h-3 text-green-500" />
                 )}
                 {Math.abs(anomaly.deviationScore).toFixed(1)}σ
               </span>
@@ -210,21 +230,25 @@ function AnomalyRow({
         <div className="flex items-center gap-2">
           <button
             onClick={() => onAnalyze(anomaly.id)}
-            className="p-2 text-honey-600 hover:bg-honey-50 rounded-lg transition-colors"
+            disabled={isAnalyzing}
+            aria-label="Analyze anomaly with AI"
+            className="p-2 text-honey-600 hover:bg-honey-50 dark:hover:bg-honey-900/20 rounded-lg transition-colors disabled:opacity-50"
             title="Analyze with AI"
           >
-            <Brain className="w-4 h-4" />
+            {isAnalyzing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Brain className="w-4 h-4" />}
           </button>
           <button
             onClick={() => onFeedback(anomaly.id, true)}
-            className="p-2 text-nog-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+            aria-label="Mark anomaly as false positive"
+            className="p-2 text-nog-400 hover:text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 rounded-lg transition-colors"
             title="Mark as false positive"
           >
             <ThumbsUp className="w-4 h-4" />
           </button>
           <button
             onClick={() => onFeedback(anomaly.id, false)}
-            className="p-2 text-nog-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+            aria-label="Confirm anomaly as true positive"
+            className="p-2 text-nog-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
             title="Confirm as true positive"
           >
             <ThumbsDown className="w-4 h-4" />
@@ -238,7 +262,9 @@ function AnomalyRow({
 
 export default function AnomalyPage() {
   const queryClient = useQueryClient();
+  const toast = useToast();
   const [selectedSeverity, setSelectedSeverity] = useState<string | undefined>();
+  const [analyzingId, setAnalyzingId] = useState<string | null>(null);
   const { resolvedTheme } = useTheme();
   const isDarkMode = resolvedTheme === 'dark';
 
@@ -281,6 +307,26 @@ export default function AnomalyPage() {
 
   const analyzeMutation = useMutation({
     mutationFn: analyzeAnomaly,
+    onMutate: (id: string) => {
+      setAnalyzingId(id);
+    },
+    onSuccess: (data) => {
+      const a = data.analysis;
+      const actions = a.suggestedActions?.length
+        ? ` Suggested: ${a.suggestedActions.slice(0, 2).join('; ')}`
+        : '';
+      toast.success(
+        `AI Analysis (risk ${a.riskScore})`,
+        `${a.explanation}${actions}`
+      );
+      queryClient.invalidateQueries({ queryKey: ['anomalies'] });
+    },
+    onError: (error) => {
+      toast.error('Analysis Failed', error instanceof Error ? error.message : 'Unknown error');
+    },
+    onSettled: () => {
+      setAnalyzingId(null);
+    },
   });
 
   const isLoading = dashboardLoading || anomaliesLoading;
@@ -469,6 +515,7 @@ export default function AnomalyPage() {
                 <AnomalyRow
                   key={anomaly.id}
                   anomaly={anomaly}
+                  isAnalyzing={analyzingId === anomaly.id}
                   onFeedback={(id, isFalsePositive) =>
                     feedbackMutation.mutate({ id, isFalsePositive })
                   }

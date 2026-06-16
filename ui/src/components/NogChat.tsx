@@ -215,9 +215,9 @@ export function NogChat() {
           }`}
         >
           {msg.role === 'user' ? (
-            <User className="w-4 h-4 text-white" />
+            <User className="w-4 h-4 text-nog-900" />
           ) : (
-            <Bot className="w-4 h-4 text-white" />
+            <Bot className="w-4 h-4 text-nog-900" />
           )}
         </div>
         <div
@@ -234,6 +234,8 @@ export function NogChat() {
               <div
                 className="bg-nog-100 dark:bg-nog-700 text-nog-900 dark:text-nog-100 rounded-2xl rounded-tl-sm p-3"
               >
+                {/* TODO: sanitize this HTML (e.g. with dompurify) before injecting — currently
+                    trusts the AI/markdown output. dompurify is not yet a dependency; do not add deps here. */}
                 <div
                   className="text-sm whitespace-pre-wrap prose prose-sm dark:prose-invert max-w-none"
                   dangerouslySetInnerHTML={{
@@ -250,13 +252,13 @@ export function NogChat() {
               {codeBlocks.map((code, codeIndex) => (
                 <div
                   key={codeIndex}
-                  className="relative bg-nog-800 dark:bg-nog-900 rounded-lg overflow-hidden"
+                  className="relative bg-nog-100 text-nog-800 dark:bg-nog-900 dark:text-nog-100 rounded-lg overflow-hidden"
                 >
-                  <div className="flex items-center justify-between px-3 py-1.5 bg-nog-700 dark:bg-nog-800 border-b border-nog-600">
-                    <span className="text-xs text-nog-400 font-mono">DSL Query</span>
+                  <div className="flex items-center justify-between px-3 py-1.5 bg-nog-200 dark:bg-nog-800 border-b border-nog-300 dark:border-nog-700">
+                    <span className="text-xs text-nog-500 dark:text-nog-400 font-mono">DSL Query</span>
                     <button
                       onClick={() => copyToClipboard(code, index * 100 + codeIndex)}
-                      className="flex items-center gap-1 text-xs text-nog-400 hover:text-nog-900 transition-colors"
+                      className="flex items-center gap-1 text-xs text-nog-500 dark:text-nog-400 hover:text-nog-900 dark:hover:text-nog-100 transition-colors"
                     >
                       {copiedIndex === index * 100 + codeIndex ? (
                         <>
@@ -271,7 +273,7 @@ export function NogChat() {
                       )}
                     </button>
                   </div>
-                  <pre className="p-3 text-sm text-honey-400 font-mono overflow-x-auto">
+                  <pre className="p-3 text-sm text-honey-700 dark:text-honey-400 font-mono overflow-x-auto">
                     {code}
                   </pre>
                 </div>
@@ -303,6 +305,7 @@ export function NogChat() {
         onClick={() => setIsOpen(true)}
         className="fixed bottom-20 sm:bottom-6 right-4 sm:right-6 z-50 group animate-scale-in"
         title="NogChat - Your LogNog Assistant"
+        aria-label="Open NogChat assistant"
       >
         <div className="relative">
           <div className="absolute inset-0 bg-honey-500 rounded-full blur-lg opacity-50 group-hover:opacity-75 transition-all duration-300" />
@@ -376,18 +379,12 @@ export function NogChat() {
               <div className="grid grid-cols-2 gap-2">
                 {QUICK_ACTIONS.map((action, i) => {
                   const Icon = action.icon;
-                  const categoryColors = {
-                    learn: 'from-honey-500/10 to-honey-500/10 hover:from-honey-500/20 hover:to-honey-500/20 text-honey-600 dark:text-honey-400',
-                    query: 'from-honey-500/10 to-honey-500/10 hover:from-honey-500/20 hover:to-honey-500/20 text-honey-600 dark:text-honey-400',
-                    insight: 'from-honey-500/10 to-honey-500/10 hover:from-honey-500/20 hover:to-honey-500/20 text-honey-600 dark:text-honey-400',
-                    splunk: 'from-honey-500/10 to-honey-500/10 hover:from-honey-500/20 hover:to-honey-500/20 text-honey-600 dark:text-honey-400',
-                  };
                   const staggerClass = `animate-stagger-${Math.min(i + 1, 8)}`;
                   return (
                     <button
                       key={i}
                       onClick={() => handleSubmit(action.prompt)}
-                      className={`flex items-center gap-2 p-3 rounded-xl bg-gradient-to-r ${categoryColors[action.category]} transition-all duration-200 text-left group hover:scale-[1.02] active:scale-[0.98] animate-fade-in ${staggerClass}`}
+                      className={`flex items-center gap-2 p-3 rounded-xl bg-honey-500/10 hover:bg-honey-500/20 text-honey-600 dark:text-honey-400 transition-all duration-200 text-left group hover:scale-[1.02] active:scale-[0.98] animate-fade-in ${staggerClass}`}
                     >
                       <Icon className="w-4 h-4 flex-shrink-0" />
                       <span className="text-sm font-medium text-nog-700 dark:text-nog-200 truncate">
@@ -427,7 +424,7 @@ export function NogChat() {
         {loading && (
           <div className="flex gap-3">
             <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-honey-500 to-honey-600 flex items-center justify-center">
-              <Bot className="w-4 h-4 text-white" />
+              <Bot className="w-4 h-4 text-nog-900" />
             </div>
             <div className="p-3 bg-nog-100 dark:bg-nog-700 rounded-2xl rounded-tl-sm">
               <div className="flex items-center gap-2">

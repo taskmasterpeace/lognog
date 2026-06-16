@@ -15,6 +15,8 @@ import {
   XCircle,
   Trash2,
   Plus,
+  AlertCircle,
+  RefreshCw,
 } from 'lucide-react';
 
 interface AgentPersona {
@@ -70,8 +72,10 @@ export function AgentPage() {
   const [loading, setLoading] = useState(false);
   const [aiAvailable, setAiAvailable] = useState<boolean | null>(null);
   const [showPersonaDropdown, setShowPersonaDropdown] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const personaMenuRef = useRef<HTMLDivElement>(null);
 
   // Load personas and check AI status on mount
   useEffect(() => {
@@ -79,6 +83,27 @@ export function AgentPage() {
     checkAiStatus();
     loadConversations();
   }, []);
+
+  // Close persona dropdown on outside click or Escape
+  useEffect(() => {
+    if (!showPersonaDropdown) return;
+
+    const handleClickAway = (e: MouseEvent) => {
+      if (personaMenuRef.current && !personaMenuRef.current.contains(e.target as Node)) {
+        setShowPersonaDropdown(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowPersonaDropdown(false);
+    };
+
+    document.addEventListener('mousedown', handleClickAway);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickAway);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showPersonaDropdown]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -95,7 +120,7 @@ export function AgentPage() {
 
   const checkAiStatus = async () => {
     try {
-      const response = await fetch('/api/ai/status');
+      const response = await authFetch('/ai/status');
       const data = await response.json();
       setAiAvailable(data.aiAvailable);
     } catch {
@@ -105,15 +130,24 @@ export function AgentPage() {
 
   const loadPersonas = async () => {
     try {
-      const response = await fetch('/api/ai/agents/personas');
+      const response = await authFetch('/ai/agents/personas');
       const data = await response.json();
       setPersonas(data.personas);
       if (data.personas.length > 0 && !selectedPersona) {
         setSelectedPersona(data.personas.find((p: AgentPersona) => p.id === 'general') || data.personas[0]);
       }
+      setLoadError(null);
     } catch (error) {
       console.error('Failed to load personas:', error);
+      setLoadError('Failed to load agent personas. Check that the API is reachable.');
     }
+  };
+
+  const retryLoad = () => {
+    setLoadError(null);
+    loadPersonas();
+    checkAiStatus();
+    loadConversations();
   };
 
   const loadConversations = async () => {
@@ -123,6 +157,7 @@ export function AgentPage() {
       setConversations(data.conversations || []);
     } catch (error) {
       console.error('Failed to load conversations:', error);
+      setLoadError('Failed to load conversations.');
     }
   };
 
@@ -137,8 +172,10 @@ export function AgentPage() {
       if (persona) {
         setSelectedPersona(persona);
       }
+      setLoadError(null);
     } catch (error) {
       console.error('Failed to load conversation:', error);
+      setLoadError('Failed to load that conversation.');
     }
   };
 
@@ -154,8 +191,10 @@ export function AgentPage() {
       if (currentConversation?.id === id) {
         startNewConversation();
       }
+      setLoadError(null);
     } catch (error) {
       console.error('Failed to delete conversation:', error);
+      setLoadError('Failed to delete conversation.');
     }
   };
 
@@ -268,6 +307,7 @@ export function AgentPage() {
                     e.stopPropagation();
                     deleteConversation(conv.id);
                   }}
+                  aria-label={`Delete conversation: ${conv.title}`}
                   className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-all"
                 >
                   <Trash2 className="w-3 h-3 text-red-500" />
@@ -282,13 +322,16 @@ export function AgentPage() {
       <div className="flex-1 flex flex-col">
         {/* Header with Persona Selector */}
         <div className="flex items-center justify-between px-6 py-3 border-b border-nog-200 dark:border-nog-700">
-          <div className="relative">
+          <div className="relative" ref={personaMenuRef}>
             <button
               onClick={() => setShowPersonaDropdown(!showPersonaDropdown)}
-              className="flex items-center gap-3 px-4 py-2 bg-nog-100 dark:bg-nog-700 hover:bg-nog-200 dark:hover:bg-nog-600 rounded-lg transition-colors"
+              aria-haspopup="menu"
+              aria-expanded={showPersonaDropdown}
+              aria-label="Select agent persona"
+              className="flex items-center gap-3 px-4 py-2 bg-nog-100 dark:bg-nog-700 hover:bg-nog-200 dark:hover:bg-nog-600 rounded transition-colors"
             >
-              <div className="p-1.5 bg-honey-500 rounded-lg">
-                <PersonaIcon className="w-4 h-4 text-white" />
+              <div className="p-1.5 bg-honey-500 rounded">
+                <PersonaIcon className="w-4 h-4 text-nog-900" />
               </div>
               <div className="text-left">
                 <p className="font-medium text-sm text-nog-900 dark:text-nog-100">
@@ -302,12 +345,13 @@ export function AgentPage() {
             </button>
 
             {showPersonaDropdown && (
-              <div className="absolute top-full left-0 mt-2 w-80 bg-white dark:bg-nog-800 rounded-xl shadow-xl border border-nog-200 dark:border-nog-700 z-50">
+              <div role="menu" className="absolute top-full left-0 mt-2 w-80 bg-white dark:bg-nog-800 rounded-xl shadow-xl border border-nog-200 dark:border-nog-700 z-50">
                 {personas.map((persona) => {
                   const Icon = PERSONA_ICONS[persona.icon] || Bot;
                   return (
                     <button
                       key={persona.id}
+                      role="menuitem"
                       onClick={() => {
                         setSelectedPersona(persona);
                         setShowPersonaDropdown(false);
@@ -316,8 +360,8 @@ export function AgentPage() {
                         selectedPersona?.id === persona.id ? 'bg-honey-50 dark:bg-honey-900/20' : ''
                       }`}
                     >
-                      <div className="p-2 bg-honey-500 rounded-lg flex-shrink-0">
-                        <Icon className="w-5 h-5 text-white" />
+                      <div className="p-2 bg-honey-500 rounded flex-shrink-0">
+                        <Icon className="w-5 h-5 text-nog-900" />
                       </div>
                       <div className="text-left flex-1">
                         <p className="font-medium text-nog-900 dark:text-nog-100">{persona.name}</p>
@@ -346,12 +390,29 @@ export function AgentPage() {
           </div>
         </div>
 
+        {/* Load error banner */}
+        {loadError && (
+          <div className="mx-6 mt-4 p-3 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-800 flex items-center justify-between gap-3 text-red-700 dark:text-red-300 text-sm">
+            <span className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              {loadError}
+            </span>
+            <button
+              onClick={retryLoad}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded font-medium bg-red-100 dark:bg-red-900/40 hover:bg-red-200 dark:hover:bg-red-900/60 transition-colors"
+            >
+              <RefreshCw className="w-3.5 h-3.5" />
+              Retry
+            </button>
+          </div>
+        )}
+
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {messages.length === 0 && selectedPersona ? (
             <div className="flex flex-col items-center justify-center h-full text-center">
               <div className="p-4 bg-honey-500 rounded-2xl mb-4">
-                <PersonaIcon className="w-12 h-12 text-white" />
+                <PersonaIcon className="w-12 h-12 text-nog-900" />
               </div>
               <h2 className="text-xl font-semibold text-nog-900 dark:text-nog-100 mb-2">
                 {selectedPersona.name}
@@ -375,13 +436,13 @@ export function AgentPage() {
               <div key={msg.id} className={`flex gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
                 <div
                   className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
-                    msg.role === 'user' ? 'bg-honey-500' : 'bg-honey-500'
+                    msg.role === 'user' ? 'bg-nog-600' : 'bg-honey-500'
                   }`}
                 >
                   {msg.role === 'user' ? (
                     <User className="w-5 h-5 text-white" />
                   ) : (
-                    <Bot className="w-5 h-5 text-white" />
+                    <Bot className="w-5 h-5 text-nog-900" />
                   )}
                 </div>
 
@@ -389,7 +450,7 @@ export function AgentPage() {
                   <div
                     className={`inline-block p-4 rounded-2xl ${
                       msg.role === 'user'
-                        ? 'bg-honey-500 text-nog-900 rounded-tr-sm'
+                        ? 'bg-nog-600 text-white rounded-tr-sm'
                         : 'bg-nog-100 dark:bg-nog-700 text-nog-900 dark:text-nog-100 rounded-tl-sm'
                     }`}
                   >
@@ -445,7 +506,7 @@ export function AgentPage() {
           {loading && (
             <div className="flex gap-4">
               <div className="flex-shrink-0 w-10 h-10 rounded-full bg-honey-500 flex items-center justify-center">
-                <Bot className="w-5 h-5 text-white" />
+                <Bot className="w-5 h-5 text-nog-900" />
               </div>
               <div className="p-4 bg-nog-100 dark:bg-nog-700 rounded-2xl rounded-tl-sm">
                 <div className="flex items-center gap-2">
@@ -474,19 +535,27 @@ export function AgentPage() {
               placeholder={`Ask ${selectedPersona?.name || 'the agent'}...`}
               className="flex-1 px-4 py-3 bg-nog-100 dark:bg-nog-700 border-none rounded-xl text-sm text-nog-900 dark:text-nog-100 placeholder:text-nog-400 focus:outline-none focus:ring-2 focus:ring-honey-500 resize-none min-h-[44px] max-h-[200px]"
               disabled={loading || !aiAvailable}
+              aria-label="Message the agent"
               rows={1}
             />
             <button
               onClick={handleSubmit}
               disabled={!input.trim() || loading || !aiAvailable}
+              aria-label="Send message"
               className="p-3 bg-honey-500 text-nog-900 rounded-xl disabled:opacity-50 disabled:cursor-not-allowed hover:shadow-lg transition-all"
             >
               {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
             </button>
           </div>
-          <p className="text-center text-xs text-nog-400 mt-2">
-            Press Enter to send, Shift+Enter for new line
-          </p>
+          {aiAvailable === false ? (
+            <p className="text-center text-xs text-nog-400 mt-2">
+              AI is offline — configure in Settings → AI
+            </p>
+          ) : (
+            <p className="text-center text-xs text-nog-400 mt-2">
+              Press Enter to send, Shift+Enter for new line
+            </p>
+          )}
         </div>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { useState, createContext, useContext, useCallback, ReactNode } from 'react';
+import { useState, useEffect, useRef, createContext, useContext, useCallback, ReactNode } from 'react';
 import { AlertTriangle, Trash2, X } from 'lucide-react';
 
 interface ConfirmOptions {
@@ -98,10 +98,26 @@ function ConfirmDialog({
   };
 
   const styles = variantStyles[variant];
+  const cancelRef = useRef<HTMLButtonElement>(null);
+
+  // Focus the cancel button on mount and close on Escape
+  useEffect(() => {
+    cancelRef.current?.focus();
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCancel();
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [onCancel]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-fade-in">
+    <div
+      className="modal-overlay p-4"
+      onClick={onCancel}
+    >
       <div
+        role="dialog"
+        aria-modal="true"
         className="bg-white dark:bg-nog-800 rounded-xl shadow-xl max-w-md w-full animate-slide-up"
         onClick={(e) => e.stopPropagation()}
       >
@@ -128,6 +144,7 @@ function ConfirmDialog({
         </div>
         <div className="flex gap-3 p-4 border-t border-nog-200 dark:border-nog-700">
           <button
+            ref={cancelRef}
             onClick={onCancel}
             className="flex-1 px-4 py-2 text-nog-700 dark:text-nog-300 bg-nog-100 dark:bg-nog-700 hover:bg-nog-200 dark:hover:bg-nog-600 rounded-lg font-medium transition-colors"
           >

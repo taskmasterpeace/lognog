@@ -2,9 +2,11 @@ import { useState, useEffect } from 'react';
 import { useAuth, authFetch, ApiKey } from '../../../contexts/AuthContext';
 import { User, Key, Plus, Trash2, Copy, Check, AlertCircle, Loader2, Shield, Clock, XCircle, Lock } from 'lucide-react';
 import { InfoTip } from '../../../components/ui/InfoTip';
+import { useConfirm } from '../../../components/ui/ConfirmDialog';
 
 export default function AccountTab() {
   const { user, logout, getApiKeys, createApiKey, revokeApiKey } = useAuth();
+  const { confirm } = useConfirm();
 
   // API keys
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
@@ -110,7 +112,14 @@ export default function AccountTab() {
   };
 
   const handleRevokeKey = async (keyId: string) => {
-    if (!confirm('Are you sure you want to revoke this API key? This action cannot be undone.')) {
+    const confirmed = await confirm({
+      title: 'Revoke API Key',
+      message: 'Are you sure you want to revoke this API key? This action cannot be undone.',
+      confirmText: 'Revoke',
+      cancelText: 'Cancel',
+      variant: 'danger',
+    });
+    if (!confirmed) {
       return;
     }
 
@@ -179,10 +188,7 @@ export default function AccountTab() {
         </div>
 
         <div className="mt-6 pt-6 border-t border-nog-200 dark:border-nog-700">
-          <button
-            onClick={logout}
-            className="px-4 py-2 text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 font-medium transition-colors"
-          >
+          <button onClick={logout} className="btn-secondary">
             Sign Out
           </button>
         </div>
@@ -221,7 +227,7 @@ export default function AccountTab() {
               value={currentPassword}
               onChange={(e) => setCurrentPassword(e.target.value)}
               required
-              className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-800 text-nog-900 dark:text-nog-100"
+              className="input"
             />
           </div>
           <div>
@@ -236,7 +242,7 @@ export default function AccountTab() {
               onChange={(e) => setNewPassword(e.target.value)}
               required
               minLength={8}
-              className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-800 text-nog-900 dark:text-nog-100"
+              className="input"
             />
             <p className="mt-1 text-xs text-nog-500 dark:text-nog-400">
               Minimum 8 characters
@@ -253,7 +259,7 @@ export default function AccountTab() {
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
               required
-              className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-800 text-nog-900 dark:text-nog-100"
+              className="input"
             />
           </div>
           <button
@@ -351,7 +357,7 @@ export default function AccountTab() {
                   value={newKeyName}
                   onChange={(e) => setNewKeyName(e.target.value)}
                   placeholder="e.g., LogNog In Agent - Server 1"
-                  className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-800 text-nog-900 dark:text-nog-100"
+                  className="input"
                 />
               </div>
 
@@ -401,7 +407,7 @@ export default function AccountTab() {
                   onChange={(e) => setNewKeyExpiry(e.target.value)}
                   placeholder="Leave empty for no expiry"
                   min="1"
-                  className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-800 text-nog-900 dark:text-nog-100"
+                  className="input"
                 />
               </div>
 

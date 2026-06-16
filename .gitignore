@@ -98,7 +98,6 @@ api/scripts/test-*.ts
 # UI test/screenshot artifacts
 ui/*.png
 ui/*.cjs
-ui/src/components/charts/AreaChart.tsx
 
 # Playwright artifacts
 ui/e2e/screenshots/

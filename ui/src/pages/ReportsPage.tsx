@@ -61,6 +61,7 @@ export default function ReportsPage() {
   const [generateTitle, setGenerateTitle] = useState('Log Report');
   const [generateTimeRange, setGenerateTimeRange] = useState('-24h');
   const [generating, setGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState<string | null>(null);
   const [reportPreview, setReportPreview] = useState<string | null>(null);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [previewFullscreen, setPreviewFullscreen] = useState(false);
@@ -127,6 +128,7 @@ export default function ReportsPage() {
 
   const handleGenerateReport = async (mode: 'download' | 'preview') => {
     setGenerating(true);
+    setGenerateError(null);
     try {
       const blob = await generateReport(generateQuery, 'html', generateTitle, generateTimeRange);
       if (blob instanceof Blob) {
@@ -150,6 +152,7 @@ export default function ReportsPage() {
       }
     } catch (err) {
       console.error('Failed to generate report:', err);
+      setGenerateError(err instanceof Error ? err.message : 'Failed to generate report. Please try again.');
     } finally {
       setGenerating(false);
     }
@@ -195,9 +198,9 @@ export default function ReportsPage() {
   if (error) {
     return (
       <div className="p-8">
-        <div className="card border-red-200 bg-red-50 p-6">
-          <p className="font-semibold text-red-900">Failed to load reports</p>
-          <p className="text-sm text-red-700 mt-1">{String(error)}</p>
+        <div className="card border-red-200 bg-red-50 dark:bg-red-900/30 dark:border-red-800 dark:text-red-300 p-6">
+          <p className="font-semibold text-red-900 dark:text-red-200">Failed to load reports</p>
+          <p className="text-sm text-red-700 dark:text-red-300 mt-1">{String(error)}</p>
         </div>
       </div>
     );
@@ -253,15 +256,15 @@ export default function ReportsPage() {
 
         {/* Last Generated Report */}
         {reportPreview && (
-          <section className="card p-4 sm:p-6 border-honey-200 bg-honey-50">
+          <section className="card p-4 sm:p-6 border-honey-200 bg-honey-50 dark:bg-honey-900/20 dark:text-honey-200 dark:border-honey-800">
             <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 sm:w-10 sm:h-10 bg-honey-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                  <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-honey-600" />
+                <div className="w-9 h-9 sm:w-10 sm:h-10 bg-honey-100 dark:bg-honey-900/40 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-honey-600 dark:text-honey-400" />
                 </div>
                 <div className="min-w-0">
-                  <h3 className="font-semibold text-nog-900 text-sm sm:text-base">Last Generated Report</h3>
-                  <p className="text-xs sm:text-sm text-nog-500 truncate">{generateTitle}</p>
+                  <h3 className="font-semibold text-nog-900 dark:text-nog-100 text-sm sm:text-base">Last Generated Report</h3>
+                  <p className="text-xs sm:text-sm text-nog-500 dark:text-nog-400 truncate">{generateTitle}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2 ml-12 sm:ml-0">
@@ -300,10 +303,10 @@ export default function ReportsPage() {
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-start gap-2 sm:gap-3 min-w-0 flex-1">
                       <div className={`w-9 h-9 sm:w-10 sm:h-10 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                        report.enabled ? 'bg-honey-100' : 'bg-nog-100'
+                        report.enabled ? 'bg-honey-100 dark:bg-honey-900/40' : 'bg-nog-100 dark:bg-nog-700'
                       }`}>
                         <FileText className={`w-4 h-4 sm:w-5 sm:h-5 ${
-                          report.enabled ? 'text-honey-600' : 'text-nog-400'
+                          report.enabled ? 'text-honey-600 dark:text-honey-400' : 'text-nog-400 dark:text-nog-500'
                         }`} />
                       </div>
                       <div className="min-w-0 flex-1">
@@ -334,8 +337,8 @@ export default function ReportsPage() {
                         onClick={() => toggleMutation.mutate({ id: report.id, enabled: !report.enabled })}
                         className={`p-1.5 sm:p-2 rounded-lg transition-colors ${
                           report.enabled
-                            ? 'text-honey-600 bg-honey-50 hover:bg-honey-100'
-                            : 'text-nog-400 bg-nog-100 hover:bg-nog-200'
+                            ? 'text-honey-600 dark:text-honey-400 bg-honey-50 dark:bg-honey-900/20 hover:bg-honey-100 dark:hover:bg-honey-900/40'
+                            : 'text-nog-400 dark:text-nog-500 bg-nog-100 dark:bg-nog-700 hover:bg-nog-200 dark:hover:bg-nog-600'
                         }`}
                         title={report.enabled ? 'Pause schedule' : 'Enable schedule'}
                       >
@@ -370,15 +373,15 @@ export default function ReportsPage() {
         </section>
 
         {/* Info Section */}
-        <section className="card p-4 sm:p-6 bg-honey-50 border-honey-100">
+        <section className="card p-4 sm:p-6 bg-honey-50 border-honey-100 dark:bg-honey-900/20 dark:text-honey-200 dark:border-honey-800">
           <div className="flex items-start gap-2 sm:gap-3">
-            <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-honey-600 mt-0.5 flex-shrink-0" />
+            <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-honey-600 dark:text-honey-400 mt-0.5 flex-shrink-0" />
             <div>
-              <h3 className="font-semibold text-honey-900 mb-1 text-sm sm:text-base">Email Delivery</h3>
-              <p className="text-xs sm:text-sm text-honey-800">
+              <h3 className="font-semibold text-honey-900 dark:text-honey-200 mb-1 text-sm sm:text-base">Email Delivery</h3>
+              <p className="text-xs sm:text-sm text-honey-800 dark:text-honey-300">
                 Scheduled reports require SMTP configuration. Set these environment variables:
               </p>
-              <code className="block mt-2 text-[10px] sm:text-xs bg-honey-100 text-honey-900 p-2 rounded font-mono overflow-x-auto">
+              <code className="block mt-2 text-[10px] sm:text-xs bg-honey-100 dark:bg-honey-900/40 text-honey-900 dark:text-honey-200 p-2 rounded font-mono overflow-x-auto">
                 SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM
               </code>
             </div>
@@ -470,12 +473,12 @@ export default function ReportsPage() {
 
       {/* Generate Report Modal */}
       {showGenerateModal && (
-        <div className="modal-overlay" onClick={() => setShowGenerateModal(false)}>
+        <div className="modal-overlay" onClick={() => { setShowGenerateModal(false); setGenerateError(null); }}>
           <div className="modal animate-slide-up w-[calc(100%-2rem)] max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-nog-900 dark:text-nog-100">Generate Report</h3>
-                <button onClick={() => setShowGenerateModal(false)} className="btn-ghost p-1">
+                <button onClick={() => { setShowGenerateModal(false); setGenerateError(null); }} className="btn-ghost p-1">
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -523,10 +526,17 @@ export default function ReportsPage() {
                   ))}
                 </div>
               </div>
+
+              {generateError && (
+                <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 dark:bg-red-900/30 dark:border-red-800 p-3">
+                  <AlertCircle className="w-4 h-4 text-red-600 dark:text-red-400 mt-0.5 flex-shrink-0" />
+                  <p className="text-xs sm:text-sm text-red-700 dark:text-red-300">{generateError}</p>
+                </div>
+              )}
             </div>
 
             <div className="modal-footer flex-wrap gap-2">
-              <button onClick={() => setShowGenerateModal(false)} className="btn-secondary flex-1 sm:flex-none justify-center">
+              <button onClick={() => { setShowGenerateModal(false); setGenerateError(null); }} className="btn-secondary flex-1 sm:flex-none justify-center">
                 Cancel
               </button>
               <button
@@ -605,6 +615,7 @@ export default function ReportsPage() {
             <div className="flex-1 overflow-auto bg-nog-100 dark:bg-nog-900 p-4">
               <iframe
                 srcDoc={reportPreview}
+                sandbox="allow-same-origin"
                 className="w-full h-full min-h-[500px] bg-white rounded-lg shadow-inner border border-nog-200"
                 title="Report Preview"
               />

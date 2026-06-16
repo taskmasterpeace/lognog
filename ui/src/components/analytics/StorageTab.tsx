@@ -228,7 +228,7 @@ export default function StorageTab() {
           </div>
           <AreaChart
             data={trendData}
-            series={[{ name: 'Data Size', dataKey: 'bytes', color: '#f59e0b' }]}
+            series={[{ name: 'Data Size', dataKey: 'bytes', color: '#C8862B' }]}
             xAxisKey="day"
             height={288}
             darkMode={isDarkMode}
@@ -250,7 +250,7 @@ export default function StorageTab() {
             height={288}
             darkMode={isDarkMode}
             horizontal={true}
-            barColor="#f59e0b"
+            barColor="#C8862B"
             showValues={false}
             onBarClick={(category) => {
               const idx = indexData.find((i) => i.name === category);

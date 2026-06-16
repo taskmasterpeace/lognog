@@ -21,6 +21,16 @@ export const CHART_PALETTE: string[] = [
 export const CHART_ACCENT = '#C8862B'; // honey-500
 
 /**
+ * Non-semantic intensity ramp for activity heatmaps (low → high).
+ * Warm honey gradient: nog-100 cream → honey-400 gold → honey-700 deep caramel.
+ */
+export const HEATMAP_HONEY_RAMP: [string, string, string] = [
+  '#F5F0E8', // nog-100
+  '#DCA23E', // honey-400
+  '#845117', // honey-700
+];
+
+/**
  * Theme-aware colors for chart chrome (axes, gridlines, labels, tooltips).
  * Derived from the warm `nog` ramp so charts never go cool-grey.
  */
@@ -37,6 +47,10 @@ export interface ChartTheme {
   tooltipBg: string;
   /** Tooltip border. */
   tooltipBorder: string;
+  /** axisPointer crosshair label background. */
+  axisPointerBg: string;
+  /** Zebra split-area shading (two alternating warm tints). */
+  splitArea: [string, string];
 }
 
 const DARK: ChartTheme = {
@@ -46,6 +60,8 @@ const DARK: ChartTheme = {
   grid: '#3D2A18',        // nog-700
   tooltipBg: 'rgba(45, 31, 19, 0.95)',  // nog-800
   tooltipBorder: '#5A3F24', // nog-600
+  axisPointerBg: '#5A3F24', // nog-600
+  splitArea: ['rgba(61, 42, 24, 0.2)', 'rgba(90, 63, 36, 0.2)'], // nog-700/nog-600 tints
 };
 
 const LIGHT: ChartTheme = {
@@ -55,6 +71,8 @@ const LIGHT: ChartTheme = {
   grid: '#E8DFD0',        // nog-200
   tooltipBg: 'rgba(255, 255, 255, 0.95)',
   tooltipBorder: '#E8DFD0', // nog-200
+  axisPointerBg: '#8B7355', // nog-500
+  splitArea: ['rgba(250, 248, 245, 0.6)', 'rgba(245, 240, 232, 0.6)'], // nog-50/nog-100 tints
 };
 
 /** Get theme-aware chart chrome colors for the active mode. */

@@ -723,7 +723,7 @@ export default function OnboardingPage() {
       {/* Main Content */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 py-8">
         {/* Master Copy All Button */}
-        <div className="bg-honey-50 dark:from-honey-900/20 dark:to-honey-900/20 border border-honey-200 dark:border-honey-800 rounded-xl p-6 mb-8">
+        <div className="bg-honey-50 dark:bg-honey-900/20 border border-honey-200 dark:border-honey-800 rounded-xl p-6 mb-8">
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-start gap-4">
               <div className="p-3 bg-white dark:bg-nog-800 rounded-lg shadow-sm">
@@ -801,38 +801,34 @@ export default function OnboardingPage() {
           <h2 className="text-lg font-semibold text-nog-900 dark:text-nog-100 mb-4">
             Current Integrations
           </h2>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+          <div className="table-container">
+            <table className="table">
               <thead>
-                <tr className="border-b border-nog-200 dark:border-nog-700">
-                  <th className="text-left py-2 px-3 font-medium text-nog-700 dark:text-nog-300">App</th>
-                  <th className="text-left py-2 px-3 font-medium text-nog-700 dark:text-nog-300">Index Name</th>
-                  <th className="text-left py-2 px-3 font-medium text-nog-700 dark:text-nog-300">Status</th>
+                <tr>
+                  <th>App</th>
+                  <th>Index Name</th>
+                  <th>Status</th>
                 </tr>
               </thead>
               <tbody>
-                <tr className="border-b border-nog-100 dark:border-nog-700/50">
-                  <td className="py-2 px-3 text-nog-900 dark:text-nog-100">Hey You're Hired</td>
-                  <td className="py-2 px-3">
-                    <code className="text-xs bg-nog-100 dark:bg-nog-900 px-2 py-0.5 rounded">
-                      hey-youre-hired
-                    </code>
+                <tr>
+                  <td className="text-nog-900 dark:text-nog-100">Hey You're Hired</td>
+                  <td>
+                    <code className="code text-xs">hey-youre-hired</code>
                   </td>
-                  <td className="py-2 px-3">
+                  <td>
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
                       Live
                     </span>
                   </td>
                 </tr>
-                <tr className="border-b border-nog-100 dark:border-nog-700/50">
-                  <td className="py-2 px-3 text-nog-900 dark:text-nog-100">Directors Palette</td>
-                  <td className="py-2 px-3">
-                    <code className="text-xs bg-nog-100 dark:bg-nog-900 px-2 py-0.5 rounded">
-                      directors-palette
-                    </code>
+                <tr>
+                  <td className="text-nog-900 dark:text-nog-100">Directors Palette</td>
+                  <td>
+                    <code className="code text-xs">directors-palette</code>
                   </td>
-                  <td className="py-2 px-3">
-                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-honey-100 text-honey-700 dark:bg-honey-900/30 dark:text-honey-400">
+                  <td>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-nog-100 text-nog-600 dark:bg-nog-700 dark:text-nog-400">
                       Pending
                     </span>
                   </td>

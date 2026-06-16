@@ -116,7 +116,7 @@ export default function GeoIPTab() {
                   value={geoipTestIp}
                   onChange={(e) => setGeoipTestIp(e.target.value)}
                   placeholder="8.8.8.8"
-                  className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-800 text-nog-900 dark:text-nog-100 font-mono"
+                  className="input font-mono"
                 />
               </div>
               <button

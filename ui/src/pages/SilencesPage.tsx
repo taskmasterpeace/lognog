@@ -19,6 +19,7 @@ import {
   AlertSilence,
   Alert,
 } from '../api/client';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 
 const DURATION_OPTIONS = [
   { label: '1 hour', value: '1h' },
@@ -31,8 +32,9 @@ const DURATION_OPTIONS = [
 export default function SilencesPage() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const queryClient = useQueryClient();
+  const { confirm } = useConfirm();
 
-  const { data: silences, isLoading } = useQuery({
+  const { data: silences, isLoading, error } = useQuery({
     queryKey: ['silences'],
     queryFn: () => getSilences(true), // Active only
   });
@@ -49,8 +51,15 @@ export default function SilencesPage() {
     },
   });
 
-  const handleDelete = (id: string) => {
-    if (confirm('Are you sure you want to remove this silence?')) {
+  const handleDelete = async (id: string) => {
+    const confirmed = await confirm({
+      title: 'Remove Silence',
+      message: 'Are you sure you want to remove this silence? Affected alerts will resume firing.',
+      confirmText: 'Remove',
+      cancelText: 'Cancel',
+      variant: 'danger',
+    });
+    if (confirmed) {
       deleteMutation.mutate(id);
     }
   };
@@ -60,22 +69,25 @@ export default function SilencesPage() {
     const end = new Date(endsAt);
     const now = new Date();
     const diff = end.getTime() - now.getTime();
+    if (diff <= 0) return 'Expired';
+    const minutes = Math.floor(diff / (1000 * 60));
     const hours = Math.floor(diff / (1000 * 60 * 60));
     const days = Math.floor(hours / 24);
 
     if (days > 0) return `${days}d ${hours % 24}h remaining`;
     if (hours > 0) return `${hours}h remaining`;
-    return 'Expired';
+    if (minutes > 0) return `${minutes}m remaining`;
+    return '< 1m remaining';
   };
 
   const getLevelIcon = (level: string) => {
     switch (level) {
       case 'global':
-        return <Globe className="h-5 w-5 text-honey-500" />;
+        return <Globe className="h-5 w-5 text-teal-500" />;
       case 'host':
         return <Server className="h-5 w-5 text-honey-500" />;
       case 'alert':
-        return <AlertCircle className="h-5 w-5 text-honey-500" />;
+        return <AlertCircle className="h-5 w-5 text-orange-500" />;
       default:
         return <BellOff className="h-5 w-5" />;
     }
@@ -83,9 +95,9 @@ export default function SilencesPage() {
 
   const getLevelBadge = (level: string) => {
     const colors = {
-      global: 'bg-honey-100 text-honey-700 dark:bg-honey-900/30 dark:text-honey-300',
+      global: 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-300',
       host: 'bg-honey-100 text-honey-700 dark:bg-honey-900/30 dark:text-honey-300',
-      alert: 'bg-honey-100 text-honey-700 dark:bg-honey-900/30 dark:text-honey-300',
+      alert: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300',
     };
     return (
       <span className={`px-2 py-1 text-xs font-medium rounded ${colors[level as keyof typeof colors] || 'bg-nog-100 text-nog-700 dark:bg-nog-800 dark:text-nog-300'}`}>
@@ -131,7 +143,19 @@ export default function SilencesPage() {
         </div>
       )}
 
-      {!isLoading && silences && silences.length === 0 && (
+      {!isLoading && error && (
+        <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4 flex items-start gap-3">
+          <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
+          <div>
+            <h3 className="text-sm font-medium text-red-700 dark:text-red-400">Failed to load silences</h3>
+            <p className="text-sm text-red-600 dark:text-red-400/80 mt-1">
+              {error instanceof Error ? error.message : 'An unexpected error occurred.'}
+            </p>
+          </div>
+        </div>
+      )}
+
+      {!isLoading && !error && silences && silences.length === 0 && (
         <div className="bg-white dark:bg-nog-800 rounded-lg shadow p-12 text-center">
           <BellOff className="h-16 w-16 text-nog-300 dark:text-nog-600 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-nog-900 dark:text-nog-100 mb-2">No active silences</h3>
@@ -148,7 +172,7 @@ export default function SilencesPage() {
         </div>
       )}
 
-      {!isLoading && silences && silences.length > 0 && (
+      {!isLoading && !error && silences && silences.length > 0 && (
         <div className="space-y-4">
           {silences.map((silence) => (
             <div
@@ -184,6 +208,7 @@ export default function SilencesPage() {
                 </div>
                 <button
                   onClick={() => handleDelete(silence.id)}
+                  aria-label={`Remove silence for ${getTargetDisplay(silence)}`}
                   className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                   title="Remove silence"
                 >
@@ -239,13 +264,14 @@ function CreateSilenceModal({ onClose, alerts }: CreateSilenceModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+    <div className="modal-overlay">
       <div className="bg-white dark:bg-nog-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div className="p-6 border-b border-nog-200 dark:border-nog-700">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold text-nog-900 dark:text-nog-100">Create Silence</h2>
             <button
               onClick={onClose}
+              aria-label="Close dialog"
               className="p-2 hover:bg-nog-100 dark:hover:bg-nog-700 rounded-lg transition-colors"
             >
               <X className="h-5 w-5" />

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import {
   User,
@@ -39,10 +39,23 @@ type TabId = typeof BASE_TABS[number]['id'] | typeof ADMIN_TABS[number]['id'];
 
 export default function SettingsPage() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<TabId>('preferences');
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const isAdmin = user?.role === 'admin';
   const TABS = isAdmin ? [...BASE_TABS, ...ADMIN_TABS] : BASE_TABS;
+
+  // Active tab is backed by the URL (?tab=...) so it's linkable and survives refresh.
+  const tabParam = searchParams.get('tab');
+  const isValidTab = TABS.some((t) => t.id === tabParam);
+  const activeTab = (isValidTab ? tabParam : 'preferences') as TabId;
+
+  const setActiveTab = (id: TabId) => {
+    setSearchParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('tab', id);
+      return next;
+    });
+  };
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-4xl mx-auto">
@@ -52,13 +65,17 @@ export default function SettingsPage() {
 
       {/* Tab Navigation */}
       <div className="mb-6 border-b border-nog-200 dark:border-nog-700">
-        <nav className="flex gap-1 overflow-x-auto pb-px -mb-px" aria-label="Settings tabs">
+        <nav role="tablist" className="flex gap-1 overflow-x-auto pb-px -mb-px" aria-label="Settings tabs">
           {TABS.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
+                role="tab"
+                id={`settings-tab-${tab.id}`}
+                aria-selected={isActive}
+                aria-controls={`settings-panel-${tab.id}`}
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2 px-4 py-2.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
                   isActive
@@ -75,7 +92,12 @@ export default function SettingsPage() {
       </div>
 
       {/* Tab Content */}
-      <div className="min-h-[400px]">
+      <div
+        role="tabpanel"
+        id={`settings-panel-${activeTab}`}
+        aria-labelledby={`settings-tab-${activeTab}`}
+        className="min-h-[400px]"
+      >
         {activeTab === 'preferences' && <PreferencesTab />}
         {activeTab === 'account' && <AccountTab />}
         {activeTab === 'notifications' && <NotificationsTab />}

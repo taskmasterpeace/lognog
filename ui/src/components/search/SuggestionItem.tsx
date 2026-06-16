@@ -11,12 +11,12 @@ interface SuggestionItemProps {
 
 const CATEGORY_STYLES: Record<SuggestionCategory, { bg: string; text: string; label: string }> = {
   command: { bg: 'bg-honey-500/20', text: 'text-honey-400', label: 'Cmd' },
-  aggregation: { bg: 'bg-purple-500/20', text: 'text-purple-400', label: 'Agg' },
-  'eval-function': { bg: 'bg-green-500/20', text: 'text-green-400', label: 'Func' },
-  field: { bg: 'bg-yellow-500/20', text: 'text-yellow-400', label: 'Field' },
-  value: { bg: 'bg-cyan-500/20', text: 'text-cyan-400', label: 'Val' },
+  aggregation: { bg: 'bg-honey-500/20', text: 'text-honey-400', label: 'Agg' },
+  'eval-function': { bg: 'bg-emerald-500/20', text: 'text-emerald-400', label: 'Func' },
+  field: { bg: 'bg-honey-500/20', text: 'text-honey-400', label: 'Field' },
+  value: { bg: 'bg-emerald-500/20', text: 'text-emerald-400', label: 'Val' },
   operator: { bg: 'bg-honey-500/20', text: 'text-honey-400', label: 'Op' },
-  keyword: { bg: 'bg-pink-500/20', text: 'text-pink-400', label: 'Key' },
+  keyword: { bg: 'bg-nog-500/20', text: 'text-nog-300', label: 'Key' },
   history: { bg: 'bg-nog-500/20', text: 'text-nog-400', label: 'History' },
 };
 

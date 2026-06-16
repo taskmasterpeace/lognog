@@ -123,26 +123,40 @@ export default function SystemTab() {
             </div>
           </div>
 
-          {/* Configuration Info */}
-          <div className="pt-6 border-t border-nog-200 dark:border-nog-700">
-            <h3 className="text-sm font-semibold text-nog-900 dark:text-nog-100 mb-4">
-              Configuration
-            </h3>
-            <div className="space-y-3 text-sm">
-              <div className="flex justify-between py-2 border-b border-nog-100 dark:border-nog-700">
-                <span className="text-nog-600 dark:text-nog-400">Data Retention</span>
-                <span className="font-medium text-nog-900 dark:text-nog-100">90 days</span>
-              </div>
-              <div className="flex justify-between py-2 border-b border-nog-100 dark:border-nog-700">
-                <span className="text-nog-600 dark:text-nog-400">Rate Limit</span>
-                <span className="font-medium text-nog-900 dark:text-nog-100">1000 req/min</span>
-              </div>
-              <div className="flex justify-between py-2">
-                <span className="text-nog-600 dark:text-nog-400">Max Batch Size</span>
-                <span className="font-medium text-nog-900 dark:text-nog-100">10,000 logs</span>
+          {/* Configuration Info — only render values the API actually reports */}
+          {(systemStats.data_retention_days || systemStats.rate_limit_per_min || systemStats.max_batch_size) && (
+            <div className="pt-6 border-t border-nog-200 dark:border-nog-700">
+              <h3 className="text-sm font-semibold text-nog-900 dark:text-nog-100 mb-4">
+                Configuration
+              </h3>
+              <div className="space-y-3 text-sm">
+                {systemStats.data_retention_days && (
+                  <div className="flex justify-between py-2 border-b border-nog-100 dark:border-nog-700">
+                    <span className="text-nog-600 dark:text-nog-400">Data Retention</span>
+                    <span className="font-medium text-nog-900 dark:text-nog-100">
+                      {systemStats.data_retention_days} days
+                    </span>
+                  </div>
+                )}
+                {systemStats.rate_limit_per_min && (
+                  <div className="flex justify-between py-2 border-b border-nog-100 dark:border-nog-700">
+                    <span className="text-nog-600 dark:text-nog-400">Rate Limit</span>
+                    <span className="font-medium text-nog-900 dark:text-nog-100">
+                      {systemStats.rate_limit_per_min} req/min
+                    </span>
+                  </div>
+                )}
+                {systemStats.max_batch_size && (
+                  <div className="flex justify-between py-2">
+                    <span className="text-nog-600 dark:text-nog-400">Max Batch Size</span>
+                    <span className="font-medium text-nog-900 dark:text-nog-100">
+                      {systemStats.max_batch_size.toLocaleString()} logs
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
-          </div>
+          )}
 
           {/* Internal Logging Settings */}
           <div className="pt-6 border-t border-nog-200 dark:border-nog-700">

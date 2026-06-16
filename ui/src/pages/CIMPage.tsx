@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Database,
@@ -30,6 +30,7 @@ import {
   type DataModel,
   type FieldMapping,
 } from '../api/client';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 
 type TabType = 'models' | 'mappings';
 
@@ -49,13 +50,16 @@ const categoryColors: Record<string, string> = {
   custom: 'text-nog-600 bg-nog-100 dark:text-nog-400 dark:bg-nog-700',
 };
 
+// Distinct, brand-safe tones per field type so the chip conveys information.
+// `array` is info-semantic, so it routes through the shared `.badge-info` class
+// (teal) instead of an ad-hoc teal- utility.
 const fieldTypeColors: Record<string, string> = {
-  string: 'text-green-600 bg-green-50 dark:text-green-400 dark:bg-green-900/30',
+  string: 'text-emerald-600 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-900/30',
   number: 'text-honey-600 bg-honey-50 dark:text-honey-400 dark:bg-honey-900/30',
-  boolean: 'text-honey-600 bg-honey-50 dark:text-honey-400 dark:bg-honey-900/30',
-  timestamp: 'text-honey-600 bg-honey-50 dark:text-honey-400 dark:bg-honey-900/30',
-  ip: 'text-honey-600 bg-honey-50 dark:text-honey-400 dark:bg-honey-900/30',
-  array: 'text-teal-600 bg-teal-50 dark:text-teal-400 dark:bg-teal-900/30',
+  boolean: 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-900/30',
+  timestamp: 'text-orange-600 bg-orange-50 dark:text-orange-400 dark:bg-orange-900/30',
+  ip: 'text-nog-500 bg-nog-100 dark:bg-nog-700 dark:text-nog-400',
+  array: 'badge-info',
 };
 
 export default function CIMPage() {
@@ -71,6 +75,7 @@ export default function CIMPage() {
   const [modelFilter, setModelFilter] = useState('');
 
   const queryClient = useQueryClient();
+  const { confirm } = useConfirm();
 
   // Fetch stats
   const { data: stats } = useQuery({
@@ -291,17 +296,27 @@ export default function CIMPage() {
                           <div className="flex items-center gap-1">
                             <button
                               onClick={(e) => { e.stopPropagation(); setEditingModel(model); setShowModelForm(true); }}
+                              aria-label="Edit data model"
+                              title="Edit data model"
                               className="p-1.5 hover:bg-nog-100 dark:hover:bg-nog-700 rounded-lg transition-colors"
                             >
                               <Edit2 className="w-4 h-4 text-nog-500" />
                             </button>
                             <button
-                              onClick={(e) => {
+                              onClick={async (e) => {
                                 e.stopPropagation();
-                                if (confirm('Delete this data model?')) {
+                                const ok = await confirm({
+                                  title: 'Delete Data Model',
+                                  message: `Delete the "${model.name}" data model? This action cannot be undone.`,
+                                  confirmText: 'Delete',
+                                  variant: 'danger',
+                                });
+                                if (ok) {
                                   deleteModelMutation.mutate(model.name);
                                 }
                               }}
+                              aria-label="Delete data model"
+                              title="Delete data model"
                               className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                             >
                               <Trash2 className="w-4 h-4 text-red-500" />
@@ -448,7 +463,10 @@ export default function CIMPage() {
                           </span>
                         </td>
                         <td className="px-4 py-3">
-                          <span className="font-mono text-sm text-nog-900 dark:text-nog-100">
+                          <span
+                            className="block max-w-[200px] truncate font-mono text-sm text-nog-900 dark:text-nog-100"
+                            title={mapping.source_field}
+                          >
                             {mapping.source_field}
                           </span>
                         </td>
@@ -456,7 +474,10 @@ export default function CIMPage() {
                           <ArrowRightLeft className="w-4 h-4 text-nog-400 mx-auto" />
                         </td>
                         <td className="px-4 py-3">
-                          <span className="font-mono text-sm text-honey-600 dark:text-honey-400">
+                          <span
+                            className="block max-w-[200px] truncate font-mono text-sm text-honey-600 dark:text-honey-400"
+                            title={mapping.cim_field}
+                          >
                             {mapping.cim_field}
                           </span>
                         </td>
@@ -476,25 +497,39 @@ export default function CIMPage() {
                         </td>
                         <td className="px-4 py-3">
                           {mapping.enabled ? (
-                            <CheckCircle className="w-4 h-4 text-honey-500" />
+                            <CheckCircle className="w-4 h-4 text-emerald-500" aria-label="Enabled" role="img">
+                              <title>Enabled</title>
+                            </CheckCircle>
                           ) : (
-                            <XCircle className="w-4 h-4 text-nog-400" />
+                            <XCircle className="w-4 h-4 text-nog-400" aria-label="Disabled" role="img">
+                              <title>Disabled</title>
+                            </XCircle>
                           )}
                         </td>
                         <td className="px-4 py-3">
                           <div className="flex items-center justify-end gap-2">
                             <button
                               onClick={() => { setEditingMapping(mapping); setShowMappingForm(true); }}
+                              aria-label="Edit field mapping"
+                              title="Edit field mapping"
                               className="p-1.5 hover:bg-nog-100 dark:hover:bg-nog-700 rounded-lg transition-colors"
                             >
                               <Edit2 className="w-4 h-4 text-nog-500" />
                             </button>
                             <button
-                              onClick={() => {
-                                if (confirm('Delete this field mapping?')) {
+                              onClick={async () => {
+                                const ok = await confirm({
+                                  title: 'Delete Field Mapping',
+                                  message: `Delete the mapping "${mapping.source_field} → ${mapping.cim_field}"? This action cannot be undone.`,
+                                  confirmText: 'Delete',
+                                  variant: 'danger',
+                                });
+                                if (ok) {
                                   deleteMappingMutation.mutate(mapping.id);
                                 }
                               }}
+                              aria-label="Delete field mapping"
+                              title="Delete field mapping"
                               className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                             >
                               <Trash2 className="w-4 h-4 text-red-500" />
@@ -594,14 +629,28 @@ function DataModelFormModal({
     mutation.mutate();
   };
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white dark:bg-nog-800 rounded-xl shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
+    <div className="modal-overlay" onClick={onClose}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={model ? 'Edit Data Model' : 'Create Data Model'}
+        className="modal max-w-2xl max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between p-4 border-b border-nog-200 dark:border-nog-700">
           <h2 className="text-lg font-semibold text-nog-900 dark:text-nog-100">
             {model ? 'Edit Data Model' : 'Create Data Model'}
           </h2>
-          <button onClick={onClose} className="text-nog-400 hover:text-nog-600">
+          <button onClick={onClose} aria-label="Close" className="text-nog-400 hover:text-nog-600">
             <XCircle className="w-5 h-5" />
           </button>
         </div>
@@ -769,14 +818,28 @@ function FieldMappingFormModal({
     mutation.mutate();
   };
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white dark:bg-nog-800 rounded-xl shadow-xl w-full max-w-lg mx-4">
+    <div className="modal-overlay" onClick={onClose}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={mapping ? 'Edit Field Mapping' : 'Create Field Mapping'}
+        className="modal max-w-lg"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between p-4 border-b border-nog-200 dark:border-nog-700">
           <h2 className="text-lg font-semibold text-nog-900 dark:text-nog-100">
             {mapping ? 'Edit Field Mapping' : 'Create Field Mapping'}
           </h2>
-          <button onClick={onClose} className="text-nog-400 hover:text-nog-600">
+          <button onClick={onClose} aria-label="Close" className="text-nog-400 hover:text-nog-600">
             <XCircle className="w-5 h-5" />
           </button>
         </div>

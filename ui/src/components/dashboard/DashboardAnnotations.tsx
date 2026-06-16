@@ -153,7 +153,7 @@ function AddAnnotationModal({ onAdd, onCancel }: AddAnnotationModalProps) {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [timestamp, setTimestamp] = useState(new Date().toISOString().slice(0, 16));
-  const [color, setColor] = useState('#3B82F6');
+  const [color, setColor] = useState('#C8862B');
 
   const handleSubmit = () => {
     if (!title.trim()) return;
@@ -224,7 +224,7 @@ function AddAnnotationModal({ onAdd, onCancel }: AddAnnotationModalProps) {
                 Color
               </label>
               <div className="flex gap-2">
-                {['#3B82F6', '#22C55E', '#F59E0B', '#EF4444', '#8B5CF6'].map((c) => (
+                {['#C8862B', '#22C55E', '#F59E0B', '#EF4444', '#0D9488'].map((c) => (
                   <button
                     key={c}
                     onClick={() => setColor(c)}

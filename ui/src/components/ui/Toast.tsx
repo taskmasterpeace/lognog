@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { CheckCircle2, AlertCircle, Info, X, XCircle } from 'lucide-react';
 
 export type ToastType = 'success' | 'error' | 'warning' | 'info';
@@ -21,6 +21,13 @@ interface ToastProps {
 export function Toast({ id, type, title, message, duration = 5000, onClose }: ToastProps) {
   const [isExiting, setIsExiting] = useState(false);
 
+  const handleClose = useCallback(() => {
+    setIsExiting(true);
+    setTimeout(() => {
+      onClose(id);
+    }, 200); // Match animation duration
+  }, [id, onClose]);
+
   useEffect(() => {
     if (duration > 0) {
       const timer = setTimeout(() => {
@@ -28,14 +35,7 @@ export function Toast({ id, type, title, message, duration = 5000, onClose }: To
       }, duration);
       return () => clearTimeout(timer);
     }
-  }, [duration]);
-
-  const handleClose = () => {
-    setIsExiting(true);
-    setTimeout(() => {
-      onClose(id);
-    }, 200); // Match animation duration
-  };
+  }, [duration, handleClose]);
 
   const icons = {
     success: CheckCircle2,
@@ -73,6 +73,7 @@ export function Toast({ id, type, title, message, duration = 5000, onClose }: To
       </div>
       <button
         onClick={handleClose}
+        aria-label="Dismiss notification"
         className="flex-shrink-0 p-1 hover:bg-black/5 dark:hover:bg-white/10 rounded transition-colors"
       >
         <X className="w-4 h-4" />

@@ -119,6 +119,19 @@ export default function DataSourcesPage() {
     setSearchParams({ tab }, { replace: true });
   };
 
+  // Close the setup modal on Escape
+  useEffect(() => {
+    if (!showSetupModal) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowSetupModal(false);
+        setSelectedTemplate(null);
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [showSetupModal]);
+
   const { data: templatesByCategory, isLoading } = useQuery({
     queryKey: ['templates', 'by-category'],
     queryFn: getTemplatesByCategory,
@@ -277,7 +290,7 @@ export default function DataSourcesPage() {
                       </Link>.
                     </p>
                     <div className="flex flex-wrap items-center gap-2">
-                      <code className="text-xs bg-nog-800 text-nog-100 px-3 py-1.5 rounded font-mono">
+                      <code className="code text-xs">
                         curl -H "X-Index: my-app" -H "X-API-Key: ..." /api/ingest/http
                       </code>
                       <Link
@@ -365,6 +378,7 @@ export default function DataSourcesPage() {
               </div>
             ) : activeSources && activeSources.sources.length > 0 ? (
               <div className="bg-white dark:bg-nog-800 rounded-xl border border-nog-200 dark:border-nog-700 overflow-hidden">
+                <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-nog-50 dark:bg-nog-900 border-b border-nog-200 dark:border-nog-700">
                     <tr>
@@ -380,13 +394,13 @@ export default function DataSourcesPage() {
                       <th className="px-4 py-3 text-left text-xs font-semibold text-nog-500 dark:text-nog-400 uppercase tracking-wide">
                         Protocol
                       </th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold text-nog-500 dark:text-nog-400 uppercase tracking-wide">
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-nog-500 dark:text-nog-400 uppercase tracking-wide whitespace-nowrap">
                         Logs (7d)
                       </th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold text-nog-500 dark:text-nog-400 uppercase tracking-wide">
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-nog-500 dark:text-nog-400 uppercase tracking-wide whitespace-nowrap">
                         Errors
                       </th>
-                      <th className="px-4 py-3 text-right text-xs font-semibold text-nog-500 dark:text-nog-400 uppercase tracking-wide">
+                      <th className="px-4 py-3 text-right text-xs font-semibold text-nog-500 dark:text-nog-400 uppercase tracking-wide whitespace-nowrap">
                         Last Seen
                       </th>
                       <th className="px-4 py-3"></th>
@@ -409,10 +423,16 @@ export default function DataSourcesPage() {
                             </div>
                           </td>
                           <td className="px-4 py-3">
-                            <div className="font-medium text-nog-900 dark:text-nog-100">
+                            <div
+                              className="font-medium text-nog-900 dark:text-nog-100 max-w-[200px] truncate"
+                              title={source.app_name}
+                            >
                               {source.app_name}
                             </div>
-                            <div className="text-xs text-nog-500 dark:text-nog-400">
+                            <div
+                              className="text-xs text-nog-500 dark:text-nog-400 max-w-[200px] truncate"
+                              title={source.hostname}
+                            >
                               {source.hostname}
                             </div>
                           </td>
@@ -492,6 +512,7 @@ export default function DataSourcesPage() {
                     })}
                   </tbody>
                 </table>
+                </div>
               </div>
             ) : (
               <div className="bg-white dark:bg-nog-800 rounded-xl border border-nog-200 dark:border-nog-700 overflow-hidden">
@@ -519,7 +540,7 @@ export default function DataSourcesPage() {
                     <p className="text-sm text-nog-600 dark:text-nog-400 mb-3">
                       Point any syslog-compatible device to LogNog.
                     </p>
-                    <code className="block text-xs bg-nog-100 dark:bg-nog-700 text-nog-700 dark:text-nog-300 p-2 rounded font-mono mb-2">
+                    <code className="code block text-xs p-2 mb-2">
                       Port: UDP/TCP 514
                     </code>
                     <p className="text-xs text-nog-500 dark:text-nog-400">
@@ -538,7 +559,7 @@ export default function DataSourcesPage() {
                     <p className="text-sm text-nog-600 dark:text-nog-400 mb-3">
                       Send JSON logs with custom index names.
                     </p>
-                    <code className="block text-xs bg-nog-100 dark:bg-nog-700 text-nog-700 dark:text-nog-300 p-2 rounded font-mono mb-2 break-all">
+                    <code className="code block text-xs p-2 mb-2 break-all">
                       POST /api/ingest/http
                       <br />
                       X-Index: my-app
@@ -559,7 +580,7 @@ export default function DataSourcesPage() {
                     <p className="text-sm text-nog-600 dark:text-nog-400 mb-3">
                       Install on Windows/Linux to collect logs and events.
                     </p>
-                    <code className="block text-xs bg-nog-100 dark:bg-nog-700 text-nog-700 dark:text-nog-300 p-2 rounded font-mono mb-2">
+                    <code className="code block text-xs p-2 mb-2">
                       LogNogIn.exe init
                     </code>
                     <p className="text-xs text-nog-500 dark:text-nog-400">
@@ -710,8 +731,17 @@ export default function DataSourcesPage() {
 
       {/* Setup Modal */}
       {showSetupModal && selectedTemplate && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-nog-800 rounded-xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+        <div
+          className="modal-overlay"
+          onClick={() => { setShowSetupModal(false); setSelectedTemplate(null); }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={selectedTemplate.name}
+            className="modal max-w-4xl max-h-[90vh] overflow-hidden flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
             {/* Header */}
             <div className="p-6 border-b border-nog-200 dark:border-nog-700 flex items-center justify-between">
               <div className="flex items-center gap-3">
@@ -736,6 +766,7 @@ export default function DataSourcesPage() {
                   setShowSetupModal(false);
                   setSelectedTemplate(null);
                 }}
+                aria-label="Close"
                 className="p-2 hover:bg-nog-100 dark:hover:bg-nog-700 rounded-lg"
               >
                 <X className="w-5 h-5" />

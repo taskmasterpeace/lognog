@@ -12,6 +12,8 @@ export default function AiTab() {
   const [aiConfig, setAiConfig] = useState<any>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSaving, setAiSaving] = useState(false);
+  const [aiSaveSuccess, setAiSaveSuccess] = useState(false);
+  const [aiError, setAiError] = useState<string | null>(null);
   const [aiTestResult, setAiTestResult] = useState<any>(null);
   const [aiTesting, setAiTesting] = useState(false);
 
@@ -45,6 +47,7 @@ export default function AiTab() {
       }
     } catch (err) {
       console.error('Failed to load AI config:', err);
+      setAiError('Failed to load AI configuration.');
     } finally {
       setAiLoading(false);
     }
@@ -52,6 +55,8 @@ export default function AiTab() {
 
   const saveAiConfig = async (updates: any) => {
     setAiSaving(true);
+    setAiSaveSuccess(false);
+    setAiError(null);
     try {
       const response = await authFetch('/settings/ai', {
         method: 'PUT',
@@ -60,9 +65,15 @@ export default function AiTab() {
       });
       if (response.ok) {
         await loadAiConfig();
+        setAiSaveSuccess(true);
+        setTimeout(() => setAiSaveSuccess(false), 2000);
+      } else {
+        const data = await response.json().catch(() => ({}));
+        setAiError(data.error || 'Failed to save AI configuration.');
       }
     } catch (err) {
       console.error('Failed to save AI config:', err);
+      setAiError('Failed to connect to server.');
     } finally {
       setAiSaving(false);
     }
@@ -105,12 +116,28 @@ export default function AiTab() {
 
   return (
     <div className="space-y-6">
+      {/* Save error banner (applies to both sections) */}
+      {aiError && (
+        <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-800 flex items-center gap-2 text-red-700 dark:text-red-300 text-sm">
+          <AlertCircle className="w-4 h-4" />
+          {aiError}
+        </div>
+      )}
+
       {/* Ollama Configuration */}
       <section className="bg-white dark:bg-nog-800 rounded-xl shadow-sm border border-nog-200 dark:border-nog-700 p-6">
-        <h2 className="text-lg font-semibold text-nog-900 dark:text-nog-100 flex items-center gap-2 mb-4">
-          <Bot className="w-5 h-5" />
-          Ollama Configuration
-        </h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-nog-900 dark:text-nog-100 flex items-center gap-2">
+            <Bot className="w-5 h-5" />
+            Ollama Configuration
+          </h2>
+          {aiSaveSuccess && (
+            <span className="flex items-center gap-1 text-sm text-green-600 dark:text-green-400">
+              <Check className="w-4 h-4" />
+              Saved
+            </span>
+          )}
+        </div>
 
         <p className="text-sm text-nog-500 dark:text-nog-400 mb-6">
           Configure local Ollama instance for AI-powered features like natural language queries and dashboard insights.
@@ -131,11 +158,11 @@ export default function AiTab() {
                 value={localOllamaUrl}
                 onChange={(e) => setLocalOllamaUrl(e.target.value)}
                 placeholder="http://localhost:11434"
-                className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-800 text-nog-900 dark:text-nog-100 font-mono text-sm"
+                className="input font-mono text-sm"
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
                   Chat Model
@@ -145,7 +172,7 @@ export default function AiTab() {
                   value={localOllamaModel}
                   onChange={(e) => setLocalOllamaModel(e.target.value)}
                   placeholder="llama3.2"
-                  className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-800 text-nog-900 dark:text-nog-100"
+                  className="input font-mono text-sm"
                 />
               </div>
               <div>
@@ -157,7 +184,7 @@ export default function AiTab() {
                   value={localReasoningModel}
                   onChange={(e) => setLocalReasoningModel(e.target.value)}
                   placeholder="deepseek-r1"
-                  className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-800 text-nog-900 dark:text-nog-100"
+                  className="input font-mono text-sm"
                 />
               </div>
             </div>
@@ -171,7 +198,7 @@ export default function AiTab() {
                 value={localEmbedModel}
                 onChange={(e) => setLocalEmbedModel(e.target.value)}
                 placeholder="nomic-embed-text"
-                className="w-full max-w-xs px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-800 text-nog-900 dark:text-nog-100"
+                className="input max-w-xs font-mono text-sm"
               />
             </div>
 
@@ -227,10 +254,18 @@ export default function AiTab() {
 
       {/* OpenRouter Configuration */}
       <section className="bg-white dark:bg-nog-800 rounded-xl shadow-sm border border-nog-200 dark:border-nog-700 p-6">
-        <h2 className="text-lg font-semibold text-nog-900 dark:text-nog-100 flex items-center gap-2 mb-4">
-          <Zap className="w-5 h-5" />
-          OpenRouter Configuration
-        </h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-lg font-semibold text-nog-900 dark:text-nog-100 flex items-center gap-2">
+            <Zap className="w-5 h-5" />
+            OpenRouter Configuration
+          </h2>
+          {aiSaveSuccess && (
+            <span className="flex items-center gap-1 text-sm text-green-600 dark:text-green-400">
+              <Check className="w-4 h-4" />
+              Saved
+            </span>
+          )}
+        </div>
 
         <p className="text-sm text-nog-500 dark:text-nog-400 mb-6">
           Configure OpenRouter for cloud-based AI models. Use as fallback or alternative to local Ollama.
@@ -249,7 +284,7 @@ export default function AiTab() {
                 value={localOpenrouterKey}
                 onChange={(e) => setLocalOpenrouterKey(e.target.value)}
                 placeholder={aiConfig?.openrouter?.api_key_set ? '••••••••' : 'Enter API key'}
-                className="flex-1 px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-800 text-nog-900 dark:text-nog-100"
+                className="input flex-1 font-mono text-sm"
               />
               {aiConfig?.openrouter?.api_key_set && (
                 <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs rounded">
@@ -268,7 +303,7 @@ export default function AiTab() {
               value={localOpenrouterModel}
               onChange={(e) => setLocalOpenrouterModel(e.target.value)}
               placeholder="anthropic/claude-3.5-sonnet"
-              className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-800 text-nog-900 dark:text-nog-100"
+              className="input font-mono text-sm"
             />
             <p className="mt-1 text-xs text-nog-500 dark:text-nog-400">
               See <a href="https://openrouter.ai/models" target="_blank" rel="noopener noreferrer" className="text-honey-500 hover:underline">openrouter.ai/models</a> for available models

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Server,
@@ -25,6 +25,7 @@ import {
   discoverAssets,
   type Asset,
 } from '../api/client';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 
 const assetTypeIcons: Record<string, React.ElementType> = {
   server: Server,
@@ -45,16 +46,16 @@ const assetTypeLabels: Record<string, string> = {
 };
 
 const statusColors: Record<string, string> = {
-  active: 'text-honey-600 bg-honey-50 dark:text-honey-400 dark:bg-honey-900/30',
-  inactive: 'text-honey-600 bg-honey-50 dark:text-honey-400 dark:bg-honey-900/30',
+  active: 'text-emerald-600 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-900/30',
+  inactive: 'text-nog-500 bg-nog-100 dark:bg-nog-700 dark:text-nog-400',
   decommissioned: 'text-nog-600 bg-nog-100 dark:text-nog-400 dark:bg-nog-700',
 };
 
 function CriticalityBadge({ value }: { value: number }) {
   const color = value >= 80 ? 'text-red-600 bg-red-50 dark:text-red-400 dark:bg-red-900/30'
-    : value >= 60 ? 'text-honey-600 bg-honey-50 dark:text-honey-400 dark:bg-honey-900/30'
+    : value >= 60 ? 'text-orange-600 bg-orange-50 dark:text-orange-400 dark:bg-orange-900/30'
     : value >= 40 ? 'text-honey-600 bg-honey-50 dark:text-honey-400 dark:bg-honey-900/30'
-    : 'text-nog-600 bg-nog-100 dark:text-nog-400 dark:bg-nog-700';
+    : 'text-nog-500 bg-nog-100 dark:bg-nog-700 dark:text-nog-400';
 
   return (
     <span className={`px-2 py-0.5 rounded text-xs font-medium ${color}`}>
@@ -65,6 +66,7 @@ function CriticalityBadge({ value }: { value: number }) {
 
 export default function AssetsPage() {
   const queryClient = useQueryClient();
+  const { confirm } = useConfirm();
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('');
@@ -243,12 +245,17 @@ export default function AssetsPage() {
                           <div className="w-8 h-8 rounded-lg bg-nog-100 dark:bg-nog-700 flex items-center justify-center">
                             <Icon className="w-4 h-4 text-nog-600 dark:text-nog-300" />
                           </div>
-                          <div>
-                            <div className="font-medium text-nog-900 dark:text-nog-100">
+                          <div className="min-w-0">
+                            <div
+                              className="font-medium text-nog-900 dark:text-nog-100 truncate max-w-[220px]"
+                              title={asset.display_name || asset.identifier}
+                            >
                               {asset.display_name || asset.identifier}
                             </div>
                             {asset.display_name && (
-                              <div className="text-xs text-nog-500">{asset.identifier}</div>
+                              <div className="text-xs text-nog-500 truncate max-w-[220px]" title={asset.identifier}>
+                                {asset.identifier}
+                              </div>
                             )}
                           </div>
                         </div>
@@ -259,7 +266,7 @@ export default function AssetsPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium ${statusColors[asset.status]}`}>
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium capitalize ${statusColors[asset.status]}`}>
                           {asset.status === 'active' && <CheckCircle className="w-3 h-3" />}
                           {asset.status === 'inactive' && <AlertTriangle className="w-3 h-3" />}
                           {asset.status === 'decommissioned' && <XCircle className="w-3 h-3" />}
@@ -280,11 +287,11 @@ export default function AssetsPage() {
                         </span>
                       </td>
                       <td className="px-4 py-3">
-                        <span className={`text-xs px-2 py-0.5 rounded ${
+                        <span className={`inline-block max-w-[200px] truncate text-xs px-2 py-0.5 rounded ${
                           asset.source === 'auto'
                             ? 'bg-honey-50 text-honey-600 dark:bg-honey-900/30 dark:text-honey-400'
                             : 'bg-nog-100 text-nog-600 dark:bg-nog-700 dark:text-nog-300'
-                        }`}>
+                        }`} title={asset.source}>
                           {asset.source}
                         </span>
                       </td>
@@ -292,16 +299,26 @@ export default function AssetsPage() {
                         <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => { setEditingAsset(asset); setShowForm(true); }}
+                            aria-label="Edit asset"
+                            title="Edit asset"
                             className="p-1.5 hover:bg-nog-100 dark:hover:bg-nog-700 rounded-lg transition-colors"
                           >
                             <Edit2 className="w-4 h-4 text-nog-500" />
                           </button>
                           <button
-                            onClick={() => {
-                              if (confirm('Delete this asset?')) {
+                            onClick={async () => {
+                              const ok = await confirm({
+                                title: 'Delete Asset',
+                                message: `Delete "${asset.display_name || asset.identifier}"? This action cannot be undone.`,
+                                confirmText: 'Delete',
+                                variant: 'danger',
+                              });
+                              if (ok) {
                                 deleteMutation.mutate(asset.id);
                               }
                             }}
+                            aria-label="Delete asset"
+                            title="Delete asset"
                             className="p-1.5 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                           >
                             <Trash2 className="w-4 h-4 text-red-500" />
@@ -370,14 +387,28 @@ function AssetFormModal({
     mutation.mutate();
   };
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white dark:bg-nog-800 rounded-xl shadow-xl w-full max-w-lg mx-4">
+    <div className="modal-overlay" onClick={onClose}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={asset ? 'Edit Asset' : 'Add Asset'}
+        className="modal max-w-lg"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex items-center justify-between p-4 border-b border-nog-200 dark:border-nog-700">
           <h2 className="text-lg font-semibold text-nog-900 dark:text-nog-100">
             {asset ? 'Edit Asset' : 'Add Asset'}
           </h2>
-          <button onClick={onClose} className="text-nog-400 hover:text-nog-600">
+          <button onClick={onClose} aria-label="Close" className="text-nog-400 hover:text-nog-600">
             <XCircle className="w-5 h-5" />
           </button>
         </div>

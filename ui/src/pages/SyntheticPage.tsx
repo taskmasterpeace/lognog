@@ -35,6 +35,7 @@ import {
   SyntheticResult,
   SyntheticStatus,
 } from '../api/client';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 
 // Constants
 const TEST_TYPES: { value: SyntheticTestType; label: string; icon: typeof Globe; description: string }[] = [
@@ -65,6 +66,7 @@ const STATUS_COLORS: Record<SyntheticStatus, { bg: string; text: string; icon: t
 
 export default function SyntheticPage() {
   const queryClient = useQueryClient();
+  const { confirm } = useConfirm();
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showResultsModal, setShowResultsModal] = useState(false);
   const [editingTest, setEditingTest] = useState<SyntheticTest | null>(null);
@@ -291,6 +293,20 @@ export default function SyntheticPage() {
       </div>
 
       {/* Dashboard Stats */}
+      {!dashboard && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div
+              key={i}
+              className="bg-white dark:bg-nog-800 rounded-lg p-4 border border-nog-200 dark:border-nog-700 animate-pulse"
+            >
+              <div className="h-3 w-20 bg-nog-200 dark:bg-nog-700 rounded mb-3" />
+              <div className="h-7 w-12 bg-nog-200 dark:bg-nog-700 rounded mb-2" />
+              <div className="h-2.5 w-24 bg-nog-100 dark:bg-nog-700/50 rounded" />
+            </div>
+          ))}
+        </div>
+      )}
       {dashboard && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
           <div className="bg-white dark:bg-nog-800 rounded-lg p-4 border border-nog-200 dark:border-nog-700">
@@ -365,6 +381,8 @@ export default function SyntheticPage() {
                     {/* Expand Button */}
                     <button
                       onClick={() => toggleExpanded(test.id)}
+                      aria-label={isExpanded ? `Collapse details for "${test.name}"` : `Expand details for "${test.name}"`}
+                      aria-expanded={isExpanded}
                       className="text-nog-400 hover:text-nog-600 dark:hover:text-nog-300"
                     >
                       {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
@@ -386,9 +404,9 @@ export default function SyntheticPage() {
                         )}
                       </div>
                       <div className="text-sm text-nog-500 dark:text-nog-400 truncate">
-                        {test.test_type === 'http' || test.test_type === 'api'
-                          ? test.config.url
-                          : `${test.config.host}:${test.config.port}`}
+                        {test.test_type === 'tcp'
+                          ? `${test.config.host ?? ''}:${test.config.port ?? ''}`
+                          : test.config.url || '—'}
                       </div>
                     </div>
 
@@ -413,6 +431,7 @@ export default function SyntheticPage() {
                       <button
                         onClick={() => runMutation.mutate(test.id)}
                         disabled={isRunning}
+                        aria-label={`Run test "${test.name}" now`}
                         className="p-2 text-nog-400 hover:text-honey-600 hover:bg-honey-50 dark:hover:bg-honey-900/20 rounded-lg transition-colors"
                         title="Run now"
                       >
@@ -424,6 +443,7 @@ export default function SyntheticPage() {
                       </button>
                       <button
                         onClick={() => toggleMutation.mutate(test.id)}
+                        aria-label={test.enabled ? `Disable test "${test.name}"` : `Enable test "${test.name}"`}
                         className="p-2 text-nog-400 hover:text-yellow-600 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 rounded-lg transition-colors"
                         title={test.enabled ? 'Disable' : 'Enable'}
                       >
@@ -431,6 +451,7 @@ export default function SyntheticPage() {
                       </button>
                       <button
                         onClick={() => openEditModal(test)}
+                        aria-label={`Edit test "${test.name}"`}
                         className="p-2 text-nog-400 hover:text-nog-600 hover:bg-nog-100 dark:hover:bg-nog-700 rounded-lg transition-colors"
                         title="Edit"
                       >
@@ -441,17 +462,26 @@ export default function SyntheticPage() {
                           setSelectedTestId(test.id);
                           setShowResultsModal(true);
                         }}
+                        aria-label={`View results for test "${test.name}"`}
                         className="p-2 text-nog-400 hover:text-nog-600 hover:bg-nog-100 dark:hover:bg-nog-700 rounded-lg transition-colors"
                         title="View results"
                       >
                         <BarChart3 className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => {
-                          if (confirm('Are you sure you want to delete this test?')) {
+                        onClick={async () => {
+                          const confirmed = await confirm({
+                            title: 'Delete Test',
+                            message: `Are you sure you want to delete "${test.name}"? This action cannot be undone.`,
+                            confirmText: 'Delete',
+                            cancelText: 'Cancel',
+                            variant: 'danger',
+                          });
+                          if (confirmed) {
                             deleteMutation.mutate(test.id);
                           }
                         }}
+                        aria-label={`Delete test "${test.name}"`}
                         className="p-2 text-nog-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                         title="Delete"
                       >
@@ -511,6 +541,7 @@ export default function SyntheticPage() {
                   setEditingTest(null);
                   resetForm();
                 }}
+                aria-label="Close dialog"
                 className="text-nog-400 hover:text-nog-600 dark:hover:text-nog-300"
               >
                 <X className="w-5 h-5" />
@@ -742,14 +773,16 @@ export default function SyntheticPage() {
                   setShowResultsModal(false);
                   setSelectedTestId(null);
                 }}
+                aria-label="Close results dialog"
                 className="text-nog-400 hover:text-nog-600 dark:hover:text-nog-300"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="overflow-auto max-h-[70vh]">
-              <table className="w-full">
+            <div className="overflow-y-auto max-h-[70vh]">
+              <div className="overflow-x-auto">
+              <table className="w-full min-w-[640px]">
                 <thead className="bg-nog-50 dark:bg-nog-700/50 sticky top-0">
                   <tr>
                     <th className="px-4 py-3 text-left text-xs font-medium text-nog-500 dark:text-nog-400 uppercase">Timestamp</th>
@@ -787,7 +820,10 @@ export default function SyntheticPage() {
                             <span className="text-red-600 ml-2">{result.assertions_failed} failed</span>
                           )}
                         </td>
-                        <td className="px-4 py-3 text-sm text-red-500 dark:text-red-400 max-w-xs truncate">
+                        <td
+                          className="px-4 py-3 text-sm text-red-500 dark:text-red-400 max-w-xs truncate"
+                          title={result.error_message || undefined}
+                        >
                           {result.error_message || '-'}
                         </td>
                       </tr>
@@ -802,6 +838,7 @@ export default function SyntheticPage() {
                   )}
                 </tbody>
               </table>
+              </div>
             </div>
           </div>
         </div>

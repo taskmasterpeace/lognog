@@ -163,7 +163,7 @@ export default function PublicDashboardPage() {
     return null;
   }
 
-  const accentColor = dashboard.accent_color || '#f59e0b';
+  const accentColor = dashboard.accent_color || '#C8862B';
 
   return (
     <div className="min-h-screen bg-nog-50 dark:bg-nog-900">

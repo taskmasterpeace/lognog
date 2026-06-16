@@ -79,12 +79,13 @@ import {
 } from '../components/dashboard';
 import { InfoTip } from '../components/ui/InfoTip';
 import { Tooltip as FloatingTooltip } from '../components/ui/Tooltip';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 import PanelCopyModal from '../components/PanelCopyModal';
 import PanelProvenanceModal from '../components/PanelProvenanceModal';
 import { getDefaultDashboard, setDefaultDashboard } from './DashboardsPage';
 
-// LogNog brand colors - amber/orange theme
-const CHART_COLORS = ['#f59e0b', '#d97706', '#fbbf24', '#b45309', '#f97316', '#ea580c', '#fcd34d', '#c2410c'];
+// LogNog brand colors - honey-gold theme
+const CHART_COLORS = ['#C8862B', '#DCA23E', '#A66A1E', '#E6BB63', '#845117', '#5A3F24', '#8B7355', '#D4C4B0'];
 
 const VISUALIZATION_OPTIONS = [
   { value: 'table', label: 'Table', icon: Table2 },
@@ -177,7 +178,7 @@ function PanelVisualization({
           }))}
           height={200}
           horizontal={true}
-          barColor="#f59e0b"
+          barColor="#C8862B"
           darkMode={isDarkMode}
           showValues={false}
           onBarClick={(category) => {
@@ -225,7 +226,7 @@ function PanelVisualization({
       return (
         <AreaChart
           data={results}
-          series={[{ name: valueKey, dataKey: valueKey, color: '#f59e0b' }]}
+          series={[{ name: valueKey, dataKey: valueKey, color: '#C8862B' }]}
           xAxisKey={labelKey}
           height={200}
           darkMode={isDarkMode}
@@ -767,6 +768,7 @@ export default function DashboardViewPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const { drilldown } = useDrilldown();
+  const { confirm } = useConfirm();
 
   const [timeRange, setTimeRange] = useState('-24h');
   const [showAutoRefreshDropdown, setShowAutoRefreshDropdown] = useState(false);
@@ -1079,7 +1081,7 @@ export default function DashboardViewPage() {
         scale: 2, // Higher resolution
         useCORS: true,
         allowTaint: true,
-        backgroundColor: document.documentElement.classList.contains('dark') ? '#1a1b26' : '#ffffff',
+        backgroundColor: document.documentElement.classList.contains('dark') ? '#1E150E' : '#ffffff',
         logging: false,
       });
 
@@ -1494,9 +1496,16 @@ export default function DashboardViewPage() {
                       <Edit3 className="w-3 h-3" />
                     </button>
                     <button
-                      onClick={(e) => {
+                      onClick={async (e) => {
                         e.stopPropagation();
-                        if (confirm(`Delete page "${page.name}"?`)) {
+                        const confirmed = await confirm({
+                          title: 'Delete Page',
+                          message: `Are you sure you want to delete the page "${page.name}"? This action cannot be undone.`,
+                          confirmText: 'Delete',
+                          cancelText: 'Cancel',
+                          variant: 'danger',
+                        });
+                        if (confirmed) {
                           deletePageMutation.mutate(page.id);
                         }
                       }}
@@ -1706,7 +1715,7 @@ export default function DashboardViewPage() {
         const VizIcon = vizOption.icon;
 
         return (
-          <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" onClick={() => setFullscreenPanel(null)}>
+          <div className="modal-overlay p-4" onClick={() => setFullscreenPanel(null)}>
             <div className="bg-white dark:bg-nog-800 rounded-xl shadow-2xl w-full h-full max-w-[95vw] max-h-[95vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
               {/* Header */}
               <div className="flex items-center justify-between p-4 border-b border-nog-200 dark:border-nog-700">

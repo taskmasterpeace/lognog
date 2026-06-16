@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { authFetch } from '../../../contexts/AuthContext';
 import { Database, Check, AlertCircle, Loader2, Zap, Trash2, Download, RefreshCw } from 'lucide-react';
+import { useConfirm } from '../../../components/ui/ConfirmDialog';
 
 const DataTab = () => {
+  const { confirm } = useConfirm();
   // Demo data generation
   const [generatingData, setGeneratingData] = useState(false);
   const [demoDataCount, setDemoDataCount] = useState('500');
@@ -98,7 +100,14 @@ const DataTab = () => {
   };
 
   const handleClearDemoData = async () => {
-    if (!confirm('Are you sure you want to clear ALL log data? This action cannot be undone.')) {
+    const confirmed = await confirm({
+      title: 'Clear All Log Data',
+      message: 'Are you sure you want to clear ALL log data? This action cannot be undone.',
+      confirmText: 'Clear All',
+      cancelText: 'Cancel',
+      variant: 'danger',
+    });
+    if (!confirmed) {
       return;
     }
 
@@ -190,7 +199,14 @@ const DataTab = () => {
       .filter(([_, v]) => v)
       .map(([k, v]) => `${k}="${v}"`)
       .join(', ');
-    if (!confirm(`Delete logs matching: ${filterDesc}?\n\nThis cannot be undone.`)) {
+    const confirmed = await confirm({
+      title: 'Delete Matching Logs',
+      message: `Delete logs matching: ${filterDesc}? This cannot be undone.`,
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      variant: 'danger',
+    });
+    if (!confirmed) {
       return;
     }
 
@@ -297,7 +313,7 @@ const DataTab = () => {
         </h3>
 
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
                 Number of Logs
@@ -308,7 +324,7 @@ const DataTab = () => {
                 onChange={(e) => setDemoDataCount(e.target.value)}
                 min="10"
                 max="10000"
-                className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-800 text-nog-900 dark:text-nog-100"
+                className="input"
               />
             </div>
             <div>
@@ -318,7 +334,7 @@ const DataTab = () => {
               <select
                 value={demoDataTimeRange}
                 onChange={(e) => setDemoDataTimeRange(e.target.value)}
-                className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-800 text-nog-900 dark:text-nog-100"
+                className="input"
               >
                 <option value="-1h">Last Hour</option>
                 <option value="-6h">Last 6 Hours</option>
@@ -386,7 +402,7 @@ const DataTab = () => {
           <button
             onClick={handleExportData}
             disabled={exportingData}
-            className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+            className="btn-secondary"
           >
             {exportingData ? (
               <>
@@ -404,7 +420,7 @@ const DataTab = () => {
           <button
             onClick={handleClearDemoData}
             disabled={clearingData}
-            className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+            className="btn-danger"
           >
             {clearingData ? (
               <>
@@ -494,7 +510,7 @@ const DataTab = () => {
         )}
 
         {/* Delete filters */}
-        <div className="grid grid-cols-2 gap-3 mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
           <div>
             <label className="block text-xs font-medium text-nog-600 dark:text-nog-400 mb-1">
               Index Name
@@ -504,7 +520,7 @@ const DataTab = () => {
               value={deleteFilter.index_name}
               onChange={(e) => setDeleteFilter(f => ({ ...f, index_name: e.target.value }))}
               placeholder="e.g., lognog-internal"
-              className="w-full px-3 py-2 text-sm border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-800 text-nog-900 dark:text-nog-100"
+              className="input font-mono text-sm"
             />
           </div>
           <div>
@@ -516,7 +532,7 @@ const DataTab = () => {
               value={deleteFilter.app_name}
               onChange={(e) => setDeleteFilter(f => ({ ...f, app_name: e.target.value }))}
               placeholder="e.g., lognog-internal"
-              className="w-full px-3 py-2 text-sm border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-800 text-nog-900 dark:text-nog-100"
+              className="input font-mono text-sm"
             />
           </div>
           <div>
@@ -528,7 +544,7 @@ const DataTab = () => {
               value={deleteFilter.app_scope}
               onChange={(e) => setDeleteFilter(f => ({ ...f, app_scope: e.target.value }))}
               placeholder="e.g., lognog"
-              className="w-full px-3 py-2 text-sm border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-800 text-nog-900 dark:text-nog-100"
+              className="input font-mono text-sm"
             />
           </div>
           <div>
@@ -541,7 +557,7 @@ const DataTab = () => {
               onChange={(e) => setDeleteFilter(f => ({ ...f, older_than_days: e.target.value }))}
               placeholder="e.g., 7"
               min="1"
-              className="w-full px-3 py-2 text-sm border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-800 text-nog-900 dark:text-nog-100"
+              className="input text-sm"
             />
           </div>
         </div>
@@ -549,7 +565,7 @@ const DataTab = () => {
         <button
           onClick={handleDeleteLogs}
           disabled={deletingLogs || (!deleteFilter.index_name && !deleteFilter.app_name && !deleteFilter.app_scope && !deleteFilter.older_than_days)}
-          className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
+          className="btn-danger"
         >
           {deletingLogs ? (
             <>

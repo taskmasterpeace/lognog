@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
-import { CHART_ACCENT } from './palette';
+import { CHART_ACCENT, getChartTheme } from './palette';
 
 export interface TimeSeriesData {
   timestamp: string | number;
@@ -33,8 +33,6 @@ export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
   height = 400,
   showZoom = true,
   showArea = true,
-  autoRefresh = false,
-  refreshInterval = 30000,
   darkMode = false,
   yAxisLabel = 'Count',
   xAxisLabel = 'Time',
@@ -65,6 +63,7 @@ export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
 
   // Calculate hover color based on dark mode
   const computedHoverColor = barHoverColor || (darkMode ? '#DCA23E' : '#A66A1E');
+  const theme = getChartTheme(darkMode);
 
   const option: EChartsOption = React.useMemo(() => {
     const seriesConfig = Array.from(seriesMap.entries()).map(([name, { timestamps, values }]) => {
@@ -101,7 +100,7 @@ export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
       title: title ? {
         text: title,
         textStyle: {
-          color: darkMode ? '#e5e7eb' : '#1f2937',
+          color: theme.text,
           fontSize: 16,
         },
       } : undefined,
@@ -111,19 +110,19 @@ export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
         axisPointer: {
           type: 'cross',
           label: {
-            backgroundColor: darkMode ? '#374151' : '#6b7280',
+            backgroundColor: theme.axisPointerBg,
           },
         },
-        backgroundColor: darkMode ? 'rgba(31, 41, 55, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-        borderColor: darkMode ? '#4b5563' : '#d1d5db',
+        backgroundColor: theme.tooltipBg,
+        borderColor: theme.tooltipBorder,
         textStyle: {
-          color: darkMode ? '#e5e7eb' : '#1f2937',
+          color: theme.text,
         },
       },
       legend: seriesMap.size > 1 ? {
         data: Array.from(seriesMap.keys()),
         textStyle: {
-          color: darkMode ? '#e5e7eb' : '#1f2937',
+          color: theme.text,
         },
         top: title ? 35 : 10,
       } : undefined,
@@ -138,10 +137,10 @@ export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
         type: 'time',
         name: xAxisLabel,
         nameTextStyle: {
-          color: darkMode ? '#9ca3af' : '#6b7280',
+          color: theme.textMuted,
         },
         axisLabel: {
-          color: darkMode ? '#9ca3af' : '#6b7280',
+          color: theme.textMuted,
           hideOverlap: true,
           formatter: (value: number) => {
             const date = new Date(value);
@@ -152,12 +151,12 @@ export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
         },
         axisLine: {
           lineStyle: {
-            color: darkMode ? '#4b5563' : '#d1d5db',
+            color: theme.axis,
           },
         },
         splitLine: {
           lineStyle: {
-            color: darkMode ? '#374151' : '#f3f4f6',
+            color: theme.grid,
           },
         },
       },
@@ -165,19 +164,19 @@ export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
         type: 'value',
         name: yAxisLabel,
         nameTextStyle: {
-          color: darkMode ? '#9ca3af' : '#6b7280',
+          color: theme.textMuted,
         },
         axisLabel: {
-          color: darkMode ? '#9ca3af' : '#6b7280',
+          color: theme.textMuted,
         },
         axisLine: {
           lineStyle: {
-            color: darkMode ? '#4b5563' : '#d1d5db',
+            color: theme.axis,
           },
         },
         splitLine: {
           lineStyle: {
-            color: darkMode ? '#374151' : '#f3f4f6',
+            color: theme.grid,
           },
         },
       },
@@ -191,15 +190,15 @@ export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
           start: 0,
           end: 100,
           textStyle: {
-            color: darkMode ? '#9ca3af' : '#6b7280',
+            color: theme.textMuted,
           },
-          borderColor: darkMode ? '#4b5563' : '#d1d5db',
+          borderColor: theme.axis,
           dataBackground: {
             lineStyle: {
-              color: darkMode ? '#4b5563' : '#d1d5db',
+              color: theme.axis,
             },
             areaStyle: {
-              color: darkMode ? '#374151' : '#f3f4f6',
+              color: theme.grid,
             },
           },
         },
@@ -218,11 +217,11 @@ export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
           },
         },
         iconStyle: {
-          borderColor: darkMode ? '#9ca3af' : '#6b7280',
+          borderColor: theme.textMuted,
         },
         emphasis: {
           iconStyle: {
-            borderColor: '#f59e0b',
+            borderColor: CHART_ACCENT,
           },
         },
       } : undefined,
@@ -235,13 +234,13 @@ export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
         throttleDelay: 300,
         brushStyle: {
           borderWidth: 1,
-          color: 'rgba(245, 158, 11, 0.2)',
-          borderColor: '#f59e0b',
+          color: 'rgba(200, 134, 43, 0.2)', // honey-500 @ 20%
+          borderColor: CHART_ACCENT,
         },
       } : undefined,
       series: seriesConfig,
     };
-  }, [seriesMap, title, showZoom, showArea, darkMode, yAxisLabel, xAxisLabel, onBrushEnd, chartType, barColor, computedHoverColor]);
+  }, [seriesMap, title, showZoom, showArea, darkMode, yAxisLabel, xAxisLabel, onBrushEnd, chartType, barColor, computedHoverColor, theme]);
 
   const onEvents = React.useMemo(() => {
     const events: Record<string, (params: unknown) => void> = {};
@@ -297,17 +296,6 @@ export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
 
     return Object.keys(events).length > 0 ? events : undefined;
   }, [onBrushEnd, onBarClick, chartType]);
-
-  React.useEffect(() => {
-    if (!autoRefresh || !refreshInterval) return;
-
-    const interval = setInterval(() => {
-      // Trigger re-render or refetch data
-      // This is a placeholder - actual implementation would depend on data fetching strategy
-    }, refreshInterval);
-
-    return () => clearInterval(interval);
-  }, [autoRefresh, refreshInterval]);
 
   return (
     <div className="w-full">

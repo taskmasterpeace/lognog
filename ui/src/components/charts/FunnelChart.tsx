@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
-import { CHART_PALETTE } from './palette';
+import { CHART_PALETTE, getChartTheme } from './palette';
 
 export interface FunnelChartData {
   name: string;
@@ -29,6 +29,8 @@ export const FunnelChart: React.FC<FunnelChartProps> = ({
   orientation = 'vertical',
   onStageClick,
 }) => {
+  const theme = getChartTheme(darkMode);
+
   const processedData = React.useMemo(() => {
     if (sortOrder === 'none') return data;
 
@@ -47,17 +49,17 @@ export const FunnelChart: React.FC<FunnelChartProps> = ({
     title: title ? {
       text: title,
       textStyle: {
-        color: darkMode ? '#e5e7eb' : '#1f2937',
+        color: theme.text,
         fontSize: 16,
       },
     } : undefined,
     backgroundColor: 'transparent',
     tooltip: {
       trigger: 'item',
-      backgroundColor: darkMode ? 'rgba(31, 41, 55, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-      borderColor: darkMode ? '#4b5563' : '#d1d5db',
+      backgroundColor: theme.tooltipBg,
+      borderColor: theme.tooltipBorder,
       textStyle: {
-        color: darkMode ? '#e5e7eb' : '#1f2937',
+        color: theme.text,
       },
       formatter: (params: any) => {
         const percentage = ((params.value / maxValue) * 100).toFixed(1);
@@ -70,7 +72,7 @@ export const FunnelChart: React.FC<FunnelChartProps> = ({
       left: orientation === 'horizontal' ? 'center' : 'left',
       top: orientation === 'horizontal' ? (title ? 35 : 10) : 'middle',
       textStyle: {
-        color: darkMode ? '#9ca3af' : '#6b7280',
+        color: theme.textMuted,
       },
     },
     series: [
@@ -102,7 +104,7 @@ export const FunnelChart: React.FC<FunnelChartProps> = ({
           show: false,
         },
         itemStyle: {
-          borderColor: darkMode ? '#1f2937' : '#fff',
+          borderColor: darkMode ? '#2D1F13' : '#fff', // nog-800 / white card bg
           borderWidth: 2,
         },
         emphasis: {
@@ -112,7 +114,7 @@ export const FunnelChart: React.FC<FunnelChartProps> = ({
           itemStyle: {
             shadowBlur: 10,
             shadowOffsetX: 0,
-            shadowColor: 'rgba(0, 0, 0, 0.5)',
+            shadowColor: 'rgba(0, 0, 0, 0.25)',
           },
         },
         data: processedData.map((item, index) => ({
@@ -124,7 +126,7 @@ export const FunnelChart: React.FC<FunnelChartProps> = ({
         })),
       },
     ],
-  }), [title, darkMode, showLabels, sortOrder, orientation, processedData, maxValue]);
+  }), [title, darkMode, showLabels, sortOrder, orientation, processedData, maxValue, theme]);
 
   const onEvents = React.useMemo(() => {
     if (!onStageClick) return undefined;

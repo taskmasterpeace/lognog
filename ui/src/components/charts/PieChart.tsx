@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
-import { CHART_PALETTE } from './palette';
+import { CHART_PALETTE, getChartTheme } from './palette';
 
 export interface PieChartData {
   name: string;
@@ -37,6 +37,7 @@ export const PieChart: React.FC<PieChartProps> = ({
 }) => {
   const defaultRadius = donut ? ['40%', '70%'] : '70%';
   const pieRadius = radius || defaultRadius;
+  const theme = getChartTheme(darkMode);
 
   const option: EChartsOption = React.useMemo(() => {
     const legendConfig: any = showLegend ? {
@@ -47,7 +48,7 @@ export const PieChart: React.FC<PieChartProps> = ({
           ? (legendPosition === 'top' ? (title ? 40 : 10) : 10)
           : 'middle',
       textStyle: {
-        color: darkMode ? '#e5e7eb' : '#1f2937',
+        color: theme.text,
       },
       type: 'scroll',
     } : undefined;
@@ -57,17 +58,17 @@ export const PieChart: React.FC<PieChartProps> = ({
         text: title,
         left: 'center',
         textStyle: {
-          color: darkMode ? '#e5e7eb' : '#1f2937',
+          color: theme.text,
           fontSize: 16,
         },
       } : undefined,
       backgroundColor: 'transparent',
       tooltip: {
         trigger: 'item',
-        backgroundColor: darkMode ? 'rgba(31, 41, 55, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-        borderColor: darkMode ? '#4b5563' : '#d1d5db',
+        backgroundColor: theme.tooltipBg,
+        borderColor: theme.tooltipBorder,
         textStyle: {
-          color: darkMode ? '#e5e7eb' : '#1f2937',
+          color: theme.text,
         },
         formatter: (params: any) => {
           return `${params.name}<br/>Count: ${params.value} (${params.percent}%)`;
@@ -84,11 +85,11 @@ export const PieChart: React.FC<PieChartProps> = ({
             itemStyle: {
               shadowBlur: 10,
               shadowOffsetX: 0,
-              shadowColor: 'rgba(0, 0, 0, 0.5)',
+              shadowColor: 'rgba(0, 0, 0, 0.25)',
             },
           },
           label: {
-            color: darkMode ? '#e5e7eb' : '#1f2937',
+            color: theme.text,
             formatter: (params: any) => {
               return `{name|${params.name}}\n{percent|${params.percent}%}`;
             },
@@ -99,13 +100,13 @@ export const PieChart: React.FC<PieChartProps> = ({
               },
               percent: {
                 fontSize: 11,
-                color: darkMode ? '#9ca3af' : '#6b7280',
+                color: theme.textMuted,
               },
             },
           },
           labelLine: {
             lineStyle: {
-              color: darkMode ? '#4b5563' : '#d1d5db',
+              color: theme.axis,
             },
           },
           center: legendPosition === 'left' ? ['60%', '50%'] :
@@ -115,7 +116,7 @@ export const PieChart: React.FC<PieChartProps> = ({
         },
       ],
     };
-  }, [data, title, darkMode, donut, showLegend, legendPosition, pieRadius, colors]);
+  }, [data, title, darkMode, donut, showLegend, legendPosition, pieRadius, colors, theme]);
 
   const onEvents = React.useMemo(() => {
     if (!onItemClick) return undefined;
@@ -128,6 +129,17 @@ export const PieChart: React.FC<PieChartProps> = ({
       },
     };
   }, [onItemClick]);
+
+  if (!data || data.length === 0) {
+    return (
+      <div
+        className="w-full flex items-center justify-center text-nog-400 dark:text-nog-500"
+        style={{ height: `${height}px` }}
+      >
+        No data to display
+      </div>
+    );
+  }
 
   return (
     <div className="w-full">

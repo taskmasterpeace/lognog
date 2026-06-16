@@ -2,6 +2,7 @@ import React from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react';
+import { CHART_ACCENT } from './palette';
 
 export interface StatCardProps {
   title: string;
@@ -64,7 +65,7 @@ export const StatCard: React.FC<StatCardProps> = ({
   icon,
   trend,
   trendLabel,
-  color = '#5470c6',
+  color = CHART_ACCENT,
 }) => {
   const formattedValue = formatValue(value, format, customFormatter);
 

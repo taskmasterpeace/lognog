@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
-import { CHART_PALETTE } from './palette';
+import { CHART_PALETTE, getChartTheme } from './palette';
 
 export interface TreemapNode {
   name: string;
@@ -28,20 +28,22 @@ export const TreemapChart: React.FC<TreemapChartProps> = ({
   maxDepth = 2,
   onNodeClick,
 }) => {
+  const theme = getChartTheme(darkMode);
+
   const option: EChartsOption = React.useMemo(() => ({
     title: title ? {
       text: title,
       textStyle: {
-        color: darkMode ? '#e5e7eb' : '#1f2937',
+        color: theme.text,
         fontSize: 16,
       },
     } : undefined,
     backgroundColor: 'transparent',
     tooltip: {
-      backgroundColor: darkMode ? 'rgba(31, 41, 55, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-      borderColor: darkMode ? '#4b5563' : '#d1d5db',
+      backgroundColor: theme.tooltipBg,
+      borderColor: theme.tooltipBorder,
       textStyle: {
-        color: darkMode ? '#e5e7eb' : '#1f2937',
+        color: theme.text,
       },
       formatter: (params: any) => {
         const treePathInfo = params.treePathInfo || [];
@@ -72,20 +74,20 @@ export const TreemapChart: React.FC<TreemapChartProps> = ({
         upperLabel: {
           show: true,
           height: 30,
-          color: darkMode ? '#e5e7eb' : '#1f2937',
-          backgroundColor: darkMode ? 'rgba(31, 41, 55, 0.8)' : 'rgba(255, 255, 255, 0.8)',
+          color: theme.text,
+          backgroundColor: theme.tooltipBg,
           borderRadius: 4,
           padding: [4, 8],
         },
         itemStyle: {
-          borderColor: darkMode ? '#1f2937' : '#fff',
+          borderColor: darkMode ? '#2D1F13' : '#fff', // nog-800 / white card bg
           borderWidth: 2,
           gapWidth: 2,
         },
         levels: [
           {
             itemStyle: {
-              borderColor: darkMode ? '#374151' : '#e5e7eb',
+              borderColor: theme.grid,
               borderWidth: 4,
               gapWidth: 4,
             },
@@ -111,13 +113,13 @@ export const TreemapChart: React.FC<TreemapChartProps> = ({
         emphasis: {
           itemStyle: {
             shadowBlur: 10,
-            shadowColor: 'rgba(0, 0, 0, 0.5)',
+            shadowColor: 'rgba(0, 0, 0, 0.25)',
           },
         },
         data: addColorsToData(data, darkMode),
       },
     ],
-  }), [title, darkMode, showLabels, maxDepth, data]);
+  }), [title, darkMode, showLabels, maxDepth, data, theme]);
 
   const onEvents = React.useMemo(() => {
     if (!onNodeClick) return undefined;

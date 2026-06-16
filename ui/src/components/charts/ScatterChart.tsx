@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
+import { CHART_PALETTE, getChartTheme } from './palette';
 
 export interface ScatterChartData {
   x: number;
@@ -33,6 +34,8 @@ export const ScatterChart: React.FC<ScatterChartProps> = ({
   symbolSize = 10,
   onPointClick,
 }) => {
+  const theme = getChartTheme(darkMode);
+
   // Group data by category if present
   const seriesData = React.useMemo(() => {
     const categories = new Map<string, ScatterChartData[]>();
@@ -59,7 +62,7 @@ export const ScatterChart: React.FC<ScatterChartProps> = ({
         show: showLabels,
         formatter: (params: any) => params.data.name || '',
         position: 'top' as const,
-        color: darkMode ? '#e5e7eb' : '#1f2937',
+        color: theme.text,
         fontSize: 10,
       },
       emphasis: {
@@ -67,27 +70,28 @@ export const ScatterChart: React.FC<ScatterChartProps> = ({
         itemStyle: {
           shadowBlur: 10,
           shadowOffsetX: 0,
-          shadowColor: 'rgba(0, 0, 0, 0.5)',
+          shadowColor: 'rgba(0, 0, 0, 0.25)',
         },
       },
     }));
-  }, [data, symbolSize, showLabels, darkMode]);
+  }, [data, symbolSize, showLabels, theme]);
 
   const option: EChartsOption = React.useMemo(() => ({
+    color: CHART_PALETTE,
     title: title ? {
       text: title,
       textStyle: {
-        color: darkMode ? '#e5e7eb' : '#1f2937',
+        color: theme.text,
         fontSize: 16,
       },
     } : undefined,
     backgroundColor: 'transparent',
     tooltip: {
       trigger: 'item',
-      backgroundColor: darkMode ? 'rgba(31, 41, 55, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-      borderColor: darkMode ? '#4b5563' : '#d1d5db',
+      backgroundColor: theme.tooltipBg,
+      borderColor: theme.tooltipBorder,
       textStyle: {
-        color: darkMode ? '#e5e7eb' : '#1f2937',
+        color: theme.text,
       },
       formatter: (params: any) => {
         const point = params.data;
@@ -98,7 +102,7 @@ export const ScatterChart: React.FC<ScatterChartProps> = ({
     legend: seriesData.length > 1 ? {
       data: seriesData.map(s => s.name),
       textStyle: {
-        color: darkMode ? '#9ca3af' : '#6b7280',
+        color: theme.textMuted,
       },
       top: title ? 30 : 10,
     } : undefined,
@@ -113,19 +117,19 @@ export const ScatterChart: React.FC<ScatterChartProps> = ({
       type: 'value',
       name: xAxisLabel,
       nameTextStyle: {
-        color: darkMode ? '#9ca3af' : '#6b7280',
+        color: theme.textMuted,
       },
       axisLabel: {
-        color: darkMode ? '#9ca3af' : '#6b7280',
+        color: theme.textMuted,
       },
       axisLine: {
         lineStyle: {
-          color: darkMode ? '#4b5563' : '#d1d5db',
+          color: theme.axis,
         },
       },
       splitLine: {
         lineStyle: {
-          color: darkMode ? '#374151' : '#f3f4f6',
+          color: theme.grid,
         },
       },
     },
@@ -133,24 +137,24 @@ export const ScatterChart: React.FC<ScatterChartProps> = ({
       type: 'value',
       name: yAxisLabel,
       nameTextStyle: {
-        color: darkMode ? '#9ca3af' : '#6b7280',
+        color: theme.textMuted,
       },
       axisLabel: {
-        color: darkMode ? '#9ca3af' : '#6b7280',
+        color: theme.textMuted,
       },
       axisLine: {
         lineStyle: {
-          color: darkMode ? '#4b5563' : '#d1d5db',
+          color: theme.axis,
         },
       },
       splitLine: {
         lineStyle: {
-          color: darkMode ? '#374151' : '#f3f4f6',
+          color: theme.grid,
         },
       },
     },
     series: seriesData,
-  }), [title, darkMode, xAxisLabel, yAxisLabel, seriesData]);
+  }), [title, darkMode, xAxisLabel, yAxisLabel, seriesData, theme]);
 
   const onEvents = React.useMemo(() => {
     if (!onPointClick) return undefined;
@@ -170,6 +174,17 @@ export const ScatterChart: React.FC<ScatterChartProps> = ({
       },
     };
   }, [onPointClick]);
+
+  if (!data || data.length === 0) {
+    return (
+      <div
+        className="w-full flex items-center justify-center text-nog-400 dark:text-nog-500"
+        style={{ height: `${height}px` }}
+      >
+        No data to display
+      </div>
+    );
+  }
 
   return (
     <div className="w-full">

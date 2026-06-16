@@ -17,6 +17,7 @@ import {
   MessageSquare,
   Info,
   ExternalLink,
+  X,
 } from 'lucide-react';
 import {
   getFieldExtractions,
@@ -57,12 +58,12 @@ export default function KnowledgePage() {
   const [activeTab, setActiveTab] = useState<Tab>('extractions');
 
   const tabs = [
-    { id: 'extractions' as Tab, label: 'Field Extractions', icon: Filter, color: 'amber' },
-    { id: 'events' as Tab, label: 'Event Types', icon: FileText, color: 'orange' },
-    { id: 'tags' as Tab, label: 'Tags', icon: Tag, color: 'amber' },
-    { id: 'lookups' as Tab, label: 'Lookups', icon: Database, color: 'amber' },
-    { id: 'workflows' as Tab, label: 'Workflow Actions', icon: Zap, color: 'orange' },
-    { id: 'annotations' as Tab, label: 'Source Annotations', icon: MessageSquare, color: 'blue' },
+    { id: 'extractions' as Tab, label: 'Field Extractions', icon: Filter },
+    { id: 'events' as Tab, label: 'Event Types', icon: FileText },
+    { id: 'tags' as Tab, label: 'Tags', icon: Tag },
+    { id: 'lookups' as Tab, label: 'Lookups', icon: Database },
+    { id: 'workflows' as Tab, label: 'Workflow Actions', icon: Zap },
+    { id: 'annotations' as Tab, label: 'Source Annotations', icon: MessageSquare },
   ];
 
   return (
@@ -94,7 +95,7 @@ export default function KnowledgePage() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center gap-2 px-4 py-3 border-b-2 transition-all whitespace-nowrap ${
                   isActive
-                    ? `border-${tab.color}-500 text-${tab.color}-600 bg-${tab.color}-50/50 dark:bg-${tab.color}-900/20`
+                    ? 'border-honey-500 text-honey-600 dark:text-honey-400 bg-honey-50/50 dark:bg-honey-900/20'
                     : 'border-transparent text-nog-600 dark:text-nog-400 hover:text-nog-900 dark:hover:text-nog-100 hover:bg-nog-50 dark:hover:bg-nog-800'
                 }`}
               >
@@ -229,7 +230,7 @@ function FieldExtractionsTab() {
                     {extraction.enabled ? (
                       <span className="badge badge-success">Enabled</span>
                     ) : (
-                      <span className="badge bg-nog-100 text-nog-600">Disabled</span>
+                      <span className="badge bg-nog-100 text-nog-600 dark:bg-nog-700 dark:text-nog-400">Disabled</span>
                     )}
                   </td>
                   <td>
@@ -588,7 +589,7 @@ function EventTypesTab() {
                     {eventType.enabled ? (
                       <span className="badge badge-success">Enabled</span>
                     ) : (
-                      <span className="badge bg-nog-100 text-nog-600">Disabled</span>
+                      <span className="badge bg-nog-100 text-nog-600 dark:bg-nog-700 dark:text-nog-400">Disabled</span>
                     )}
                     <span className="text-xs text-nog-500">Priority: {eventType.priority}</span>
                   </div>
@@ -703,7 +704,7 @@ function EventTypeModal({
               className="input font-mono text-sm resize-none"
             />
             <p className="text-xs text-nog-500 mt-1">
-              Use Spunk DSL syntax to define the event matching criteria
+              Use Splunk DSL syntax to define the event matching criteria
             </p>
           </div>
 
@@ -1199,7 +1200,7 @@ function WorkflowActionsTab() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-8 h-8 text-rose-500 animate-spin" />
+        <Loader2 className="w-8 h-8 text-honey-500 animate-spin" />
       </div>
     );
   }
@@ -1263,8 +1264,8 @@ function WorkflowActionsTab() {
         </div>
       ) : (
         <div className="card p-12 text-center">
-          <div className="w-16 h-16 bg-rose-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <Zap className="w-8 h-8 text-rose-600" />
+          <div className="w-16 h-16 bg-honey-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Zap className="w-8 h-8 text-honey-600" />
           </div>
           <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">No workflow actions</h3>
           <p className="text-sm text-nog-500 mb-4">
@@ -1678,18 +1679,22 @@ function SourceAnnotationModal({
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content max-w-lg" onClick={(e) => e.stopPropagation()}>
+      <div className="modal max-w-lg" onClick={(e) => e.stopPropagation()}>
         <div className="modal-header">
-          <h3 className="modal-title">
-            {annotation ? 'Edit Annotation' : 'Create Annotation'}
-          </h3>
-          <button onClick={onClose} className="modal-close">&times;</button>
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-nog-900 dark:text-nog-100">
+              {annotation ? 'Edit Annotation' : 'Create Annotation'}
+            </h3>
+            <button onClick={onClose} className="btn-ghost p-1">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
         </div>
 
         <div className="modal-body space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="label">Field Name</label>
+              <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">Field Name</label>
               <select
                 value={fieldName}
                 onChange={(e) => setFieldName(e.target.value)}
@@ -1702,7 +1707,7 @@ function SourceAnnotationModal({
               </select>
             </div>
             <div>
-              <label className="label">Field Value</label>
+              <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">Field Value</label>
               <input
                 type="text"
                 value={fieldValue}
@@ -1716,7 +1721,7 @@ function SourceAnnotationModal({
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="label">Icon (Emoji)</label>
+              <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">Icon (Emoji)</label>
               <input
                 type="text"
                 value={icon}
@@ -1726,7 +1731,7 @@ function SourceAnnotationModal({
               />
             </div>
             <div>
-              <label className="label">Title</label>
+              <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">Title</label>
               <input
                 type="text"
                 value={title}
@@ -1738,7 +1743,7 @@ function SourceAnnotationModal({
           </div>
 
           <div>
-            <label className="label">Description (Tooltip)</label>
+            <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">Description (Tooltip)</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -1749,7 +1754,7 @@ function SourceAnnotationModal({
           </div>
 
           <div>
-            <label className="label">Details (Card View)</label>
+            <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">Details (Card View)</label>
             <textarea
               value={details}
               onChange={(e) => setDetails(e.target.value)}
@@ -1763,7 +1768,7 @@ function SourceAnnotationModal({
           </div>
 
           <div>
-            <label className="label">Link to Lookup Table</label>
+            <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">Link to Lookup Table</label>
             <select
               value={lookupId}
               onChange={(e) => setLookupId(e.target.value)}
@@ -1782,7 +1787,7 @@ function SourceAnnotationModal({
           </div>
 
           <div>
-            <label className="label">Tags (comma-separated)</label>
+            <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">Tags (comma-separated)</label>
             <input
               type="text"
               value={tagsInput}
@@ -1793,13 +1798,13 @@ function SourceAnnotationModal({
           </div>
 
           <div>
-            <label className="label">Highlight Color (optional)</label>
+            <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">Highlight Color (optional)</label>
             <input
               type="text"
               value={color}
               onChange={(e) => setColor(e.target.value)}
               className="input"
-              placeholder="e.g., #3B82F6 or blue"
+              placeholder="e.g., #C8862B or #0D9488"
             />
           </div>
         </div>

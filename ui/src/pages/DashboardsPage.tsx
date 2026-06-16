@@ -174,9 +174,9 @@ export default function DashboardsPage() {
   if (error) {
     return (
       <div className="p-8">
-        <div className="card border-red-200 bg-red-50 p-6">
-          <p className="font-semibold text-red-900">Failed to load dashboards</p>
-          <p className="text-sm text-red-700 mt-1">{String(error)}</p>
+        <div className="card border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800 p-6">
+          <p className="font-semibold text-red-900 dark:text-red-200">Failed to load dashboards</p>
+          <p className="text-sm text-red-700 dark:text-red-300 mt-1">{String(error)}</p>
         </div>
       </div>
     );
@@ -206,7 +206,7 @@ export default function DashboardsPage() {
                     setSortBy(field);
                     setSortDir(dir);
                   }}
-                  className="px-2 py-1.5 text-sm bg-white dark:bg-nog-800 border border-nog-200 dark:border-nog-700 rounded-lg text-nog-700 dark:text-nog-300"
+                  className="input w-auto text-sm"
                 >
                   <option value="name-asc">Name (A-Z)</option>
                   <option value="name-desc">Name (Z-A)</option>
@@ -326,7 +326,7 @@ export default function DashboardsPage() {
         {/* Empty State */}
         {(!isLoading && sortedDashboards.length === 0) && (
           <div className="text-center py-12">
-            <div className="w-16 h-16 bg-nog-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 bg-nog-100 dark:bg-nog-800 rounded-full flex items-center justify-center mx-auto mb-4">
               <LayoutDashboard className="w-8 h-8 text-nog-400" />
             </div>
             <h3 className="text-lg font-semibold text-nog-900 dark:text-nog-100 mb-2">No dashboards yet</h3>
@@ -368,9 +368,9 @@ export default function DashboardsPage() {
         </section>
 
         {/* Tips */}
-        <section className="card p-6 bg-honey-50 border-honey-100">
-          <h3 className="font-semibold text-honey-900 mb-3">Dashboard Tips</h3>
-          <ul className="space-y-2 text-sm text-honey-800">
+        <section className="card p-6 bg-honey-50 border-honey-100 dark:bg-honey-900/20 dark:border-honey-800 dark:text-honey-200">
+          <h3 className="font-semibold text-honey-900 dark:text-honey-200 mb-3">Dashboard Tips</h3>
+          <ul className="space-y-2 text-sm text-honey-800 dark:text-honey-200">
             <li className="flex items-start gap-2">
               <span className="text-honey-500 mt-0.5">•</span>
               Use time filters to focus on relevant data and improve performance

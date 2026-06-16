@@ -71,7 +71,7 @@ interface NavLinkProps {
 
 function NavLink({ to, icon: Icon, children, onClick }: NavLinkProps) {
   const location = useLocation();
-  const isActive = location.pathname === to;
+  const isActive = location.pathname === to || location.pathname.startsWith(to + '/');
 
   return (
     <Link
@@ -116,6 +116,7 @@ function NavGroup({ title, storageKey, defaultExpanded = true, children }: NavGr
     <div className="mb-2">
       <button
         onClick={toggleExpanded}
+        aria-expanded={isExpanded}
         className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-nog-400 dark:text-nog-500 uppercase tracking-wider hover:text-nog-600 dark:hover:text-nog-300 transition-colors group"
       >
         <span className="transition-transform duration-200" style={{ transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)' }}>
@@ -125,7 +126,7 @@ function NavGroup({ title, storageKey, defaultExpanded = true, children }: NavGr
       </button>
       <div
         className={`space-y-1 overflow-hidden transition-all duration-200 ease-in-out ${
-          isExpanded ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'
+          isExpanded ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'
         }`}
       >
         {children}
@@ -141,7 +142,7 @@ function UserMenu() {
     <div className="p-4 border-t border-nog-100 dark:border-nog-700">
       <div className="flex items-center gap-3 mb-3">
         <div className="w-8 h-8 bg-gradient-to-br from-honey-400 to-honey-600 rounded-full flex items-center justify-center">
-          <User className="w-4 h-4 text-white" />
+          <User className="w-4 h-4 text-nog-900" />
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-medium text-nog-900 dark:text-nog-100 truncate">
@@ -212,7 +213,7 @@ function Layout({ children }: { children: React.ReactNode }) {
       {/* Mobile Overlay */}
       {sidebarOpen && (
         <div
-          className="lg:hidden fixed inset-0 z-40 bg-black/50 backdrop-blur-sm transition-opacity"
+          className="lg:hidden fixed inset-0 z-40 bg-nog-950/60 backdrop-blur-sm transition-opacity"
           onClick={closeSidebar}
           aria-hidden="true"
         />
@@ -237,19 +238,16 @@ function Layout({ children }: { children: React.ReactNode }) {
             />
             <div className="flex-1 min-w-0">
               <h1 className="font-bold text-xl text-nog-900 dark:text-nog-100">LogNog</h1>
-              <p className="text-xs text-nog-500 dark:text-nog-400 truncate">Your Logs, Your Control</p>
+              <p className="text-xs text-nog-500 dark:text-nog-400 leading-tight">Your Logs, Your Control</p>
             </div>
-            {/* Close button on mobile, theme toggle on desktop */}
+            {/* Close button on mobile only */}
             <button
               onClick={closeSidebar}
-              className="lg:hidden p-2 -mr-2 rounded-lg hover:bg-nog-100 dark:hover:bg-nog-700 transition-colors"
+              className="lg:hidden p-2 -mr-2 rounded-lg hover:bg-nog-100 dark:hover:bg-nog-700 transition-colors flex-shrink-0"
               aria-label="Close menu"
             >
               <X className="w-5 h-5 text-nog-600 dark:text-nog-300" />
             </button>
-            <div className="hidden lg:block">
-              <ThemeToggle />
-            </div>
           </div>
         </div>
 
@@ -287,16 +285,21 @@ function Layout({ children }: { children: React.ReactNode }) {
           </NavGroup>
         </nav>
 
-        {/* Connection Status - hide on small screens to save space */}
+        {/* Backend info + theme toggle - hide on small screens to save space */}
         <div className="hidden sm:block p-4 border-t border-nog-100 dark:border-nog-700">
-          <div className="p-3 bg-nog-50 dark:bg-nog-900 rounded-lg">
-            <div className="flex items-center gap-2 text-xs text-nog-500 dark:text-nog-400">
-              <Database className="w-4 h-4 text-honey-500 dark:text-honey-400 flex-shrink-0" />
-              <span className="truncate">ClickHouse Connected</span>
+          <div className="p-3 bg-nog-50 dark:bg-nog-900 rounded-lg flex items-center gap-3">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 text-xs text-nog-500 dark:text-nog-400">
+                <Database className="w-4 h-4 text-honey-500 dark:text-honey-400 flex-shrink-0" />
+                <span className="truncate">Backend: ClickHouse</span>
+              </div>
+              <p className="text-xs text-nog-400 dark:text-nog-500 mt-1 truncate">
+                Syslog ingest on port 514
+              </p>
             </div>
-            <p className="text-xs text-nog-400 dark:text-nog-500 mt-1 truncate">
-              Ready to receive logs on port 514
-            </p>
+            <div className="hidden lg:block flex-shrink-0">
+              <ThemeToggle />
+            </div>
           </div>
         </div>
 

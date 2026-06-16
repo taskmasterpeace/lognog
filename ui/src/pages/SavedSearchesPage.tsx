@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -22,6 +22,7 @@ import {
   Filter,
   ChevronDown,
   ChevronRight,
+  MoreVertical,
 } from 'lucide-react';
 import {
   getSavedSearches,
@@ -42,6 +43,7 @@ import {
   SavedSearchRunResult,
   Dashboard,
 } from '../api/client';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 
 const SCHEDULE_OPTIONS = [
   { label: 'No schedule', value: '', desc: 'Run manually only' },
@@ -82,6 +84,22 @@ export default function SavedSearchesPage() {
   const [searchFilter, setSearchFilter] = useState('');
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [expandedFilters, setExpandedFilters] = useState(false);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  const { confirm } = useConfirm();
+
+  // Close the row actions menu when clicking outside it
+  useEffect(() => {
+    if (!openMenuId) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setOpenMenuId(null);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [openMenuId]);
 
   // Form state for create/edit
   const [formData, setFormData] = useState<SavedSearchCreateRequest>({
@@ -303,7 +321,7 @@ export default function SavedSearchesPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-nog-900 dark:text-white">Saved Searches</h1>
+          <h1 className="text-2xl font-bold text-nog-900 dark:text-nog-100">Saved Searches</h1>
           <p className="text-nog-600 dark:text-nog-400 mt-1">
             Save, schedule, and reuse your search queries
           </p>
@@ -410,7 +428,7 @@ export default function SavedSearchesPage() {
       {searches.length === 0 ? (
         <div className="card p-12 text-center">
           <Database className="w-12 h-12 text-nog-300 dark:text-nog-600 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-nog-900 dark:text-white mb-2">
+          <h3 className="text-lg font-semibold text-nog-900 dark:text-nog-100 mb-2">
             No saved searches yet
           </h3>
           <p className="text-nog-600 dark:text-nog-400 mb-4">
@@ -434,7 +452,7 @@ export default function SavedSearchesPage() {
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-nog-900 dark:text-white truncate">
+                    <h3 className="font-semibold text-nog-900 dark:text-nog-100 truncate">
                       {search.name}
                     </h3>
                     {search.schedule_enabled === 1 && (
@@ -456,8 +474,8 @@ export default function SavedSearchesPage() {
                     </p>
                   )}
 
-                  <div className="flex items-center gap-4 mt-2 text-xs text-nog-500 dark:text-nog-400">
-                    <code className="bg-nog-100 dark:bg-nog-800 px-2 py-0.5 rounded max-w-md truncate">
+                  <div className="flex items-center gap-4 mt-2 text-xs text-nog-500 dark:text-nog-400 flex-wrap">
+                    <code className="bg-nog-100 dark:bg-nog-800 px-2 py-0.5 rounded max-w-md truncate min-w-0">
                       {search.query}
                     </code>
                     <span>Time: {search.time_range}</span>
@@ -525,79 +543,108 @@ export default function SavedSearchesPage() {
                     )}
                   </button>
 
-                  <div className="relative group">
-                    <button className="btn-secondary text-sm py-1.5">
-                      <ChevronDown className="w-4 h-4" />
+                  <div className="relative" ref={openMenuId === search.id ? menuRef : undefined}>
+                    <button
+                      onClick={() => setOpenMenuId(openMenuId === search.id ? null : search.id)}
+                      className="btn-secondary text-sm py-1.5"
+                      aria-label="More actions"
+                      aria-haspopup="menu"
+                      aria-expanded={openMenuId === search.id}
+                    >
+                      <MoreVertical className="w-4 h-4" />
                     </button>
-                    <div className="absolute right-0 top-full mt-1 bg-white dark:bg-nog-800 rounded-lg shadow-lg border border-nog-200 dark:border-nog-700 py-1 min-w-[180px] hidden group-hover:block z-10">
-                      <button
-                        onClick={() => {
-                          setSelectedSearch(search);
-                          runMutation.mutate({ id: search.id, forceRefresh: true });
-                        }}
-                        className="w-full px-3 py-2 text-left text-sm hover:bg-nog-100 dark:hover:bg-nog-700 flex items-center gap-2"
+                    {openMenuId === search.id && (
+                      <div
+                        role="menu"
+                        className="absolute right-0 top-full mt-1 bg-white dark:bg-nog-800 rounded-lg shadow-lg border border-nog-200 dark:border-nog-700 py-1 min-w-[180px] z-10"
                       >
-                        <RefreshCw className="w-4 h-4" />
-                        Force Refresh
-                      </button>
-                      <button
-                        onClick={() => handleEditClick(search)}
-                        className="w-full px-3 py-2 text-left text-sm hover:bg-nog-100 dark:hover:bg-nog-700 flex items-center gap-2"
-                      >
-                        <Edit className="w-4 h-4" />
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => duplicateMutation.mutate(search.id)}
-                        className="w-full px-3 py-2 text-left text-sm hover:bg-nog-100 dark:hover:bg-nog-700 flex items-center gap-2"
-                      >
-                        <Copy className="w-4 h-4" />
-                        Duplicate
-                      </button>
-                      <hr className="my-1 border-nog-200 dark:border-nog-700" />
-                      <button
-                        onClick={() => {
-                          setSelectedSearch(search);
-                          setShowCreateAlertModal(true);
-                        }}
-                        className="w-full px-3 py-2 text-left text-sm hover:bg-nog-100 dark:hover:bg-nog-700 flex items-center gap-2"
-                      >
-                        <Bell className="w-4 h-4" />
-                        Create Alert
-                      </button>
-                      <button
-                        onClick={() => {
-                          setSelectedSearch(search);
-                          setShowAddToDashboardModal(true);
-                        }}
-                        className="w-full px-3 py-2 text-left text-sm hover:bg-nog-100 dark:hover:bg-nog-700 flex items-center gap-2"
-                      >
-                        <LayoutDashboard className="w-4 h-4" />
-                        Add to Dashboard
-                      </button>
-                      <button
-                        onClick={() => {
-                          setSelectedSearch(search);
-                          setShowCreateReportModal(true);
-                        }}
-                        className="w-full px-3 py-2 text-left text-sm hover:bg-nog-100 dark:hover:bg-nog-700 flex items-center gap-2"
-                      >
-                        <FileBarChart className="w-4 h-4" />
-                        Create Report
-                      </button>
-                      <hr className="my-1 border-nog-200 dark:border-nog-700" />
-                      <button
-                        onClick={() => {
-                          if (confirm('Delete this saved search?')) {
-                            deleteMutation.mutate(search.id);
-                          }
-                        }}
-                        className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                        Delete
-                      </button>
-                    </div>
+                        <button
+                          onClick={() => {
+                            setOpenMenuId(null);
+                            setSelectedSearch(search);
+                            runMutation.mutate({ id: search.id, forceRefresh: true });
+                          }}
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-nog-100 dark:hover:bg-nog-700 flex items-center gap-2"
+                        >
+                          <RefreshCw className="w-4 h-4" />
+                          Force Refresh
+                        </button>
+                        <button
+                          onClick={() => {
+                            setOpenMenuId(null);
+                            handleEditClick(search);
+                          }}
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-nog-100 dark:hover:bg-nog-700 flex items-center gap-2"
+                        >
+                          <Edit className="w-4 h-4" />
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => {
+                            setOpenMenuId(null);
+                            duplicateMutation.mutate(search.id);
+                          }}
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-nog-100 dark:hover:bg-nog-700 flex items-center gap-2"
+                        >
+                          <Copy className="w-4 h-4" />
+                          Duplicate
+                        </button>
+                        <hr className="my-1 border-nog-200 dark:border-nog-700" />
+                        <button
+                          onClick={() => {
+                            setOpenMenuId(null);
+                            setSelectedSearch(search);
+                            setShowCreateAlertModal(true);
+                          }}
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-nog-100 dark:hover:bg-nog-700 flex items-center gap-2"
+                        >
+                          <Bell className="w-4 h-4" />
+                          Create Alert
+                        </button>
+                        <button
+                          onClick={() => {
+                            setOpenMenuId(null);
+                            setSelectedSearch(search);
+                            setShowAddToDashboardModal(true);
+                          }}
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-nog-100 dark:hover:bg-nog-700 flex items-center gap-2"
+                        >
+                          <LayoutDashboard className="w-4 h-4" />
+                          Add to Dashboard
+                        </button>
+                        <button
+                          onClick={() => {
+                            setOpenMenuId(null);
+                            setSelectedSearch(search);
+                            setShowCreateReportModal(true);
+                          }}
+                          className="w-full px-3 py-2 text-left text-sm hover:bg-nog-100 dark:hover:bg-nog-700 flex items-center gap-2"
+                        >
+                          <FileBarChart className="w-4 h-4" />
+                          Create Report
+                        </button>
+                        <hr className="my-1 border-nog-200 dark:border-nog-700" />
+                        <button
+                          onClick={async () => {
+                            setOpenMenuId(null);
+                            const confirmed = await confirm({
+                              title: 'Delete Saved Search',
+                              message: `Are you sure you want to delete "${search.name}"? This action cannot be undone.`,
+                              confirmText: 'Delete',
+                              cancelText: 'Cancel',
+                              variant: 'danger',
+                            });
+                            if (confirmed) {
+                              deleteMutation.mutate(search.id);
+                            }
+                          }}
+                          className="w-full px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                          Delete
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -608,10 +655,10 @@ export default function SavedSearchesPage() {
 
       {/* Create/Edit Modal */}
       {(showCreateModal || showEditModal) && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-nog-900 rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="modal-overlay">
+          <div className="modal w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between p-4 border-b border-nog-200 dark:border-nog-700">
-              <h2 className="text-lg font-semibold text-nog-900 dark:text-white">
+              <h2 className="text-lg font-semibold text-nog-900 dark:text-nog-100">
                 {showEditModal ? 'Edit Saved Search' : 'Create Saved Search'}
               </h2>
               <button
@@ -809,11 +856,11 @@ export default function SavedSearchesPage() {
 
       {/* Results Modal */}
       {showResultsModal && runResults && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-nog-900 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+        <div className="modal-overlay">
+          <div className="modal w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
             <div className="flex items-center justify-between p-4 border-b border-nog-200 dark:border-nog-700">
               <div>
-                <h2 className="text-lg font-semibold text-nog-900 dark:text-white">
+                <h2 className="text-lg font-semibold text-nog-900 dark:text-nog-100">
                   Search Results
                 </h2>
                 <p className="text-sm text-nog-600 dark:text-nog-400">
@@ -857,7 +904,8 @@ export default function SavedSearchesPage() {
                           {Object.values(row).map((val, valIdx) => (
                             <td
                               key={valIdx}
-                              className="px-4 py-2 text-sm text-nog-900 dark:text-nog-100 whitespace-nowrap"
+                              className="px-4 py-2 text-sm text-nog-900 dark:text-nog-100 max-w-xs truncate"
+                              title={String(val)}
                             >
                               {String(val)}
                             </td>
@@ -892,10 +940,10 @@ export default function SavedSearchesPage() {
 
       {/* Create Alert Modal */}
       {showCreateAlertModal && selectedSearch && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-nog-900 rounded-lg shadow-xl w-full max-w-md">
+        <div className="modal-overlay">
+          <div className="modal w-full max-w-md">
             <div className="flex items-center justify-between p-4 border-b border-nog-200 dark:border-nog-700">
-              <h2 className="text-lg font-semibold text-nog-900 dark:text-white">
+              <h2 className="text-lg font-semibold text-nog-900 dark:text-nog-100">
                 Create Alert from Search
               </h2>
               <button
@@ -982,10 +1030,10 @@ export default function SavedSearchesPage() {
 
       {/* Add to Dashboard Modal */}
       {showAddToDashboardModal && selectedSearch && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-nog-900 rounded-lg shadow-xl w-full max-w-md">
+        <div className="modal-overlay">
+          <div className="modal w-full max-w-md">
             <div className="flex items-center justify-between p-4 border-b border-nog-200 dark:border-nog-700">
-              <h2 className="text-lg font-semibold text-nog-900 dark:text-white">
+              <h2 className="text-lg font-semibold text-nog-900 dark:text-nog-100">
                 Add to Dashboard
               </h2>
               <button
@@ -1072,10 +1120,10 @@ export default function SavedSearchesPage() {
 
       {/* Create Report Modal */}
       {showCreateReportModal && selectedSearch && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-nog-900 rounded-lg shadow-xl w-full max-w-md">
+        <div className="modal-overlay">
+          <div className="modal w-full max-w-md">
             <div className="flex items-center justify-between p-4 border-b border-nog-200 dark:border-nog-700">
-              <h2 className="text-lg font-semibold text-nog-900 dark:text-white">
+              <h2 className="text-lg font-semibold text-nog-900 dark:text-nog-100">
                 Create Scheduled Report
               </h2>
               <button

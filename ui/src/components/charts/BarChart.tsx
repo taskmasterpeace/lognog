@@ -1,7 +1,7 @@
 import React from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
-import { CHART_ACCENT } from './palette';
+import { CHART_ACCENT, getChartTheme } from './palette';
 
 export interface BarChartData {
   category: string;
@@ -61,23 +61,25 @@ export const BarChart: React.FC<BarChartProps> = ({
     return processedData.map(d => d.value);
   }, [processedData]);
 
+  const theme = getChartTheme(darkMode);
+
   const option: EChartsOption = React.useMemo(() => {
     const categoryAxis = {
       type: 'category' as const,
       data: categories,
       name: horizontal ? yAxisLabel : xAxisLabel,
       nameTextStyle: {
-        color: darkMode ? '#9ca3af' : '#6b7280',
+        color: theme.textMuted,
       },
       axisLabel: {
-        color: darkMode ? '#9ca3af' : '#6b7280',
+        color: theme.textMuted,
         interval: 0,
         rotate: horizontal ? 0 : 45,
         fontSize: 11,
       },
       axisLine: {
         lineStyle: {
-          color: darkMode ? '#4b5563' : '#d1d5db',
+          color: theme.axis,
         },
       },
     };
@@ -86,19 +88,19 @@ export const BarChart: React.FC<BarChartProps> = ({
       type: 'value' as const,
       name: horizontal ? xAxisLabel : yAxisLabel,
       nameTextStyle: {
-        color: darkMode ? '#9ca3af' : '#6b7280',
+        color: theme.textMuted,
       },
       axisLabel: {
-        color: darkMode ? '#9ca3af' : '#6b7280',
+        color: theme.textMuted,
       },
       axisLine: {
         lineStyle: {
-          color: darkMode ? '#4b5563' : '#d1d5db',
+          color: theme.axis,
         },
       },
       splitLine: {
         lineStyle: {
-          color: darkMode ? '#374151' : '#f3f4f6',
+          color: theme.grid,
         },
       },
     };
@@ -107,7 +109,7 @@ export const BarChart: React.FC<BarChartProps> = ({
       title: title ? {
         text: title,
         textStyle: {
-          color: darkMode ? '#e5e7eb' : '#1f2937',
+          color: theme.text,
           fontSize: 16,
         },
       } : undefined,
@@ -117,10 +119,10 @@ export const BarChart: React.FC<BarChartProps> = ({
         axisPointer: {
           type: 'shadow',
         },
-        backgroundColor: darkMode ? 'rgba(31, 41, 55, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-        borderColor: darkMode ? '#4b5563' : '#d1d5db',
+        backgroundColor: theme.tooltipBg,
+        borderColor: theme.tooltipBorder,
         textStyle: {
-          color: darkMode ? '#e5e7eb' : '#1f2937',
+          color: theme.text,
         },
         formatter: (params: any) => {
           const param = Array.isArray(params) ? params[0] : params;
@@ -147,21 +149,21 @@ export const BarChart: React.FC<BarChartProps> = ({
           label: {
             show: showValues,
             position: horizontal ? 'right' : 'top',
-            color: darkMode ? '#e5e7eb' : '#1f2937',
+            color: theme.text,
             fontSize: 11,
           },
           emphasis: {
             itemStyle: {
               shadowBlur: 10,
               shadowOffsetX: 0,
-              shadowColor: 'rgba(0, 0, 0, 0.5)',
+              shadowColor: 'rgba(0, 0, 0, 0.25)',
             },
           },
           barMaxWidth: 60,
         },
       ],
     };
-  }, [categories, values, title, darkMode, horizontal, showValues, barColor, xAxisLabel, yAxisLabel]);
+  }, [categories, values, title, darkMode, horizontal, showValues, barColor, xAxisLabel, yAxisLabel, theme]);
 
   const onEvents = React.useMemo(() => {
     if (!onBarClick) return undefined;
@@ -176,6 +178,17 @@ export const BarChart: React.FC<BarChartProps> = ({
       },
     };
   }, [onBarClick, categories, values]);
+
+  if (!data || data.length === 0) {
+    return (
+      <div
+        className="w-full flex items-center justify-center text-nog-400 dark:text-nog-500"
+        style={{ height: `${height}px` }}
+      >
+        No data to display
+      </div>
+    );
+  }
 
   return (
     <div className="w-full">

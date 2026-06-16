@@ -113,11 +113,14 @@ export default function UsersTab() {
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
       case 'admin':
+        // Admin = honey accent (distinct, elevated)
         return 'bg-honey-100 text-honey-800 dark:bg-honey-900/30 dark:text-honey-400';
       case 'user':
-        return 'bg-honey-100 text-honey-800 dark:bg-honey-900/30 dark:text-honey-400';
-      case 'readonly':
+        // User = neutral nog
         return 'bg-nog-100 text-nog-600 dark:bg-nog-700 dark:text-nog-400';
+      case 'readonly':
+        // Read-only = lighter neutral
+        return 'bg-nog-50 text-nog-500 dark:bg-nog-800 dark:text-nog-500';
       default:
         return 'bg-nog-100 text-nog-600 dark:bg-nog-700 dark:text-nog-400';
     }
@@ -177,7 +180,7 @@ export default function UsersTab() {
             Create New User
           </h3>
           <form onSubmit={handleCreateUser} className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
                   Username
@@ -188,7 +191,7 @@ export default function UsersTab() {
                   onChange={(e) => setNewUsername(e.target.value)}
                   required
                   pattern="[a-zA-Z0-9_-]+"
-                  className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-800 text-nog-900 dark:text-nog-100"
+                  className="input"
                   placeholder="johndoe"
                 />
               </div>
@@ -201,12 +204,12 @@ export default function UsersTab() {
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
                   required
-                  className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-800 text-nog-900 dark:text-nog-100"
+                  className="input"
                   placeholder="john@example.com"
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
                   Password
@@ -219,7 +222,7 @@ export default function UsersTab() {
                   onChange={(e) => setNewUserPassword(e.target.value)}
                   required
                   minLength={8}
-                  className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-800 text-nog-900 dark:text-nog-100"
+                  className="input"
                   placeholder="Min 8 characters"
                 />
               </div>
@@ -230,7 +233,7 @@ export default function UsersTab() {
                 <select
                   value={newUserRole}
                   onChange={(e) => setNewUserRole(e.target.value)}
-                  className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-800 text-nog-900 dark:text-nog-100"
+                  className="input"
                 >
                   <option value="user">User</option>
                   <option value="readonly">Read Only</option>

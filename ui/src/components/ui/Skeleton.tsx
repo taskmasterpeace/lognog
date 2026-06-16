@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, useMemo } from 'react';
 
 interface SkeletonProps {
   className?: string;
@@ -119,17 +119,23 @@ export function SkeletonList({ items = 5, className = '' }: { items?: number; cl
 }
 
 export function SkeletonChart({ className = '' }: { className?: string }) {
+  // Memoize bar heights so they stay stable across re-renders (no flicker).
+  const barHeights = useMemo(
+    () => Array.from({ length: 12 }, () => Math.random() * 150 + 50),
+    []
+  );
+
   return (
     <div className={`card p-6 ${className}`}>
       <SkeletonGroup>
         <Skeleton variant="text" width="40%" height={24} />
         <div className="mt-6 flex items-end gap-2 h-48">
-          {Array.from({ length: 12 }).map((_, i) => (
+          {barHeights.map((height, i) => (
             <Skeleton
               key={i}
               variant="rectangular"
               className="flex-1"
-              height={Math.random() * 150 + 50}
+              height={height}
             />
           ))}
         </div>

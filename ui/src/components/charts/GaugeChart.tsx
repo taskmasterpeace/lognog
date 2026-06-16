@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
+import { getChartTheme } from './palette';
 
 export interface GaugeChartProps {
   value: number;
@@ -29,6 +30,8 @@ export const GaugeChart: React.FC<GaugeChartProps> = ({
   unit = '',
   animated = true,
 }) => {
+  const theme = getChartTheme(darkMode);
+
   const option: EChartsOption = React.useMemo(() => ({
     backgroundColor: 'transparent',
     series: [
@@ -57,9 +60,9 @@ export const GaugeChart: React.FC<GaugeChartProps> = ({
           lineStyle: {
             width: 18,
             color: [
-              [thresholds.low / max, '#10b981'],
-              [thresholds.medium / max, '#fbbf24'],
-              [1, '#ef4444'],
+              [thresholds.low / max, '#16A34A'],   // green-600 — low/healthy
+              [thresholds.medium / max, '#C8862B'], // honey-500 — medium (brand-warm)
+              [1, '#DC2626'],                       // red-600 — high/critical
             ],
           },
         },
@@ -68,7 +71,7 @@ export const GaugeChart: React.FC<GaugeChartProps> = ({
           splitNumber: 5,
           lineStyle: {
             width: 2,
-            color: darkMode ? '#4b5563' : '#d1d5db',
+            color: theme.axis,
           },
         },
         splitLine: {
@@ -76,12 +79,12 @@ export const GaugeChart: React.FC<GaugeChartProps> = ({
           length: 14,
           lineStyle: {
             width: 3,
-            color: darkMode ? '#4b5563' : '#d1d5db',
+            color: theme.axis,
           },
         },
         axisLabel: {
           distance: -45,
-          color: darkMode ? '#9ca3af' : '#6b7280',
+          color: theme.textMuted,
           fontSize: 12,
         },
         anchor: {
@@ -91,7 +94,7 @@ export const GaugeChart: React.FC<GaugeChartProps> = ({
           show: !!title,
           offsetCenter: [0, '80%'],
           fontSize: 14,
-          color: darkMode ? '#9ca3af' : '#6b7280',
+          color: theme.textMuted,
         },
         detail: {
           valueAnimation: animated,
@@ -107,11 +110,11 @@ export const GaugeChart: React.FC<GaugeChartProps> = ({
             value: {
               fontSize: 32,
               fontWeight: 'bold',
-              color: darkMode ? '#e5e7eb' : '#1f2937',
+              color: theme.text,
             },
             unit: {
               fontSize: 18,
-              color: darkMode ? '#9ca3af' : '#6b7280',
+              color: theme.textMuted,
               padding: [0, 0, 0, 5],
             },
           },
@@ -124,7 +127,7 @@ export const GaugeChart: React.FC<GaugeChartProps> = ({
         ],
       },
     ],
-  }), [value, title, min, max, darkMode, thresholds, unit, animated]);
+  }), [value, title, min, max, darkMode, thresholds, unit, animated, theme]);
 
   return (
     <div className="w-full flex items-center justify-center">

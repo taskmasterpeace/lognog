@@ -690,6 +690,7 @@ export default function SearchPage() {
                         onClick={() => setAiQuestion('')}
                         className="p-1 text-nog-400 hover:text-nog-600 hover:bg-nog-100 rounded transition-colors"
                         title="Clear"
+                        aria-label="Clear question"
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -717,6 +718,7 @@ export default function SearchPage() {
                         onClick={() => setQuery('search *')}
                         className="p-1 text-nog-400 hover:text-nog-600 hover:bg-nog-100 rounded transition-colors pointer-events-auto"
                         title="Clear search"
+                        aria-label="Clear search"
                       >
                         <X className="w-4 h-4" />
                       </button>
@@ -732,6 +734,7 @@ export default function SearchPage() {
                     onClick={() => setShowHistory(!showHistory)}
                     className="btn-secondary h-11 sm:h-12 group"
                     title="Query history"
+                    aria-label="Query history"
                   >
                     <History className="w-4 h-4 text-nog-400 group-hover:text-nog-600 transition-all duration-200 group-hover:scale-110" />
                   </button>
@@ -786,6 +789,7 @@ export default function SearchPage() {
                     onClick={() => setShowTemplates(!showTemplates)}
                     className="btn-secondary h-11 sm:h-12 group"
                     title="Query templates"
+                    aria-label="Query templates"
                   >
                     <BookTemplate className="w-4 h-4 text-nog-400 group-hover:text-nog-600 transition-all duration-200 group-hover:scale-110" />
                   </button>
@@ -918,11 +922,11 @@ export default function SearchPage() {
                   <button
                     key={idx}
                     onClick={() => setAiQuestion(suggestion.text)}
-                    className="flex items-center gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm bg-honey-50 text-honey-700 rounded-lg hover:bg-honey-100 transition-colors whitespace-nowrap flex-shrink-0"
+                    className="flex items-center gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 text-xs sm:text-sm bg-honey-50 text-honey-700 rounded-lg hover:bg-honey-100 transition-colors flex-shrink-0 max-w-[12rem]"
                     title={suggestion.description}
                   >
-                    <Wand2 className="w-3 h-3" />
-                    {suggestion.text.length > 20 ? suggestion.text.slice(0, 20) + '...' : suggestion.text}
+                    <Wand2 className="w-3 h-3 flex-shrink-0" />
+                    <span className="truncate">{suggestion.text}</span>
                   </button>
                 ))}
               </>
@@ -983,7 +987,7 @@ export default function SearchPage() {
 
         {/* Error State */}
         {(searchMutation.isError || aiSearchMutation.isError) && (
-          <div className="card border-red-200 bg-red-50 p-4 mb-6 flex items-start gap-3 animate-fade-in">
+          <div className="card border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800 p-4 mb-6 flex items-start gap-3 animate-fade-in">
             <AlertCircle className="w-5 h-5 text-red-500 mt-0.5 flex-shrink-0" />
             <div>
               <p className="font-semibold text-red-900">Search Error</p>
@@ -996,7 +1000,7 @@ export default function SearchPage() {
 
         {/* AI Search Result Card */}
         {aiSearchMutation.data && (
-          <div className="card border-honey-200 bg-honey-50 p-4 mb-6 animate-fade-in">
+          <div className="card border-honey-200 bg-honey-50 dark:bg-honey-900/20 dark:border-honey-800 p-4 mb-6 animate-fade-in">
             <div className="flex items-start gap-3">
               <Wand2 className="w-5 h-5 text-honey-500 mt-0.5 flex-shrink-0" />
               <div className="flex-1">
@@ -1331,7 +1335,7 @@ export default function SearchPage() {
 
               {/* SQL Preview */}
               {showSqlPreview && sql && (
-                <div className="card p-4 mb-4 bg-nog-900 text-nog-100 animate-fade-in">
+                <div className="card p-4 mb-4 bg-nog-900 dark:bg-nog-950 border border-nog-700 text-nog-100 animate-fade-in">
                   <pre className="text-sm font-mono overflow-x-auto whitespace-pre-wrap">
                     {sql}
                   </pre>
@@ -1417,7 +1421,7 @@ export default function SearchPage() {
                                     {new Date(String(value)).toLocaleString()}
                                   </span>
                                 ) : key === 'message' ? (
-                                  <span className="font-mono text-xs text-nog-700 dark:text-nog-300 max-w-md truncate block">
+                                  <span className="font-mono text-xs text-nog-700 dark:text-nog-300 max-w-md truncate block" title={String(value)}>
                                     {String(value)}
                                   </span>
                                 ) : key === 'hostname' || key === 'app_name' ? (
@@ -1435,7 +1439,7 @@ export default function SearchPage() {
                 </div>
               ) : (
                 /* JSON View */
-                <div className="card overflow-hidden bg-nog-900">
+                <div className="card overflow-hidden bg-nog-900 dark:bg-nog-950 border border-nog-700">
                   <div className="overflow-auto p-4" style={{ maxHeight: '600px' }}>
                     <pre className="text-sm font-mono text-nog-100 whitespace-pre-wrap">
                       {JSON.stringify(results, null, 2)}
@@ -1546,9 +1550,7 @@ export default function SearchPage() {
         {/* Loading State */}
         {(searchMutation.isPending || aiSearchMutation.isPending) && (
           <div className="flex flex-col items-center justify-center py-20">
-            <Loader2 className={`w-8 h-8 animate-spin mb-4 ${
-              searchMode === 'ai' ? 'text-honey-500' : 'text-honey-500'
-            }`} />
+            <Loader2 className="w-8 h-8 animate-spin mb-4 text-honey-500" />
             <p className="text-nog-600">
               {searchMode === 'ai' ? 'AI is translating your question...' : 'Searching logs...'}
             </p>

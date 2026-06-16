@@ -1,6 +1,7 @@
 import React from 'react';
 import ReactECharts from 'echarts-for-react';
 import type { EChartsOption } from 'echarts';
+import { getChartTheme, HEATMAP_HONEY_RAMP } from './palette';
 
 export interface HeatmapData {
   hour: number;
@@ -25,9 +26,19 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({
   title,
   height = 400,
   darkMode = false,
-  colorRange = ['#10b981', '#ef4444'],
+  colorRange,
   showValues = false,
 }) => {
+  const theme = getChartTheme(darkMode);
+
+  // Non-semantic activity heatmap: warm honey ramp by default. A caller-supplied
+  // semantic range (e.g. green→red) is honored with an amber midpoint.
+  const visualMapColors = React.useMemo<string[]>(() => {
+    return colorRange
+      ? [colorRange[0], '#CA8A04', colorRange[1]] // amber-600 midpoint (functional/semantic)
+      : [...HEATMAP_HONEY_RAMP];
+  }, [colorRange]);
+
   const processedData = React.useMemo(() => {
     return data.map(item => [item.hour, item.day, item.value]);
   }, [data]);
@@ -40,17 +51,17 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({
     title: title ? {
       text: title,
       textStyle: {
-        color: darkMode ? '#e5e7eb' : '#1f2937',
+        color: theme.text,
         fontSize: 16,
       },
     } : undefined,
     backgroundColor: 'transparent',
     tooltip: {
       position: 'top',
-      backgroundColor: darkMode ? 'rgba(31, 41, 55, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-      borderColor: darkMode ? '#4b5563' : '#d1d5db',
+      backgroundColor: theme.tooltipBg,
+      borderColor: theme.tooltipBorder,
       textStyle: {
-        color: darkMode ? '#e5e7eb' : '#1f2937',
+        color: theme.text,
       },
       formatter: (params: any) => {
         const [hour, day, value] = params.data;
@@ -70,24 +81,22 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({
       nameLocation: 'middle',
       nameGap: 30,
       nameTextStyle: {
-        color: darkMode ? '#9ca3af' : '#6b7280',
+        color: theme.textMuted,
         fontSize: 12,
       },
       axisLabel: {
-        color: darkMode ? '#9ca3af' : '#6b7280',
+        color: theme.textMuted,
         interval: 2,
       },
       axisLine: {
         lineStyle: {
-          color: darkMode ? '#4b5563' : '#d1d5db',
+          color: theme.axis,
         },
       },
       splitArea: {
         show: true,
         areaStyle: {
-          color: darkMode
-            ? ['rgba(55, 65, 81, 0.2)', 'rgba(75, 85, 99, 0.2)']
-            : ['rgba(250, 250, 250, 0.5)', 'rgba(240, 240, 240, 0.5)'],
+          color: theme.splitArea,
         },
       },
     },
@@ -98,23 +107,21 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({
       nameLocation: 'middle',
       nameGap: 50,
       nameTextStyle: {
-        color: darkMode ? '#9ca3af' : '#6b7280',
+        color: theme.textMuted,
         fontSize: 12,
       },
       axisLabel: {
-        color: darkMode ? '#9ca3af' : '#6b7280',
+        color: theme.textMuted,
       },
       axisLine: {
         lineStyle: {
-          color: darkMode ? '#4b5563' : '#d1d5db',
+          color: theme.axis,
         },
       },
       splitArea: {
         show: true,
         areaStyle: {
-          color: darkMode
-            ? ['rgba(55, 65, 81, 0.2)', 'rgba(75, 85, 99, 0.2)']
-            : ['rgba(250, 250, 250, 0.5)', 'rgba(240, 240, 240, 0.5)'],
+          color: theme.splitArea,
         },
       },
     },
@@ -126,10 +133,10 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({
       left: 'center',
       bottom: '5%',
       textStyle: {
-        color: darkMode ? '#9ca3af' : '#6b7280',
+        color: theme.textMuted,
       },
       inRange: {
-        color: [colorRange[0], '#fbbf24', colorRange[1]],
+        color: visualMapColors,
       },
     },
     series: [
@@ -139,18 +146,29 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({
         data: processedData,
         label: {
           show: showValues,
-          color: darkMode ? '#e5e7eb' : '#1f2937',
+          color: theme.text,
           fontSize: 10,
         },
         emphasis: {
           itemStyle: {
             shadowBlur: 10,
-            shadowColor: 'rgba(0, 0, 0, 0.5)',
+            shadowColor: 'rgba(0, 0, 0, 0.25)',
           },
         },
       },
     ],
-  }), [processedData, maxValue, title, darkMode, colorRange, showValues]);
+  }), [processedData, maxValue, title, darkMode, visualMapColors, showValues, theme]);
+
+  if (!data || data.length === 0) {
+    return (
+      <div
+        className="w-full flex items-center justify-center text-nog-400 dark:text-nog-500"
+        style={{ height: `${height}px` }}
+      >
+        No data to display
+      </div>
+    );
+  }
 
   return (
     <div className="w-full">

@@ -17,7 +17,7 @@ import { getStats, getTimeSeries } from '../api/client';
 import StorageTab from '../components/analytics/StorageTab';
 import { useTheme } from '../contexts/ThemeContext';
 
-const SEVERITY_COLORS = ['#dc2626', '#ea580c', '#d97706', '#eab308', '#84cc16', '#22c55e', '#10b981', '#06b6d4'];
+const SEVERITY_COLORS = ['#dc2626', '#ea580c', '#d97706', '#eab308', '#84cc16', '#22c55e', '#10b981', '#0D9488'];
 const SEVERITY_NAMES = ['Emergency', 'Alert', 'Critical', 'Error', 'Warning', 'Notice', 'Info', 'Debug'];
 
 interface StatCardProps {
@@ -82,7 +82,7 @@ export default function StatsPage() {
   const severityData = stats?.bySeverity.map((s) => ({
     name: SEVERITY_NAMES[s.severity] || `Level ${s.severity}`,
     value: s.count,
-    fill: SEVERITY_COLORS[s.severity] || '#6b7280',
+    fill: SEVERITY_COLORS[s.severity] || '#B8A68E',
     severity: s.severity,
   })) || [];
 
@@ -148,7 +148,19 @@ export default function StatsPage() {
         </div>
       )}
 
-      {activeTab === 'analytics' && !statsLoading && !timeSeriesLoading && (
+      {activeTab === 'analytics' && !statsLoading && !timeSeriesLoading && stats?.totalLogs === 0 && (
+        <div className="flex flex-col items-center justify-center py-16 sm:py-24 px-4 text-center">
+          <div className="w-16 h-16 bg-honey-100 dark:bg-honey-900/20 rounded-full flex items-center justify-center mb-4">
+            <Database className="w-8 h-8 text-honey-600 dark:text-honey-400" />
+          </div>
+          <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-1 text-base sm:text-lg">No data yet</h3>
+          <p className="text-sm text-nog-500 dark:text-nog-400 max-w-sm">
+            No logs have been ingested yet. Once your sources start sending logs, analytics will appear here.
+          </p>
+        </div>
+      )}
+
+      {activeTab === 'analytics' && !statsLoading && !timeSeriesLoading && stats?.totalLogs !== 0 && (
 
       <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
         {/* Stat Cards */}
@@ -165,7 +177,6 @@ export default function StatsPage() {
             icon={Activity}
             label="Last 24 Hours"
             value={stats?.last24Hours || 0}
-            trend="+12%"
             color="text-honey-600"
             iconBg="bg-honey-50"
           />
@@ -210,12 +221,13 @@ export default function StatsPage() {
             <AreaChart
               data={timeSeries || []}
               series={[
-                { name: 'Total', dataKey: 'count', color: '#f59e0b' },
+                { name: 'Total', dataKey: 'count', color: '#C8862B' },
                 { name: 'Errors', dataKey: 'errors', color: '#ef4444' },
               ]}
               xAxisKey="time"
               height={288}
               darkMode={isDarkMode}
+              showLegend={false}
               xAxisFormatter={(v) => new Date(v).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               tooltipFormatter={(v) => new Date(v).toLocaleString()}
             />
@@ -268,7 +280,7 @@ export default function StatsPage() {
               height={288}
               darkMode={isDarkMode}
               horizontal={true}
-              barColor="#f59e0b"
+              barColor="#C8862B"
               showValues={false}
               onBarClick={(category) => handleDrilldown('hostname', category)}
             />
