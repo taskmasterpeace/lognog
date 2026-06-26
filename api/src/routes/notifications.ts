@@ -332,6 +332,7 @@ router.post('/channels/:id/test', authenticate, async (req: Request, res: Respon
           body: `This is a test notification from LogNog for channel "${channel.name}". If you see this, your notification channel is configured correctly!`,
           type: 'info',
         }),
+        signal: AbortSignal.timeout(10000), // don't hold the request socket open on a hung Apprise
       });
 
       const success = response.ok;
@@ -382,6 +383,7 @@ router.post('/test', authenticate, async (req: Request, res: Response) => {
           body: body || 'This is a test notification from LogNog.',
           type: 'info',
         }),
+        signal: AbortSignal.timeout(10000), // don't hold the request socket open on a hung Apprise
       });
 
       if (response.ok) {

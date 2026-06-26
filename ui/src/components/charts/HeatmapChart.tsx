@@ -44,7 +44,7 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({
   }, [data]);
 
   const maxValue = React.useMemo(() => {
-    return Math.max(...data.map(d => d.value), 1);
+    return data.reduce((max, d) => (d.value > max ? d.value : max), 1);
   }, [data]);
 
   const option: EChartsOption = React.useMemo(() => ({
@@ -65,7 +65,7 @@ export const HeatmapChart: React.FC<HeatmapChartProps> = ({
       },
       formatter: (params: any) => {
         const [hour, day, value] = params.data;
-        return `${DAYS[day]} ${HOURS[hour]}<br/>Count: ${value}`;
+        return `${DAYS[day]} ${HOURS[hour]}<br/>Count: ${Number(value) || 0}`;
       },
     },
     grid: {

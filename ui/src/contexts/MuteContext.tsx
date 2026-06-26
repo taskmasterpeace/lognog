@@ -27,7 +27,7 @@ export function MuteProvider({ children }: { children: ReactNode }) {
     // Load from localStorage first for instant access
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
-      return saved ? JSON.parse(saved) : DEFAULT_MUTED_VALUES;
+      return saved ? { ...DEFAULT_MUTED_VALUES, ...JSON.parse(saved) } : DEFAULT_MUTED_VALUES;
     } catch {
       return DEFAULT_MUTED_VALUES;
     }
@@ -43,7 +43,7 @@ export function MuteProvider({ children }: { children: ReactNode }) {
         return;
       }
       try {
-        const serverValues = await getMutedValues();
+        const serverValues = { ...DEFAULT_MUTED_VALUES, ...(await getMutedValues()) };
         setMutedValues(serverValues);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(serverValues));
       } catch (err) {
@@ -72,8 +72,8 @@ export function MuteProvider({ children }: { children: ReactNode }) {
 
     // Optimistically update local state
     setMutedValues(prev => {
-      if (prev[fieldKey].includes(value)) return prev;
-      const updated = { ...prev, [field]: [...prev[fieldKey], value] };
+      if ((prev[fieldKey] ?? []).includes(value)) return prev;
+      const updated = { ...prev, [field]: [...(prev[fieldKey] ?? []), value] };
 
       // Sync to server in background
       const token = localStorage.getItem('lognog_access_token');
@@ -94,7 +94,7 @@ export function MuteProvider({ children }: { children: ReactNode }) {
 
     // Optimistically update local state
     setMutedValues(prev => {
-      const updated = { ...prev, [field]: prev[fieldKey].filter(v => v !== value) };
+      const updated = { ...prev, [field]: (prev[fieldKey] ?? []).filter(v => v !== value) };
 
       // Sync to server in background
       const token = localStorage.getItem('lognog_access_token');
@@ -117,7 +117,7 @@ export function MuteProvider({ children }: { children: ReactNode }) {
   }, [isMuted, addMute, removeMute]);
 
   const getMutedCount = useCallback((): number => {
-    return mutedValues.app_name.length + mutedValues.index_name.length + mutedValues.hostname.length;
+    return (mutedValues.app_name ?? []).length + (mutedValues.index_name ?? []).length + (mutedValues.hostname ?? []).length;
   }, [mutedValues]);
 
   const getMutedCountByField = useCallback((field: string): number => {

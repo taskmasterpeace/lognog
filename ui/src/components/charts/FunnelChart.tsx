@@ -42,7 +42,7 @@ export const FunnelChart: React.FC<FunnelChartProps> = ({
 
   // Calculate percentages
   const maxValue = React.useMemo(() => {
-    return Math.max(...data.map(d => d.value), 1);
+    return data.reduce((max, d) => (d.value > max ? d.value : max), 1);
   }, [data]);
 
   const option: EChartsOption = React.useMemo(() => ({
@@ -62,8 +62,9 @@ export const FunnelChart: React.FC<FunnelChartProps> = ({
         color: theme.text,
       },
       formatter: (params: any) => {
-        const percentage = ((params.value / maxValue) * 100).toFixed(1);
-        return `<strong>${params.name}</strong><br/>Value: ${params.value.toLocaleString()}<br/>Percentage: ${percentage}%`;
+        const value = Number(params.value) || 0;
+        const percentage = ((value / maxValue) * 100).toFixed(1);
+        return `<strong>${params.name}</strong><br/>Value: ${value.toLocaleString()}<br/>Percentage: ${percentage}%`;
       },
     },
     legend: {
@@ -96,7 +97,8 @@ export const FunnelChart: React.FC<FunnelChartProps> = ({
           fontSize: 12,
           fontWeight: 'bold',
           formatter: (params: any) => {
-            const percentage = ((params.value / maxValue) * 100).toFixed(0);
+            const value = Number(params.value) || 0;
+            const percentage = ((value / maxValue) * 100).toFixed(0);
             return `${params.name}\n${percentage}%`;
           },
         },

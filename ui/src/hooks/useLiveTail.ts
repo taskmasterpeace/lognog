@@ -55,6 +55,17 @@ export function useLiveTail(options: UseLiveTailOptions = {}): UseLiveTailReturn
   const rateCounterRef = useRef<number[]>([]);
   const rateIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+  // Keep refs in sync so the SSE onmessage handler (bound once in start())
+  // always reads the latest values instead of stale closure captures.
+  const isPausedRef = useRef(isPaused);
+  useEffect(() => {
+    isPausedRef.current = isPaused;
+  }, [isPaused]);
+  const onNewLogsRef = useRef(onNewLogs);
+  useEffect(() => {
+    onNewLogsRef.current = onNewLogs;
+  }, [onNewLogs]);
+
   // Calculate logs per second
   useEffect(() => {
     if (isStreaming && !isPaused) {
@@ -110,7 +121,7 @@ export function useLiveTail(options: UseLiveTailOptions = {}): UseLiveTailReturn
           newLogs.forEach(() => rateCounterRef.current.push(now));
           setTotalReceived(prev => prev + newLogs.length);
 
-          if (isPaused) {
+          if (isPausedRef.current) {
             // Buffer logs while paused
             pausedLogsRef.current = [...pausedLogsRef.current, ...newLogs].slice(-maxLogs);
           } else {
@@ -121,8 +132,8 @@ export function useLiveTail(options: UseLiveTailOptions = {}): UseLiveTailReturn
             });
 
             // Callback for new logs
-            if (onNewLogs) {
-              onNewLogs(newLogs);
+            if (onNewLogsRef.current) {
+              onNewLogsRef.current(newLogs);
             }
           }
         } else if (message.type === 'error') {
@@ -139,7 +150,7 @@ export function useLiveTail(options: UseLiveTailOptions = {}): UseLiveTailReturn
 
       // EventSource will automatically reconnect
     };
-  }, [query, maxLogs, isPaused, onNewLogs]);
+  }, [query, maxLogs]);
 
   const stop = useCallback(() => {
     if (eventSourceRef.current) {

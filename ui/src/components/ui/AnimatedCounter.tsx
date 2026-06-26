@@ -24,12 +24,18 @@ export default function AnimatedCounter({
   const rafRef = useRef<number>();
   const startTimeRef = useRef<number>();
   const startValueRef = useRef<number>(value);
+  // Track the latest displayed value without making it an effect dependency,
+  // so the rAF loop's setDisplayValue calls don't restart the animation effect.
+  const displayValueRef = useRef<number>(value);
+  useEffect(() => {
+    displayValueRef.current = displayValue;
+  }, [displayValue]);
 
   useEffect(() => {
-    if (value === displayValue) return;
+    if (value === displayValueRef.current) return;
 
     setIsAnimating(true);
-    startValueRef.current = displayValue;
+    startValueRef.current = displayValueRef.current;
     startTimeRef.current = performance.now();
 
     const animate = (currentTime: number) => {
@@ -63,7 +69,7 @@ export default function AnimatedCounter({
         cancelAnimationFrame(rafRef.current);
       }
     };
-  }, [value, duration, displayValue]);
+  }, [value, duration]);
 
   return (
     <span className={`${className} ${isAnimating ? 'text-honey-600 dark:text-honey-400' : ''} transition-colors duration-200`}>

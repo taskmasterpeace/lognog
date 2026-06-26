@@ -49,7 +49,7 @@ function generateToken(): string {
  * Check if a path is exempt from CSRF protection
  */
 function isExemptPath(path: string): boolean {
-  return EXEMPT_PATHS.some(exempt => path.startsWith(exempt));
+  return EXEMPT_PATHS.some(exempt => path === exempt || path.startsWith(exempt + '/'));
 }
 
 /**
@@ -120,6 +120,16 @@ export function csrfProtection(
     res.status(403).json({
       error: 'CSRF token missing',
       message: 'Include X-CSRF-Token header with the value from the lognog_csrf cookie',
+    });
+    return;
+  }
+
+  // Reject mismatched lengths before timingSafeEqual (which throws RangeError
+  // on unequal-length buffers). Treat a short/long token as an invalid token.
+  if (!headerToken || headerToken.length !== cookieToken.length) {
+    res.status(403).json({
+      error: 'CSRF token invalid',
+      message: 'X-CSRF-Token header does not match cookie',
     });
     return;
   }

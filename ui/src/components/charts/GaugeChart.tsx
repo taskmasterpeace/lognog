@@ -59,11 +59,19 @@ export const GaugeChart: React.FC<GaugeChartProps> = ({
         axisLine: {
           lineStyle: {
             width: 18,
-            color: [
-              [thresholds.low / max, '#16A34A'],   // green-600 — low/healthy
-              [thresholds.medium / max, '#C8862B'], // honey-500 — medium (brand-warm)
-              [1, '#DC2626'],                       // red-600 — high/critical
-            ],
+            color: (() => {
+              // Guard against max <= 0 (would NaN/Infinity the offsets) and keep
+              // the offset stops within an ascending [0, 1] range.
+              const divisor = max > 0 ? max : 1;
+              const clamp = (n: number) => Math.min(1, Math.max(0, n));
+              const lowStop = clamp(thresholds.low / divisor);
+              const medStop = clamp(Math.max(thresholds.medium / divisor, lowStop));
+              return [
+                [lowStop, '#16A34A'],   // green-600 — low/healthy
+                [medStop, '#C8862B'],   // honey-500 — medium (brand-warm)
+                [1, '#DC2626'],         // red-600 — high/critical
+              ];
+            })(),
           },
         },
         axisTick: {
@@ -104,7 +112,11 @@ export const GaugeChart: React.FC<GaugeChartProps> = ({
           offsetCenter: [0, '10%'],
           fontSize: 32,
           fontWeight: 'bold',
-          formatter: (val: number) => `{value|${val.toFixed(1)}}${unit ? `{unit|${unit}}` : ''}`,
+          formatter: (val: number) => {
+            const n = Number(val);
+            const display = Number.isFinite(n) ? n.toFixed(1) : '0';
+            return `{value|${display}}${unit ? `{unit|${unit}}` : ''}`;
+          },
           color: 'auto',
           rich: {
             value: {

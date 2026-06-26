@@ -75,6 +75,7 @@ async function generateWithOllama(prompt: string): Promise<string> {
         temperature: 0.3, // Lower temperature for more consistent analysis
       },
     }),
+    signal: AbortSignal.timeout(30000), // don't hang the scoring loop on an unresponsive LLM
   });
 
   if (!response.ok) {
@@ -106,6 +107,7 @@ async function generateWithOpenRouter(prompt: string): Promise<string> {
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.3,
     }),
+    signal: AbortSignal.timeout(30000), // don't hang the scoring loop on an unresponsive LLM
   });
 
   if (!response.ok) {

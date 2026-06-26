@@ -12,6 +12,15 @@ APP_NAME = "lognog-in"
 APP_AUTHOR = "MachineKingLabs"
 
 
+def _filter_fields(raw: dict, cls, section: str) -> dict:
+    """Drop unknown keys from a config dict so a typo doesn't crash agent startup."""
+    valid = set(getattr(cls, "__dataclass_fields__", {}))
+    unknown = [k for k in raw if k not in valid]
+    if unknown:
+        print(f"[lognog-in] Warning: ignoring unknown {section} keys: {', '.join(unknown)}")
+    return {k: v for k, v in raw.items() if k in valid}
+
+
 @dataclass
 class WatchPath:
     """A path to watch for log files."""
@@ -120,7 +129,7 @@ class Config:
             if isinstance(wp, str):
                 watch_paths.append(WatchPath(path=wp))
             elif isinstance(wp, dict):
-                watch_paths.append(WatchPath(**wp))
+                watch_paths.append(WatchPath(**_filter_fields(wp, WatchPath, "watch_paths")))
 
         # Parse FIM paths
         fim_paths = []
@@ -128,7 +137,7 @@ class Config:
             if isinstance(fp, str):
                 fim_paths.append(FIMPath(path=fp))
             elif isinstance(fp, dict):
-                fim_paths.append(FIMPath(**fp))
+                fim_paths.append(FIMPath(**_filter_fields(fp, FIMPath, "fim_paths")))
 
         # Parse Windows Events config
         windows_events_data = data.get("windows_events", {})

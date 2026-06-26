@@ -207,6 +207,18 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
     throw new Error(error.message || error.error || 'Request failed');
   }
 
+  // No-content / empty-body responses (e.g. 204 from delete/clear endpoints)
+  // have nothing to parse — calling .json() would throw "Unexpected end of JSON input".
+  const contentType = response.headers.get('content-type');
+  if (
+    response.status === 204 ||
+    response.headers.get('content-length') === '0' ||
+    !contentType ||
+    !contentType.includes('application/json')
+  ) {
+    return undefined as T;
+  }
+
   return response.json();
 }
 

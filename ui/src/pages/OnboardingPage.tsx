@@ -562,7 +562,8 @@ ${QUERY_EXAMPLES_CONTENT}
 function CopyButton({ text, label, size = 'md' }: { text: string; label?: string; size?: 'sm' | 'md' }) {
   const [copied, setCopied] = useState(false);
 
-  const handleCopy = async () => {
+  const handleCopy = async (e?: React.MouseEvent) => {
+    e?.stopPropagation();
     await navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -607,9 +608,13 @@ function CopyableSection({ title, description, icon, content, isExpanded, onTogg
   return (
     <div className="bg-white dark:bg-nog-800 border border-nog-200 dark:border-nog-700 rounded-xl overflow-hidden">
       {/* Header - always visible */}
-      <button
+      <div
+        role="button"
+        tabIndex={0}
         onClick={onToggle}
-        className="w-full flex items-center justify-between p-4 hover:bg-nog-50 dark:hover:bg-nog-700/50 transition-colors"
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onToggle(); } }}
+        aria-expanded={isExpanded}
+        className="w-full flex items-center justify-between p-4 hover:bg-nog-50 dark:hover:bg-nog-700/50 transition-colors cursor-pointer"
       >
         <div className="flex items-center gap-3">
           <div className="p-2 bg-honey-100 dark:bg-honey-900/30 rounded-lg">
@@ -628,7 +633,7 @@ function CopyableSection({ title, description, icon, content, isExpanded, onTogg
             <ChevronDown className="w-5 h-5 text-nog-400" />
           )}
         </div>
-      </button>
+      </div>
 
       {/* Expandable Content */}
       {isExpanded && (

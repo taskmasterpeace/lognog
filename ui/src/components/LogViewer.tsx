@@ -84,19 +84,25 @@ const highlightText = (text: string, searchTerms?: string[]): JSX.Element => {
 
     result.forEach((part) => {
       if (typeof part === 'string') {
-        const regex = new RegExp(`(${term})`, 'gi');
-        const parts = part.split(regex);
-        parts.forEach((p, i) => {
-          if (p.toLowerCase() === term.toLowerCase()) {
-            newResult.push(
-              <mark key={`${term}-${i}`} className="bg-yellow-200 dark:bg-yellow-500/30 text-nog-900 dark:text-yellow-200 px-0.5 rounded">
-                {p}
-              </mark>
-            );
-          } else if (p) {
-            newResult.push(p);
-          }
-        });
+        try {
+          const escapedTerm = term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+          const regex = new RegExp(`(${escapedTerm})`, 'gi');
+          const parts = part.split(regex);
+          parts.forEach((p, i) => {
+            if (p.toLowerCase() === term.toLowerCase()) {
+              newResult.push(
+                <mark key={`${term}-${i}`} className="bg-yellow-200 dark:bg-yellow-500/30 text-nog-900 dark:text-yellow-200 px-0.5 rounded">
+                  {p}
+                </mark>
+              );
+            } else if (p) {
+              newResult.push(p);
+            }
+          });
+        } catch {
+          // On any regex/highlight error, fall back to the plain text unchanged
+          newResult.push(part);
+        }
       } else {
         newResult.push(part);
       }
