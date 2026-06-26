@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { CitationsPanel, CitedSource, SearchStats } from './NogChat/CitationsPanel';
 import { api } from '../api/client';
+import { sanitize } from '../utils/sanitize';
 
 interface Message {
   role: 'user' | 'assistant';
@@ -87,6 +88,66 @@ const STARTER_PROMPTS = [
   'Help me write a timechart query',
 ];
 
+type ContentSegment =
+  | { kind: 'text'; value: string }
+  | { kind: 'code'; value: string };
+
+/**
+ * Single-pass tokenizer that splits assistant content into ordered text and
+ * fenced-code-block segments. Because it walks the string once and emits
+ * segments directly (no sentinel/placeholder string), untrusted content can't
+ * collide with a placeholder to drop or duplicate blocks.
+ */
+function tokenizeContent(content: string): ContentSegment[] {
+  const segments: ContentSegment[] = [];
+  // ```lang?\n ... ``` — non-greedy body, optional leading language + newline.
+  const fenceRegex = /```(?:[^\n`]*)\n?([\s\S]*?)```/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = fenceRegex.exec(content)) !== null) {
+    if (match.index > lastIndex) {
+      segments.push({ kind: 'text', value: content.slice(lastIndex, match.index) });
+    }
+    segments.push({ kind: 'code', value: match[1].replace(/\n+$/, '').trim() });
+    lastIndex = fenceRegex.lastIndex;
+  }
+
+  // Trailing text (also covers the unbalanced-backticks case: any unmatched
+  // remainder is rendered as plain text rather than silently dropped).
+  if (lastIndex < content.length) {
+    segments.push({ kind: 'text', value: content.slice(lastIndex) });
+  }
+
+  return segments;
+}
+
+/** Escape HTML so untrusted text can't inject markup before our formatting runs. */
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+/**
+ * Convert a plain-text segment's lightweight markdown (**bold**, `inline code`)
+ * into HTML. Input is HTML-escaped first; output is sanitized at render time.
+ */
+function formatTextSegment(text: string): string {
+  let html = escapeHtml(text);
+  // Bold
+  html = html.replace(/\*\*([\s\S]*?)\*\*/g, '<strong>$1</strong>');
+  // Inline code
+  html = html.replace(
+    /`([^`]+)`/g,
+    '<code class="bg-nog-200 dark:bg-nog-600 px-1 rounded text-sm">$1</code>'
+  );
+  return html;
+}
+
 export function NogChat() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -126,15 +187,6 @@ export function NogChat() {
     setTimeout(() => setCopiedIndex(null), 2000);
   };
 
-  const extractCodeBlocks = (content: string): string[] => {
-    const codeBlockRegex = /```(?:\w+)?\n?([\s\S]*?)```/g;
-    const matches: string[] = [];
-    let match;
-    while ((match = codeBlockRegex.exec(content)) !== null) {
-      matches.push(match[1].trim());
-    }
-    return matches;
-  };
 
   const handleSubmit = async (customPrompt?: string) => {
     const messageText = customPrompt || input.trim();
@@ -189,18 +241,10 @@ export function NogChat() {
   };
 
   const renderMessage = (msg: Message, index: number) => {
-    const codeBlocks = msg.role === 'assistant' ? extractCodeBlocks(msg.content) : [];
-
-    // Format content - convert markdown-style formatting
-    const formatContent = (content: string) => {
-      // Remove code blocks for separate rendering
-      let formatted = content.replace(/```(?:\w+)?\n?([\s\S]*?)```/g, '%%%CODE_BLOCK%%%');
-      // Bold
-      formatted = formatted.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-      // Inline code
-      formatted = formatted.replace(/`([^`]+)`/g, '<code class="bg-nog-200 dark:bg-nog-600 px-1 rounded text-sm">$1</code>');
-      return formatted;
-    };
+    // Single-pass tokenize into ordered text/code segments (no placeholder string).
+    const segments = msg.role === 'assistant' ? tokenizeContent(msg.content) : [];
+    // Running counter so each code block keeps a stable copy-button index.
+    let codeBlockSeq = 0;
 
     return (
       <div
@@ -231,53 +275,62 @@ export function NogChat() {
             <div className="text-sm">{msg.content}</div>
           ) : (
             <>
-              <div
-                className="bg-nog-100 dark:bg-nog-700 text-nog-900 dark:text-nog-100 rounded-2xl rounded-tl-sm p-3"
-              >
-                {/* TODO: sanitize this HTML (e.g. with dompurify) before injecting — currently
-                    trusts the AI/markdown output. dompurify is not yet a dependency; do not add deps here. */}
-                <div
-                  className="text-sm whitespace-pre-wrap prose prose-sm dark:prose-invert max-w-none"
-                  dangerouslySetInnerHTML={{
-                    __html: formatContent(msg.content).split('%%%CODE_BLOCK%%%').map((part, i) => {
-                      if (i < codeBlocks.length) {
-                        return part + `<div class="code-placeholder" data-index="${i}"></div>`;
-                      }
-                      return part;
-                    }).join(''),
-                  }}
-                />
-              </div>
-              {/* Render code blocks with copy buttons */}
-              {codeBlocks.map((code, codeIndex) => (
-                <div
-                  key={codeIndex}
-                  className="relative bg-nog-100 text-nog-800 dark:bg-nog-900 dark:text-nog-100 rounded-lg overflow-hidden"
-                >
-                  <div className="flex items-center justify-between px-3 py-1.5 bg-nog-200 dark:bg-nog-800 border-b border-nog-300 dark:border-nog-700">
-                    <span className="text-xs text-nog-500 dark:text-nog-400 font-mono">DSL Query</span>
-                    <button
-                      onClick={() => copyToClipboard(code, index * 100 + codeIndex)}
-                      className="flex items-center gap-1 text-xs text-nog-500 dark:text-nog-400 hover:text-nog-900 dark:hover:text-nog-100 transition-colors"
+              {/* Render text and code segments in document order. */}
+              {segments.map((segment, segIndex) => {
+                if (segment.kind === 'text') {
+                  // Skip whitespace-only text segments (e.g. between fences).
+                  if (segment.value.trim() === '') return null;
+                  return (
+                    <div
+                      key={segIndex}
+                      className="bg-nog-100 dark:bg-nog-700 text-nog-900 dark:text-nog-100 rounded-2xl rounded-tl-sm p-3"
                     >
-                      {copiedIndex === index * 100 + codeIndex ? (
-                        <>
-                          <Check className="w-3 h-3" />
-                          Copied!
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="w-3 h-3" />
-                          Copy
-                        </>
-                      )}
-                    </button>
+                      <div
+                        className="text-sm whitespace-pre-wrap prose prose-sm dark:prose-invert max-w-none"
+                        // Untrusted AI/log output: HTML-escaped during formatting,
+                        // then sanitized with DOMPurify before injection.
+                        dangerouslySetInnerHTML={{
+                          __html: sanitize(formatTextSegment(segment.value)),
+                        }}
+                      />
+                    </div>
+                  );
+                }
+
+                // Code block with copy button.
+                const code = segment.value;
+                const copyId = index * 100 + codeBlockSeq;
+                codeBlockSeq += 1;
+                return (
+                  <div
+                    key={segIndex}
+                    className="relative bg-nog-100 text-nog-800 dark:bg-nog-900 dark:text-nog-100 rounded-lg overflow-hidden"
+                  >
+                    <div className="flex items-center justify-between px-3 py-1.5 bg-nog-200 dark:bg-nog-800 border-b border-nog-300 dark:border-nog-700">
+                      <span className="text-xs text-nog-500 dark:text-nog-400 font-mono">DSL Query</span>
+                      <button
+                        onClick={() => copyToClipboard(code, copyId)}
+                        className="flex items-center gap-1 text-xs text-nog-500 dark:text-nog-400 hover:text-nog-900 dark:hover:text-nog-100 transition-colors"
+                      >
+                        {copiedIndex === copyId ? (
+                          <>
+                            <Check className="w-3 h-3" />
+                            Copied!
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="w-3 h-3" />
+                            Copy
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    <pre className="p-3 text-sm text-honey-700 dark:text-honey-400 font-mono overflow-x-auto">
+                      {code}
+                    </pre>
                   </div>
-                  <pre className="p-3 text-sm text-honey-700 dark:text-honey-400 font-mono overflow-x-auto">
-                    {code}
-                  </pre>
-                </div>
-              ))}
+                );
+              })}
               {/* Show executed query badge for insights */}
               {msg.query && (
                 <div className="flex items-center gap-2 text-xs text-nog-500 dark:text-nog-400">

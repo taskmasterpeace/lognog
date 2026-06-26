@@ -90,14 +90,69 @@ function sanitizeFieldName(field: string): string {
   return field;
 }
 
+export interface TimeBounds {
+  earliest?: string;
+  latest?: string;
+}
+
 export class Compiler {
   private ast: QueryAST;
   private params: unknown[] = [];
   private allowedIndexes?: string[];
+  private timeBounds?: TimeBounds;
 
-  constructor(ast: QueryAST, allowedIndexes?: string[]) {
+  constructor(ast: QueryAST, allowedIndexes?: string[], timeBounds?: TimeBounds) {
     this.ast = ast;
     this.allowedIndexes = allowedIndexes;
+    this.timeBounds = timeBounds;
+  }
+
+  /**
+   * Build ClickHouse time-range WHERE conditions from earliest/latest. These are
+   * built into the compiler's top-level WHERE rather than spliced post-hoc with
+   * sql.replace(), which only hit the first match and could land inside a
+   * subquery/CTE or be dropped entirely (#37/#41-11).
+   */
+  private buildTimeConditions(): string[] {
+    const tb = this.timeBounds;
+    if (!tb) return [];
+    const earliest = tb.earliest;
+    // Default latest to 'now' if earliest is provided but latest is not.
+    const latest = tb.latest || (earliest ? 'now' : undefined);
+    const unitMap: Record<string, string> = {
+      m: 'MINUTE', h: 'HOUR', d: 'DAY', w: 'WEEK',
+    };
+    const conditions: string[] = [];
+
+    if (earliest) {
+      const relativeMatch = earliest.match(/^-(\d+)([mhdw])$/i);
+      if (relativeMatch) {
+        const value = parseInt(relativeMatch[1], 10);
+        const unit = unitMap[relativeMatch[2].toLowerCase()];
+        if (unit) conditions.push(`timestamp >= now() - INTERVAL ${value} ${unit}`);
+      } else if (/^\d{4}-\d{2}-\d{2}/.test(earliest)) {
+        const chFormat = earliest.replace('T', ' ').replace('Z', '').replace(/'/g, "''");
+        conditions.push(`timestamp >= '${chFormat}'`);
+      }
+    }
+
+    if (latest) {
+      if (latest.toLowerCase() === 'now') {
+        conditions.push(`timestamp <= now()`);
+      } else {
+        const relativeMatch = latest.match(/^-(\d+)([mhdw])$/i);
+        if (relativeMatch) {
+          const value = parseInt(relativeMatch[1], 10);
+          const unit = unitMap[relativeMatch[2].toLowerCase()];
+          if (unit) conditions.push(`timestamp <= now() - INTERVAL ${value} ${unit}`);
+        } else if (/^\d{4}-\d{2}-\d{2}/.test(latest)) {
+          const chFormat = latest.replace('T', ' ').replace('Z', '').replace(/'/g, "''");
+          conditions.push(`timestamp <= '${chFormat}'`);
+        }
+      }
+    }
+
+    return conditions;
   }
 
   /**
@@ -116,7 +171,9 @@ export class Compiler {
     if (stages.length === 0) {
       // Default query - recent logs
       const scope = this.buildIndexScopeCondition();
-      const whereClause = scope ? ` WHERE ${scope}` : '';
+      const conds = [...this.buildTimeConditions()];
+      if (scope) conds.push(scope);
+      const whereClause = conds.length > 0 ? ` WHERE ${conds.join(' AND ')}` : '';
       return {
         sql: `SELECT ${DEFAULT_FIELDS.join(', ')} FROM lognog.logs${whereClause} ORDER BY timestamp DESC LIMIT 1000`,
         params: [],
@@ -176,13 +233,35 @@ export class Compiler {
           }
           break;
 
-        case 'rename':
-          // Handle rename with AS
-          selectFields = selectFields.map(f => {
-            const mapping = stage.mappings.find(m => m.from === f);
-            return mapping ? `${f} AS ${mapping.to}` : f;
-          });
+        case 'rename': {
+          // Bug #41-5: the old version only matched a `from` that appeared
+          // literally as a bare select field. It missed DSL aliases (host ->
+          // hostname), already-aliased exprs, and structured_data fields (which
+          // are only present via the `structured_data` blob). Resolve each
+          // rename against the actual output name of every select field, and
+          // for an unmatched custom field add a JSON-extract projection.
+          for (const mapping of stage.mappings) {
+            const mappedFrom = this.mapField(mapping.from);
+            let matched = false;
+            selectFields = selectFields.map(f => {
+              if (this.outputFieldName(f) === mapping.from ||
+                  this.outputFieldName(f) === mappedFrom) {
+                matched = true;
+                return `${this.selectExpr(f)} AS ${mapping.to}`;
+              }
+              return f;
+            });
+            if (!matched) {
+              // Field lives in structured_data (or is otherwise not selected):
+              // project it explicitly under the new name.
+              const safeField = sanitizeFieldName(mapping.from);
+              selectFields.push(
+                `JSONExtractString(structured_data, '${safeField}') AS ${mapping.to}`
+              );
+            }
+          }
           break;
+        }
 
         case 'eval':
           // Eval creates new computed fields
@@ -279,6 +358,11 @@ export class Compiler {
     }
 
     sql += ' FROM lognog.logs';
+
+    // Time-range bounds: built into the top-level WHERE here (not spliced via
+    // sql.replace afterwards) so they reliably apply to the base table only and
+    // never land in a subquery/CTE (#37/#41-11).
+    whereConditions.push(...this.buildTimeConditions());
 
     // Mandatory read-side index scoping: ANDed into the base-table WHERE so it
     // applies to bare/stats/timechart queries, not just user `search` filters.
@@ -392,7 +476,10 @@ export class Compiler {
         if (mappedField === 'severity') {
           // Severity is numeric
           expr = `${field} ${cond.operator} ${this.severityToNumber(cond.value)}`;
-        } else if (typeof cond.value === 'string' && isKnownColumn) {
+        } else if (typeof cond.value === 'string') {
+          // String operand (known column OR structured_data field): always
+          // quote+escape. Bug #37-8: structured_data string comparisons were
+          // interpolated unquoted/unescaped, allowing SQL injection.
           expr = `${field} ${cond.operator} '${this.escape(cond.value)}'`;
         } else {
           expr = `${field} ${cond.operator} ${cond.value}`;
@@ -430,8 +517,9 @@ export class Compiler {
           ).join(', ');
           expr = `${field} ${cond.operator} (${formattedValues})`;
         } catch {
-          // Fallback if not JSON
-          expr = `${field} ${cond.operator} (${cond.value})`;
+          // Fallback if not JSON: treat the raw value as a single escaped,
+          // quoted operand instead of interpolating it unescaped (#37/#9).
+          expr = `${field} ${cond.operator} ('${this.escape(String(cond.value))}')`;
         }
         break;
 
@@ -516,6 +604,23 @@ export class Compiler {
   }
 
   /**
+   * Output (column) name of a select-list entry: the alias after `AS`, or the
+   * bare field itself. Case-insensitive on the `AS` keyword.
+   */
+  private outputFieldName(selectField: string): string {
+    const m = selectField.match(/\s+AS\s+([A-Za-z0-9_.\-]+)\s*$/i);
+    return m ? m[1] : selectField.trim();
+  }
+
+  /**
+   * Underlying expression of a select-list entry, with any trailing `AS alias`
+   * stripped, so a rename can re-alias it without stacking AS clauses.
+   */
+  private selectExpr(selectField: string): string {
+    return selectField.replace(/\s+AS\s+[A-Za-z0-9_.\-]+\s*$/i, '').trim();
+  }
+
+  /**
    * Map a field for use in SELECT, GROUP BY, or aggregations
    * Unknown fields are extracted from structured_data JSON
    * @param field The field name
@@ -573,8 +678,10 @@ export class Compiler {
     const field = this.mapField(bin.field);
     const span = bin.span;
 
-    // Check if this is a time field
-    if (field === 'timestamp' || field.includes('time')) {
+    // Only the real timestamp column is time-bucketed. Bug #41-6: matching
+    // any field containing "time" mis-routed numeric fields like response_time
+    // or time_ms into time-bucketing instead of numeric binning.
+    if (field === 'timestamp') {
       return this.compileTimeBucket(span.toString());
     }
 
@@ -741,21 +848,26 @@ export class Compiler {
         return `coalesce(${compiledArgs.join(', ')})`;
       case 'nullif':
         return `nullIf(${compiledArgs[0]}, ${compiledArgs[1]})`;
-      case 'case':
+      case 'case': {
         // case(field, val1, result1, val2, result2, ..., default)
-        // Convert to ClickHouse multiIf or CASE WHEN
+        // Convert to ClickHouse multiIf. Iterate WHEN/THEN pairs starting at
+        // index 1 (index 0 is the compared field). A trailing odd arg is the
+        // ELSE/default. Bug #41-1: the old guard dropped the last WHEN/THEN
+        // pair whenever the result index landed at length-1.
         if (compiledArgs.length < 3) {
           return compiledArgs[0] || 'NULL';
         }
         const field = compiledArgs[0];
-        let caseExpr = 'multiIf(';
-        for (let i = 1; i < compiledArgs.length - 1; i += 2) {
-          if (i + 1 < compiledArgs.length - 1) {
-            caseExpr += `${field} = ${compiledArgs[i]}, ${compiledArgs[i + 1]}, `;
-          }
+        const branches: string[] = [];
+        let i = 1;
+        for (; i + 1 < compiledArgs.length; i += 2) {
+          branches.push(`${field} = ${compiledArgs[i]}`);
+          branches.push(compiledArgs[i + 1]);
         }
-        caseExpr += compiledArgs[compiledArgs.length - 1] + ')';
-        return caseExpr;
+        // Trailing arg (if any) is the ELSE/default; otherwise default to NULL.
+        const elseExpr = i < compiledArgs.length ? compiledArgs[i] : 'NULL';
+        return `multiIf(${branches.join(', ')}, ${elseExpr})`;
+      }
 
       // IP Classification functions
       case 'classify_ip':
@@ -859,7 +971,11 @@ export class Compiler {
 // Helper function to compile DSL to SQL.
 // When allowedIndexes is a non-empty array, a mandatory index_name IN (...)
 // filter is appended to the WHERE for read-side index scoping.
-export function compileDSL(ast: QueryAST, allowedIndexes?: string[]): CompiledQueryWithMeta {
-  const compiler = new Compiler(ast, allowedIndexes);
+export function compileDSL(
+  ast: QueryAST,
+  allowedIndexes?: string[],
+  timeBounds?: TimeBounds,
+): CompiledQueryWithMeta {
+  const compiler = new Compiler(ast, allowedIndexes, timeBounds);
   return compiler.compile();
 }

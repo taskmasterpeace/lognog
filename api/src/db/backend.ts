@@ -13,7 +13,7 @@ import * as clickhouse from './clickhouse.js';
 import * as sqliteLogs from './sqlite-logs.js';
 import { parseToAST } from '../dsl/index.js';
 import { compileDSL } from '../dsl/compiler.js';
-import { compileDSLToSQLite, parseRelativeTimeSQLite } from '../dsl/compiler-sqlite.js';
+import { compileDSLToSQLite } from '../dsl/compiler-sqlite.js';
 import { logQueryExecution } from '../services/internal-logger.js';
 import { applyLookup } from '../services/lookup-tables.js';
 import { recordHeartbeats } from '../services/heartbeat.js';
@@ -22,6 +22,20 @@ import { isLogicGroup } from '../dsl/types.js';
 import { indexScopeSqlClause } from '../auth/index-scope.js';
 
 export type Backend = 'clickhouse' | 'sqlite';
+
+// Index names are constrained to a safe identifier charset. Used to validate
+// caller-supplied `options.index` before it is interpolated into SQL (#37-10).
+const INDEX_NAME_RE = /^[a-zA-Z][a-zA-Z0-9_-]*$/;
+
+/**
+ * Escape a string for a single-quoted SQL literal. Doubling the single quote is
+ * the correct, portable form for both ClickHouse and SQLite; the previous
+ * ClickHouse path used backslash escaping (`\\'`) which is wrong for ClickHouse
+ * string literals and breaks on a trailing backslash (#37-10).
+ */
+function escapeSqlString(value: string): string {
+  return value.replace(/'/g, "''");
+}
 
 // Get the configured backend
 export function getBackend(): Backend {
@@ -98,39 +112,14 @@ export async function executeDSLQuery<T = Record<string, unknown>>(
 
     if (isLiteMode()) {
       // Compile to SQLite SQL (with mandatory read-side index scoping applied
-      // pre-lookup, so any post-lookup in-memory stages already see constrained rows)
-      const compiled = compileDSLToSQLite(ast, options?.allowedIndexes);
-      let sql = compiled.sql;
-
-      // Add time range conditions
-      // Default latest to 'now' if earliest is provided but latest is not
-      const sqliteEarliest = options?.earliest;
-      const sqliteLatest = options?.latest || (sqliteEarliest ? 'now' : undefined);
-
-      if (sqliteEarliest || sqliteLatest) {
-        const timeConditions: string[] = [];
-
-        if (sqliteEarliest) {
-          const timeExpr = parseRelativeTimeSQLite(sqliteEarliest);
-          if (timeExpr) {
-            timeConditions.push(`timestamp >= ${timeExpr}`);
-          }
-        }
-        if (sqliteLatest) {
-          const timeExpr = parseRelativeTimeSQLite(sqliteLatest);
-          if (timeExpr) {
-            timeConditions.push(`timestamp <= ${timeExpr}`);
-          }
-        }
-
-        if (timeConditions.length > 0) {
-          if (sql.includes('WHERE')) {
-            sql = sql.replace('WHERE', `WHERE ${timeConditions.join(' AND ')} AND`);
-          } else if (sql.includes('FROM logs')) {
-            sql = sql.replace('FROM logs', `FROM logs WHERE ${timeConditions.join(' AND ')}`);
-          }
-        }
-      }
+      // pre-lookup, so any post-lookup in-memory stages already see constrained
+      // rows). Time bounds are passed into the compiler so they are built into
+      // the top-level WHERE rather than spliced in afterwards (#37/#41-11).
+      const compiled = compileDSLToSQLite(ast, options?.allowedIndexes, {
+        earliest: options?.earliest,
+        latest: options?.latest,
+      });
+      const sql = compiled.sql;
 
       let results = await sqliteLogs.executeQuery<T>(sql);
 
@@ -150,70 +139,16 @@ export async function executeDSLQuery<T = Record<string, unknown>>(
       return { sql, results };
     } else {
       // Compile to ClickHouse SQL (with mandatory read-side index scoping applied
-      // pre-lookup, so any post-lookup in-memory stages already see constrained rows)
-      const compiled = compileDSL(ast, options?.allowedIndexes);
-      let sql = compiled.sql;
-
-      // Add time range conditions (ClickHouse format)
-      // Default latest to 'now' if earliest is provided but latest is not
-      const earliest = options?.earliest;
-      const latest = options?.latest || (earliest ? 'now' : undefined);
-
-      if (earliest || latest) {
-        const timeConditions: string[] = [];
-
-        if (earliest) {
-          const relativeMatch = earliest.match(/^-(\d+)([mhdw])$/i);
-          if (relativeMatch) {
-            // Relative time like -5m, -1h, -7d
-            const value = parseInt(relativeMatch[1], 10);
-            const unit = relativeMatch[2].toLowerCase();
-            const unitMap: Record<string, string> = {
-              'm': 'MINUTE', 'h': 'HOUR', 'd': 'DAY', 'w': 'WEEK',
-            };
-            const clickhouseUnit = unitMap[unit];
-            if (clickhouseUnit) {
-              timeConditions.push(`timestamp >= now() - INTERVAL ${value} ${clickhouseUnit}`);
-            }
-          } else if (/^\d{4}-\d{2}-\d{2}/.test(earliest)) {
-            // ISO timestamp like 2026-02-21T01:45:26.465Z - convert to ClickHouse format
-            const chFormat = earliest.replace('T', ' ').replace('Z', '').replace(/'/g, "''");
-            timeConditions.push(`timestamp >= '${chFormat}'`);
-          }
-        }
-        if (latest) {
-          // Handle "now" for latest time bound
-          if (latest.toLowerCase() === 'now') {
-            timeConditions.push(`timestamp <= now()`);
-          } else {
-            const relativeMatch = latest.match(/^-(\d+)([mhdw])$/i);
-            if (relativeMatch) {
-              // Relative time like -5m, -1h
-              const value = parseInt(relativeMatch[1], 10);
-              const unit = relativeMatch[2].toLowerCase();
-              const unitMap: Record<string, string> = {
-                'm': 'MINUTE', 'h': 'HOUR', 'd': 'DAY', 'w': 'WEEK',
-              };
-              const clickhouseUnit = unitMap[unit];
-              if (clickhouseUnit) {
-                timeConditions.push(`timestamp <= now() - INTERVAL ${value} ${clickhouseUnit}`);
-              }
-            } else if (/^\d{4}-\d{2}-\d{2}/.test(latest)) {
-              // ISO timestamp like 2026-02-21T01:45:26.465Z - convert to ClickHouse format
-              const chFormat = latest.replace('T', ' ').replace('Z', '').replace(/'/g, "''");
-              timeConditions.push(`timestamp <= '${chFormat}'`);
-            }
-          }
-        }
-
-        if (timeConditions.length > 0) {
-          if (sql.includes('WHERE')) {
-            sql = sql.replace('WHERE', `WHERE ${timeConditions.join(' AND ')} AND`);
-          } else if (sql.includes('FROM lognog.logs')) {
-            sql = sql.replace('FROM lognog.logs', `FROM lognog.logs WHERE ${timeConditions.join(' AND ')}`);
-          }
-        }
-      }
+      // pre-lookup, so any post-lookup in-memory stages already see constrained
+      // rows). Time bounds are passed into the compiler so they are built into
+      // the top-level WHERE rather than spliced in afterwards with sql.replace,
+      // which only hit the first match and could land in a subquery/CTE or be
+      // dropped (#37/#41-11).
+      const compiled = compileDSL(ast, options?.allowedIndexes, {
+        earliest: options?.earliest,
+        latest: options?.latest,
+      });
+      const sql = compiled.sql;
 
       let results = await clickhouse.executeQuery<T>(sql);
 
@@ -510,9 +445,13 @@ export async function discoverStructuredDataFields(options?: {
       }
     }
 
-    // Add index filter
+    // Add index filter. Validate against a strict identifier charset before
+    // interpolation so a malicious index value cannot inject SQL (#37-10).
     if (options?.index) {
-      sql += ` AND index_name = '${options.index.replace(/'/g, "''")}'`;
+      if (!INDEX_NAME_RE.test(options.index)) {
+        throw new Error(`Invalid index name: ${options.index}`);
+      }
+      sql += ` AND index_name = '${escapeSqlString(options.index)}'`;
     }
 
     // Phase 5: read-side index scoping
@@ -545,8 +484,10 @@ export async function discoverStructuredDataFields(options?: {
         LIMIT 5
       `;
       try {
+        // field.name is an attacker-controlled JSON key; single-quote escape it
+        // before substituting into the literal (#37-10).
         const samples = await sqliteLogs.executeQuery<{ val: string }>(
-          sampleSql.replace(/\?/g, `'${field.name.replace(/'/g, "''")}'`)
+          sampleSql.replace(/\?/g, `'${escapeSqlString(field.name)}'`)
         );
         fieldsWithSamples.push({
           name: field.name,
@@ -589,9 +530,14 @@ export async function discoverStructuredDataFields(options?: {
       }
     }
 
-    // Add index filter
+    // Add index filter. Validate against a strict identifier charset, then use
+    // proper single-quote-doubling escaping. The old `\\'` form is wrong for
+    // ClickHouse string literals and breaks on a trailing backslash (#37-10).
     if (options?.index) {
-      sql += ` AND index_name = '${options.index.replace(/'/g, "\\'")}'`;
+      if (!INDEX_NAME_RE.test(options.index)) {
+        throw new Error(`Invalid index name: ${options.index}`);
+      }
+      sql += ` AND index_name = '${escapeSqlString(options.index)}'`;
     }
 
     // Phase 5: read-side index scoping
@@ -614,13 +560,19 @@ export async function discoverStructuredDataFields(options?: {
     const fieldsWithSamples: DiscoveredField[] = [];
     for (const field of results) {
       try {
+        // field.name is an attacker-controlled JSON key returned by
+        // JSONExtractKeys over structured_data. Escape it with single-quote
+        // doubling (the old `\\'` form is wrong for ClickHouse and breaks on a
+        // trailing backslash) so it cannot break out of the string literal and
+        // inject SQL (#37-10).
+        const safeName = escapeSqlString(field.name);
         const sampleSql = `
           SELECT
-            JSONType(structured_data, '${field.name.replace(/'/g, "\\'")}') as type,
-            groupUniqArray(5)(JSONExtractString(structured_data, '${field.name.replace(/'/g, "\\'")}')) as samples
+            JSONType(structured_data, '${safeName}') as type,
+            groupUniqArray(5)(JSONExtractString(structured_data, '${safeName}')) as samples
           FROM lognog.logs
           WHERE structured_data != '{}'
-            AND JSONHas(structured_data, '${field.name.replace(/'/g, "\\'")}')
+            AND JSONHas(structured_data, '${safeName}')
             ${scope ? `AND ${scope}` : ''}
           LIMIT 1
         `;

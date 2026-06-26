@@ -186,7 +186,56 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction): v
 }
 
 /**
- * Require API key permission
+ * Validate an index name used in interpolated SQL (ClickHouse/SQLite) to prevent
+ * SQL injection via route params / query params (#37). Index names are
+ * alphanumeric, starting with a letter, and may contain `_`/`-`. Anything else
+ * (quotes, spaces, semicolons, etc.) is rejected.
+ */
+const INDEX_NAME_RE = /^[a-zA-Z][a-zA-Z0-9_-]*$/;
+
+export function isValidIndexName(name: unknown): name is string {
+  return typeof name === 'string' && name.length > 0 && name.length <= 128 && INDEX_NAME_RE.test(name);
+}
+
+/**
+ * Roles that are NOT permitted to perform write/mutating operations.
+ * A `readonly` role can authenticate and read, but must never satisfy 'write'.
+ */
+const READONLY_ROLES = new Set(['readonly', 'viewer', 'read-only']);
+
+/** True when the given role is a read-only role that must be denied writes. */
+function isReadonlyRole(role: string | undefined): boolean {
+  return !!role && READONLY_ROLES.has(role);
+}
+
+/**
+ * Map an abstract permission ('read' | 'write' | 'admin') to whether the
+ * current user's ROLE grants it. JWT users are authorized by role rather than
+ * by an explicit permission list.
+ */
+function roleGrantsPermission(role: string | undefined, permission: string): boolean {
+  switch (permission) {
+    case 'read':
+      // Every authenticated role can read.
+      return true;
+    case 'write':
+      // Read-only roles cannot write; everyone else can.
+      return !isReadonlyRole(role);
+    case 'admin':
+      return role === 'admin';
+    default:
+      // Unknown/custom permissions: only deny for read-only roles on anything
+      // that is clearly not a read.
+      return !isReadonlyRole(role);
+  }
+}
+
+/**
+ * Require API key permission (or, for JWT users, the equivalent role grant).
+ *
+ * Previously JWT tokens were granted full access unconditionally, which let a
+ * `readonly` user perform writes. We now evaluate the user's role for JWT auth
+ * so read-only roles are denied write/admin operations (#36).
  */
 export function requirePermission(...permissions: string[]) {
   return (req: Request, res: Response, next: NextFunction): void => {
@@ -195,13 +244,23 @@ export function requirePermission(...permissions: string[]) {
       return;
     }
 
-    // JWT tokens have full access based on role
+    // JWT tokens are authorized based on the user's role.
     if (req.authMethod === 'jwt') {
+      const granted = permissions.some((p) => roleGrantsPermission(req.user!.role, p));
+      if (!granted) {
+        logAuthEvent(req.user.id, 'permission_denied', req.ip, req.get('user-agent'), {
+          requiredPermissions: permissions,
+          userRole: req.user.role,
+          path: req.path,
+        });
+        res.status(403).json({ error: 'Insufficient permissions for this operation' });
+        return;
+      }
       next();
       return;
     }
 
-    // API keys must have specific permissions
+    // API keys must have specific permissions...
     if (req.authMethod === 'apikey') {
       const hasPermission = permissions.some(
         (p) => req.apiKeyPermissions?.includes(p) || req.apiKeyPermissions?.includes('*')
@@ -216,11 +275,58 @@ export function requirePermission(...permissions: string[]) {
         res.status(403).json({ error: 'API key lacks required permissions' });
         return;
       }
+
+      // ...AND a read-only role must never write, even with a write-scoped key.
+      const needsWrite = permissions.some((p) => p === 'write' || p === 'admin');
+      if (needsWrite && isReadonlyRole(req.user.role)) {
+        logAuthEvent(req.user.id, 'permission_denied', req.ip, req.get('user-agent'), {
+          requiredPermissions: permissions,
+          userRole: req.user.role,
+          path: req.path,
+        });
+        res.status(403).json({ error: 'Read-only account cannot perform write operations' });
+        return;
+      }
     }
 
     next();
   };
 }
+
+/**
+ * Deny write/mutating HTTP verbs (POST/PUT/PATCH/DELETE) for read-only roles.
+ * Safe (GET/HEAD/OPTIONS) requests always pass through. Intended as a
+ * router-level guard so read endpoints stay open while mutations are protected.
+ */
+export function denyReadonly(req: Request, res: Response, next: NextFunction): void {
+  const method = req.method.toUpperCase();
+  const isMutating = method === 'POST' || method === 'PUT' || method === 'PATCH' || method === 'DELETE';
+
+  if (!isMutating) {
+    next();
+    return;
+  }
+
+  if (!req.user) {
+    res.status(401).json({ error: 'Authentication required' });
+    return;
+  }
+
+  if (isReadonlyRole(req.user.role)) {
+    logAuthEvent(req.user.id, 'permission_denied', req.ip, req.get('user-agent'), {
+      reason: 'readonly_write_blocked',
+      method,
+      path: req.path,
+    });
+    res.status(403).json({ error: 'Read-only account cannot perform write operations' });
+    return;
+  }
+
+  next();
+}
+
+/** Alias for denyReadonly: require a non-readonly (write-capable) role. */
+export const requireWrite = denyReadonly;
 
 /**
  * Rate limiting by user (simple in-memory implementation)

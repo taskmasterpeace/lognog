@@ -128,17 +128,6 @@ describe('Baseline Calculator', () => {
       expect(score).toBe(-2); // (30-50)/10 = -2 std devs
     });
 
-    it('should return 3 for non-zero difference when stddev is 0', () => {
-      // When stddev is 0 but there's a difference, it returns 3 as significant
-      const score = calculateDeviationScore(100, 50, 0);
-      expect(score).toBe(3);
-    });
-
-    it('should return 0 when value equals mean and stddev is 0', () => {
-      const score = calculateDeviationScore(50, 50, 0);
-      expect(score).toBe(0);
-    });
-
     it('should calculate z-score correctly', () => {
       // 3 standard deviations above mean
       const score = calculateDeviationScore(80, 50, 10);
@@ -148,6 +137,87 @@ describe('Baseline Calculator', () => {
     it('should handle fractional z-scores', () => {
       const score = calculateDeviationScore(55, 50, 10);
       expect(score).toBe(0.5);
+    });
+  });
+
+  // Regression tests for issue #40: flat-baseline (stdDev === 0) scoring.
+  // The old implementation returned a hard-coded +3 for ANY non-zero
+  // difference, so a DROP below a flat baseline was scored +3 and
+  // misclassified as a spike, and any tiny fluctuation maxed the score.
+  describe('calculateDeviationScore - flat baseline (issue #40)', () => {
+    it('should score a DROP below a flat baseline NEGATIVE (not +3)', () => {
+      // Flat baseline at 50, observed 40 (a drop). Must be negative so the
+      // detector classifies it as a drop, not a spike.
+      const score = calculateDeviationScore(40, 50, 0);
+      expect(score).toBeLessThan(0);
+      expect(score).not.toBe(3);
+    });
+
+    it('should score a SPIKE above a flat baseline POSITIVE', () => {
+      const score = calculateDeviationScore(100, 50, 0);
+      expect(score).toBeGreaterThan(0);
+    });
+
+    it('should return exactly 0 when value equals a flat-baseline mean', () => {
+      expect(calculateDeviationScore(50, 50, 0)).toBe(0);
+    });
+
+    it('should preserve sign symmetry around a flat baseline', () => {
+      const up = calculateDeviationScore(60, 50, 0);
+      const down = calculateDeviationScore(40, 50, 0);
+      // Equal magnitude deviations in opposite directions -> opposite signs,
+      // equal magnitude.
+      expect(Math.sign(up)).toBe(1);
+      expect(Math.sign(down)).toBe(-1);
+      expect(up).toBeCloseTo(-down, 10);
+    });
+
+    it('should not let a tiny fluctuation on a flat baseline max out the score', () => {
+      // A 1-unit change against a large flat mean should be a small score,
+      // nowhere near the +3 spike threshold, thanks to the mean-scaled floor.
+      const score = calculateDeviationScore(1001, 1000, 0);
+      expect(Math.abs(score)).toBeLessThan(1);
+    });
+
+    it('should clamp extreme flat-baseline deviations to a bounded range', () => {
+      // A huge jump against a small flat mean stays bounded (|score| <= 6)
+      // rather than producing an absurd z-score.
+      const big = calculateDeviationScore(1_000_000, 1, 0);
+      expect(big).toBeLessThanOrEqual(6);
+      expect(big).toBeGreaterThan(3); // still well past the spike threshold
+    });
+  });
+
+  // End-to-end: a realistic normally-distributed sample yields the right
+  // sign and magnitude for an observed value, using the same center+spread
+  // pair (arithmetic mean + std-dev around that mean) the baseline stores.
+  describe('calculateDeviationScore - normal distribution sample', () => {
+    // Sample drawn around mean 100. Symmetric-ish for a stable mean/stddev.
+    const sample = [100, 102, 98, 101, 99, 103, 97, 100, 104, 96, 100, 100];
+    const mean = calculateSMA(sample);
+    const stdDev = calculateStdDev(sample, mean);
+
+    it('produces a valid (non-degenerate) mean and spread', () => {
+      expect(mean).toBeCloseTo(100, 5);
+      expect(stdDev).toBeGreaterThan(0);
+    });
+
+    it('scores a value above the sample mean as positive', () => {
+      const observed = mean + 2 * stdDev;
+      const score = calculateDeviationScore(observed, mean, stdDev);
+      expect(score).toBeGreaterThan(0);
+      expect(score).toBeCloseTo(2, 5); // ~2 std devs above
+    });
+
+    it('scores a value below the sample mean as negative', () => {
+      const observed = mean - 2 * stdDev;
+      const score = calculateDeviationScore(observed, mean, stdDev);
+      expect(score).toBeLessThan(0);
+      expect(score).toBeCloseTo(-2, 5); // ~2 std devs below
+    });
+
+    it('scores a value at the sample mean as 0', () => {
+      expect(calculateDeviationScore(mean, mean, stdDev)).toBe(0);
     });
   });
 });

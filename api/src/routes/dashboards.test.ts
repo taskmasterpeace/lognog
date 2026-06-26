@@ -1,8 +1,34 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import express, { Express } from 'express';
 import request from 'supertest';
+
+// The dashboards router now requires authentication (#35). Mock JWT verification
+// so every request authenticates as an admin via the real `authenticate`
+// middleware, and inject a Bearer header for all requests below.
+import * as auth from '../auth/auth.js';
+vi.mock('../auth/auth.js', async () => {
+  const actual = await vi.importActual<typeof auth>('../auth/auth.js');
+  return {
+    ...actual,
+    verifyAccessToken: vi.fn(() => ({
+      userId: 'test-admin',
+      username: 'admin',
+      role: 'admin',
+      type: 'access',
+    })),
+  };
+});
+
 import dashboardsRouter from './dashboards.js';
 import { closeDatabase } from '../db/sqlite.js';
+
+// Injects an Authorization header so the mocked `authenticate` admits requests.
+function withAuth(): express.RequestHandler {
+  return (req, _res, next) => {
+    req.headers.authorization = 'Bearer test-token';
+    next();
+  };
+}
 
 describe('Dashboard Duplicate Feature', () => {
   let app: Express;
@@ -11,6 +37,7 @@ describe('Dashboard Duplicate Feature', () => {
   beforeAll(() => {
     app = express();
     app.use(express.json());
+    app.use(withAuth());
     app.use('/dashboards', dashboardsRouter);
   });
 
@@ -159,6 +186,7 @@ describe('Dashboard Builder Wizard', () => {
   beforeAll(() => {
     app = express();
     app.use(express.json());
+    app.use(withAuth());
     app.use('/dashboards', dashboardsRouter);
   });
 

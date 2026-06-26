@@ -21,8 +21,15 @@ import {
   getTemplateStats,
   formatTemplateForResponse,
 } from '../services/templates.js';
+import { authenticate, requireAdmin, denyReadonly } from '../auth/middleware.js';
 
 const router = Router();
+
+// #35/#36: require auth on all template routes; block writes for read-only roles.
+// Template create/update/delete are config changes and require admin. The
+// non-persisting /:id/test (validate a template) stays user-accessible.
+router.use(authenticate);
+router.use(denyReadonly);
 
 // Get all templates (optionally filtered by category)
 router.get('/', (req: Request, res: Response) => {
@@ -113,7 +120,7 @@ router.post('/:id/test', (req: Request, res: Response) => {
 });
 
 // Create custom template (admin only - could add auth middleware here)
-router.post('/', (req: Request, res: Response) => {
+router.post('/', requireAdmin, (req: Request, res: Response) => {
   try {
     const {
       name,
@@ -172,7 +179,7 @@ router.post('/', (req: Request, res: Response) => {
 });
 
 // Update template
-router.put('/:id', (req: Request, res: Response) => {
+router.put('/:id', requireAdmin, (req: Request, res: Response) => {
   try {
     const existing = getSourceTemplate(req.params.id);
 
@@ -237,7 +244,7 @@ router.put('/:id', (req: Request, res: Response) => {
 });
 
 // Delete custom template (cannot delete built-in)
-router.delete('/:id', (req: Request, res: Response) => {
+router.delete('/:id', requireAdmin, (req: Request, res: Response) => {
   try {
     const existing = getSourceTemplate(req.params.id);
 

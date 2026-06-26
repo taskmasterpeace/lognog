@@ -39,7 +39,9 @@ class LogFileHandler(FileSystemEventHandler):
         self.watch_path = watch_path
         self.hostname = hostname
         self.on_event = on_event
-        self._file_positions: dict[str, int] = {}
+        # Track read position keyed by stable file identity (inode/file-id) so a
+        # rotate-by-rename doesn't lose the offset or carry it onto a new file.
+        self._file_positions: dict[int, int] = {}
         self._lock = threading.Lock()
 
     def _matches_pattern(self, file_path: str) -> bool:
@@ -47,35 +49,82 @@ class LogFileHandler(FileSystemEventHandler):
         filename = os.path.basename(file_path)
         return fnmatch.fnmatch(filename, self.watch_path.pattern)
 
+    @staticmethod
+    def _file_id(stat_result) -> int:
+        """Return a stable identity for a file from its stat result.
+
+        Uses st_ino where available (set on Windows too by Python's os.stat for
+        NTFS); falls back to a device/size tuple hash if the inode is 0.
+        """
+        if stat_result.st_ino:
+            return stat_result.st_ino
+        return hash((stat_result.st_dev, stat_result.st_ctime_ns, stat_result.st_size))
+
     def _read_new_lines(self, file_path: str) -> list[str]:
         """Read new lines from a file since last read."""
         try:
+            # Resolve a stable identity for this file. Read the offset under the
+            # lock, but perform the blocking file I/O outside it.
+            file_id = self._file_id(os.stat(file_path))
             with self._lock:
-                current_pos = self._file_positions.get(file_path, 0)
+                current_pos = self._file_positions.get(file_id, 0)
 
-                with open(file_path, "r", errors="replace") as f:
-                    # Check if file was truncated (rotated)
-                    f.seek(0, 2)  # Seek to end
-                    file_size = f.tell()
+            with open(file_path, "r", errors="replace") as f:
+                # Check if file was truncated (rotated in place)
+                f.seek(0, 2)  # Seek to end
+                file_size = f.tell()
 
-                    if file_size < current_pos:
-                        # File was truncated, start from beginning
-                        current_pos = 0
+                if file_size < current_pos:
+                    # File was truncated, start from beginning
+                    current_pos = 0
 
-                    f.seek(current_pos)
-                    lines = f.readlines()
+                f.seek(current_pos)
+                lines = f.readlines()
+                new_pos = f.tell()
 
-                    # Update position
-                    self._file_positions[file_path] = f.tell()
+            with self._lock:
+                self._file_positions[file_id] = new_pos
 
-                return [line.rstrip("\n\r") for line in lines if line.strip()]
+            self._prune_dead_positions()
+
+            return [line.rstrip("\n\r") for line in lines if line.strip()]
         except Exception as e:
             logger.error(f"Error reading file {file_path}: {e}")
             return []
 
-    def _process_file(self, file_path: str) -> None:
-        """Process a file and emit events for new lines."""
-        if not self._matches_pattern(file_path):
+    def _prune_dead_positions(self) -> None:
+        """Drop tracked positions for files that no longer exist.
+
+        Positions are keyed by file id; once watchdog stops emitting events for a
+        rotated/deleted file its entry would otherwise leak. We can only check a
+        file id against currently-tracked watched files, so we rely on the
+        watched directory tree to enumerate live ids.
+        """
+        try:
+            live_ids = set()
+            watch_root = self.watch_path.path
+            for root, _dirs, files in os.walk(watch_root):
+                for name in files:
+                    try:
+                        live_ids.add(self._file_id(os.stat(os.path.join(root, name))))
+                    except OSError:
+                        continue
+                if not self.watch_path.recursive:
+                    break
+            with self._lock:
+                stale = [fid for fid in self._file_positions if fid not in live_ids]
+                for fid in stale:
+                    del self._file_positions[fid]
+        except Exception as e:
+            logger.debug(f"Position prune skipped: {e}")
+
+    def _process_file(self, file_path: str, ignore_pattern: bool = False) -> None:
+        """Process a file and emit events for new lines.
+
+        ``ignore_pattern`` lets a rotation handler flush the tail of a file whose
+        new name no longer matches the watch pattern (e.g. app.log -> app.log.1).
+        """
+        if not ignore_pattern and not self._matches_pattern(file_path):
             return
 
         if not os.path.isfile(file_path):
@@ -104,9 +153,9 @@ class LogFileHandler(FileSystemEventHandler):
         if event.is_directory:
             return
         logger.debug(f"File created: {event.src_path}")
-        # Initialize position tracking for new file
-        with self._lock:
-            self._file_positions[event.src_path] = 0
+        # A newly-created file gets a fresh inode/file-id, so it naturally starts
+        # reading from offset 0 without any explicit initialization. Process it
+        # to pick up any content written at creation time.
         self._process_file(event.src_path)
 
     def on_modified(self, event: FileModifiedEvent) -> None:
@@ -117,14 +166,17 @@ class LogFileHandler(FileSystemEventHandler):
         self._process_file(event.src_path)
 
     def on_moved(self, event: FileMovedEvent) -> None:
-        """Handle file move/rename."""
+        """Handle file move/rename (log rotation by rename)."""
         if event.is_directory:
             return
         logger.debug(f"File moved: {event.src_path} -> {event.dest_path}")
-        # Update position tracking for moved file
-        with self._lock:
-            if event.src_path in self._file_positions:
-                self._file_positions[event.dest_path] = self._file_positions.pop(event.src_path)
+        # Positions are keyed by inode/file-id, which is preserved across a
+        # rename, so no remapping is needed. Flush any lines written to the file
+        # just before the rename by reading from its new path, then prune the
+        # now-dead source path.
+        if os.path.isfile(event.dest_path):
+            self._process_file(event.dest_path, ignore_pattern=True)
+        self._prune_dead_positions()
 
 
 class FileWatcher:

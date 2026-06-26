@@ -260,6 +260,34 @@ export function updateAlert(
   return getAlert(id);
 }
 
+/**
+ * Atomically claim a trigger slot for an alert within its throttle window
+ * (issue #39 bug 4).
+ *
+ * The previous flow checked a "recent trigger" in history and *then* wrote
+ * last_triggered in a separate statement, so two concurrent evaluations could
+ * both pass the throttle check and both fire. This conditional UPDATE sets
+ * last_triggered = nowIso and bumps trigger_count only when the alert has not
+ * triggered since `windowStartIso`. better-sqlite3 runs statements serially, so
+ * exactly one concurrent evaluation sees changes === 1 and proceeds to send the
+ * notification/write history; the rest are throttled.
+ *
+ * Pass windowStartIso = nowIso to disable throttling (the first evaluation in a
+ * given instant still wins; a strictly-earlier last_triggered always allows it).
+ */
+export function claimAlertTrigger(id: string, nowIso: string, windowStartIso: string): boolean {
+  const database = getSQLiteDB();
+  const result = database.prepare(`
+    UPDATE alerts
+    SET last_triggered = ?,
+        trigger_count = trigger_count + 1,
+        updated_at = datetime('now')
+    WHERE id = ?
+      AND (last_triggered IS NULL OR last_triggered < ?)
+  `).run(nowIso, id, windowStartIso);
+  return result.changes === 1;
+}
+
 export function deleteAlert(id: string): boolean {
   const database = getSQLiteDB();
   const result = database.prepare('DELETE FROM alerts WHERE id = ?').run(id);

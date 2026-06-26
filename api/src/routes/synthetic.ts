@@ -23,8 +23,14 @@ import {
   unscheduleTest,
   refreshScheduler,
 } from '../services/synthetic/index.js';
+import { authenticate, denyReadonly } from '../auth/middleware.js';
 
 const router = Router();
+
+// #35/#36: require auth on all synthetic-monitoring routes; block writes for
+// read-only roles. Synthetic tests are user-usable (not admin-only).
+router.use(authenticate);
+router.use(denyReadonly);
 
 // Get all tests
 router.get('/tests', (req: Request, res: Response) => {

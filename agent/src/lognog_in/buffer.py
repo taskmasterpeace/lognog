@@ -138,7 +138,7 @@ class EventBuffer:
                 rows = conn.execute(
                     """
                     SELECT id, event_type, data FROM events
-                    ORDER BY created_at ASC
+                    ORDER BY id ASC
                     LIMIT ?
                     """,
                     (batch_size,)

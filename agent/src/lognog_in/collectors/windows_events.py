@@ -64,6 +64,28 @@ HIGH_VALUE_EVENTS = {
 }
 
 
+def detect_record_reset(bookmark: Optional[int], oldest: int, total: int) -> Optional[int]:
+    """Detect a Windows event-log clear/wrap and return a corrected bookmark.
+
+    After the log is cleared (or wraps), record numbers restart low, so the
+    newest record number can fall below a previously-stored bookmark and new
+    records would be silently skipped. When that happens, return a reset
+    bookmark (just before the new oldest record); otherwise return ``bookmark``
+    unchanged.
+
+    Args:
+        bookmark: Previously stored bookmark, or None if never read.
+        oldest: Oldest record number currently in the log.
+        total: Total number of records currently in the log.
+    """
+    if bookmark is None or total <= 0:
+        return bookmark
+    newest = oldest + total - 1
+    if newest < bookmark:
+        return max(oldest - 1, 0)
+    return bookmark
+
+
 class EventBookmark:
     """Manages bookmarks for Windows Event Log reading."""
 
@@ -248,10 +270,22 @@ class WindowsEventCollector:
                 # Get bookmark (last read record)
                 bookmark = self.bookmarks.get_bookmark(channel)
 
+                # Oldest record currently in the log.
+                oldest = win32evtlog.GetOldestEventLogRecord(hand)
+
+                # Detect a record-number reset (log cleared/wrapped) so new
+                # low-numbered records aren't silently skipped past the bookmark.
+                reset_bookmark = detect_record_reset(bookmark, oldest, total)
+                if reset_bookmark != bookmark:
+                    logger.warning(
+                        f"Record-number reset detected on {channel} "
+                        f"(oldest={oldest}, total={total}, bookmark={bookmark}); "
+                        f"resetting bookmark to {reset_bookmark}"
+                    )
+                    bookmark = reset_bookmark
+
                 # If no bookmark, start from current position (don't read entire history)
                 if bookmark is None:
-                    # Get the oldest record number
-                    oldest = win32evtlog.GetOldestEventLogRecord(hand)
                     # Start from most recent to avoid reading entire history on first run
                     bookmark = max(oldest, total - 100) if total > 100 else oldest
                     logger.info(f"No bookmark for {channel}, starting from record {bookmark}")

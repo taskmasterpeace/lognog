@@ -15,8 +15,13 @@ import {
   CreateSilenceOptions,
 } from '../services/silence-service.js';
 import { SilenceLevel } from '../db/sqlite.js';
+import { authenticate, denyReadonly } from '../auth/middleware.js';
 
 const router = Router();
+
+// #35/#36: require auth on all silence routes; block writes for read-only roles.
+router.use(authenticate);
+router.use(denyReadonly);
 
 // Get all silences
 router.get('/', (req: Request, res: Response) => {

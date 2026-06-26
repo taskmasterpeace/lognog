@@ -25,8 +25,15 @@ import {
   SourceConfigTransform,
   SourceRoutingRule,
 } from '../db/sqlite.js';
+import { authenticate, requireAdmin, denyReadonly } from '../auth/middleware.js';
 
 const router = Router();
+
+// #35/#36: require auth on all source-config routes; block writes for read-only
+// roles. Config create/update/delete (configs, extractions, transforms) require
+// admin. The non-persisting /:id/test (test a config) stays user-accessible.
+router.use(authenticate);
+router.use(denyReadonly);
 
 // ============================================================================
 // Source Configs
@@ -72,7 +79,7 @@ router.get('/:id', (req: Request, res: Response) => {
 });
 
 // Create source config
-router.post('/', (req: Request, res: Response) => {
+router.post('/', requireAdmin, (req: Request, res: Response) => {
   try {
     const { name, description, hostname_pattern, app_name_pattern, source_type, priority, template_id, target_index, parsing_mode, time_format, time_field, enabled } = req.body;
 
@@ -103,7 +110,7 @@ router.post('/', (req: Request, res: Response) => {
 });
 
 // Update source config
-router.put('/:id', (req: Request, res: Response) => {
+router.put('/:id', requireAdmin, (req: Request, res: Response) => {
   try {
     const existing = getSourceConfig(req.params.id);
     if (!existing) {
@@ -119,7 +126,7 @@ router.put('/:id', (req: Request, res: Response) => {
 });
 
 // Delete source config
-router.delete('/:id', (req: Request, res: Response) => {
+router.delete('/:id', requireAdmin, (req: Request, res: Response) => {
   try {
     const deleted = deleteSourceConfig(req.params.id);
     if (!deleted) {
@@ -248,7 +255,7 @@ router.get('/:id/extractions', (req: Request, res: Response) => {
   }
 });
 
-router.post('/:id/extractions', (req: Request, res: Response) => {
+router.post('/:id/extractions', requireAdmin, (req: Request, res: Response) => {
   try {
     const config = getSourceConfig(req.params.id);
     if (!config) {
@@ -286,7 +293,7 @@ router.post('/:id/extractions', (req: Request, res: Response) => {
   }
 });
 
-router.put('/:id/extractions/:extractionId', (req: Request, res: Response) => {
+router.put('/:id/extractions/:extractionId', requireAdmin, (req: Request, res: Response) => {
   try {
     const extraction = getSourceConfigExtraction(req.params.extractionId);
     if (!extraction) {
@@ -310,7 +317,7 @@ router.put('/:id/extractions/:extractionId', (req: Request, res: Response) => {
   }
 });
 
-router.delete('/:id/extractions/:extractionId', (req: Request, res: Response) => {
+router.delete('/:id/extractions/:extractionId', requireAdmin, (req: Request, res: Response) => {
   try {
     const deleted = deleteSourceConfigExtraction(req.params.extractionId);
     if (!deleted) {
@@ -342,7 +349,7 @@ router.get('/:id/transforms', (req: Request, res: Response) => {
   }
 });
 
-router.post('/:id/transforms', (req: Request, res: Response) => {
+router.post('/:id/transforms', requireAdmin, (req: Request, res: Response) => {
   try {
     const config = getSourceConfig(req.params.id);
     if (!config) {
@@ -377,7 +384,7 @@ router.post('/:id/transforms', (req: Request, res: Response) => {
   }
 });
 
-router.put('/:id/transforms/:transformId', (req: Request, res: Response) => {
+router.put('/:id/transforms/:transformId', requireAdmin, (req: Request, res: Response) => {
   try {
     const transform = getSourceConfigTransform(req.params.transformId);
     if (!transform) {
@@ -397,7 +404,7 @@ router.put('/:id/transforms/:transformId', (req: Request, res: Response) => {
   }
 });
 
-router.delete('/:id/transforms/:transformId', (req: Request, res: Response) => {
+router.delete('/:id/transforms/:transformId', requireAdmin, (req: Request, res: Response) => {
   try {
     const deleted = deleteSourceConfigTransform(req.params.transformId);
     if (!deleted) {

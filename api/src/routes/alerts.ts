@@ -22,8 +22,14 @@ import {
 } from '../db/sqlite.js';
 import { evaluateAlert, testAlert, evaluateAllAlerts } from '../services/alerts.js';
 import { ALERT_TEMPLATES } from '../data/alert-templates.js';
+import { authenticate, denyReadonly } from '../auth/middleware.js';
 
 const router = Router();
+
+// #35: require auth on all alert routes; #36: block writes for read-only roles.
+// Alerts are user-usable (not admin-only), so normal users keep full access.
+router.use(authenticate);
+router.use(denyReadonly);
 
 // Safe JSON parse helper to prevent crashes on corrupted data
 function safeJsonParse<T>(json: string | null | undefined, defaultValue: T): T {

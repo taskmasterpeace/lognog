@@ -19,10 +19,43 @@ import { createAlert } from '../db/sqlite.js';
 import { createDashboardPanel, getDashboard } from '../db/sqlite.js';
 import { getSQLiteDB } from '../db/sqlite.js';
 import { v4 as uuidv4 } from 'uuid';
-import { authenticate, optionalAuth } from '../auth/middleware.js';
+import { authenticate, optionalAuth, denyReadonly } from '../auth/middleware.js';
 import { reseedSavedSearches } from '../data/seed-templates.js';
+import type { SavedSearch } from '../db/sqlite-saved-searches.js';
 
 const router = Router();
+
+// #36 (IDOR): enforce ownership on a fetched saved search.
+//  - For read/run access (`allowShared = true`) a shared search is visible to
+//    any authenticated user; otherwise only the owner may access it.
+//  - For mutations (`allowShared = false`) only the owner may access it.
+// Admins retain full access. Returns true when access is allowed; otherwise it
+// writes a 403/404 response and returns false so the caller can `return`.
+function enforceOwnership(
+  req: Request,
+  res: Response,
+  search: SavedSearch,
+  allowShared: boolean,
+): boolean {
+  const user = req.user;
+  if (!user) {
+    res.status(401).json({ error: 'Authentication required' });
+    return false;
+  }
+
+  // Admins can access any saved search.
+  if (user.role === 'admin') return true;
+
+  // Owner always has access.
+  if (search.owner_id && search.owner_id === user.id) return true;
+
+  // Shared searches are readable/runnable by any authenticated user.
+  if (allowShared && search.is_shared) return true;
+
+  // Otherwise: do not reveal existence to non-owners.
+  res.status(404).json({ error: 'Saved search not found' });
+  return false;
+}
 
 // Validation schemas
 const createSchema = z.object({
@@ -201,12 +234,15 @@ router.post('/reseed', authenticate, (req: Request, res: Response) => {
 });
 
 // GET /saved-searches/:id - Get single saved search
-router.get('/:id', optionalAuth, (req: Request, res: Response) => {
+router.get('/:id', authenticate, (req: Request, res: Response) => {
   try {
     const search = getSavedSearch(req.params.id);
     if (!search) {
       return res.status(404).json({ error: 'Saved search not found' });
     }
+
+    // #36: owner or (shared + authenticated). Non-owners of a private search 404.
+    if (!enforceOwnership(req, res, search, true)) return;
 
     return res.json({
       ...search,
@@ -254,12 +290,15 @@ router.post('/', authenticate, (req: Request, res: Response) => {
 });
 
 // PUT /saved-searches/:id - Update saved search
-router.put('/:id', authenticate, (req: Request, res: Response) => {
+router.put('/:id', authenticate, denyReadonly, (req: Request, res: Response) => {
   try {
     const existing = getSavedSearch(req.params.id);
     if (!existing) {
       return res.status(404).json({ error: 'Saved search not found' });
     }
+
+    // #36: only the owner (or admin) may update; shared does NOT grant write.
+    if (!enforceOwnership(req, res, existing, false)) return;
 
     const data = updateSchema.parse(req.body);
     const search = updateSavedSearch(req.params.id, data);
@@ -283,8 +322,16 @@ router.put('/:id', authenticate, (req: Request, res: Response) => {
 });
 
 // DELETE /saved-searches/:id - Delete saved search
-router.delete('/:id', authenticate, (req: Request, res: Response) => {
+router.delete('/:id', authenticate, denyReadonly, (req: Request, res: Response) => {
   try {
+    const existing = getSavedSearch(req.params.id);
+    if (!existing) {
+      return res.status(404).json({ error: 'Saved search not found' });
+    }
+
+    // #36: only the owner (or admin) may delete.
+    if (!enforceOwnership(req, res, existing, false)) return;
+
     const success = deleteSavedSearch(req.params.id);
     if (!success) {
       return res.status(404).json({ error: 'Saved search not found' });
@@ -303,6 +350,9 @@ router.post('/:id/run', authenticate, async (req: Request, res: Response) => {
     if (!search) {
       return res.status(404).json({ error: 'Saved search not found' });
     }
+
+    // #36: owner or shared may run; non-owners of a private search 404.
+    if (!enforceOwnership(req, res, search, true)) return;
 
     const options = runSchema.parse(req.body || {});
 
@@ -356,12 +406,15 @@ router.post('/:id/run', authenticate, async (req: Request, res: Response) => {
 });
 
 // GET /saved-searches/:id/results - Get cached results (loadjob equivalent)
-router.get('/:id/results', optionalAuth, (req: Request, res: Response) => {
+router.get('/:id/results', authenticate, (req: Request, res: Response) => {
   try {
     const search = getSavedSearch(req.params.id);
     if (!search) {
       return res.status(404).json({ error: 'Saved search not found' });
     }
+
+    // #36: owner or shared may read cached results.
+    if (!enforceOwnership(req, res, search, true)) return;
 
     if (!search.cached_results) {
       return res.status(404).json({
@@ -388,12 +441,15 @@ router.get('/:id/results', optionalAuth, (req: Request, res: Response) => {
 });
 
 // POST /saved-searches/:id/clear-cache - Clear cached results
-router.post('/:id/clear-cache', authenticate, (req: Request, res: Response) => {
+router.post('/:id/clear-cache', authenticate, denyReadonly, (req: Request, res: Response) => {
   try {
     const search = getSavedSearch(req.params.id);
     if (!search) {
       return res.status(404).json({ error: 'Saved search not found' });
     }
+
+    // #36: only the owner (or admin) may clear another search's cache.
+    if (!enforceOwnership(req, res, search, false)) return;
 
     clearSavedSearchCache(req.params.id);
     return res.json({ message: 'Cache cleared' });
@@ -404,8 +460,15 @@ router.post('/:id/clear-cache', authenticate, (req: Request, res: Response) => {
 });
 
 // POST /saved-searches/:id/duplicate - Duplicate a saved search
-router.post('/:id/duplicate', authenticate, (req: Request, res: Response) => {
+router.post('/:id/duplicate', authenticate, denyReadonly, (req: Request, res: Response) => {
   try {
+    // #36: must be able to see the source (owner or shared) before duplicating.
+    const source = getSavedSearch(req.params.id);
+    if (!source) {
+      return res.status(404).json({ error: 'Saved search not found' });
+    }
+    if (!enforceOwnership(req, res, source, true)) return;
+
     const newSearch = duplicateSavedSearch(req.params.id, req.user?.id);
     if (!newSearch) {
       return res.status(404).json({ error: 'Saved search not found' });
@@ -422,12 +485,15 @@ router.post('/:id/duplicate', authenticate, (req: Request, res: Response) => {
 });
 
 // POST /saved-searches/:id/create-alert - Create alert from saved search
-router.post('/:id/create-alert', authenticate, (req: Request, res: Response) => {
+router.post('/:id/create-alert', authenticate, denyReadonly, (req: Request, res: Response) => {
   try {
     const search = getSavedSearch(req.params.id);
     if (!search) {
       return res.status(404).json({ error: 'Saved search not found' });
     }
+
+    // #36: owner or shared may use the source search to create an alert.
+    if (!enforceOwnership(req, res, search, true)) return;
 
     const data = createAlertSchema.parse(req.body || {});
 
@@ -458,12 +524,15 @@ router.post('/:id/create-alert', authenticate, (req: Request, res: Response) => 
 });
 
 // POST /saved-searches/:id/create-panel - Create dashboard panel from saved search
-router.post('/:id/create-panel', authenticate, (req: Request, res: Response) => {
+router.post('/:id/create-panel', authenticate, denyReadonly, (req: Request, res: Response) => {
   try {
     const search = getSavedSearch(req.params.id);
     if (!search) {
       return res.status(404).json({ error: 'Saved search not found' });
     }
+
+    // #36: owner or shared may use the source search to create a panel.
+    if (!enforceOwnership(req, res, search, true)) return;
 
     const data = createPanelSchema.parse(req.body);
 
@@ -502,12 +571,15 @@ router.post('/:id/create-panel', authenticate, (req: Request, res: Response) => 
 });
 
 // POST /saved-searches/:id/create-report - Create scheduled report from saved search
-router.post('/:id/create-report', authenticate, (req: Request, res: Response) => {
+router.post('/:id/create-report', authenticate, denyReadonly, (req: Request, res: Response) => {
   try {
     const search = getSavedSearch(req.params.id);
     if (!search) {
       return res.status(404).json({ error: 'Saved search not found' });
     }
+
+    // #36: owner or shared may use the source search to create a report.
+    if (!enforceOwnership(req, res, search, true)) return;
 
     const data = createReportSchema.parse(req.body);
 

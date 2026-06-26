@@ -4,11 +4,16 @@ import { getSQLiteDB } from '../db/sqlite.js';
 import { executeQuery } from '../db/clickhouse.js';
 import { compileDSL, parseAndCompile } from '../dsl/index.js';
 import { triggerReport } from '../services/scheduler.js';
-import { rateLimit } from '../auth/middleware.js';
+import { rateLimit, authenticate, denyReadonly } from '../auth/middleware.js';
 import { getReportTemplates, getTemplateById, getTemplatesByCategory, getTemplateCategories } from '../data/report-templates.js';
 import { getAvailableReportTokens } from '../services/template-engine.js';
 
 const router = Router();
+
+// #35/#36: require auth on all report routes; block writes for read-only roles.
+// Reports are user-usable (authenticate, not admin) per spec.
+router.use(authenticate);
+router.use(denyReadonly);
 
 interface ScheduledReport {
   id: string;

@@ -26,8 +26,14 @@ import {
   getSourceCompliance,
   applyAutoMappings,
 } from '../services/cim-normalizer.js';
+import { authenticate, requireAdmin, denyReadonly } from '../auth/middleware.js';
 
 const router = Router();
+
+// #35/#36: require auth on all CIM routes; block writes for read-only roles.
+// Config mutations (data models / field mappings) additionally require admin.
+router.use(authenticate);
+router.use(denyReadonly);
 
 // ============================================================================
 // Data Models Routes
@@ -97,7 +103,7 @@ router.get('/models/:name', (req: Request, res: Response) => {
 /**
  * POST /cim/models - Create a new data model
  */
-router.post('/models', (req: Request, res: Response) => {
+router.post('/models', requireAdmin, (req: Request, res: Response) => {
   try {
     const { name, description, category, fields, constraints } = req.body;
 
@@ -135,7 +141,7 @@ router.post('/models', (req: Request, res: Response) => {
 /**
  * PUT /cim/models/:name - Update a data model
  */
-router.put('/models/:name', (req: Request, res: Response) => {
+router.put('/models/:name', requireAdmin, (req: Request, res: Response) => {
   try {
     const { name } = req.params;
     const updates = req.body;
@@ -158,7 +164,7 @@ router.put('/models/:name', (req: Request, res: Response) => {
 /**
  * DELETE /cim/models/:name - Delete a data model
  */
-router.delete('/models/:name', (req: Request, res: Response) => {
+router.delete('/models/:name', requireAdmin, (req: Request, res: Response) => {
   try {
     const { name } = req.params;
 
@@ -226,7 +232,7 @@ router.get('/mappings/:id', (req: Request, res: Response) => {
 /**
  * POST /cim/mappings - Create a new field mapping
  */
-router.post('/mappings', (req: Request, res: Response) => {
+router.post('/mappings', requireAdmin, (req: Request, res: Response) => {
   try {
     const { source_type, source_field, data_model, cim_field, transform, priority } = req.body;
 
@@ -270,7 +276,7 @@ router.post('/mappings', (req: Request, res: Response) => {
 /**
  * PUT /cim/mappings/:id - Update a field mapping
  */
-router.put('/mappings/:id', (req: Request, res: Response) => {
+router.put('/mappings/:id', requireAdmin, (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const updates = req.body;
@@ -290,7 +296,7 @@ router.put('/mappings/:id', (req: Request, res: Response) => {
 /**
  * DELETE /cim/mappings/:id - Delete a field mapping
  */
-router.delete('/mappings/:id', (req: Request, res: Response) => {
+router.delete('/mappings/:id', requireAdmin, (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -411,7 +417,7 @@ router.post('/auto-detect', (req: Request, res: Response) => {
 /**
  * POST /cim/auto-detect/apply - Apply auto-detected mappings
  */
-router.post('/auto-detect/apply', (req: Request, res: Response) => {
+router.post('/auto-detect/apply', requireAdmin, (req: Request, res: Response) => {
   try {
     const { suggestions } = req.body;
 

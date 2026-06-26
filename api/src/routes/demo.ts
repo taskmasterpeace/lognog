@@ -6,7 +6,7 @@
 
 import { Router } from 'express';
 import { z } from 'zod';
-import { authenticate, requirePermission } from '../auth/middleware.js';
+import { authenticate, requirePermission, requireAdmin, isValidIndexName } from '../auth/middleware.js';
 import { insertLogs, executeRawQuery, getBackend } from '../db/backend.js';
 import { generateMockLogs, exportLogsToJSON, importLogsFromJSON } from '../services/mock-data.js';
 import { logAuthEvent } from '../auth/auth.js';
@@ -35,7 +35,7 @@ const importRequestSchema = z.object({
  * Generate realistic mock log data.
  * Requires authentication with 'write' permission.
  */
-router.post('/generate', authenticate, requirePermission('write'), async (req, res) => {
+router.post('/generate', authenticate, requireAdmin, async (req, res) => {
   try {
     const params = generateRequestSchema.parse(req.body);
 
@@ -167,6 +167,19 @@ router.get('/export', authenticate, requirePermission('read'), async (req, res) 
     const earliest = req.query.earliest as string || '-24h';
     const latest = req.query.latest as string || 'now';
 
+    // #37: earliest/latest are interpolated into SQL by parseRelativeTime, which
+    // falls through to `'${timeStr}'` for unrecognized input. Validate against
+    // the accepted forms ('now' or -<num><m|h|d|w>) and reject anything else so
+    // an attacker cannot inject SQL via these query params.
+    const timeParamRe = /^(now|-\d+[mhdw])$/;
+    if (!timeParamRe.test(earliest) || !timeParamRe.test(latest)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid time parameter',
+        message: "earliest/latest must be 'now' or a relative offset like '-24h' (units: m,h,d,w)",
+      });
+    }
+
     let sql: string;
     const backend = getBackend();
 
@@ -248,16 +261,26 @@ router.get('/export', authenticate, requirePermission('read'), async (req, res) 
  * - confirm: must be 'yes' to proceed
  * - index: specific index to clear (optional, default: clear all)
  */
-router.delete('/clear', authenticate, requirePermission('admin'), async (req, res) => {
+router.delete('/clear', authenticate, requireAdmin, async (req, res) => {
   try {
     const confirm = req.query.confirm as string;
-    const index = req.query.index as string;
+    const index = req.query.index as string | undefined;
 
     if (confirm !== 'yes') {
       return res.status(400).json({
         success: false,
         error: 'Confirmation required',
         message: 'Add ?confirm=yes query parameter to confirm deletion',
+      });
+    }
+
+    // #37: index is interpolated into a DELETE / ALTER ... DELETE statement.
+    // Reject anything that isn't a valid index name to prevent SQL injection.
+    if (index !== undefined && !isValidIndexName(index)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid index name',
+        message: 'index must match ^[a-zA-Z][a-zA-Z0-9_-]*$',
       });
     }
 

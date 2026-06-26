@@ -9,6 +9,7 @@ import {
   Sparkles,
   Info,
 } from 'lucide-react';
+import { sanitize } from '../../utils/sanitize';
 
 // Types matching the API response
 export interface CitedSource {
@@ -125,9 +126,11 @@ function SourceCard({
           <div
             className="text-sm text-nog-700 dark:text-nog-300 leading-relaxed"
             dangerouslySetInnerHTML={{
-              __html: source.highlightedText.replace(
-                /<mark>/g,
-                '<mark class="bg-honey-200 dark:bg-honey-900/50 px-0.5 rounded">'
+              __html: sanitize(
+                source.highlightedText.replace(
+                  /<mark>/g,
+                  '<mark class="bg-honey-200 dark:bg-honey-900/50 px-0.5 rounded">'
+                )
               ),
             }}
           />

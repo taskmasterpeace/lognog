@@ -13,7 +13,7 @@ import {
 } from '../db/sqlite.js';
 import { translateNaturalLanguage, getSuggestedQueries } from '../services/ai-search.js';
 import { applyFieldExtraction } from '../services/field-extractor.js';
-import { optionalAuth, rateLimit } from '../auth/middleware.js';
+import { optionalAuth, authenticate, rateLimit } from '../auth/middleware.js';
 import { isIndexAllowed, indexScopeSqlClause } from '../auth/index-scope.js';
 import { FilldownNode, TransactionNode, ChartNode, CompareNode, TimewrapNode } from '../dsl/types.js';
 import { listLookupTables } from '../services/lookup-tables.js';
@@ -471,7 +471,7 @@ function parseRelativeTime(timeStr: string, referenceTime: number = Date.now()):
 }
 
 // Execute a DSL query (rate limited: 120/min for CPU-intensive parsing)
-router.post('/query', optionalAuth, rateLimit(120, 60000), async (req: Request, res: Response) => {
+router.post('/query', authenticate, rateLimit(120, 60000), async (req: Request, res: Response) => {
   try {
     const { query, earliest, latest, extract_fields = false, source_type, include_histogram = true } = req.body;
 
@@ -762,7 +762,7 @@ router.post('/parse', (req: Request, res: Response) => {
 });
 
 // AI-powered natural language search
-router.post('/ai', optionalAuth, async (req: Request, res: Response) => {
+router.post('/ai', authenticate, async (req: Request, res: Response) => {
   try {
     const { question, execute = true } = req.body;
 
@@ -834,7 +834,7 @@ router.post('/validate', (req: Request, res: Response) => {
 });
 
 // Get field suggestions (core fields only)
-router.get('/fields', optionalAuth, async (req: Request, res: Response) => {
+router.get('/fields', authenticate, async (req: Request, res: Response) => {
   try {
     const fields = await getFields(req.allowedIndexes ?? undefined);
     return res.json(fields);
@@ -845,7 +845,7 @@ router.get('/fields', optionalAuth, async (req: Request, res: Response) => {
 });
 
 // Discover all available fields (core + custom from structured_data)
-router.get('/fields/discover', optionalAuth, async (req: Request, res: Response) => {
+router.get('/fields/discover', authenticate, async (req: Request, res: Response) => {
   try {
     const { earliest, latest, limit, index } = req.query;
 
@@ -971,7 +971,7 @@ router.post('/fields/reorder', optionalAuth, (req: Request, res: Response) => {
 });
 
 // Get unique values for a field (for autocomplete)
-router.get('/fields/:field/values', optionalAuth, async (req: Request, res: Response) => {
+router.get('/fields/:field/values', authenticate, async (req: Request, res: Response) => {
   try {
     const { field } = req.params;
     const { limit = '100' } = req.query;
@@ -1085,7 +1085,7 @@ router.delete('/saved/:id', (req: Request, res: Response) => {
  * GET /api/search/logs/:id/full-message
  * Fetch full message content for a truncated log entry (lazy loading)
  */
-router.get('/logs/:id/full-message', optionalAuth, async (req: Request, res: Response) => {
+router.get('/logs/:id/full-message', authenticate, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -1127,7 +1127,7 @@ router.get('/logs/:id/full-message', optionalAuth, async (req: Request, res: Res
  * GET /api/search/logs/:id/context
  * Fetch surrounding log entries for context (like grep -C)
  */
-router.get('/logs/:id/context', optionalAuth, async (req: Request, res: Response) => {
+router.get('/logs/:id/context', authenticate, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { before = '5', after = '5' } = req.query;

@@ -2,8 +2,13 @@ import { Router, Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { getSQLiteDB } from '../db/sqlite.js';
 import { executeQuery } from '../db/clickhouse.js';
+import { authenticate, requireAdmin, isValidIndexName } from '../auth/middleware.js';
 
 const router = Router();
+
+// #35: require auth on all retention routes. Reads (GET) are available to any
+// authenticated user; policy writes and cleanup require admin (applied per-route).
+router.use(authenticate);
 
 interface RetentionSetting {
   id: string;
@@ -55,7 +60,7 @@ router.get('/:indexName', async (req: Request, res: Response) => {
 });
 
 // Create or update retention setting for an index
-router.put('/:indexName', async (req: Request, res: Response) => {
+router.put('/:indexName', requireAdmin, async (req: Request, res: Response) => {
   try {
     const { indexName } = req.params;
     const { retention_days } = req.body;
@@ -112,7 +117,7 @@ router.put('/:indexName', async (req: Request, res: Response) => {
 });
 
 // Delete retention setting (revert to default)
-router.delete('/:indexName', async (req: Request, res: Response) => {
+router.delete('/:indexName', requireAdmin, async (req: Request, res: Response) => {
   try {
     const { indexName } = req.params;
     const db = getSQLiteDB();
@@ -129,7 +134,7 @@ router.delete('/:indexName', async (req: Request, res: Response) => {
 });
 
 // Trigger manual cleanup for all indexes based on their retention settings
-router.post('/cleanup', async (_req: Request, res: Response) => {
+router.post('/cleanup', requireAdmin, async (_req: Request, res: Response) => {
   try {
     const db = getSQLiteDB();
     const settings = db.prepare(`
@@ -144,6 +149,15 @@ router.post('/cleanup', async (_req: Request, res: Response) => {
     `);
 
     for (const idx of indexes) {
+      // #37: index_name is interpolated into a ClickHouse DELETE. Although these
+      // values come from the DB, validate defensively against the canonical
+      // index-name pattern and skip anything that doesn't match, so a malformed
+      // or maliciously-ingested index name can never inject SQL.
+      if (!isValidIndexName(idx.index_name)) {
+        console.warn(`Skipping cleanup for invalid index name: ${JSON.stringify(idx.index_name)}`);
+        continue;
+      }
+
       // Find retention for this index (custom or default 90 days)
       const customSetting = settings.find(s => s.index_name === idx.index_name);
       const retentionDays = customSetting?.retention_days || 90;

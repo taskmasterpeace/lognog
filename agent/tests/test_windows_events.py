@@ -4,11 +4,37 @@ import sys
 import pytest
 from pathlib import Path
 
-# Only run these tests on Windows
-pytestmark = pytest.mark.skipif(
-    sys.platform != "win32",
-    reason="Windows Event tests only run on Windows"
-)
+# detect_record_reset is a pure function with no pywin32 dependency, so it can
+# be tested on any platform.
+from lognog_in.collectors.windows_events import detect_record_reset
+
+
+class TestDetectRecordReset:
+    """Tests for record-number reset detection (issue #42, log clear/wrap)."""
+
+    def test_no_bookmark_returns_none(self):
+        assert detect_record_reset(None, oldest=1, total=10) is None
+
+    def test_empty_log_returns_bookmark_unchanged(self):
+        assert detect_record_reset(500, oldest=0, total=0) == 500
+
+    def test_normal_growth_keeps_bookmark(self):
+        # Records 1..1000 present, bookmark at 900 -> newest 1000 >= 900, no reset.
+        assert detect_record_reset(900, oldest=1, total=1000) == 900
+
+    def test_reset_after_clear_resets_bookmark(self):
+        # Log was cleared: only records 1..5 remain, but bookmark is 900.
+        # newest = 5 < 900 -> reset to just before the new oldest (0).
+        assert detect_record_reset(900, oldest=1, total=5) == 0
+
+    def test_reset_with_nonzero_oldest(self):
+        # New oldest record is 3 after a wrap; bookmark 900 is stale.
+        # newest = 3 + 2 - 1 = 4 < 900 -> reset to oldest - 1 = 2.
+        assert detect_record_reset(900, oldest=3, total=2) == 2
+
+    def test_bookmark_at_newest_no_reset(self):
+        # newest exactly equals bookmark -> not a reset.
+        assert detect_record_reset(1000, oldest=1, total=1000) == 1000
 
 
 class TestWindowsEventCollector:

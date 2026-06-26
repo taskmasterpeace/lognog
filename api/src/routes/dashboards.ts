@@ -47,8 +47,62 @@ import {
   reorderDashboardLogos,
   getProjects,
 } from '../db/sqlite.js';
+import { authenticate, denyReadonly } from '../auth/middleware.js';
 
 const router = Router();
+
+// #35 CARVE-OUT: public dashboard viewing by share token must stay reachable
+// WITHOUT a logged-in user. It is registered BEFORE router.use(authenticate) so
+// the auth guard below never applies to it. Access is gated by the unguessable
+// token (+ optional password) instead.
+router.get('/public/:token', async (req: Request, res: Response) => {
+  try {
+    const { token } = req.params;
+    const { password } = req.query;
+
+    const dashboard = getDashboardByToken(token);
+    if (!dashboard) {
+      return res.status(404).json({ error: 'Dashboard not found or link expired' });
+    }
+
+    // Check password if required
+    if (dashboard.public_password) {
+      if (!password) {
+        return res.status(401).json({ error: 'Password required', needs_password: true });
+      }
+      const passwordMatch = await bcrypt.compare(String(password), dashboard.public_password);
+      if (!passwordMatch) {
+        return res.status(401).json({ error: 'Invalid password', needs_password: true });
+      }
+    }
+
+    // Get panels for the dashboard
+    const panels = getDashboardPanels(dashboard.id);
+    const pages = getDashboardPages(dashboard.id);
+    const variables = getDashboardVariables(dashboard.id);
+
+    return res.json({
+      id: dashboard.id,
+      name: dashboard.name,
+      description: dashboard.description,
+      layout: dashboard.layout,
+      logo_url: dashboard.logo_url,
+      accent_color: dashboard.accent_color,
+      header_color: dashboard.header_color,
+      panels,
+      pages,
+      variables,
+    });
+  } catch (error) {
+    console.error('Error fetching public dashboard:', error);
+    return res.status(500).json({ error: 'Failed to fetch dashboard' });
+  }
+});
+
+// #35/#36: every other dashboard route requires auth; read-only roles cannot
+// mutate. Dashboards are user-owned, so normal authenticated users keep access.
+router.use(authenticate);
+router.use(denyReadonly);
 
 // Get all available app scopes
 router.get('/app-scopes', (_req: Request, res: Response) => {
@@ -547,50 +601,7 @@ router.delete('/:id/share', (req: Request, res: Response) => {
   }
 });
 
-// Get public dashboard by token (no auth required)
-router.get('/public/:token', async (req: Request, res: Response) => {
-  try {
-    const { token } = req.params;
-    const { password } = req.query;
-
-    const dashboard = getDashboardByToken(token);
-    if (!dashboard) {
-      return res.status(404).json({ error: 'Dashboard not found or link expired' });
-    }
-
-    // Check password if required
-    if (dashboard.public_password) {
-      if (!password) {
-        return res.status(401).json({ error: 'Password required', needs_password: true });
-      }
-      const passwordMatch = await bcrypt.compare(String(password), dashboard.public_password);
-      if (!passwordMatch) {
-        return res.status(401).json({ error: 'Invalid password', needs_password: true });
-      }
-    }
-
-    // Get panels for the dashboard
-    const panels = getDashboardPanels(dashboard.id);
-    const pages = getDashboardPages(dashboard.id);
-    const variables = getDashboardVariables(dashboard.id);
-
-    return res.json({
-      id: dashboard.id,
-      name: dashboard.name,
-      description: dashboard.description,
-      layout: dashboard.layout,
-      logo_url: dashboard.logo_url,
-      accent_color: dashboard.accent_color,
-      header_color: dashboard.header_color,
-      panels,
-      pages,
-      variables,
-    });
-  } catch (error) {
-    console.error('Error fetching public dashboard:', error);
-    return res.status(500).json({ error: 'Failed to fetch dashboard' });
-  }
-});
+// (Public dashboard-by-token route is defined above, before router.use(authenticate).)
 
 // Get dashboard variables
 router.get('/:id/variables', (req: Request, res: Response) => {

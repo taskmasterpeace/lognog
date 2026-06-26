@@ -6,8 +6,15 @@ import {
   updateSourceRoutingRule,
   deleteSourceRoutingRule,
 } from '../db/sqlite.js';
+import { authenticate, requireAdmin, denyReadonly } from '../auth/middleware.js';
 
 const router = Router();
+
+// #35/#36: require auth on all routing-rule routes; block writes for read-only
+// roles. Rule create/update/delete are config changes and require admin. The
+// non-persisting POST /evaluate (dry-run a rule) stays user-accessible.
+router.use(authenticate);
+router.use(denyReadonly);
 
 // Get all routing rules
 router.get('/', (_req: Request, res: Response) => {
@@ -36,7 +43,7 @@ router.get('/:id', (req: Request, res: Response) => {
 });
 
 // Create routing rule
-router.post('/', (req: Request, res: Response) => {
+router.post('/', requireAdmin, (req: Request, res: Response) => {
   try {
     const { name, conditions, match_mode, target_index, priority, enabled } = req.body;
 
@@ -72,7 +79,7 @@ router.post('/', (req: Request, res: Response) => {
 });
 
 // Update routing rule
-router.put('/:id', (req: Request, res: Response) => {
+router.put('/:id', requireAdmin, (req: Request, res: Response) => {
   try {
     const existing = getSourceRoutingRule(req.params.id);
     if (!existing) {
@@ -105,7 +112,7 @@ router.put('/:id', (req: Request, res: Response) => {
 });
 
 // Delete routing rule
-router.delete('/:id', (req: Request, res: Response) => {
+router.delete('/:id', requireAdmin, (req: Request, res: Response) => {
   try {
     const deleted = deleteSourceRoutingRule(req.params.id);
     if (!deleted) {

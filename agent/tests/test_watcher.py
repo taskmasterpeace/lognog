@@ -81,6 +81,76 @@ class TestLogFileHandler:
         lines = handler._read_new_lines(str(test_file))
         assert lines == ["Line 4", "Line 5"]
 
+    def test_position_tracked_by_file_id_survives_rename(self, tmp_path: Path):
+        """Rotate-by-rename must not lose the read offset (issue #42).
+
+        The position is keyed by inode/file-id, which is preserved across a
+        rename, so reading the renamed path returns no duplicate lines.
+        """
+        import os
+
+        events = []
+        handler = LogFileHandler(
+            watch_path=WatchPath(path=str(tmp_path), pattern="*.log"),
+            hostname="testhost",
+            on_event=events.append,
+        )
+
+        log = tmp_path / "app.log"
+        log.write_text("Line 1\nLine 2\n")
+        assert handler._read_new_lines(str(log)) == ["Line 1", "Line 2"]
+
+        # Append a line, then rotate by renaming the file.
+        with open(log, "a") as f:
+            f.write("Line 3\n")
+        rotated = tmp_path / "app.log.1"
+        os.replace(log, rotated)
+
+        # Reading the rotated path (same inode) must only return the new line,
+        # not re-emit Line 1 / Line 2 from offset 0.
+        assert handler._read_new_lines(str(rotated)) == ["Line 3"]
+
+    def test_new_file_same_name_reads_from_start(self, tmp_path: Path):
+        """A brand-new file reusing an old name must read from offset 0."""
+        import os
+
+        events = []
+        handler = LogFileHandler(
+            watch_path=WatchPath(path=str(tmp_path), pattern="*.log"),
+            hostname="testhost",
+            on_event=events.append,
+        )
+
+        log = tmp_path / "app.log"
+        log.write_text("Old 1\nOld 2\n")
+        assert handler._read_new_lines(str(log)) == ["Old 1", "Old 2"]
+
+        # Rotate away and create a fresh file at the same path (new inode).
+        os.replace(log, tmp_path / "app.log.1")
+        log.write_text("Fresh 1\n")
+
+        # New inode => starts at 0 => reads the fresh content.
+        assert handler._read_new_lines(str(log)) == ["Fresh 1"]
+
+    def test_prune_dead_positions_evicts_deleted_files(self, tmp_path: Path):
+        """Tracked positions for deleted files are pruned (no unbounded growth)."""
+        import os
+
+        handler = LogFileHandler(
+            watch_path=WatchPath(path=str(tmp_path), pattern="*.log", recursive=False),
+            hostname="testhost",
+            on_event=[].append,
+        )
+
+        log = tmp_path / "app.log"
+        log.write_text("Line 1\n")
+        handler._read_new_lines(str(log))
+        assert len(handler._file_positions) == 1
+
+        os.remove(log)
+        handler._prune_dead_positions()
+        assert len(handler._file_positions) == 0
+
     def test_read_new_lines_handles_rotation(self, tmp_path: Path):
         """Test that rotation (truncation) is handled."""
         events = []

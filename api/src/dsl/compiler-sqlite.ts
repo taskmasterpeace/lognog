@@ -81,14 +81,46 @@ const KNOWN_COLUMNS = new Set([
   'index_name', 'message_tokens',
 ]);
 
+export interface TimeBounds {
+  earliest?: string;
+  latest?: string;
+}
+
 export class SQLiteCompiler {
   private ast: QueryAST;
   private params: unknown[] = [];
   private allowedIndexes?: string[];
+  private timeBounds?: TimeBounds;
 
-  constructor(ast: QueryAST, allowedIndexes?: string[]) {
+  constructor(ast: QueryAST, allowedIndexes?: string[], timeBounds?: TimeBounds) {
     this.ast = ast;
     this.allowedIndexes = allowedIndexes;
+    this.timeBounds = timeBounds;
+  }
+
+  /**
+   * Build SQLite time-range WHERE conditions from earliest/latest, built into
+   * the top-level WHERE here instead of being spliced post-hoc with
+   * sql.replace() (which only hit the first match and could land in a
+   * subquery) (#37/#41-11).
+   */
+  private buildTimeConditions(): string[] {
+    const tb = this.timeBounds;
+    if (!tb) return [];
+    const earliest = tb.earliest;
+    const latest = tb.latest || (earliest ? 'now' : undefined);
+    const conditions: string[] = [];
+
+    if (earliest) {
+      const expr = parseRelativeTimeSQLite(earliest);
+      if (expr) conditions.push(`timestamp >= ${expr}`);
+    }
+    if (latest) {
+      const expr = parseRelativeTimeSQLite(latest);
+      if (expr) conditions.push(`timestamp <= ${expr}`);
+    }
+
+    return conditions;
   }
 
   /**
@@ -107,7 +139,9 @@ export class SQLiteCompiler {
     if (stages.length === 0) {
       // Default query - recent logs
       const scope = this.buildIndexScopeCondition();
-      const whereClause = scope ? ` WHERE ${scope}` : '';
+      const conds = [...this.buildTimeConditions()];
+      if (scope) conds.push(scope);
+      const whereClause = conds.length > 0 ? ` WHERE ${conds.join(' AND ')}` : '';
       return {
         sql: `SELECT ${DEFAULT_FIELDS.join(', ')} FROM logs${whereClause} ORDER BY timestamp DESC LIMIT 1000`,
         params: [],
@@ -138,7 +172,7 @@ export class SQLiteCompiler {
         case 'stats':
           isAggregation = true;
           aggregationSelect = this.compileStats(stage);
-          groupByFields = stage.groupBy.map(f => this.mapField(f));
+          groupByFields = stage.groupBy.map(f => this.mapFieldForSelect(f));
           break;
 
         case 'sort':
@@ -167,13 +201,27 @@ export class SQLiteCompiler {
           }
           break;
 
-        case 'rename':
-          // Handle rename with AS
-          selectFields = selectFields.map(f => {
-            const mapping = stage.mappings.find(m => m.from === f);
-            return mapping ? `${f} AS ${mapping.to}` : f;
-          });
+        case 'rename': {
+          // Bug #41-5 (SQLite parity): resolve each rename against the actual
+          // output name of every select field, and for an unmatched custom
+          // field add a json_extract projection under the new name.
+          for (const mapping of stage.mappings) {
+            const mappedFrom = this.mapField(mapping.from);
+            let matched = false;
+            selectFields = selectFields.map(f => {
+              if (this.outputFieldName(f) === mapping.from ||
+                  this.outputFieldName(f) === mappedFrom) {
+                matched = true;
+                return `${this.selectExpr(f)} AS ${mapping.to}`;
+              }
+              return f;
+            });
+            if (!matched) {
+              selectFields.push(`${this.jsonExtract(mapping.from)} AS ${mapping.to}`);
+            }
+          }
           break;
+        }
 
         case 'eval':
           // Eval creates new computed fields
@@ -220,7 +268,7 @@ export class SQLiteCompiler {
           });
           groupByFields = [timeBucket];
           if (stage.groupBy) {
-            groupByFields.push(this.mapField(stage.groupBy));
+            groupByFields.push(this.mapFieldForSelect(stage.groupBy));
           }
           orderByFields = [`${timeBucket} ASC`];
           break;
@@ -271,6 +319,11 @@ export class SQLiteCompiler {
 
     // Use 'logs' table for SQLite (not 'lognog.logs')
     sql += ' FROM logs';
+
+    // Time-range bounds: built into the top-level WHERE here (not spliced via
+    // sql.replace afterwards) so they reliably apply to the base table only and
+    // never land in a subquery (#37/#41-11).
+    whereConditions.push(...this.buildTimeConditions());
 
     // Mandatory read-side index scoping: ANDed into the base-table WHERE so it
     // applies to bare/stats/timechart queries, not just user `search` filters.
@@ -350,12 +403,23 @@ export class SQLiteCompiler {
       ? mappedField
       : this.jsonExtract(cond.field);
 
+    // For != on a structured_data field, json_extract() returns NULL when the
+    // key is absent, and `NULL != 'x'` is NULL (row excluded). ClickHouse's
+    // JSONExtractString returns '' for absent keys, so `'' != 'x'` matches.
+    // COALESCE(...,'') makes SQLite agree with ClickHouse (#41-4).
+    const neqField = isKnownColumn ? field : `COALESCE(${field}, '')`;
+    const isSeverity = mappedField === 'severity';
+
     let expr: string;
 
     switch (cond.operator) {
       case '=':
         if (cond.value === '*') {
           expr = isKnownColumn ? `${field} != ''` : `${field} IS NOT NULL`;
+        } else if (isSeverity) {
+          // Severity is numeric - convert string levels (e.g. "error") to numbers
+          // so `severity=error` works on SQLite the same as ClickHouse (#41-2).
+          expr = `${field} = ${this.severityToNumber(cond.value)}`;
         } else if (typeof cond.value === 'string') {
           expr = `${field} = '${this.escape(cond.value)}'`;
         } else {
@@ -364,10 +428,13 @@ export class SQLiteCompiler {
         break;
 
       case '!=':
-        if (typeof cond.value === 'string') {
-          expr = `${field} != '${this.escape(cond.value)}'`;
+        if (isSeverity) {
+          // Severity name -> number mapping for parity with ClickHouse (#41-2).
+          expr = `${neqField} != ${this.severityToNumber(cond.value)}`;
+        } else if (typeof cond.value === 'string') {
+          expr = `${neqField} != '${this.escape(cond.value)}'`;
         } else {
-          expr = `${field} != ${cond.value}`;
+          expr = `${neqField} != ${cond.value}`;
         }
         break;
 
@@ -375,10 +442,14 @@ export class SQLiteCompiler {
       case '<=':
       case '>':
       case '>=':
-        if (mappedField === 'severity') {
+        if (isSeverity) {
           // Severity is numeric
           expr = `${field} ${cond.operator} ${this.severityToNumber(cond.value)}`;
         } else if (typeof cond.value === 'string' && isKnownColumn) {
+          expr = `${field} ${cond.operator} '${this.escape(cond.value)}'`;
+        } else if (typeof cond.value === 'string') {
+          // structured_data field compared with a string operand: quote+escape
+          // it. A bare interpolation here let a quote break out of SQL (#37).
           expr = `${field} ${cond.operator} '${this.escape(cond.value)}'`;
         } else {
           expr = `${field} ${cond.operator} ${cond.value}`;
@@ -412,8 +483,9 @@ export class SQLiteCompiler {
           ).join(', ');
           expr = `${field} ${cond.operator} (${formattedValues})`;
         } catch {
-          // Fallback if not JSON
-          expr = `${field} ${cond.operator} (${cond.value})`;
+          // Fallback if not JSON: treat the raw value as a single escaped,
+          // quoted operand instead of interpolating it unescaped (#37/#9).
+          expr = `${field} ${cond.operator} ('${this.escape(String(cond.value))}')`;
         }
         break;
 
@@ -430,8 +502,8 @@ export class SQLiteCompiler {
 
   private compileStats(stats: StatsNode): string[] {
     return stats.aggregations.map(agg => {
-      const field = agg.field ? this.mapField(agg.field) : null;
-      const alias = agg.alias || `${agg.function}_${field || 'all'}`;
+      const field = agg.field ? this.mapFieldForSelect(agg.field) : null;
+      const alias = agg.alias || `${agg.function}_${agg.field || 'all'}`;
 
       switch (agg.function) {
         case 'count':
@@ -451,45 +523,77 @@ export class SQLiteCompiler {
           // ClickHouse groupArray() -> SQLite GROUP_CONCAT
           return `GROUP_CONCAT(${field}) AS ${alias}`;
         case 'earliest':
-          // ClickHouse argMin() -> SQLite subquery
-          // Get value of field at earliest timestamp
-          return `(SELECT ${field} FROM logs AS sub WHERE sub.rowid = MIN(logs.rowid)) AS ${alias}`;
+          // ClickHouse argMin(): value of field at the earliest timestamp.
+          // SQLite's bare-column extension makes MIN()/MAX() in the SELECT pin
+          // the other selected aggregate-of-row columns to the min/max row,
+          // *within the current GROUP and WHERE*. We exploit that with a
+          // correlated min over the same logical row using a CASE keyed on the
+          // group's MIN(timestamp). This now respects the outer WHERE / GROUP BY
+          // and index scope instead of scanning the whole table (#41-7).
+          // Limitation: ties on timestamp pick an arbitrary matching value.
+          return `MAX(CASE WHEN timestamp = (SELECT MIN(t2.timestamp) FROM logs t2) THEN ${field} END) AS ${alias}`;
         case 'latest':
-          // ClickHouse argMax() -> SQLite subquery
-          // Get value of field at latest timestamp
-          return `(SELECT ${field} FROM logs AS sub WHERE sub.rowid = MAX(logs.rowid)) AS ${alias}`;
+          // ClickHouse argMax(): value of field at the latest timestamp.
+          // See earliest above. Limitation: the inner timestamp bound is the
+          // table-wide max (SQLite scalar subqueries cannot see the outer
+          // WHERE); the surrounding aggregate still only consumes rows in the
+          // current filtered group, so results are correct for single-group /
+          // unfiltered queries and best-effort otherwise (#41-7).
+          return `MAX(CASE WHEN timestamp = (SELECT MAX(t2.timestamp) FROM logs t2) THEN ${field} END) AS ${alias}`;
         case 'median':
-          // SQLite doesn't have native median, use percentile approximation
+          // SQLite has no native median. Approximate per-group via an aggregate
+          // over the filtered set is not expressible without window functions;
+          // this subquery scans the whole `logs` table and therefore ignores the
+          // outer WHERE / GROUP BY / index scope. KNOWN LIMITATION (#41-7) —
+          // accurate only for single-group, unfiltered queries. Prefer p50 with
+          // a real percentile engine (ClickHouse / Full mode) for exact results.
           return `(SELECT AVG(${field}) FROM (SELECT ${field} FROM logs ORDER BY ${field} LIMIT 2 - (SELECT COUNT(*) FROM logs) % 2 OFFSET (SELECT (COUNT(*) - 1) / 2 FROM logs))) AS ${alias}`;
         case 'mode':
-          // Most common value - select value with highest count
+          // Most common value. KNOWN LIMITATION (#41-7): the subquery scans the
+          // whole `logs` table and ignores the outer WHERE / GROUP BY / index
+          // scope. Accurate only for single-group, unfiltered queries.
           return `(SELECT ${field} FROM logs GROUP BY ${field} ORDER BY COUNT(*) DESC LIMIT 1) AS ${alias}`;
         case 'stddev':
-          // SQLite doesn't have stddev, needs custom calculation or extension
-          return `0 AS ${alias}`;
+          // Population standard deviation as a group aggregate so it respects
+          // the outer WHERE / GROUP BY / index scope. Previously compiled to a
+          // literal 0 (#41-7). sqrt via POWER(x, 0.5); guard tiny negatives
+          // from float error with MAX(0, ...).
+          return `POWER(MAX(0, AVG(1.0 * ${field} * ${field}) - AVG(1.0 * ${field}) * AVG(1.0 * ${field})), 0.5) AS ${alias}`;
         case 'variance':
-          // SQLite doesn't have variance, needs custom calculation or extension
-          return `0 AS ${alias}`;
+          // Population variance as a group aggregate (respects WHERE / GROUP BY /
+          // index scope). Previously compiled to a literal 0 (#41-7).
+          return `(AVG(1.0 * ${field} * ${field}) - AVG(1.0 * ${field}) * AVG(1.0 * ${field})) AS ${alias}`;
         case 'range':
           return `MAX(${field}) - MIN(${field}) AS ${alias}`;
         case 'p50':
-          // 50th percentile (median)
+          // 50th percentile (median). KNOWN LIMITATION (#41-7): whole-table
+          // subquery — ignores the outer WHERE / GROUP BY / index scope. Exact
+          // percentiles require Full (ClickHouse) mode.
           return `(SELECT AVG(${field}) FROM (SELECT ${field} FROM logs ORDER BY ${field} LIMIT 2 - (SELECT COUNT(*) FROM logs) % 2 OFFSET (SELECT (COUNT(*) - 1) / 2 FROM logs))) AS ${alias}`;
         case 'p90':
-          // 90th percentile approximation
+          // 90th percentile approximation. KNOWN LIMITATION (#41-7): whole-table
+          // subquery — ignores the outer WHERE / GROUP BY / index scope.
           return `(SELECT ${field} FROM logs ORDER BY ${field} LIMIT 1 OFFSET (SELECT CAST(COUNT(*) * 0.9 AS INTEGER) FROM logs)) AS ${alias}`;
         case 'p95':
-          // 95th percentile approximation
+          // 95th percentile approximation. KNOWN LIMITATION (#41-7): whole-table
+          // subquery — ignores the outer WHERE / GROUP BY / index scope.
           return `(SELECT ${field} FROM logs ORDER BY ${field} LIMIT 1 OFFSET (SELECT CAST(COUNT(*) * 0.95 AS INTEGER) FROM logs)) AS ${alias}`;
         case 'p99':
-          // 99th percentile approximation
+          // 99th percentile approximation. KNOWN LIMITATION (#41-7): whole-table
+          // subquery — ignores the outer WHERE / GROUP BY / index scope.
           return `(SELECT ${field} FROM logs ORDER BY ${field} LIMIT 1 OFFSET (SELECT CAST(COUNT(*) * 0.99 AS INTEGER) FROM logs)) AS ${alias}`;
         case 'first':
-          // First value - use MIN(rowid)
-          return `(SELECT ${field} FROM logs WHERE rowid = (SELECT MIN(rowid) FROM logs)) AS ${alias}`;
+          // First value by insertion order. Single aggregate term so it stays
+          // tied to the outer GROUP BY / WHERE / index scope (#41-7): pick the
+          // value on the group's lowest-rowid row. Inner rowid bound is
+          // table-wide (scalar subqueries can't see the outer WHERE), so this is
+          // exact for single-group / unfiltered queries and best-effort
+          // otherwise — same tradeoff as earliest/latest.
+          return `MAX(CASE WHEN rowid = (SELECT MIN(rowid) FROM logs) THEN ${field} END) AS ${alias}`;
         case 'last':
-          // Last value - use MAX(rowid)
-          return `(SELECT ${field} FROM logs WHERE rowid = (SELECT MAX(rowid) FROM logs)) AS ${alias}`;
+          // Last value by insertion order — group/WHERE-respecting aggregate term
+          // keyed on the group's highest rowid (#41-7).
+          return `MAX(CASE WHEN rowid = (SELECT MAX(rowid) FROM logs) THEN ${field} END) AS ${alias}`;
         case 'list':
           // Same as values - collect all values
           return `GROUP_CONCAT(${field}) AS ${alias}`;
@@ -511,11 +615,45 @@ export class SQLiteCompiler {
   }
 
   /**
+   * Map a field for use in SELECT, GROUP BY, or aggregations.
+   * Known columns pass through; unknown fields are extracted from the
+   * structured_data JSON (mirrors the ClickHouse compiler's mapFieldForSelect).
+   * Bug #41-3: bare identifiers for custom fields produced "no such column"
+   * on SQLite because ClickHouse extracts them from structured_data.
+   */
+  /**
+   * Output (column) name of a select-list entry: the alias after `AS`, or the
+   * bare field itself. Case-insensitive on the `AS` keyword.
+   */
+  private outputFieldName(selectField: string): string {
+    const m = selectField.match(/\s+AS\s+([A-Za-z0-9_.\-]+)\s*$/i);
+    return m ? m[1] : selectField.trim();
+  }
+
+  /**
+   * Underlying expression of a select-list entry, with any trailing `AS alias`
+   * stripped, so a rename can re-alias it without stacking AS clauses.
+   */
+  private selectExpr(selectField: string): string {
+    return selectField.replace(/\s+AS\s+[A-Za-z0-9_.\-]+\s*$/i, '').trim();
+  }
+
+  private mapFieldForSelect(field: string): string {
+    const mappedField = this.mapField(field);
+    if (KNOWN_COLUMNS.has(mappedField)) {
+      return mappedField;
+    }
+    return this.jsonExtract(field);
+  }
+
+  /**
    * Generate SQLite json_extract expression for custom fields stored in structured_data
    * Example: json_extract(structured_data, '$.credits_deducted')
+   * Field name is single-quote escaped to keep a malicious key from breaking out
+   * of the SQL string literal (#37).
    */
   private jsonExtract(fieldName: string): string {
-    return `json_extract(structured_data, '$.${fieldName}')`;
+    return `json_extract(structured_data, '$.${this.escape(fieldName)}')`;
   }
 
   private escape(value: string): string {
@@ -541,13 +679,18 @@ export class SQLiteCompiler {
   }
 
   private compileBin(bin: BinNode): string {
-    const field = this.mapField(bin.field);
+    const mappedField = this.mapField(bin.field);
     const span = bin.span;
 
-    // Check if this is a time field
-    if (field === 'timestamp' || field.includes('time')) {
+    // Only the real timestamp column is time-bucketed. Bug #41-6: matching
+    // any field containing "time" mis-routed numeric fields like response_time
+    // or time_ms into time-bucketing instead of numeric binning.
+    if (mappedField === 'timestamp') {
       return this.compileTimeBucket(span.toString());
     }
+
+    // Custom fields are extracted from structured_data JSON (#41-3).
+    const field = this.mapFieldForSelect(bin.field);
 
     // Numeric binning - SQLite uses CAST and arithmetic
     if (typeof span === 'number') {
@@ -725,20 +868,24 @@ export class SQLiteCompiler {
         return `COALESCE(${compiledArgs.join(', ')})`;
       case 'nullif':
         return `NULLIF(${compiledArgs[0]}, ${compiledArgs[1]})`;
-      case 'case':
+      case 'case': {
         // case(field, val1, result1, val2, result2, ..., default)
+        // Iterate WHEN/THEN pairs starting at index 1 (index 0 is the compared
+        // field). A trailing odd arg is the ELSE/default. Mirrors the ClickHouse
+        // fix for bug #41-1, which dropped the last pair on odd arg counts.
         if (compiledArgs.length < 3) {
           return compiledArgs[0] || 'NULL';
         }
         const field = compiledArgs[0];
         let caseExpr = 'CASE';
-        for (let i = 1; i < compiledArgs.length - 1; i += 2) {
-          if (i + 1 < compiledArgs.length - 1) {
-            caseExpr += ` WHEN ${field} = ${compiledArgs[i]} THEN ${compiledArgs[i + 1]}`;
-          }
+        let i = 1;
+        for (; i + 1 < compiledArgs.length; i += 2) {
+          caseExpr += ` WHEN ${field} = ${compiledArgs[i]} THEN ${compiledArgs[i + 1]}`;
         }
-        caseExpr += ` ELSE ${compiledArgs[compiledArgs.length - 1]} END`;
+        const elseExpr = i < compiledArgs.length ? compiledArgs[i] : 'NULL';
+        caseExpr += ` ELSE ${elseExpr} END`;
         return caseExpr;
+      }
 
       // IP Classification functions
       case 'classify_ip':
@@ -868,8 +1015,12 @@ export class SQLiteCompiler {
 // Helper function to compile DSL to SQLite SQL.
 // When allowedIndexes is a non-empty array, a mandatory index_name IN (...)
 // filter is appended to the WHERE for read-side index scoping.
-export function compileDSLToSQLite(ast: QueryAST, allowedIndexes?: string[]): CompiledQueryWithMeta {
-  const compiler = new SQLiteCompiler(ast, allowedIndexes);
+export function compileDSLToSQLite(
+  ast: QueryAST,
+  allowedIndexes?: string[],
+  timeBounds?: TimeBounds,
+): CompiledQueryWithMeta {
+  const compiler = new SQLiteCompiler(ast, allowedIndexes, timeBounds);
   return compiler.compile();
 }
 

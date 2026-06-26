@@ -233,7 +233,11 @@ export async function calculateBaseline(
     if (values.length < 3) continue; // Need at least 3 samples per time slot
 
     const [hourOfDay, dayOfWeek] = key.split('-').map(Number);
-    const avgValue = calculateEMA(values, cfg.emaAlpha);
+    // Use a consistent center + spread pair: the arithmetic mean as the center
+    // and the standard deviation measured around THAT SAME mean. Computing the
+    // std-dev around an EMA (a different center) makes the dispersion invalid
+    // and produces wrong downstream z-scores, so we no longer use EMA here.
+    const avgValue = calculateSMA(values);
     const stdDev = calculateStdDev(values, avgValue);
 
     baselines.push({
@@ -433,14 +437,42 @@ export async function calculateAllBaselines(
 
 /**
  * Calculate deviation score (z-score)
- * Returns how many standard deviations the value is from the mean
+ * Returns how many standard deviations the value is from the mean.
+ *
+ * A positive score means the value is ABOVE the mean (potential spike);
+ * a negative score means it is BELOW the mean (potential drop). The sign
+ * MUST be preserved so callers can distinguish spikes from drops.
+ *
+ * When the observed dispersion is zero (a perfectly flat baseline), a raw
+ * z-score is undefined (division by zero). Rather than emit a magic constant
+ * that ignores direction, we apply a small std-dev FLOOR derived from the
+ * mean's magnitude. This keeps the score continuous and signed: a value just
+ * below a flat baseline yields a negative score (a drop), a value above
+ * yields a positive score (a spike), and value === mean yields exactly 0.
+ *
+ * The floor scales with the mean (1% of |mean|, min 1.0) so that, for a flat
+ * baseline, even a 1-unit change against a tiny mean does not blow the score
+ * past the critical threshold, while a change of a few percent against a
+ * larger baseline still registers proportionally.
  */
 export function calculateDeviationScore(value: number, mean: number, stdDev: number): number {
-  if (stdDev === 0) {
-    // If no variation, any difference is significant
-    return value === mean ? 0 : Math.abs(value - mean) > 0 ? 3 : 0;
-  }
-  return (value - mean) / stdDev;
+  // Floor the spread so a degenerate (flat) baseline can't divide by zero and
+  // can't be triggered by a single off-by-one sample. Tie the floor to the
+  // mean's scale, with an absolute minimum of 1.0.
+  const minStdDev = Math.max(1, Math.abs(mean) * 0.01);
+  const effectiveStdDev = Math.max(stdDev, minStdDev);
+
+  const z = (value - mean) / effectiveStdDev;
+
+  // Clamp to the range callers reason about. The detector treats |z| >= 5
+  // (criticalThreshold) as the most severe class, and calculateRiskScore caps
+  // its base contribution at |z| * 15 -> 60, so values beyond ~6.7 add nothing.
+  // Clamping to [-6, 6] keeps a flat-baseline change from producing an
+  // absurd score while staying above every spike/drop/critical threshold.
+  const MAX_ABS_SCORE = 6;
+  if (z > MAX_ABS_SCORE) return MAX_ABS_SCORE;
+  if (z < -MAX_ABS_SCORE) return -MAX_ABS_SCORE;
+  return z;
 }
 
 /**

@@ -6,6 +6,84 @@ function getCsrfToken(): string | null {
   return match ? decodeURIComponent(match[1]) : null;
 }
 
+// ---------------------------------------------------------------------------
+// Token management (single source of truth, shared with AuthContext)
+// ---------------------------------------------------------------------------
+export const ACCESS_TOKEN_KEY = 'lognog_access_token';
+export const REFRESH_TOKEN_KEY = 'lognog_refresh_token';
+
+export function getAccessToken(): string | null {
+  return localStorage.getItem(ACCESS_TOKEN_KEY);
+}
+
+export function getRefreshToken(): string | null {
+  return localStorage.getItem(REFRESH_TOKEN_KEY);
+}
+
+export function setTokens(accessToken: string, refreshToken: string): void {
+  localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
+  localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+}
+
+export function clearTokens(): void {
+  localStorage.removeItem(ACCESS_TOKEN_KEY);
+  localStorage.removeItem(REFRESH_TOKEN_KEY);
+}
+
+// Optional callback invoked when a refresh definitively fails (tokens cleared).
+// AuthContext registers this so React auth state can be flipped to logged-out.
+let onAuthFailure: (() => void) | null = null;
+export function setAuthFailureHandler(handler: (() => void) | null): void {
+  onAuthFailure = handler;
+}
+
+// Refresh lock so concurrent 401s trigger only one refresh round-trip.
+let refreshPromise: Promise<boolean> | null = null;
+
+/**
+ * Attempt to refresh the access token using the stored refresh token.
+ * Returns true on success. On definitive failure, clears tokens and notifies
+ * the registered auth-failure handler so the app can redirect to login.
+ */
+export async function refreshAccessToken(): Promise<boolean> {
+  if (refreshPromise) {
+    return refreshPromise;
+  }
+
+  const refreshToken = getRefreshToken();
+  if (!refreshToken) {
+    return false;
+  }
+
+  refreshPromise = (async () => {
+    try {
+      const response = await fetch(`${API_BASE}/auth/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ refreshToken }),
+      });
+
+      if (!response.ok) {
+        clearTokens();
+        if (onAuthFailure) onAuthFailure();
+        return false;
+      }
+
+      const data = await response.json();
+      setTokens(data.accessToken, data.refreshToken);
+      return true;
+    } catch {
+      clearTokens();
+      if (onAuthFailure) onAuthFailure();
+      return false;
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
+}
+
 export interface HistogramBucket {
   timestamp: number;
   count: number;
@@ -177,30 +255,49 @@ export interface TimeSeriesData {
 }
 
 async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    ...(options?.headers as Record<string, string>),
+  // Wait for any in-flight refresh so we don't send a stale token.
+  if (refreshPromise) {
+    await refreshPromise;
+  }
+
+  const buildHeaders = (): Record<string, string> => {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...(options?.headers as Record<string, string>),
+    };
+
+    // Add JWT auth token
+    const token = getAccessToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    // Add CSRF token for state-changing methods
+    const method = options?.method?.toUpperCase() || 'GET';
+    if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
+      const csrfToken = getCsrfToken();
+      if (csrfToken) {
+        headers['X-CSRF-Token'] = csrfToken;
+      }
+    }
+    return headers;
   };
 
-  // Add JWT auth token
-  const token = localStorage.getItem('lognog_access_token');
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
+  let response = await fetch(`${API_BASE}${endpoint}`, {
+    ...options,
+    headers: buildHeaders(),
+  });
 
-  // Add CSRF token for state-changing methods
-  const method = options?.method?.toUpperCase() || 'GET';
-  if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
-    const csrfToken = getCsrfToken();
-    if (csrfToken) {
-      headers['X-CSRF-Token'] = csrfToken;
+  // Transparently refresh once on 401, then retry the original request.
+  if (response.status === 401 && getRefreshToken()) {
+    const refreshed = await refreshAccessToken();
+    if (refreshed) {
+      response = await fetch(`${API_BASE}${endpoint}`, {
+        ...options,
+        headers: buildHeaders(),
+      });
     }
   }
-
-  const response = await fetch(`${API_BASE}${endpoint}`, {
-    ...options,
-    headers,
-  });
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Request failed' }));
@@ -225,27 +322,47 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
 // Authenticated fetch — returns raw Response (for blobs, streaming, etc.)
 // Adds JWT auth + CSRF headers automatically
 export async function authFetch(endpoint: string, options?: RequestInit): Promise<Response> {
-  const headers: Record<string, string> = {
-    ...(options?.headers as Record<string, string>),
-  };
-
-  const token = localStorage.getItem('lognog_access_token');
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
+  // Wait for any in-flight refresh so we don't send a stale token.
+  if (refreshPromise) {
+    await refreshPromise;
   }
 
-  const method = options?.method?.toUpperCase() || 'GET';
-  if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
-    const csrfToken = getCsrfToken();
-    if (csrfToken) {
-      headers['X-CSRF-Token'] = csrfToken;
+  const buildHeaders = (): Record<string, string> => {
+    const headers: Record<string, string> = {
+      ...(options?.headers as Record<string, string>),
+    };
+
+    const token = getAccessToken();
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    const method = options?.method?.toUpperCase() || 'GET';
+    if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
+      const csrfToken = getCsrfToken();
+      if (csrfToken) {
+        headers['X-CSRF-Token'] = csrfToken;
+      }
+    }
+    return headers;
+  };
+
+  let response = await fetch(`${API_BASE}${endpoint}`, {
+    ...options,
+    headers: buildHeaders(),
+  });
+
+  if (response.status === 401 && getRefreshToken()) {
+    const refreshed = await refreshAccessToken();
+    if (refreshed) {
+      response = await fetch(`${API_BASE}${endpoint}`, {
+        ...options,
+        headers: buildHeaders(),
+      });
     }
   }
 
-  return fetch(`${API_BASE}${endpoint}`, {
-    ...options,
-    headers,
-  });
+  return response;
 }
 
 // Generic API client for ad-hoc requests
@@ -635,7 +752,8 @@ export async function generateReport(
   title?: string,
   timeRange?: string
 ): Promise<Blob | { title: string; results: Record<string, unknown>[]; count: number }> {
-  const response = await fetch(`${API_BASE}/reports/generate`, {
+  // authFetch attaches the JWT + CSRF headers and transparently refreshes on 401.
+  const response = await authFetch('/reports/generate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ query, format, title, timeRange }),
@@ -1457,13 +1575,21 @@ export async function validateIngestion(payload: unknown): Promise<ValidationRes
 }
 
 export async function sendTestEvent(payload: unknown, apiKey: string): Promise<{ accepted: number }> {
-  // This uses the generic HTTP ingest endpoint
+  // This uses the generic HTTP ingest endpoint. The ingest API key is the
+  // primary credential, but we also attach the logged-in user's JWT so the
+  // request is authenticated even if the supplied key is rejected.
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'X-API-Key': apiKey,
+  };
+  const token = getAccessToken();
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
   const response = await fetch(`${API_BASE}/ingest/http`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-API-Key': apiKey,
-    },
+    headers,
     body: JSON.stringify(Array.isArray(payload) ? payload : [payload]),
   });
 

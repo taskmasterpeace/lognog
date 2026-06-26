@@ -12,8 +12,8 @@ import {
   getAlerts,
   getAlert,
   updateAlert,
+  claimAlertTrigger,
   createAlertHistoryEntry,
-  getRecentAlertTrigger,
   createAgentNotification,
   createLoginNotification,
   isAlertSilenced,
@@ -665,7 +665,10 @@ export async function evaluateAlert(alertId: string): Promise<{
     const { results } = await executeDSLQuery(alert.search_query, { earliest, latest });
     const resultCount = results.length;
 
-    // Update last_run timestamp
+    // Update last_run timestamp (scheduling bookkeeping only — the scheduler's
+    // cron matcher uses this to know the alert was evaluated this cycle). The
+    // *throttle*/double-fire guard is handled atomically via claimAlertTrigger()
+    // below, keyed on last_triggered, not last_run (issue #39 bug 4).
     updateAlert(alertId, { last_run: new Date().toISOString() });
 
     // Check trigger condition
@@ -738,28 +741,38 @@ export async function evaluateAlert(alertId: string): Promise<{
       };
     }
 
-    // Check throttling
-    if (alert.throttle_enabled) {
-      const recentTrigger = getRecentAlertTrigger(alertId, alert.throttle_window_seconds);
-      if (recentTrigger) {
-        const duration_ms = Math.round(performance.now() - startTime);
-        logAlertEvaluated({
-          alert_id: alertId,
-          alert_name: alert.name,
-          duration_ms,
-          result_count: resultCount,
-          triggered: true,
-          throttled: true,
-        });
-        return {
-          triggered: false,
-          resultCount,
-          message: `Throttled - last triggered at ${recentTrigger.triggered_at}`,
-        };
-      }
+    // Atomic throttle + double-fire guard (issue #39 bug 4).
+    //
+    // Instead of a read-then-write (getRecentAlertTrigger followed by a separate
+    // last_triggered update) which let concurrent evaluations both fire, we
+    // claim the trigger slot with a single conditional UPDATE. Exactly one
+    // evaluation wins per throttle window; losers are throttled.
+    const nowIso = new Date().toISOString();
+    const windowSeconds = alert.throttle_enabled ? (alert.throttle_window_seconds || 0) : 0;
+    // windowStart = now - windowSeconds. With throttle disabled, windowSeconds=0
+    // so windowStart=now: the claim still serializes same-instant duplicates but
+    // imposes no cross-time throttle.
+    const windowStartIso = new Date(Date.now() - windowSeconds * 1000).toISOString();
+
+    const claimed = claimAlertTrigger(alertId, nowIso, windowStartIso);
+    if (!claimed) {
+      const duration_ms = Math.round(performance.now() - startTime);
+      logAlertEvaluated({
+        alert_id: alertId,
+        alert_name: alert.name,
+        duration_ms,
+        result_count: resultCount,
+        triggered: true,
+        throttled: true,
+      });
+      return {
+        triggered: false,
+        resultCount,
+        message: 'Throttled - already triggered within throttle window',
+      };
     }
 
-    // Execute actions
+    // We won the throttle slot. Execute actions.
     const actionResults = await executeActions(
       alert,
       resultCount,
@@ -778,11 +791,8 @@ export async function evaluateAlert(alertId: string): Promise<{
       }
     );
 
-    // Update alert statistics
-    updateAlert(alertId, {
-      last_triggered: new Date().toISOString(),
-      trigger_count: (alert.trigger_count || 0) + 1,
-    });
+    // (last_triggered and trigger_count were already updated atomically by
+    // claimAlertTrigger above.)
 
     // Create agent notification (push to system tray) with variable substitution
     const alertMetadata = {

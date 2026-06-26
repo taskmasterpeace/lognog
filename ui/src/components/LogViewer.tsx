@@ -50,6 +50,15 @@ const SEVERITY_CONFIG = {
   7: { name: 'Debug', color: 'text-nog-700 dark:text-nog-300 bg-nog-100 dark:bg-nog-800 ring-nog-600/30', bgColor: 'bg-nog-50/50 dark:bg-nog-800/50' },
 };
 
+// Build a stable per-log key for expansion / diagnosis state. Prefer the log's
+// own id; otherwise fall back to a content-derived key. Crucially this must NOT
+// depend on array position, so a new search (different logs at the same index)
+// does not show the wrong rows expanded with stale AI diagnosis.
+const getLogKey = (log: LogEntry, fallbackIndex: number): string => {
+  if (log.id != null && log.id !== '') return `id:${log.id}`;
+  return `n:${log.timestamp ?? ''}|${log.message ?? ''}|${fallbackIndex}`;
+};
+
 // Helper function to get relative time
 const getRelativeTime = (timestamp: string): string => {
   try {
@@ -252,10 +261,10 @@ const FieldValue: React.FC<FieldValueProps> = ({ field, value, onAddFilter, sear
 // Log row component
 interface LogRowProps {
   log: LogEntry;
-  index: number;
+  rowKey: string;
   style: React.CSSProperties;
   isExpanded: boolean;
-  onToggleExpand: (index: number) => void;
+  onToggleExpand: (rowKey: string) => void;
   onAddFilter?: (field: string, value: string, exclude?: boolean) => void;
   onLoadFullMessage?: (logId: string) => void;
   onViewContext?: (logId: string) => void;
@@ -264,7 +273,7 @@ interface LogRowProps {
 
 const LogRow: React.FC<LogRowProps> = ({
   log,
-  index,
+  rowKey,
   style,
   isExpanded,
   onToggleExpand,
@@ -347,7 +356,7 @@ const LogRow: React.FC<LogRowProps> = ({
       <div className="flex items-start gap-2 px-4 py-2">
         {/* Expand/Collapse Button */}
         <button
-          onClick={() => onToggleExpand(index)}
+          onClick={() => onToggleExpand(rowKey)}
           className="mt-1 p-1 hover:bg-nog-200 dark:hover:bg-nog-700 rounded transition-colors flex-shrink-0"
           aria-label={isExpanded ? 'Collapse' : 'Expand'}
         >
@@ -679,7 +688,7 @@ export default function LogViewer({
   searchTerms,
   isLoading = false,
 }: LogViewerProps) {
-  const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [visibleStart, setVisibleStart] = useState(0);
   const [visibleEnd, setVisibleEnd] = useState(50);
   const annotationContext = useSourceAnnotationsOptional();
@@ -764,13 +773,13 @@ export default function LogViewer({
     }
   }, [logs, annotationContext]);
 
-  const handleToggleExpand = useCallback((index: number) => {
+  const handleToggleExpand = useCallback((rowKey: string) => {
     setExpandedRows((prev) => {
       const next = new Set(prev);
-      if (next.has(index)) {
-        next.delete(index);
+      if (next.has(rowKey)) {
+        next.delete(rowKey);
       } else {
-        next.add(index);
+        next.add(rowKey);
       }
       return next;
     });
@@ -851,13 +860,14 @@ export default function LogViewer({
         {/* Visible rows */}
         {visibleLogs.map((log, i) => {
           const realIndex = visibleStart + i;
+          const rowKey = getLogKey(log, realIndex);
           return (
             <LogRow
-              key={realIndex}
+              key={rowKey}
               log={log}
-              index={realIndex}
+              rowKey={rowKey}
               style={{}}
-              isExpanded={expandedRows.has(realIndex)}
+              isExpanded={expandedRows.has(rowKey)}
               onToggleExpand={handleToggleExpand}
               onAddFilter={onAddFilter}
               onLoadFullMessage={loadFullMessage}

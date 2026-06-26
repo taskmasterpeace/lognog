@@ -8,8 +8,14 @@ import {
   deleteProject,
   getDashboardsByProject,
 } from '../db/sqlite.js';
+import { authenticate, requireAdmin, denyReadonly } from '../auth/middleware.js';
 
 const router = Router();
+
+// #35/#36: require auth on all project routes; block writes for read-only roles.
+// Project create/update/delete are config changes and require admin.
+router.use(authenticate);
+router.use(denyReadonly);
 
 // Get all projects
 router.get('/', (_req: Request, res: Response) => {
@@ -51,7 +57,7 @@ router.get('/slug/:slug', (req: Request, res: Response) => {
 });
 
 // Create new project
-router.post('/', (req: Request, res: Response) => {
+router.post('/', requireAdmin, (req: Request, res: Response) => {
   try {
     const { name, slug, description, logo_url, accent_color, sort_order } = req.body;
 
@@ -80,7 +86,7 @@ router.post('/', (req: Request, res: Response) => {
 });
 
 // Update project
-router.put('/:id', (req: Request, res: Response) => {
+router.put('/:id', requireAdmin, (req: Request, res: Response) => {
   try {
     const project = getProject(req.params.id);
     if (!project) {
@@ -115,7 +121,7 @@ router.put('/:id', (req: Request, res: Response) => {
 });
 
 // Delete project
-router.delete('/:id', (req: Request, res: Response) => {
+router.delete('/:id', requireAdmin, (req: Request, res: Response) => {
   try {
     const deleted = deleteProject(req.params.id);
     if (!deleted) {

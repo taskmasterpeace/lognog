@@ -273,6 +273,32 @@ class TestEventBuffer:
         assert removed == 1
         assert buffer.count() == 0
 
+    def test_get_batch_ordered_by_id(self, tmp_path: Path):
+        """Batch ordering must follow autoincrement id, not the created_at string.
+
+        Insert events whose created_at strings sort in reverse of insertion order
+        and verify the batch still comes back in insertion (id) order.
+        """
+        db_path = tmp_path / "buffer.db"
+        buffer = EventBuffer(db_path)
+
+        # Insert rows directly with descending created_at timestamps so that an
+        # ORDER BY created_at would reverse them relative to id order.
+        with buffer._get_connection() as conn:
+            for i in range(5):
+                # i=0 -> "2024-...09", i=4 -> "2024-...05" (descending)
+                conn.execute(
+                    "INSERT INTO events (event_type, data, created_at) VALUES (?, ?, ?)",
+                    ("log", json.dumps({"message": f"Message {i}"}), f"2024-01-15T10:30:0{9 - i}Z"),
+                )
+            conn.commit()
+
+        batch = buffer.get_batch(batch_size=5)
+
+        # Ordered by id ascending => insertion order, regardless of created_at.
+        messages = [item[2]["message"] for item in batch]
+        assert messages == [f"Message {i}" for i in range(5)]
+
     def test_clear(self, tmp_path: Path):
         """Test clearing all events."""
         db_path = tmp_path / "buffer.db"

@@ -30,6 +30,10 @@ export function SearchAutocomplete({
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [cursorPosition, setCursorPosition] = useState(0);
+  // True only after the user explicitly moved through the suggestion list with
+  // ArrowUp/ArrowDown. Until then, Enter should SUBMIT the query rather than
+  // auto-inserting the (passively highlighted) first suggestion.
+  const hasNavigatedRef = useRef(false);
 
   // Track cursor position on selection change
   const handleSelect = useCallback(() => {
@@ -109,13 +113,31 @@ export function SearchAutocomplete({
     (e: React.KeyboardEvent<HTMLInputElement>) => {
       // Let autocomplete handle navigation keys when open
       if (isOpen) {
-        if (['ArrowDown', 'ArrowUp', 'Escape'].includes(e.key)) {
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+          // User is explicitly navigating the list — from now on Enter inserts.
+          hasNavigatedRef.current = true;
+          autocompleteKeyDown(e);
+          return;
+        }
+        if (e.key === 'Escape') {
+          hasNavigatedRef.current = false;
           autocompleteKeyDown(e);
           return;
         }
 
-        // Tab or Enter selects current suggestion
-        if (e.key === 'Tab' || (e.key === 'Enter' && suggestions.length > 0)) {
+        // Tab always accepts the highlighted suggestion.
+        if (e.key === 'Tab' && suggestions.length > 0) {
+          const selected = getSelectedSuggestion();
+          if (selected) {
+            e.preventDefault();
+            handleSuggestionSelect(selected);
+            return;
+          }
+        }
+
+        // Enter only auto-inserts when the user actually navigated the list.
+        // Otherwise fall through so Enter submits the query.
+        if (e.key === 'Enter' && !e.shiftKey && hasNavigatedRef.current && suggestions.length > 0) {
           const selected = getSelectedSuggestion();
           if (selected) {
             e.preventDefault();
@@ -125,12 +147,11 @@ export function SearchAutocomplete({
         }
       }
 
-      // Enter submits (when autocomplete closed or no suggestions)
+      // Enter submits the query (dropdown closed, no suggestions, or the user
+      // never navigated the suggestion list).
       if (e.key === 'Enter' && !e.shiftKey) {
-        if (!isOpen || suggestions.length === 0) {
-          e.preventDefault();
-          onSubmit();
-        }
+        e.preventDefault();
+        onSubmit();
       }
     },
     [isOpen, suggestions, autocompleteKeyDown, getSelectedSuggestion, handleSuggestionSelect, onSubmit]
@@ -153,7 +174,17 @@ export function SearchAutocomplete({
     if (inputRef.current) {
       setCursorPosition(inputRef.current.selectionStart || value.length);
     }
+    // Typing produces a fresh suggestion list — require the user to re-navigate
+    // before Enter will auto-insert again.
+    hasNavigatedRef.current = false;
   }, [value]);
+
+  // Reset the navigation flag whenever the dropdown closes.
+  useEffect(() => {
+    if (!isOpen) {
+      hasNavigatedRef.current = false;
+    }
+  }, [isOpen]);
 
   return (
     <div ref={containerRef} className={`relative ${className}`}>

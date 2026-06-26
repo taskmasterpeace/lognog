@@ -7,8 +7,16 @@ import {
   deleteFieldExtraction,
 } from '../db/sqlite.js';
 import { testPattern, getBuiltInPatterns } from '../services/field-extractor.js';
+import { authenticate, requireAdmin, denyReadonly } from '../auth/middleware.js';
 
 const router = Router();
+
+// #35/#36: require auth on all field-extraction routes; block writes for
+// read-only roles. Create/update/delete + seeding are config changes and
+// require admin. The non-persisting POST /test (test a pattern) stays
+// user-accessible.
+router.use(authenticate);
+router.use(denyReadonly);
 
 /**
  * Get all field extraction patterns
@@ -44,7 +52,7 @@ router.get('/:id', (req: Request, res: Response) => {
 /**
  * Create a new field extraction pattern
  */
-router.post('/', (req: Request, res: Response) => {
+router.post('/', requireAdmin, (req: Request, res: Response) => {
   try {
     const {
       name,
@@ -92,7 +100,7 @@ router.post('/', (req: Request, res: Response) => {
 /**
  * Update an existing field extraction pattern
  */
-router.put('/:id', (req: Request, res: Response) => {
+router.put('/:id', requireAdmin, (req: Request, res: Response) => {
   try {
     const { name, source_type, field_name, pattern, pattern_type, priority, enabled } = req.body;
 
@@ -128,7 +136,7 @@ router.put('/:id', (req: Request, res: Response) => {
 /**
  * Delete a field extraction pattern
  */
-router.delete('/:id', (req: Request, res: Response) => {
+router.delete('/:id', requireAdmin, (req: Request, res: Response) => {
   try {
     const deleted = deleteFieldExtraction(req.params.id);
     if (!deleted) {
@@ -205,7 +213,7 @@ router.get('/built-in/patterns', (_req: Request, res: Response) => {
 /**
  * Seed database with built-in patterns
  */
-router.post('/built-in/seed', (req: Request, res: Response) => {
+router.post('/built-in/seed', requireAdmin, (req: Request, res: Response) => {
   try {
     const { overwrite = false } = req.body;
     const builtInPatterns = getBuiltInPatterns();

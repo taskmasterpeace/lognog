@@ -4,6 +4,7 @@ import asyncio
 import logging
 import threading
 import time
+import uuid
 from enum import Enum
 from typing import Callable, Optional
 
@@ -21,6 +22,13 @@ class ConnectionStatus(Enum):
     DISCONNECTED = "disconnected"
     CONNECTING = "connecting"
     ERROR = "error"
+
+
+class SendResult(Enum):
+    """Outcome of a batch send attempt."""
+    SUCCESS = "success"        # Server accepted the batch (remove events)
+    TRANSIENT = "transient"    # 5xx / timeout / connection error (retry)
+    PERMANENT = "permanent"    # 4xx the server will never accept (drop batch)
 
 
 # Notification callback type
@@ -125,19 +133,10 @@ class HTTPShipper:
                     batch = self.buffer.get_batch(self.config.batch_size)
 
                     if batch:
-                        success = await self._send_batch(client, batch)
-                        if success:
-                            # Remove sent events
-                            event_ids = [item[0] for item in batch]
-                            self.buffer.remove_events(event_ids)
-                            self._events_sent += len(batch)
+                        result = await self._send_batch(client, batch)
+                        if self._handle_batch_result(batch, result):
                             retry_delay = self.config.retry_backoff_seconds
-                            self.status = ConnectionStatus.CONNECTED
                         else:
-                            # Mark as failed
-                            event_ids = [item[0] for item in batch]
-                            self.buffer.increment_attempts(event_ids)
-                            self._events_failed += len(batch)
                             retry_delay = min(retry_delay * 2, 60.0)
                     else:
                         # No events to send, still check connection
@@ -159,19 +158,71 @@ class HTTPShipper:
                     self._stop_event.wait(timeout=retry_delay)
                     retry_delay = min(retry_delay * 2, 60.0)
 
+    def _handle_batch_result(
+        self,
+        batch: list[tuple[int, str, dict]],
+        result: SendResult,
+    ) -> bool:
+        """Apply a send result to the buffer.
+
+        Returns True when the send succeeded (caller can reset its backoff),
+        False otherwise. This is the single place that decides whether events
+        are removed (SUCCESS / PERMANENT) or retried (TRANSIENT), and where
+        poison events exceeding the retry limit are purged so a permanently
+        failing head batch can't block the queue forever.
+        """
+        event_ids = [item[0] for item in batch]
+
+        if result == SendResult.SUCCESS:
+            self.buffer.remove_events(event_ids)
+            self._events_sent += len(batch)
+            self.status = ConnectionStatus.CONNECTED
+            return True
+
+        if result == SendResult.PERMANENT:
+            # Server will never accept this batch (e.g. 400/413/422); drop it so
+            # the queue advances instead of retrying forever.
+            self.buffer.remove_events(event_ids)
+            self._events_failed += len(batch)
+            logger.warning(
+                f"Dropped {len(batch)} events after permanent send failure: "
+                f"{self._last_error}"
+            )
+            return False
+
+        # TRANSIENT - mark as failed and retry later.
+        self.buffer.increment_attempts(event_ids)
+        self._events_failed += len(batch)
+        # Purge poison events that have exceeded the retry limit.
+        dropped = self.buffer.remove_stale_events(self.config.retry_max_attempts)
+        if dropped:
+            logger.warning(
+                f"Dropped {dropped} stale event(s) exceeding "
+                f"{self.config.retry_max_attempts} attempts"
+            )
+        return False
+
     async def _send_batch(
         self,
         client: httpx.AsyncClient,
         batch: list[tuple[int, str, dict]],
-    ) -> bool:
-        """Send a batch of events to the server."""
+    ) -> SendResult:
+        """Send a batch of events to the server.
+
+        Returns a SendResult classifying the outcome so the caller can decide
+        whether to remove the events (SUCCESS / PERMANENT) or retry (TRANSIENT).
+        """
         if not self.config.api_key:
             logger.error("No API key configured")
             self.status = ConnectionStatus.ERROR
             self._last_error = "No API key configured"
-            return False
+            return SendResult.TRANSIENT
 
         url = f"{self.config.server_url}/api/ingest/agent"
+
+        # Stable idempotency key for this batch. A retried identical batch carries
+        # the same id so the server can dedupe if the prior response was lost.
+        batch_id = str(uuid.uuid4())
 
         # Format events for API
         events = []
@@ -185,44 +236,61 @@ class HTTPShipper:
             self.status = ConnectionStatus.CONNECTING
             response = await client.post(
                 url,
-                json={"events": events},
+                json={"events": events, "batch_id": batch_id},
                 headers={
                     "Authorization": f"ApiKey {self.config.api_key}",
                     "Content-Type": "application/json",
                     "User-Agent": "LogNog-In/0.1.0",
+                    "X-Batch-Id": batch_id,
                 },
             )
 
-            if response.status_code == 200:
+            status = response.status_code
+
+            if status == 200:
                 self._last_send_time = time.time()
                 logger.debug(f"Sent {len(events)} events successfully")
-                return True
-            elif response.status_code == 401:
+                return SendResult.SUCCESS
+            elif status == 401:
                 logger.error("Authentication failed - check API key")
                 self.status = ConnectionStatus.ERROR
                 self._last_error = "Authentication failed"
-                return False
-            else:
-                logger.error(f"Server returned {response.status_code}: {response.text}")
+                # Auth issue - keep events buffered and retry once configured.
+                return SendResult.TRANSIENT
+            elif status in (408, 429) or status >= 500:
+                # Timeout / rate-limit / server error - transient, safe to retry.
+                logger.error(f"Server returned {status}: {response.text}")
                 self.status = ConnectionStatus.ERROR
-                self._last_error = f"HTTP {response.status_code}"
-                return False
+                self._last_error = f"HTTP {status}"
+                return SendResult.TRANSIENT
+            elif 400 <= status < 500:
+                # Other 4xx (e.g. 400/413/422) - the server will never accept
+                # this batch, so drop it instead of retrying forever.
+                logger.error(f"Server returned {status} (permanent): {response.text}")
+                self.status = ConnectionStatus.ERROR
+                self._last_error = f"HTTP {status} (permanent)"
+                return SendResult.PERMANENT
+            else:
+                logger.error(f"Server returned {status}: {response.text}")
+                self.status = ConnectionStatus.ERROR
+                self._last_error = f"HTTP {status}"
+                return SendResult.TRANSIENT
 
         except httpx.ConnectError as e:
             logger.error(f"Connection failed: {e}")
             self.status = ConnectionStatus.DISCONNECTED
             self._last_error = "Connection failed"
-            return False
+            return SendResult.TRANSIENT
         except httpx.TimeoutException as e:
             logger.error(f"Request timeout: {e}")
             self.status = ConnectionStatus.DISCONNECTED
             self._last_error = "Timeout"
-            return False
+            return SendResult.TRANSIENT
         except Exception as e:
             logger.error(f"Send failed: {e}")
             self.status = ConnectionStatus.ERROR
             self._last_error = str(e)
-            return False
+            return SendResult.TRANSIENT
 
     async def _check_connection(self, client: httpx.AsyncClient) -> bool:
         """Check connection to server."""

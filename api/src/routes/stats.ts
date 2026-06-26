@@ -86,6 +86,10 @@ router.get('/timeseries', async (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Invalid interval' });
     }
 
+    // #37: clamp hours to a sane range (1..720) so an out-of-range or NaN value
+    // can't produce a malformed/abusive query.
+    const h = Math.min(Math.max(parseInt(String(hours), 10) || 24, 1), 720);
+
     const scope = scopeFragments(req.allowedIndexes);
 
     const data = await executeQuery<{ time: string; count: number; errors: number }>(
@@ -94,7 +98,7 @@ router.get('/timeseries', async (req: Request, res: Response) => {
         count() as count,
         countIf(severity <= 3) as errors
       FROM lognog.logs
-      WHERE timestamp > now() - INTERVAL ${parseInt(hours as string, 10)} HOUR${scope.and}
+      WHERE timestamp > now() - INTERVAL ${h} HOUR${scope.and}
       GROUP BY time
       ORDER BY time`
     );

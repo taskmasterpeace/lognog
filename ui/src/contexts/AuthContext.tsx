@@ -1,5 +1,13 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
-import { LoginNotification } from '../api/client';
+import {
+  LoginNotification,
+  getAccessToken,
+  getRefreshToken,
+  setTokens,
+  clearTokens,
+  refreshAccessToken,
+  setAuthFailureHandler,
+} from '../api/client';
 
 const API_BASE = '/api';
 
@@ -52,27 +60,9 @@ interface AuthContextType extends AuthState {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Token management
-const ACCESS_TOKEN_KEY = 'lognog_access_token';
-const REFRESH_TOKEN_KEY = 'lognog_refresh_token';
-
-function getAccessToken(): string | null {
-  return localStorage.getItem(ACCESS_TOKEN_KEY);
-}
-
-function getRefreshToken(): string | null {
-  return localStorage.getItem(REFRESH_TOKEN_KEY);
-}
-
-function setTokens(accessToken: string, refreshToken: string): void {
-  localStorage.setItem(ACCESS_TOKEN_KEY, accessToken);
-  localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
-}
-
-function clearTokens(): void {
-  localStorage.removeItem(ACCESS_TOKEN_KEY);
-  localStorage.removeItem(REFRESH_TOKEN_KEY);
-}
+// Token management + the refresh routine live in api/client.ts (single source
+// of truth, shared by the typed `request()` helper). We re-export the names we
+// use here so the rest of this module reads the same way it always has.
 
 // Helper to read CSRF token from cookie
 function getCsrfToken(): string | null {
@@ -80,98 +70,53 @@ function getCsrfToken(): string | null {
   return match ? decodeURIComponent(match[1]) : null;
 }
 
-// Token refresh lock to prevent multiple simultaneous refresh attempts
-let refreshPromise: Promise<boolean> | null = null;
-
-// Authenticated request helper
+// Authenticated request helper. Delegates token refresh to the shared
+// refreshAccessToken() in api/client.ts so both fetch stacks stay in sync.
 export async function authFetch(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<Response> {
-  // Wait for any ongoing token refresh to complete before making request
-  if (refreshPromise) {
-    await refreshPromise;
-  }
+  const buildHeaders = (): HeadersInit => {
+    const headers: HeadersInit = {
+      'Content-Type': 'application/json',
+      ...options.headers,
+    };
 
-  const token = getAccessToken();
-
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-    ...options.headers,
-  };
-
-  if (token) {
-    (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
-  }
-
-  // Add CSRF token for state-changing methods
-  const method = options.method?.toUpperCase() || 'GET';
-  if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
-    const csrfToken = getCsrfToken();
-    if (csrfToken) {
-      (headers as Record<string, string>)['X-CSRF-Token'] = csrfToken;
+    const token = getAccessToken();
+    if (token) {
+      (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
     }
-  }
+
+    // Add CSRF token for state-changing methods
+    const method = options.method?.toUpperCase() || 'GET';
+    if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(method)) {
+      const csrfToken = getCsrfToken();
+      if (csrfToken) {
+        (headers as Record<string, string>)['X-CSRF-Token'] = csrfToken;
+      }
+    }
+    return headers;
+  };
 
   let response = await fetch(`${API_BASE}${endpoint}`, {
     ...options,
-    headers,
+    headers: buildHeaders(),
     credentials: 'include', // Ensure cookies are sent
   });
 
-  // If 401 and we have a refresh token, try to refresh
+  // If 401 and we have a refresh token, try to refresh once and retry.
   if (response.status === 401 && getRefreshToken()) {
-    const refreshed = await refreshTokens();
+    const refreshed = await refreshAccessToken();
     if (refreshed) {
-      // Retry with new token
-      (headers as Record<string, string>)['Authorization'] = `Bearer ${getAccessToken()}`;
       response = await fetch(`${API_BASE}${endpoint}`, {
         ...options,
-        headers,
+        headers: buildHeaders(),
         credentials: 'include',
       });
     }
   }
 
   return response;
-}
-
-async function refreshTokens(): Promise<boolean> {
-  // If a refresh is already in progress, wait for it
-  if (refreshPromise) {
-    return refreshPromise;
-  }
-
-  const refreshToken = getRefreshToken();
-  if (!refreshToken) return false;
-
-  // Create a new refresh promise that other requests will wait for
-  refreshPromise = (async () => {
-    try {
-      const response = await fetch(`${API_BASE}/auth/refresh`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken }),
-      });
-
-      if (!response.ok) {
-        clearTokens();
-        return false;
-      }
-
-      const data = await response.json();
-      setTokens(data.accessToken, data.refreshToken);
-      return true;
-    } catch {
-      clearTokens();
-      return false;
-    } finally {
-      // Clear the promise when done
-      refreshPromise = null;
-    }
-  })();
-
-  return refreshPromise;
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -250,6 +195,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     refreshAuth();
   }, [refreshAuth]);
+
+  // When a token refresh definitively fails anywhere in the app (either fetch
+  // stack), tokens are already cleared — flip React auth state to logged-out so
+  // ProtectedRoute redirects to login instead of re-firing failing requests.
+  useEffect(() => {
+    setAuthFailureHandler(() => {
+      setState((prev) => ({
+        ...prev,
+        user: null,
+        isAuthenticated: false,
+        isLoading: false,
+        loginNotifications: [],
+      }));
+    });
+    return () => setAuthFailureHandler(null);
+  }, []);
 
   // Login
   const login = async (username: string, password: string) => {

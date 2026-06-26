@@ -1,4 +1,5 @@
 import nodemailer from 'nodemailer';
+import * as cron from 'node-cron';
 import { getSQLiteDB, getAlerts, Alert, getScheduledSavedSearches, updateSavedSearchCache, updateSavedSearchError, cleanupExpiredSearchCache, SavedSearch, getSystemSetting, getProjectBySlug } from '../db/sqlite.js';
 import { executeDSLQuery } from '../db/backend.js';
 import { parseAndCompile } from '../dsl/index.js';
@@ -60,82 +61,225 @@ if (SMTP_CONFIG.host) {
   console.log('SMTP not configured - scheduled report emails will be skipped');
 }
 
-// Parse cron expression and check if it should run now
-function shouldRunNow(schedule: string, lastRun: string | null): boolean {
-  // Simple cron parser for common patterns
-  // Format: minute hour day-of-month month day-of-week
-  const parts = schedule.split(' ');
-  if (parts.length !== 5) return false;
+/**
+ * Cron matching (issue #39).
+ *
+ * The previous hand-rolled matcher fired only when `now.getMinutes()` exactly
+ * equalled the cron minute, used `nowMinute % interval` (wrong whenever the
+ * interval does not divide 60, e.g. `*​/7`), and never parsed comma-lists such
+ * as `15,45 * * * *`. A 60s setInterval drifts, so the exact-minute check could
+ * skip the target minute entirely and a daily report/alert would silently never
+ * run.
+ *
+ * We now delegate validation to node-cron (the same library the synthetic
+ * scheduler uses) and parse each field into the explicit set of values it
+ * permits, then compute the next fire time at or after a base instant. A job is
+ * "due" on a given tick when its next fire time strictly after its last run has
+ * already arrived (<= now). This is robust to interval drift: a missed minute is
+ * still caught on the following tick because we compare against last_run rather
+ * than requiring exact minute equality.
+ *
+ * Supported per field: `*`, `a`, `a-b`, `a-b/N`, `*​/N`, and comma-lists of any
+ * of those (e.g. `0-5,15,30-45/5`). Standard 5-field cron:
+ *   minute(0-59) hour(0-23) day-of-month(1-31) month(1-12) day-of-week(0-6)
+ */
 
-  const [minute, hour, dayOfMonth, month, dayOfWeek] = parts;
-  const now = new Date();
-
-  // Check if enough time has passed since last run
-  if (lastRun) {
-    const lastRunDate = new Date(lastRun);
-    const minInterval = getMinimumInterval(schedule);
-    if (now.getTime() - lastRunDate.getTime() < minInterval) {
-      return false;
-    }
-  }
-
-  // Check minute
-  if (minute !== '*' && minute !== '*/1') {
-    const nowMinute = now.getMinutes();
-    if (minute.startsWith('*/')) {
-      const interval = parseInt(minute.slice(2), 10);
-      if (nowMinute % interval !== 0) return false;
-    } else if (parseInt(minute, 10) !== nowMinute) {
-      return false;
-    }
-  }
-
-  // Check hour
-  if (hour !== '*') {
-    const nowHour = now.getHours();
-    if (hour.startsWith('*/')) {
-      const interval = parseInt(hour.slice(2), 10);
-      if (nowHour % interval !== 0) return false;
-    } else if (parseInt(hour, 10) !== nowHour) {
-      return false;
-    }
-  }
-
-  // Check day of month
-  if (dayOfMonth !== '*') {
-    if (parseInt(dayOfMonth, 10) !== now.getDate()) return false;
-  }
-
-  // Check month
-  if (month !== '*') {
-    if (parseInt(month, 10) !== now.getMonth() + 1) return false;
-  }
-
-  // Check day of week (0 = Sunday)
-  if (dayOfWeek !== '*') {
-    if (parseInt(dayOfWeek, 10) !== now.getDay()) return false;
-  }
-
-  return true;
+interface CronFields {
+  minutes: Set<number>;
+  hours: Set<number>;
+  daysOfMonth: Set<number>;
+  months: Set<number>;
+  daysOfWeek: Set<number>;
 }
 
-function getMinimumInterval(schedule: string): number {
-  const parts = schedule.split(' ');
-  if (parts.length !== 5) return 60 * 60 * 1000; // Default 1 hour
+const FIELD_RANGES: Array<[number, number]> = [
+  [0, 59], // minute
+  [0, 23], // hour
+  [1, 31], // day of month
+  [1, 12], // month
+  [0, 6],  // day of week
+];
 
-  const [minute, hour] = parts;
+// Expand a single cron field (e.g. "*/7", "15,45", "0-5", "*") into the set of
+// matching integers within [min, max].
+function expandField(field: string, min: number, max: number): Set<number> {
+  const values = new Set<number>();
 
-  // Calculate minimum interval based on schedule
-  if (minute.startsWith('*/')) {
-    return parseInt(minute.slice(2), 10) * 60 * 1000;
+  for (const part of field.split(',')) {
+    let step = 1;
+    let rangePart = part;
+
+    const slashIdx = part.indexOf('/');
+    if (slashIdx !== -1) {
+      step = parseInt(part.slice(slashIdx + 1), 10);
+      rangePart = part.slice(0, slashIdx);
+      if (!Number.isFinite(step) || step <= 0) continue;
+    }
+
+    let start = min;
+    let end = max;
+    if (rangePart === '*') {
+      // full range, honoring step
+    } else if (rangePart.includes('-')) {
+      const [a, b] = rangePart.split('-');
+      start = parseInt(a, 10);
+      end = parseInt(b, 10);
+    } else {
+      start = parseInt(rangePart, 10);
+      end = slashIdx !== -1 ? max : start; // "5/10" means 5,15,25,... up to max
+    }
+
+    if (!Number.isFinite(start) || !Number.isFinite(end)) continue;
+    start = Math.max(min, start);
+    end = Math.min(max, end);
+
+    for (let v = start; v <= end; v += step) {
+      values.add(v);
+    }
   }
-  if (hour.startsWith('*/')) {
-    return parseInt(hour.slice(2), 10) * 60 * 60 * 1000;
+
+  return values;
+}
+
+// Parse a validated 5-field cron expression into matching value sets.
+function parseCron(schedule: string): CronFields | null {
+  if (!cron.validate(schedule)) return null;
+
+  const parts = schedule.trim().split(/\s+/);
+  if (parts.length !== 5) return null;
+
+  const sets = parts.map((p, i) => expandField(p, FIELD_RANGES[i][0], FIELD_RANGES[i][1]));
+  // day-of-week 7 is sometimes used for Sunday; node-cron normalizes, but guard anyway.
+  if (sets[4].has(7)) sets[4].add(0);
+
+  return {
+    minutes: sets[0],
+    hours: sets[1],
+    daysOfMonth: sets[2],
+    months: sets[3],
+    daysOfWeek: sets[4],
+  };
+}
+
+function matchesDate(fields: CronFields, date: Date): boolean {
+  return (
+    fields.minutes.has(date.getMinutes()) &&
+    fields.hours.has(date.getHours()) &&
+    fields.daysOfMonth.has(date.getDate()) &&
+    fields.months.has(date.getMonth() + 1) &&
+    fields.daysOfWeek.has(date.getDay())
+  );
+}
+
+/**
+ * Compute the next fire time strictly after `after`, minute-aligned.
+ * Walks forward minute-by-minute (bounded) until all fields match.
+ * Returns null if no match within the search horizon.
+ */
+function nextFireAfter(fields: CronFields, after: Date): Date | null {
+  const cursor = new Date(after.getTime());
+  // Move to the start of the next minute (strictly after `after`).
+  cursor.setSeconds(0, 0);
+  cursor.setMinutes(cursor.getMinutes() + 1);
+
+  // Search up to ~366 days of minutes to cover any annual schedule.
+  const maxIterations = 366 * 24 * 60;
+  for (let i = 0; i < maxIterations; i++) {
+    if (matchesDate(fields, cursor)) return new Date(cursor.getTime());
+    cursor.setMinutes(cursor.getMinutes() + 1);
   }
-  if (hour !== '*') {
-    return 24 * 60 * 60 * 1000; // Daily
+  return null;
+}
+
+/**
+ * Decide whether a cron job is due on this tick.
+ *
+ * - With a `lastRun`: due when the next fire strictly after lastRun is <= now.
+ *   This catches missed minutes from interval drift.
+ * - Without a `lastRun` (never run): due when the current minute matches, so a
+ *   freshly-created job fires the first time its cron lines up rather than
+ *   waiting a full cycle.
+ *
+ * Exported for unit testing.
+ */
+export function shouldRunNow(schedule: string, lastRun: string | null, now: Date = new Date()): boolean {
+  const fields = parseCron(schedule);
+  if (!fields) return false;
+
+  if (!lastRun) {
+    return matchesDate(fields, now);
   }
-  return 60 * 60 * 1000; // Hourly
+
+  const lastRunDate = new Date(lastRun);
+  if (isNaN(lastRunDate.getTime())) {
+    // Corrupt last_run — fall back to current-minute match.
+    return matchesDate(fields, now);
+  }
+
+  const next = nextFireAfter(fields, lastRunDate);
+  if (!next) return false;
+  return next.getTime() <= now.getTime();
+}
+
+/**
+ * Map a report's cron schedule to the query time window it should cover.
+ *
+ * Previously `runReport` hard-coded `-7d` regardless of cadence, so a daily or
+ * hourly report queried 7 days of data and its if_change/threshold/if_results
+ * conditions compared 7-day counts. We derive the window from the schedule's
+ * effective frequency: roughly the gap between consecutive fires.
+ *
+ * Returns a relative time-range string understood by the DSL backend
+ * (e.g. "-1h", "-24h", "-7d"). Exported for unit testing.
+ */
+export function reportWindowForSchedule(schedule: string): string {
+  const fields = parseCron(schedule);
+  if (!fields) return '-24h'; // sensible default
+
+  const everyMinute = fields.minutes.size >= 60;
+  const everyHour = fields.hours.size >= 24;
+  const everyDom = fields.daysOfMonth.size >= 31;
+  const everyDow = fields.daysOfWeek.size >= 7;
+
+  // Sub-hourly: minute field is restricted but it runs every hour & every day.
+  if (!everyMinute && everyHour && everyDom && everyDow) {
+    // e.g. "*/5 * * * *" or "0 * * * *" -> last hour
+    return '-1h';
+  }
+
+  // Hourly cadence: a specific minute each hour (handled above). If the hour
+  // field is restricted but it still runs every day, treat as daily.
+  if (!everyHour && everyDom && everyDow) {
+    // Runs on specific hour(s) each day -> daily window
+    return '-24h';
+  }
+
+  // Weekly cadence: restricted to specific day(s) of week.
+  if (!everyDow) {
+    return '-7d';
+  }
+
+  // Monthly cadence: restricted to specific day(s) of month.
+  if (!everyDom) {
+    return '-30d';
+  }
+
+  // Fallback: weekly window preserves historical behavior.
+  return '-7d';
+}
+
+// Map a relative window string to milliseconds (for computing display ranges).
+function windowToMs(window: string): number {
+  const match = window.match(/^-?(\d+)(s|m|h|d)$/);
+  if (!match) return 7 * 24 * 60 * 60 * 1000;
+  const value = parseInt(match[1], 10);
+  switch (match[2]) {
+    case 's': return value * 1000;
+    case 'm': return value * 60 * 1000;
+    case 'h': return value * 60 * 60 * 1000;
+    case 'd': return value * 24 * 60 * 60 * 1000;
+    default: return 7 * 24 * 60 * 60 * 1000;
+  }
 }
 
 /**
@@ -175,15 +319,19 @@ async function runReport(report: ScheduledReport): Promise<void> {
   const startTime = performance.now();
 
   try {
-    // Calculate time range (last 7 days for weekly reports)
+    // Derive the query window from the report's schedule (issue #39 bug 5):
+    // hourly -> -1h, daily -> -24h, weekly -> -7d, etc. Previously hard-coded
+    // to -7d regardless of cadence, which skewed if_change/threshold/if_results
+    // comparisons for daily/hourly reports.
+    const window = reportWindowForSchedule(report.schedule);
     const now = new Date();
-    const earliest = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    const earliest = new Date(now.getTime() - windowToMs(window));
     const latestIso = now.toISOString();
     const earliestIso = earliest.toISOString();
 
     // Execute DSL query using backend abstraction (handles ClickHouse vs SQLite)
     const { sql, results } = await executeDSLQuery(report.query, {
-      earliest: '-7d',
+      earliest: window,
       latest: 'now',
     });
     const executionTimeMs = Math.round(performance.now() - startTime);
@@ -504,52 +652,73 @@ async function runCacheCleanup(): Promise<void> {
   }
 }
 
+// Re-entrancy guard (issue #39 bug 3): setInterval does not await the async
+// tick, so a slow tick lets the next one start and re-read the same enabled
+// rows whose last_run has not yet updated -> duplicate report/alert sends. We
+// skip a tick entirely while the previous one is still running.
+let tickRunning = false;
+
+// Single scheduler tick: evaluate reports, alerts, heartbeats, saved searches,
+// pull collectors, and periodic cache cleanup. Exported (indirectly) only via
+// startScheduler; kept as a named function so the guard is easy to reason about.
+async function runSchedulerTick(): Promise<void> {
+  if (tickRunning) {
+    console.warn('[Scheduler] Previous tick still running - skipping this tick');
+    return;
+  }
+  tickRunning = true;
+  try {
+    // Check reports
+    const db = getSQLiteDB();
+    const reports = db.prepare(
+      'SELECT * FROM scheduled_reports WHERE enabled = 1'
+    ).all() as ScheduledReport[];
+
+    for (const report of reports) {
+      if (shouldRunNow(report.schedule, report.last_run)) {
+        await runReport(report);
+      }
+    }
+
+    // Check alerts
+    await checkAlerts();
+
+    // Phase 3: Heartbeat / no-data sweep (cheap, reads tiny presence table)
+    try {
+      await checkHeartbeats();
+    } catch (hbError) {
+      console.error('Heartbeat sweep error:', hbError);
+    }
+
+    // Check scheduled saved searches
+    await checkScheduledSavedSearches();
+
+    // Phase 4 (Reach): pull collectors (fetch external HTTP endpoints -> logs)
+    try {
+      await checkPullCollectors();
+    } catch (pcError) {
+      console.error('Pull collector sweep error:', pcError);
+    }
+
+    // Cleanup expired caches (run less frequently - every 5 minutes)
+    const now = new Date();
+    if (now.getMinutes() % 5 === 0) {
+      await runCacheCleanup();
+    }
+  } catch (error) {
+    console.error('Scheduler error:', error);
+  } finally {
+    tickRunning = false;
+  }
+}
+
 // Check for reports, alerts, and saved searches to run every minute
 export function startScheduler(): void {
   console.log('Report and alert scheduler started');
 
-  setInterval(async () => {
-    try {
-      // Check reports
-      const db = getSQLiteDB();
-      const reports = db.prepare(
-        'SELECT * FROM scheduled_reports WHERE enabled = 1'
-      ).all() as ScheduledReport[];
-
-      for (const report of reports) {
-        if (shouldRunNow(report.schedule, report.last_run)) {
-          await runReport(report);
-        }
-      }
-
-      // Check alerts
-      await checkAlerts();
-
-      // Phase 3: Heartbeat / no-data sweep (cheap, reads tiny presence table)
-      try {
-        await checkHeartbeats();
-      } catch (hbError) {
-        console.error('Heartbeat sweep error:', hbError);
-      }
-
-      // Check scheduled saved searches
-      await checkScheduledSavedSearches();
-
-      // Phase 4 (Reach): pull collectors (fetch external HTTP endpoints -> logs)
-      try {
-        await checkPullCollectors();
-      } catch (pcError) {
-        console.error('Pull collector sweep error:', pcError);
-      }
-
-      // Cleanup expired caches (run less frequently - every 5 minutes)
-      const now = new Date();
-      if (now.getMinutes() % 5 === 0) {
-        await runCacheCleanup();
-      }
-    } catch (error) {
-      console.error('Scheduler error:', error);
-    }
+  setInterval(() => {
+    // Fire-and-forget; the re-entrancy guard inside prevents overlap.
+    void runSchedulerTick();
   }, 60 * 1000); // Check every minute
 }
 

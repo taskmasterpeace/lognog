@@ -5,6 +5,7 @@ import * as path from 'path';
 import * as os from 'os';
 import { testPattern } from '../services/field-extractor.js';
 import { loadCustomLookups } from '../services/lookup-tables.js';
+import { authenticate, requireAdmin, denyReadonly } from '../auth/middleware.js';
 import {
   // Field Extractions
   getFieldExtractions,
@@ -41,6 +42,13 @@ import {
 
 const router = Router();
 
+// #34/#35/#36: this router was entirely unauthenticated, exposing an
+// unauthenticated RCE via the Python-script execution paths. Require auth on
+// everything, and block writes for read-only roles. Script execution and all
+// mutations additionally require admin (applied per-route below).
+router.use(authenticate);
+router.use(denyReadonly);
+
 // ============================================================================
 // FIELD EXTRACTIONS
 // ============================================================================
@@ -58,7 +66,7 @@ router.get('/field-extractions', (req: Request, res: Response) => {
 });
 
 // POST /knowledge/field-extractions - Create new extraction
-router.post('/field-extractions', (req: Request, res: Response) => {
+router.post('/field-extractions', requireAdmin, (req: Request, res: Response) => {
   try {
     const { name, source_type, field_name, pattern, pattern_type = 'grok', priority = 100, enabled = true } = req.body;
 
@@ -79,7 +87,7 @@ router.post('/field-extractions', (req: Request, res: Response) => {
 });
 
 // PUT /knowledge/field-extractions/:id - Update extraction
-router.put('/field-extractions/:id', (req: Request, res: Response) => {
+router.put('/field-extractions/:id', requireAdmin, (req: Request, res: Response) => {
   try {
     const { name, source_type, field_name, pattern, pattern_type, priority, enabled } = req.body;
 
@@ -118,7 +126,7 @@ router.put('/field-extractions/:id', (req: Request, res: Response) => {
 });
 
 // DELETE /knowledge/field-extractions/:id - Delete extraction
-router.delete('/field-extractions/:id', (req: Request, res: Response) => {
+router.delete('/field-extractions/:id', requireAdmin, (req: Request, res: Response) => {
   try {
     const deleted = deleteFieldExtraction(req.params.id);
     if (!deleted) {
@@ -191,7 +199,7 @@ router.get('/event-types', (_req: Request, res: Response) => {
 });
 
 // POST /knowledge/event-types - Create new event type
-router.post('/event-types', (req: Request, res: Response) => {
+router.post('/event-types', requireAdmin, (req: Request, res: Response) => {
   try {
     const { name, search_string, description, priority = 100, enabled = true } = req.body;
 
@@ -208,7 +216,7 @@ router.post('/event-types', (req: Request, res: Response) => {
 });
 
 // PUT /knowledge/event-types/:id - Update event type
-router.put('/event-types/:id', (req: Request, res: Response) => {
+router.put('/event-types/:id', requireAdmin, (req: Request, res: Response) => {
   try {
     const { name, search_string, description, priority, enabled } = req.body;
 
@@ -239,7 +247,7 @@ router.put('/event-types/:id', (req: Request, res: Response) => {
 });
 
 // DELETE /knowledge/event-types/:id - Delete event type
-router.delete('/event-types/:id', (req: Request, res: Response) => {
+router.delete('/event-types/:id', requireAdmin, (req: Request, res: Response) => {
   try {
     const deleted = deleteEventType(req.params.id);
     if (!deleted) {
@@ -286,7 +294,7 @@ router.get('/tags/by-value', (req: Request, res: Response) => {
 });
 
 // POST /knowledge/tags - Create new tag
-router.post('/tags', (req: Request, res: Response) => {
+router.post('/tags', requireAdmin, (req: Request, res: Response) => {
   try {
     const { tag_name, field, value } = req.body;
 
@@ -303,7 +311,7 @@ router.post('/tags', (req: Request, res: Response) => {
 });
 
 // DELETE /knowledge/tags/:id - Delete tag
-router.delete('/tags/:id', (req: Request, res: Response) => {
+router.delete('/tags/:id', requireAdmin, (req: Request, res: Response) => {
   try {
     const deleted = deleteTag(req.params.id);
     if (!deleted) {
@@ -346,7 +354,7 @@ router.get('/lookups/by-name/:name', (req: Request, res: Response) => {
 });
 
 // POST /knowledge/lookups - Create lookup
-router.post('/lookups', (req: Request, res: Response) => {
+router.post('/lookups', requireAdmin, (req: Request, res: Response) => {
   try {
     const { name, key_field, file_path } = req.body;
     // Accept both API field names and UI field names
@@ -388,7 +396,7 @@ router.post('/lookups', (req: Request, res: Response) => {
 });
 
 // PUT /knowledge/lookups/:id - Update lookup
-router.put('/lookups/:id', (req: Request, res: Response) => {
+router.put('/lookups/:id', requireAdmin, (req: Request, res: Response) => {
   try {
     const { name, type, key_field, output_fields, data, file_path } = req.body;
 
@@ -430,7 +438,7 @@ router.put('/lookups/:id', (req: Request, res: Response) => {
 });
 
 // DELETE /knowledge/lookups/:id - Delete lookup
-router.delete('/lookups/:id', (req: Request, res: Response) => {
+router.delete('/lookups/:id', requireAdmin, (req: Request, res: Response) => {
   try {
     const deleted = deleteLookup(req.params.id);
     if (!deleted) {
@@ -518,7 +526,7 @@ router.get('/workflow-actions', (req: Request, res: Response) => {
 });
 
 // POST /knowledge/workflow-actions - Create workflow action
-router.post('/workflow-actions', (req: Request, res: Response) => {
+router.post('/workflow-actions', requireAdmin, (req: Request, res: Response) => {
   try {
     const { name, label, field, action_type = 'link', action_value, enabled = true } = req.body;
 
@@ -539,7 +547,7 @@ router.post('/workflow-actions', (req: Request, res: Response) => {
 });
 
 // PUT /knowledge/workflow-actions/:id - Update workflow action
-router.put('/workflow-actions/:id', (req: Request, res: Response) => {
+router.put('/workflow-actions/:id', requireAdmin, (req: Request, res: Response) => {
   try {
     const { name, label, field, action_type, action_value, enabled } = req.body;
 
@@ -576,7 +584,7 @@ router.put('/workflow-actions/:id', (req: Request, res: Response) => {
 });
 
 // DELETE /knowledge/workflow-actions/:id - Delete workflow action
-router.delete('/workflow-actions/:id', (req: Request, res: Response) => {
+router.delete('/workflow-actions/:id', requireAdmin, (req: Request, res: Response) => {
   try {
     const deleted = deleteWorkflowAction(req.params.id);
     if (!deleted) {
@@ -590,7 +598,9 @@ router.delete('/workflow-actions/:id', (req: Request, res: Response) => {
 });
 
 // POST /knowledge/workflow-actions/:id/execute - Execute a workflow action
-router.post('/workflow-actions/:id/execute', async (req: Request, res: Response) => {
+// requireAdmin: this path can run arbitrary Python (action_type === 'script')
+// via executePythonScript, so it must never be reachable by non-admins (#34).
+router.post('/workflow-actions/:id/execute', requireAdmin, async (req: Request, res: Response) => {
   try {
     const { context } = req.body;
 
@@ -659,13 +669,19 @@ async function executePythonScript(
     const tmpDir = os.tmpdir();
     const scriptPath = path.join(tmpDir, `lognog_script_${Date.now()}.py`);
 
-    // Wrap the script with context injection and output capture
+    // Wrap the script with context injection and output capture.
+    // SECURITY (#34): the context is untrusted data. Never interpolate it as a
+    // Python string literal (a `'''` in the data would break out of the quotes
+    // and inject code). Instead base64-encode the JSON in Node and decode it
+    // inside Python, so the source template contains only an opaque base64 blob.
+    const contextB64 = Buffer.from(JSON.stringify(context ?? {}), 'utf-8').toString('base64');
     const wrappedScript = `
 import json
 import sys
+import base64
 
-# Context passed from LogNog
-context = json.loads('''${JSON.stringify(context).replace(/'/g, "\\'")}''')
+# Context passed from LogNog (base64-encoded JSON, decoded safely here)
+context = json.loads(base64.b64decode('${contextB64}').decode('utf-8'))
 
 # User script output
 _lognog_output = None
@@ -752,7 +768,8 @@ if _lognog_output is not None:
 }
 
 // POST /knowledge/scripts/test - Test a Python script without saving
-router.post('/scripts/test', async (req: Request, res: Response) => {
+// requireAdmin: executes arbitrary Python on the server (#34 RCE).
+router.post('/scripts/test', requireAdmin, async (req: Request, res: Response) => {
   try {
     const { script, context = {} } = req.body;
 
