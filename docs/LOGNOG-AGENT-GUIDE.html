@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<!-- Navigable user-guide shell. Rendered by user-guide-builder/scripts/render-guide.mjs from a
+     markdown guide + docs/brand.json. Self-contained; filtering/scrollspy are progressive JS. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LogNog — User Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#1a120b;
+    --surface:#241811;
+    --border:#3D2A18;
+    --border-soft:#1b212a;
+    --text:#e8ddd0;
+    --muted:#b8a389;
+    --heading:#FAF8F5;
+    --brand:#5A3F24;
+    --accent:#C8862B;
+    --accent-ink:#9fd0e8;
+    --grid:rgba(255,255,255,.025);
+    --radius:14px;
+    --maxw:72rem;
+    --sidebar-w:17rem;
+    --font-display:"Inter",ui-sans-serif,system-ui,sans-serif;
+    --font-body:"Inter",ui-sans-serif,system-ui,sans-serif;
+    --font-mono:"JetBrains Mono",ui-monospace,"SFMono-Regular",monospace;
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font-body);font-size:16px;line-height:1.7;
+    -webkit-font-smoothing:antialiased;letter-spacing:-0.006em;
+    background-image:
+      radial-gradient(110% 50% at 50% -10%, color-mix(in oklab,var(--brand) 14%, transparent), transparent 60%),
+      linear-gradient(var(--grid) 1px,transparent 1px),
+      linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+    background-size:auto,34px 34px,34px 34px;}
+  a{color:var(--brand);text-decoration:none}
+  a:hover{text-decoration:underline}
+
+  .layout{max-width:var(--maxw);margin:0 auto;display:grid;grid-template-columns:var(--sidebar-w) minmax(0,1fr);gap:2.5rem;padding:0 1.4rem}
+  .toc-toggle{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
+
+  /* ---------------- sidebar ---------------- */
+  .sidebar{position:sticky;top:0;align-self:start;height:100vh;overflow-y:auto;padding:1.6rem 0 2rem;
+    scrollbar-width:thin}
+  .brand{display:flex;align-items:center;gap:.6rem;margin-bottom:.3rem}
+  .brand .logo{width:1.7rem;height:1.7rem;border-radius:7px;background:var(--brand);display:grid;place-items:center;
+    color:#fff;font-family:var(--font-display);font-weight:700;font-size:.95rem;flex:none}
+  .brand .name{font-family:var(--font-display);font-weight:700;color:var(--heading);font-size:1.05rem;letter-spacing:-0.02em}
+  .ver{display:inline-block;font-family:var(--font-mono);font-size:.72rem;color:var(--brand);
+    border:1px solid color-mix(in oklab,var(--brand) 40%,var(--border));border-radius:6px;padding:.06rem .4rem;margin:.5rem 0 1rem;
+    background:color-mix(in oklab,var(--brand) 10%,transparent)}
+  .toc-search{width:100%;font:inherit;font-size:.85rem;color:var(--text);background:var(--surface);
+    border:1px solid var(--border);border-radius:9px;padding:.5rem .7rem;margin-bottom:.9rem;outline:none}
+  .toc-search:focus{border-color:var(--brand)}
+  .toc-search::placeholder{color:var(--muted)}
+  .toc{display:block}
+  .toc a{display:block;color:var(--muted);font-size:.86rem;padding:.27rem .65rem;border-left:2px solid transparent;
+    border-radius:0 6px 6px 0;text-decoration:none;transition:color .15s,border-color .15s,background .15s}
+  .toc a:hover{color:var(--text);background:var(--surface)}
+  .toc a.lvl3{padding-left:1.5rem;font-size:.81rem}
+  .toc a.active{color:var(--heading);border-left-color:var(--brand);background:color-mix(in oklab,var(--brand) 10%,transparent)}
+  .toc-label{display:none}
+
+  /* ---------------- content ---------------- */
+  .content{padding:2.4rem 0 5rem;min-width:0}
+  .content :where(h1,h2,h3,h4){font-family:var(--font-display);color:var(--heading);letter-spacing:-0.025em;line-height:1.15;scroll-margin-top:1.2rem}
+  .content h1{font-size:clamp(2rem,5vw,2.7rem);margin:0 0 .3rem}
+  .content h2{font-size:1.5rem;margin:2.8rem 0 1rem;padding-top:1.6rem;border-top:1px solid var(--border-soft)}
+  .content h3{font-size:1.14rem;margin:1.8rem 0 .6rem;color:var(--heading)}
+  .content h4{font-size:1rem;margin:1.3rem 0 .4rem;color:var(--text)}
+  .content p{margin:.85rem 0;color:var(--text)}
+  .content strong{color:var(--heading);font-weight:700}
+  .content a{color:var(--brand)}
+  .content ul,.content ol{margin:.8rem 0;padding-left:1.3rem;color:var(--text)}
+  .content li{margin:.34rem 0}
+  .content li::marker{color:var(--muted)}
+  .content code{font-family:var(--font-mono);font-size:.84em;background:var(--surface);border:1px solid var(--border-soft);
+    border-radius:5px;padding:.08em .35em;color:var(--accent-ink)}
+  .content pre{background:var(--surface);border:1px solid var(--border);border-radius:11px;padding:1rem 1.1rem;overflow:auto;margin:1.1rem 0}
+  .content pre code{background:none;border:0;padding:0;color:var(--text);font-size:.85rem;line-height:1.6}
+  .content blockquote{margin:1.1rem 0;padding:.7rem 1.1rem;border-left:3px solid var(--brand);
+    background:color-mix(in oklab,var(--brand) 7%,transparent);border-radius:0 9px 9px 0;color:var(--muted)}
+  .content blockquote p{margin:.2rem 0}
+  .content hr{border:0;border-top:1px solid var(--border-soft);margin:2rem 0}
+  .content img{max-width:100%;height:auto;border:1px solid var(--border);border-radius:11px;margin:1rem 0;display:block}
+  .table-wrap{overflow-x:auto;margin:1.1rem 0;border:1px solid var(--border);border-radius:11px}
+  .content table{border-collapse:collapse;width:100%;font-size:.9rem}
+  .content th,.content td{text-align:left;padding:.6rem .85rem;border-bottom:1px solid var(--border-soft);vertical-align:top}
+  .content thead th{background:var(--surface);color:var(--heading);font-weight:600;font-family:var(--font-body);
+    position:sticky;top:0;white-space:nowrap}
+  .content tbody tr:last-child td{border-bottom:0}
+  .content tbody tr:hover{background:color-mix(in oklab,var(--brand) 5%,transparent)}
+
+  .hero-tag{color:var(--muted);font-size:1.05rem;margin:.1rem 0 0}
+  .foot{margin-top:3rem;padding-top:1.4rem;border-top:1px solid var(--border-soft);color:var(--muted);font-size:.82rem}
+  .foot .mono{font-family:var(--font-mono)}
+
+  /* ---------------- responsive ---------------- */
+  @media (max-width:860px){
+    .layout{grid-template-columns:1fr;gap:0}
+    .sidebar{position:static;height:auto;padding:1.4rem 0 .4rem;border-bottom:1px solid var(--border-soft)}
+    .toc-label{display:flex;align-items:center;justify-content:space-between;cursor:pointer;color:var(--heading);
+      font-weight:600;font-size:.92rem;padding:.5rem 0;font-family:var(--font-body)}
+    .toc-label .chev{transition:transform .2s;color:var(--muted)}
+    .toc,.toc-search{display:none}
+    #toc-toggle:checked ~ .sidebar .toc,#toc-toggle:checked ~ .sidebar .toc-search{display:block}
+    #toc-toggle:checked ~ .sidebar .toc-label .chev{transform:rotate(180deg)}
+    .content{padding:1.4rem 0 4rem}
+  }
+  @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<div class="layout">
+  <input type="checkbox" id="toc-toggle" class="toc-toggle">
+  <aside class="sidebar">
+    <div class="brand"><span class="logo">L</span><span class="name">LogNog</span></div>
+    <span class="ver">v0.9.0</span>
+    <label for="toc-toggle" class="toc-label">On this page <span class="chev">▾</span></label>
+    <input type="search" class="toc-search" placeholder="Filter sections…" aria-label="Filter sections">
+    <nav class="toc" aria-label="Table of contents">
+      <a class="" href="#tldr-self-configure-in-4-steps">TL;DR — self-configure in 4 steps</a>
+      <a class="" href="#configuration">Configuration</a>
+      <a class="" href="#the-ingest-contract">The ingest contract</a>
+      <a class="" href="#indexes">Indexes</a>
+      <a class="" href="#drop-in-client-typescript">Drop-in client — TypeScript</a>
+      <a class="" href="#drop-in-client-python">Drop-in client — Python</a>
+      <a class="" href="#what-to-log">What to log</a>
+      <a class="" href="#verify-it-works">Verify it works</a>
+      <a class="" href="#machine-readable-contract">Machine-readable contract</a>
+    </nav>
+  </aside>
+  <main class="content">
+<h1 id="lognog-integration-guide-for-ai-coding-agents">LogNog — Integration Guide for AI Coding Agents</h1>
+<p><strong>You are an AI coding agent (e.g. Claude Code). Your job: instrument this project to send its logs to LogNog correctly.</strong> This guide is self-contained — everything you need to configure logging is below. Follow it top to bottom.</p>
+<p>LogNog is a self-hosted log platform (a friendlier Splunk). It ingests structured JSON log events over HTTP, stores them in ClickHouse, and lets a human search them with a Splunk-like query language, build dashboards, and get alerts. "The right logs" means <strong>structured, severity-tagged events with useful fields</strong> — not <code>console.log</code> spam. This guide tells you exactly what to send.</p>
+<ul><li><strong>Fetch the latest version of this guide:</strong> <code>GET https://logs.machinekinglabs.com/api/ingest/guide</code> (returns this markdown).</li><li><strong>Fetch the machine-readable contract:</strong> <code>GET https://logs.machinekinglabs.com/api/ingest/schema</code> (returns JSON).</li></ul>
+<hr>
+<h2 id="tldr-self-configure-in-4-steps">TL;DR — self-configure in 4 steps</h2>
+<ol><li><strong>Get an API key.</strong> A human creates one in LogNog under <strong>Settings → API Keys</strong> (or the <strong>Add Data Source</strong> wizard) and gives it to you. It looks like <code>lnog_xxxxxxxx_xxxxxxxxxxxxxxxx</code>. <strong>That is the only thing you need to provision.</strong> You do NOT create or request access to an "index" — see <a href="#indexes">Indexes</a>.</li><li><strong>Set env vars</strong> (see <a href="#configuration">Configuration</a>): <code>LOGNOG_URL</code>, <code>LOGNOG_API_KEY</code>, <code>LOGNOG_APP_NAME</code>, and optionally <code>LOGNOG_INDEX</code>.</li><li><strong>Drop in the client</strong> (<a href="#drop-in-client--typescript">TypeScript</a> or <a href="#drop-in-client--python">Python</a>) and wire it into app startup, request handling, and error paths per <a href="#what-to-log">What to log</a>.</li><li><strong>Verify</strong> (<a href="#verify-it-works">Verify it works</a>): send one test event, then confirm it appears.</li></ol>
+<hr>
+<h2 id="configuration">Configuration</h2>
+<p>Set these environment variables (add to <code>.env.local</code> / <code>.env</code> and your deploy platform):</p>
+<div class="table-wrap"><table><thead><tr><th>Variable</th><th>Required</th><th>Example</th><th>Notes</th></tr></thead><tbody><tr><td><code>LOGNOG_URL</code></td><td>yes</td><td><code>https://logs.machinekinglabs.com</code></td><td>Base URL. The client appends <code>/api/ingest/http</code>. Do NOT include the path.</td></tr><tr><td><code>LOGNOG_API_KEY</code></td><td>yes</td><td><code>lnog_ab12cd34_...</code></td><td>The key a human gave you. Server-side only — never expose to the browser.</td></tr><tr><td><code>LOGNOG_APP_NAME</code></td><td>recommended</td><td><code>my-app</code></td><td>Identifies this app in searches (<code>app_name=my-app</code>). Use a stable kebab-case name.</td></tr><tr><td><code>LOGNOG_INDEX</code></td><td>optional</td><td><code>my-app</code></td><td>Groups this app's logs. Omit to use the default. Auto-created. See <a href="#indexes">Indexes</a>.</td></tr></tbody></table></div>
+<blockquote><strong>Security:</strong> the API key authenticates ingestion. Keep it in server-side env only. If you have a browser/client that needs to log, send those events to your own server route and forward them (never ship the key to the client).</blockquote>
+<hr>
+<h2 id="the-ingest-contract">The ingest contract</h2>
+<p><strong>Endpoint:</strong> <code>POST {LOGNOG_URL}/api/ingest/http</code></p>
+<p><strong>Headers:</strong></p>
+<div class="table-wrap"><table><thead><tr><th>Header</th><th>Required</th><th>Value</th></tr></thead><tbody><tr><td><code>Content-Type</code></td><td>yes</td><td><code>application/json</code></td></tr><tr><td><code>X-API-Key</code></td><td>yes</td><td>your <code>LOGNOG_API_KEY</code></td></tr><tr><td><code>X-Index</code></td><td>no</td><td>an index name to group logs (e.g. <code>my-app</code>). Omitted → default index <code>http</code>.</td></tr><tr><td><code>X-App-Name</code></td><td>no</td><td>default <code>app_name</code> for events that don't set one</td></tr></tbody></table></div>
+<p><strong>Body:</strong> a <strong>JSON array</strong> of log-event objects (send in batches; 1–500 per request is ideal). Each event:</p>
+<div class="table-wrap"><table><thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead><tbody><tr><td><code>message</code></td><td>string</td><td><strong>yes</strong></td><td>The human-readable log line. Keep it specific.</td></tr><tr><td><code>timestamp</code></td><td>string (ISO-8601)</td><td>no</td><td>Event time, e.g. <code>2026-07-03T14:30:00.000Z</code>. Defaults to arrival time if omitted.</td></tr><tr><td><code>level</code></td><td>string</td><td>no</td><td><code>debug</code> \</td><td><code>info</code> \</td><td><code>notice</code> \</td><td><code>warning</code> \</td><td><code>error</code> \</td><td><code>critical</code>. Mapped to a numeric severity (see below). Prefer this over <code>severity</code>.</td></tr><tr><td><code>severity</code></td><td>number</td><td>no</td><td>Syslog severity 0–7 (0=emergency … 7=debug). Use if you don't send <code>level</code>.</td></tr><tr><td><code>app_name</code></td><td>string</td><td>no</td><td>Overrides <code>X-App-Name</code> per event.</td></tr><tr><td><code>hostname</code></td><td>string</td><td>no</td><td>Host/instance the event came from.</td></tr><tr><td><code>source</code></td><td>string</td><td>no</td><td>Logical source/component (e.g. <code>auth</code>, <code>checkout</code>, <code>worker</code>).</td></tr><tr><td><em>(any other keys)</em></td><td>string/number/bool</td><td>no</td><td><strong>Custom structured fields</strong> — stored and searchable (e.g. <code>user_id</code>, <code>route</code>, <code>status_code</code>, <code>duration_ms</code>, <code>error_code</code>). This is what makes logs useful.</td></tr></tbody></table></div>
+<p><strong>Severity / level mapping</strong> (send <code>level</code>; the server maps it):</p>
+<div class="table-wrap"><table><thead><tr><th><code>level</code></th><th>severity</th><th>Use for</th></tr></thead><tbody><tr><td><code>debug</code></td><td>7</td><td>verbose diagnostics (off in prod)</td></tr><tr><td><code>info</code></td><td>6</td><td>normal events (requests, lifecycle, business events)</td></tr><tr><td><code>notice</code></td><td>5</td><td>notable-but-normal</td></tr><tr><td><code>warning</code></td><td>4</td><td>recoverable problems, degraded paths</td></tr><tr><td><code>error</code></td><td>3</td><td>failed operations, caught exceptions</td></tr><tr><td><code>critical</code></td><td>2</td><td>outages, data loss, unrecoverable</td></tr></tbody></table></div>
+<p>Searching by severity later uses numbers: <code>search severity&lt;=3</code> = errors and worse.</p>
+<p><strong>Response:</strong> <code>200</code> with <code>{ "accepted": &lt;n&gt; }</code> on success. <code>401</code> = bad/missing key. <code>403</code> = key not allowed to write that index. <code>400</code> = malformed body.</p>
+<p><strong>Minimal curl (send a test event):</strong></p>
+<pre><code>curl -X POST "$LOGNOG_URL/api/ingest/http" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $LOGNOG_API_KEY" \
+  -H "X-Index: $LOGNOG_APP_NAME" \
+  -d '[{"timestamp":"'"$(date -u +%Y-%m-%dT%H:%M:%SZ)"'","level":"info","app_name":"'"$LOGNOG_APP_NAME"'","source":"setup","message":"LogNog integration test","test":true}]'</code></pre>
+<hr>
+<h2 id="indexes">Indexes</h2>
+<p><strong>You never pre-declare or "request access to" an index.</strong> An index is just a label that groups logs. It is <strong>created automatically</strong> the first time a log arrives:</p>
+<ul><li>Omit <code>X-Index</code> → logs land in the default index <code>http</code>.</li><li>Set <code>X-Index: my-app</code> → logs are grouped under <code>my-app</code>, searchable as <code>search index=my-app</code>.</li></ul>
+<p>The source appears on its own under <strong>Data Sources</strong> in the LogNog UI once the first event is received. Convention: set <code>X-Index</code> to your app name (same as <code>LOGNOG_APP_NAME</code>).</p>
+<hr>
+<h2 id="drop-in-client-typescript">Drop-in client — TypeScript</h2>
+<p>Save as <code>lib/lognog.ts</code>. Non-blocking, batched, fail-safe (logging must never crash or slow the app). Server-side only.</p>
+<pre><code>// lib/lognog.ts — minimal, batched, fire-and-forget LogNog client.
+type Level = 'debug' | 'info' | 'notice' | 'warning' | 'error' | 'critical';
+
+interface LogEvent {
+  message: string;
+  level?: Level;
+  timestamp?: string;
+  source?: string;
+  [key: string]: unknown; // custom structured fields
+}
+
+const URL = (process.env.LOGNOG_URL || '').replace(/\/+$/, '');
+const KEY = process.env.LOGNOG_API_KEY || '';
+const APP = process.env.LOGNOG_APP_NAME || 'app';
+const INDEX = process.env.LOGNOG_INDEX || APP;
+const ENABLED = Boolean(URL &amp;&amp; KEY);
+
+let queue: LogEvent[] = [];
+let timer: ReturnType&lt;typeof setTimeout&gt; | null = null;
+const FLUSH_MS = 5000;
+const MAX_BATCH = 50;
+
+async function flush(): Promise&lt;void&gt; {
+  if (timer) { clearTimeout(timer); timer = null; }
+  if (!ENABLED || queue.length === 0) return;
+  const batch = queue.splice(0, queue.length);
+  try {
+    await fetch(`${URL}/api/ingest/http`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-API-Key': KEY, 'X-Index': INDEX, 'X-App-Name': APP },
+      body: JSON.stringify(batch.map((e) =&gt; ({ app_name: APP, timestamp: new Date().toISOString(), ...e }))),
+    });
+  } catch {
+    /* never throw from logging; drop on failure */
+  }
+}
+
+export function log(event: LogEvent): void {
+  if (!ENABLED) return;
+  queue.push(event);
+  if (queue.length &gt;= MAX_BATCH) { void flush(); return; }
+  if (!timer) timer = setTimeout(() =&gt; void flush(), FLUSH_MS);
+}
+
+// Convenience helpers
+export const logger = {
+  debug: (message: string, f: Record&lt;string, unknown&gt; = {}) =&gt; log({ level: 'debug', message, ...f }),
+  info: (message: string, f: Record&lt;string, unknown&gt; = {}) =&gt; log({ level: 'info', message, ...f }),
+  warn: (message: string, f: Record&lt;string, unknown&gt; = {}) =&gt; log({ level: 'warning', message, ...f }),
+  error: (message: string, f: Record&lt;string, unknown&gt; = {}) =&gt; log({ level: 'error', message, ...f }),
+  critical: (message: string, f: Record&lt;string, unknown&gt; = {}) =&gt; log({ level: 'critical', message, ...f }),
+};
+
+// Flush on shutdown so buffered events aren't lost.
+if (typeof process !== 'undefined') {
+  process.on('beforeExit', () =&gt; void flush());
+  process.on('SIGTERM', () =&gt; void flush());
+}</code></pre>
+<p><strong>Usage:</strong></p>
+<pre><code>import { logger } from './lib/lognog';
+
+logger.info('Server started', { port: 3000, source: 'boot' });
+logger.info('User signed up', { source: 'auth', user_id: 'u_123', plan: 'pro' });
+logger.error('Checkout failed', { source: 'checkout', user_id: 'u_123', error_code: 'card_declined', amount_cents: 4999 });</code></pre>
+<p><strong>Next.js API route pattern</strong> (forward browser events safely — key stays server-side):</p>
+<pre><code>// app/api/log/route.ts
+import { logger } from '@/lib/lognog';
+export async function POST(req: Request) {
+  const { message, level = 'info', ...fields } = await req.json();
+  logger[level as 'info']?.(String(message).slice(0, 2000), { ...fields, source: 'client' });
+  return Response.json({ ok: true });
+}</code></pre>
+<hr>
+<h2 id="drop-in-client-python">Drop-in client — Python</h2>
+<p>Save as <code>lognog.py</code>. Background-thread flush, fail-safe.</p>
+<pre><code># lognog.py — minimal, batched, fire-and-forget LogNog client.
+import atexit, json, os, threading, time, urllib.request
+from datetime import datetime, timezone
+
+_URL = os.environ.get("LOGNOG_URL", "").rstrip("/")
+_KEY = os.environ.get("LOGNOG_API_KEY", "")
+_APP = os.environ.get("LOGNOG_APP_NAME", "app")
+_INDEX = os.environ.get("LOGNOG_INDEX", _APP)
+_ENABLED = bool(_URL and _KEY)
+
+_queue, _lock = [], threading.Lock()
+
+def _flush():
+    with _lock:
+        if not _queue:
+            return
+        batch, _queue[:] = list(_queue), []
+    if not _ENABLED:
+        return
+    body = json.dumps([{"app_name": _APP, "timestamp": datetime.now(timezone.utc).isoformat(), **e} for e in batch]).encode()
+    req = urllib.request.Request(f"{_URL}/api/ingest/http", data=body, method="POST",
+        headers={"Content-Type": "application/json", "X-API-Key": _KEY, "X-Index": _INDEX, "X-App-Name": _APP})
+    try:
+        urllib.request.urlopen(req, timeout=5).read()
+    except Exception:
+        pass  # never raise from logging
+
+def log(message, level="info", **fields):
+    if not _ENABLED:
+        return
+    with _lock:
+        _queue.append({"message": message, "level": level, **fields})
+        due = len(_queue) &gt;= 50
+    if due:
+        threading.Thread(target=_flush, daemon=True).start()
+
+def _loop():
+    while True:
+        time.sleep(5); _flush()
+
+if _ENABLED:
+    threading.Thread(target=_loop, daemon=True).start()
+    atexit.register(_flush)</code></pre>
+<p><strong>Usage:</strong> <code>from lognog import log</code> then <code>log("User signed up", level="info", source="auth", user_id="u_123")</code>.</p>
+<hr>
+<h2 id="what-to-log">What to log</h2>
+<p>Send <strong>structured events</strong>, not raw strings. Every event should answer: <em>what happened, to whom/what, and with what outcome.</em> Attach fields, not string-concatenated values.</p>
+<p><strong>Do log</strong> (with the right level):</p>
+<ul><li><strong>App lifecycle</strong> (<code>info</code>): server start/stop, migrations run, config loaded, background job started/finished.</li><li><strong>Requests</strong> (<code>info</code>): one event per meaningful request — <code>source</code>, <code>route</code>, <code>method</code>, <code>status_code</code>, <code>duration_ms</code>, <code>user_id</code>.</li><li><strong>Business events</strong> (<code>info</code>): signups, logins, purchases, feature usage — with IDs and amounts as fields (<code>user_id</code>, <code>plan</code>, <code>amount_cents</code>, <code>feature</code>).</li><li><strong>Warnings</strong> (<code>warning</code>): retries, rate-limit hits, deprecated-path usage, fallbacks, slow queries.</li><li><strong>Errors</strong> (<code>error</code>): caught exceptions and failed operations — include <code>error_code</code>/<code>error_name</code>, a short <code>error_message</code>, <code>source</code>, and relevant IDs. Put the stack in a <code>stack</code> field (truncate to ~2KB).</li><li><strong>Critical</strong> (<code>critical</code>): outages, data corruption, payment/webhook failures that need a human now.</li></ul>
+<p><strong>Don't log:</strong></p>
+<ul><li>Secrets, tokens, passwords, full card numbers, or raw PII. Mask/omit them (<code>user_id</code> is fine; email/SSN is not unless intended and consented).</li><li>High-cardinality debug noise in production (<code>debug</code> should be off in prod).</li><li>Giant blobs. Truncate <code>message</code> to ~2KB and large fields.</li></ul>
+<p><strong>Field naming:</strong> snake_case, stable names, primitive values. Good: <code>user_id</code>, <code>status_code</code>, <code>duration_ms</code>, <code>error_code</code>, <code>route</code>, <code>plan</code>. This lets a human write <code>search app_name=my-app status_code&gt;=500 | stats count by route</code>.</p>
+<hr>
+<h2 id="verify-it-works">Verify it works</h2>
+<ol><li><strong>Send a test event</strong> (the curl above, or <code>logger.info('LogNog integration test', { source: 'setup', test: true })</code>). A <code>200</code> with <code>{"accepted":1}</code> means the key + endpoint are correct.</li><li><strong>Confirm in the UI:</strong> open LogNog → <strong>Search</strong>, run: ``<code> search app_name=my-app </code>`<code> (or </code>search index=my-app`). Your event should appear within a few seconds.</li><li><strong>Confirm the source registered:</strong> <strong>Data Sources</strong> now lists your app/index with a recent "Last Seen".</li><li><strong>Sanity queries</strong> to prove the fields are structured: ``<code> search app_name=my-app | stats count by level search app_name=my-app severity&lt;=3 | stats count by source | sort -count </code>``</li></ol>
+<p>If nothing shows: check <code>LOGNOG_URL</code> has no trailing <code>/api/...</code> path, the key is valid (a <code>401</code> means it's wrong), the body is a JSON <strong>array</strong>, and events were flushed (the clients flush on interval/shutdown — call <code>flush()</code> in short-lived scripts).</p>
+<hr>
+<h2 id="machine-readable-contract">Machine-readable contract</h2>
+<p><code>GET {LOGNOG_URL}/api/ingest/schema</code> returns JSON describing the endpoint, headers, event fields, and level→severity map — parse it to configure programmatically without scraping this doc.</p>
+<hr>
+<p><em>This guide is served live at <code>{LOGNOG_URL}/api/ingest/guide</code>. LogNog brand: chocolate/cream, warm. Questions a human can answer live in the in-app "Ask LogNog" help bot.</em></p>
+    <div class="foot">LogNog user guide · <span class="mono">v0.9.0</span> · updated 2026-07-03</div>
+  </main>
+</div>
+<script>
+  (function(){
+    var links=[].slice.call(document.querySelectorAll('.toc a'));
+    var search=document.querySelector('.toc-search');
+    if(search){search.addEventListener('input',function(){
+      var q=search.value.toLowerCase();
+      links.forEach(function(a){a.style.display=a.textContent.toLowerCase().indexOf(q)>-1?'':'none';});
+    });}
+    var ids=links.map(function(a){return a.getAttribute('href').slice(1);});
+    function spy(){
+      var cur=ids[0];
+      for(var i=0;i<ids.length;i++){
+        var el=document.getElementById(ids[i]);
+        if(el && el.getBoundingClientRect().top<=120) cur=ids[i];
+      }
+      links.forEach(function(a){a.classList.toggle('active',a.getAttribute('href').slice(1)===cur);});
+    }
+    document.addEventListener('scroll',spy,{passive:true});
+    window.addEventListener('resize',spy);
+    spy();
+  })();
+</script>
+</body>
+</html>

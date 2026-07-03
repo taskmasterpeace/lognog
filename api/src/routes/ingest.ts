@@ -20,22 +20,46 @@ const router = Router();
 //   GET /api/ingest/guide   -> the full markdown integration guide
 //   GET /api/ingest/schema  -> the machine-readable ingest contract (JSON)
 // ---------------------------------------------------------------------------
+function firstExisting(candidates: string[]): string | null {
+  return candidates.find((p) => existsSync(p)) || null;
+}
 function agentGuidePath(): string | null {
-  const candidates = [
+  return firstExisting([
     path.join(process.cwd(), 'agent-guide.md'),                       // baked into the image
     path.join(process.cwd(), '..', 'docs', 'LOGNOG-AGENT-GUIDE.md'),  // dev (repo)
     path.join(process.cwd(), 'docs', 'LOGNOG-AGENT-GUIDE.md'),
-  ];
-  return candidates.find((p) => existsSync(p)) || null;
+  ]);
+}
+function agentGuideHtmlPath(): string | null {
+  return firstExisting([
+    path.join(process.cwd(), 'agent-guide.html'),
+    path.join(process.cwd(), '..', 'docs', 'LOGNOG-AGENT-GUIDE.html'),
+    path.join(process.cwd(), 'docs', 'LOGNOG-AGENT-GUIDE.html'),
+  ]);
 }
 
-router.get('/guide', (_req: Request, res: Response) => {
-  const p = agentGuidePath();
-  if (!p) {
+// Content-negotiated: a BROWSER gets the styled, self-contained HTML page (no
+// login required — this lives under the public /api/ingest carve-out); curl and
+// AI agents get clean markdown. `?format=html|md` forces either.
+router.get('/guide', (req: Request, res: Response) => {
+  const fmt = String(req.query.format || '').toLowerCase();
+  const wantsHtml = fmt === 'html' || (fmt !== 'md' && fmt !== 'markdown' &&
+    req.accepts(['text/markdown', 'text/html']) === 'text/html');
+
+  if (wantsHtml) {
+    const htmlPath = agentGuideHtmlPath();
+    if (htmlPath) {
+      try {
+        return res.type('text/html; charset=utf-8').send(readFileSync(htmlPath, 'utf8'));
+      } catch { /* fall through to markdown */ }
+    }
+  }
+  const mdPath = agentGuidePath();
+  if (!mdPath) {
     return res.status(404).type('text/plain').send('LogNog agent guide is not available on this instance.');
   }
   try {
-    return res.type('text/markdown; charset=utf-8').send(readFileSync(p, 'utf8'));
+    return res.type('text/markdown; charset=utf-8').send(readFileSync(mdPath, 'utf8'));
   } catch {
     return res.status(500).type('text/plain').send('Failed to read the agent guide.');
   }
