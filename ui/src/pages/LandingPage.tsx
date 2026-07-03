@@ -36,9 +36,9 @@ const integrations = [
 ];
 
 const shots = [
-  { src: '/guide-screenshots/search-page.jpg', label: 'Search', blurb: 'Pipe a query, watch it resolve in milliseconds.' },
-  { src: '/guide-screenshots/dashboard-view.jpg', label: 'Dashboards', blurb: 'Compose panels that update on their own.' },
-  { src: '/guide-screenshots/alerts-page.jpg', label: 'Alerts', blurb: 'Get told the moment something goes quiet — or loud.' },
+  { src: '/shot-search.jpg', label: 'Search', blurb: 'Pipe a query, watch it resolve in milliseconds.', pos: 'object-top' },
+  { src: '/guide-screenshots/dashboard-view.jpg', label: 'Dashboards', blurb: 'Compose panels that update on their own.', pos: 'object-[46%_32%]' },
+  { src: '/shot-alerts.jpg', label: 'Alerts', blurb: 'Get told the moment something goes quiet — or loud.', pos: 'object-top' },
 ];
 
 const comparison = [
@@ -169,7 +169,7 @@ export default function LandingPage() {
                 </div>
                 <div className="lg:w-3/5">
                   <div className="aspect-[2/1] overflow-hidden rounded-xl border border-nog-700/80 bg-nog-900 shadow-2xl shadow-black/40 ring-1 ring-honey-500/5">
-                    <img src={shot.src} alt={`LogNog ${shot.label}`} className="h-full w-full object-cover object-[46%_32%]" loading="lazy" />
+                    <img src={shot.src} alt={`LogNog ${shot.label}`} className={`h-full w-full object-cover ${shot.pos}`} loading="lazy" />
                   </div>
                 </div>
               </div>
