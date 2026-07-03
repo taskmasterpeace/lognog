@@ -8,6 +8,7 @@ import assistant from './ai/assistant.js';
 import nogchat from './ai/nogchat.js';
 import agents from './ai/agents.js';
 import errorDiagnosis from './ai/error-diagnosis.js';
+import helpbot from './ai/helpbot.js';
 
 const router = Router();
 
@@ -20,5 +21,6 @@ router.use('/', assistant);
 router.use('/', nogchat);
 router.use('/', agents);
 router.use('/', errorDiagnosis);
+router.use('/', helpbot);
 
 export default router;

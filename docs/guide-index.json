@@ -1,0 +1,669 @@
+{
+  "$schema": "ship-helpbot/guide-index@1",
+  "source": "D:/git/lognog/docs/user-guide/LogNog-User-Guide.md",
+  "product": "LogNog",
+  "version": "0.9.0",
+  "builtAt": "2026-07-03T16:13:21.659Z",
+  "count": 56,
+  "sections": [
+    {
+      "id": "table-of-contents",
+      "title": "Table of contents",
+      "level": 2,
+      "anchor": "table-of-contents",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide"
+      ],
+      "text": "1. Overview\n2. Quick Start\n3. User Roles and Permissions\n4. Navigation Guide\n5. Core Concepts\n6. Main User Workflows\n7. Feature Reference\n - 7.1 Search & Explore\n - 7.2 The DSL Query Language\n - 7.3 Saved Searches\n - 7.4 Dashboards\n - 7.5 Dashboard Studio\n - 7.6 Alerts\n - 7.7 Silences\n - 7.8 Anomaly Detection\n - 7.9 Synthetic Monitoring\n - 7.10 Analytics\n - 7.11 Reports\n - 7.12 Data Sources & Onboarding\n - 7.13 The LogNog Windows Agent (LogNog In)\n - 7.14 Data Models (CIM)\n - 7.15 Knowledge\n - 7.16 Assets\n - 7.17 Identities\n - 7.18 AI features (AI Agent, NogChat, NL→DSL)\n - 7.19 MCP server for Claude Desktop\n8. Admin Guide\n9. Examples and Scenarios\n10. Troubleshooting\n11. FAQ\n12. Glossary\n13. Known Gaps, Unclear Areas, and Suggested Improvements\n14. Documentation Maintenance Notes\n\n---",
+      "tokens": 134
+    },
+    {
+      "id": "1-overview",
+      "title": "1. Overview",
+      "level": 2,
+      "anchor": "1-overview",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide"
+      ],
+      "text": "LogNog is a self-hosted log-management platform — think of it as a friendlier Splunk you run on your own hardware. You point your apps, servers, routers, and devices at LogNog; it stores every log line; and then you search, chart, alert on, and report against those logs from a warm, clean web interface.\n\nWhat it's for. When something breaks — a website goes down, a payment fails, a server floods with errors, someone tries to break into your VPN — the evidence is in your logs. LogNog gives you one place to ask \"what just happened?\" and get an answer in seconds instead of SSH-ing into ten machines. It also watches for trouble on your behalf (alerts, anomaly detection, uptime checks) so you hear about problems before your users do.\n\nWho it's for.\n\n- Homelab and small-business owners who want Splunk-style power without Splunk's price tag and without sending their data to anyone's cloud.\n- Developers who want their app's logs (errors, signups, payments, performance) searchable in one place.\n- IT and security teams who need to investigate incidents, monitor uptime, and keep an audit trail.\n\nThe core value / job to be done. Get every log you care about into one searchable home, then answer questions and get alerted — all on infrastructure you control. Everything runs locally: your data never leaves your network, the AI features can run against a local model, and there are no per-query fees.\n\nDocumentation status. This is the first versioned edition of the full guide, written against LogNog v0.9.0. Each feature below is honestly labeled Available, Partially available, Planned, or Unclear based on what the running product actually does.\n\n\n\n---",
+      "tokens": 277
+    },
+    {
+      "id": "2-quick-start",
+      "title": "2. Quick Start",
+      "level": 2,
+      "anchor": "2-quick-start",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide"
+      ],
+      "text": "The fastest path from \"logged in\" to \"I can see and search my logs.\"",
+      "tokens": 14
+    },
+    {
+      "id": "before-you-begin",
+      "title": "Before you begin",
+      "level": 3,
+      "anchor": "before-you-begin",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide",
+        "2. Quick Start"
+      ],
+      "text": "- Access to a LogNog site. In production that's https://logs.machinekinglabs.com. If you're running your own copy, it's usually http://localhost (or your server's address).\n- An account. If you're the very first person on a brand-new LogNog, you'll create the admin account yourself (see below). Otherwise an admin gives you a username and password.\n- Something to send logs (optional for exploring) — an app, a device, or the built-in demo-data generator.",
+      "tokens": 71
+    },
+    {
+      "id": "first-access-sign-in",
+      "title": "First access (sign in)",
+      "level": 3,
+      "anchor": "first-access-sign-in",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide",
+        "2. Quick Start"
+      ],
+      "text": "1. Open the LogNog site in your browser.\n2. If this is a brand-new install with no accounts yet, you'll land on a Setup screen titled \"Create your admin account.\" Enter a username, email, and a password of at least 8 characters, then click Create Admin Account. You're logged in automatically as an administrator.\n3. Otherwise, on the Sign in screen enter your Username or Email and Password and click Sign In.\n\nThe default local development credentials are username admin, password admin — change these immediately in production.",
+      "tokens": 88
+    },
+    {
+      "id": "the-welcome-wizard-first-login",
+      "title": "The welcome wizard (first login)",
+      "level": 3,
+      "anchor": "the-welcome-wizard-first-login",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide",
+        "2. Quick Start"
+      ],
+      "text": "The first time you sign in, a \"Let's get you started!\" wizard appears. It walks you through four quick steps:\n\n1. Welcome — a summary of what you'll set up. Click Get Started.\n2. Choose Your Data Source — pick Generate Demo Data (creates 500 realistic sample logs so you have something to explore right away) or Connect Real Logs (shows you the syslog, HTTP, and agent options for later).\n3. Create Your First Dashboard — tick one or more starter templates (System Overview is pre-selected).\n4. Set Up Alerts (optional) — tick any pre-built alerts you want (Security, Errors, Performance, Availability, System).\n\nYou can Skip Setup at any time, and re-run the wizard later from Settings → Preferences → Show Welcome Wizard Again.",
+      "tokens": 124
+    },
+    {
+      "id": "first-task-run-your-first-search",
+      "title": "First task — run your first search",
+      "level": 3,
+      "anchor": "first-task-run-your-first-search",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide",
+        "2. Quick Start"
+      ],
+      "text": "1. In the left sidebar, under Explore, click Search.\n2. In the query box, leave the default search (which means \"all logs\") or type a simple query like search severity<=3 (errors and worse).\n3. Set the time range (top right of the search bar) to something like Last 24 hours.\n4. Click Search (or press Ctrl+Enter).",
+      "tokens": 56
+    },
+    {
+      "id": "what-success-looks-like",
+      "title": "What success looks like",
+      "level": 3,
+      "anchor": "what-success-looks-like",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide",
+        "2. Quick Start"
+      ],
+      "text": "You'll see a results count (e.g. \"1,204 results in 87ms\"), a small timeline histogram of events over time, and your log lines below. If you generated demo data, you'll see a healthy mix of web, database, firewall, and auth logs. Click any value in a log line to filter by it. Congratulations — you're searching.\n\n\n\n---",
+      "tokens": 56
+    },
+    {
+      "id": "3-user-roles-and-permissions",
+      "title": "3. User Roles and Permissions",
+      "level": 2,
+      "anchor": "3-user-roles-and-permissions",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide"
+      ],
+      "text": "LogNog has three built-in roles. Your role is set by an administrator (the first person to set up LogNog is automatically an admin).\n\n| Role | What they can do | What they cannot do | Notes |\n|------|------------------|---------------------|-------|\n| Admin | Everything: search, dashboards, alerts, reports; plus manage users, create/revoke API keys, configure notification channels, AI settings, GeoIP, system settings, and generate/clear/delete log data. | — (full access) | The Users, Data, GeoIP, System, and AI tabs in Settings are admin-only. |\n| User | Search and view logs; create and edit dashboards, alerts, saved searches, reports; manage their own account and preferences. | Manage other users; create/revoke API keys for the whole system; change system/AI settings; generate or delete log data. | The standard role for most people. |\n| Read Only | View logs and dashboards. | Create or edit dashboards, alerts, reports, or any configuration. | Good for stakeholders who should see data but not change anything. |\n\nYour current role is shown in the sidebar under your username, and in Settings → Account. Role names in the system are admin, user, and readonly. The MCP integration and API keys respect these same roles.\n\n---",
+      "tokens": 199
+    },
+    {
+      "id": "4-navigation-guide",
+      "title": "4. Navigation Guide",
+      "level": 2,
+      "anchor": "4-navigation-guide",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide"
+      ],
+      "text": "The left sidebar groups every page into five collapsible sections. Each group remembers whether you left it open or closed.\n\n| Area / Page | Group | Purpose | Who uses it | Common actions |\n|-------------|-------|---------|-------------|----------------|\n| Search | Explore | Run DSL queries, live-tail, explore fields | Everyone | Search, filter, export, save |\n| Saved Searches | Explore | Store, schedule, and reuse queries | Everyone | Run, edit, turn into alert/report/panel |\n| Dashboards | Explore | Browse, create, and open dashboards | Everyone | Open, create, import, duplicate |\n| Alerts | Monitor | Rules that notify you when conditions are met | User/Admin | Create, test, enable, snooze |\n| Anomaly Detection | Monitor | Learn \"normal\" and flag unusual behavior (UEBA) | User/Admin | Run detection, review, mark true/false |\n| Synthetic | Monitor | Proactive uptime checks (HTTP/API/TCP) | User/Admin | Create test, run now, view results |\n| Analytics | Analyze | Live metrics: volume, severity, top hosts/apps | Everyone | Read charts, click to drill down |\n| Reports | Analyze | Generate and schedule emailed reports | User/Admin | Generate, schedule, export HTML |\n| Data Sources | Configure | See active log sources, indexes, volumes; add new sources | User/Admin | Add source, view source's logs, mute |\n| Data Models | Configure | CIM: normalize field names across sources | User/Admin | Define models, map fields |\n| Knowledge | Configure | Field extractions, event types, tags, lookups, workflow actions, source annotations | User/Admin | Create/edit knowledge objects |\n| Assets | Configure | Inventory of servers/devices discovered from logs | User/Admin | Discover, add, set criticality |\n| Identities | Configure | Inventory of users/accounts discovered from logs | User/Admin | Discover, add, flag privileged |\n| AI Agent | Tools | Conversational AI assistant that investigates your logs | Everyone | Chat, pick a persona |\n| AI Onboarding | Tools | Guided help to instrument an app for logging | Developers | Answer questions, get code |\n| Documentation | Tools | In-app reference (DSL, guides) | Everyone | Read reference |\n| Settings (gear, bottom) | — | Preferences, account, notifications; admin config | Everyone (admin extras) | Configure |\n| NogChat (floating, bottom-right) | — | Always-available help + query assistant | Everyone | Ask questions |\n\nThe sidebar footer shows the storage backend (ClickHouse) and reminds you that syslog ingest listens on port 514. On mobile, the sidebar collapses behind a hamburger menu.\n\n\n\n---",
+      "tokens": 423
+    },
+    {
+      "id": "5-core-concepts",
+      "title": "5. Core Concepts",
+      "level": 2,
+      "anchor": "5-core-concepts",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide"
+      ],
+      "text": "Only the terms you actually need to use LogNog.\n\n| Term | Meaning | Example |\n|------|---------|---------|\n| Log / event | One line of activity from an app or device, stored as a row with fields. | Failed password for admin from 203.0.113.5 |\n| Field | A named piece of a log — hostname, severity, message, or any custom value you send. | hostname=web-01, severity=3, user=admin |\n| Index | A named \"folder\" that groups related logs. Created automatically on the first log; you never pre-provision one. | hey-youre-hired, main, vercel |\n| Source | A single app/device sending logs (identified by app name + hostname). Appears automatically under Data Sources. | nginx on web-01 |\n| Severity | Syslog severity 0–7, low number = more urgent. | 0 Emergency … 3 Error … 6 Info … 7 Debug |\n| DSL | LogNog's Splunk-style query language: search … | stats … | sort …. | search severity<=3 | stats count by hostname |\n| Pipe (|) | Passes results from one command to the next, like a conveyor belt of filters. | search | stats count | sort -count |\n| Time range | The window of time your search covers (e.g. last 15 min, last 7 days). Chosen with the time picker. | -24h to now |\n| Dashboard | A saved page of panels (charts/tables), each backed by a query. | \"System Overview\" |\n| Panel | One visualization on a dashboard (bar, pie, stat, table, etc.). | \"Errors by host\" bar chart |\n| Alert | A rule that runs a query on a schedule and notifies you when a condition is met. | \"More than 10 failed logins in 5 min\" |\n| Silence | A temporary mute for alerts — globally, per host, or per alert. | \"Silence host web-01 for 2 hours\" |\n| API key | A secret token that lets an app send logs (or an integration read data) without a password. | lnogabc123… |\n| Lookup | A translation table that enriches logs (e.g. IP → location, status code → meaning). | 192.168.1.20 → \"John's workstation\" |\n\n---",
+      "tokens": 360
+    },
+    {
+      "id": "workflow-investigate-an-incident-search-context-filter",
+      "title": "Workflow: Investigate an incident (search → context → filter)",
+      "level": 3,
+      "anchor": "workflow-investigate-an-incident-search-context-filter",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide",
+        "6. Main User Workflows"
+      ],
+      "text": "Goal: Find out what happened around a problem and narrow to the root cause.\nWho uses this: Everyone.\nWhen to use it: A service errored, a user complained, an alert fired.\nSteps:\n1. Open Search.\n2. Start broad: search severity<=3 with a time range covering the incident.\n3. Read the timeline histogram at the top — spikes tell you when. Click a bar to zoom into that moment, or drag across bars to select a range.\n4. In a suspicious log line, click a value (e.g. a hostname) to add it as a filter, or use the field sidebar on the left to see which values are most common.\n5. On a key log line, choose \"Events ±5 min on this host\" (Nearby Events) to see everything that happened around it on the same machine.\n6. Refine with pipes: search host=web-01 severity<=3 | stats count by appname | sort -count.\n\nExample: A payment page is failing. You run search index=my-app severity<=3, spot a spike at 14:05, click the spike to zoom, click \"Nearby Events\" on the first error, and discover the database timed out at 14:04.\nExpected result: A short list of the events that explain the problem.\nCommon mistakes: Time range too narrow (widen it); using an alias in a complex spot (use hostname, not host, if a filter behaves oddly).\nTroubleshooting: No results? Start with search , widen the time range, then add conditions one at a time.",
+      "tokens": 240
+    },
+    {
+      "id": "workflow-turn-a-search-into-ongoing-monitoring-search-save-alert",
+      "title": "Workflow: Turn a search into ongoing monitoring (search → save → alert)",
+      "level": 3,
+      "anchor": "workflow-turn-a-search-into-ongoing-monitoring-search-save-alert",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide",
+        "6. Main User Workflows"
+      ],
+      "text": "Goal: Get notified automatically the next time this problem happens.\nWho uses this: User/Admin.\nSteps:\n1. Build the query on the Search page (e.g. search appname=sshd message\"Failed password\" | stats count by sourceip | filter count>10).\n2. Click the Alert button in the results toolbar (or go to Alerts → Create Alert). The query and time range come with you.\n3. Set a trigger condition (e.g. Number of Results is greater than 10), a schedule (e.g. every 5 minutes), a severity, and at least one action (email, notification channel, webhook…).\n4. Click Test Alert to preview whether it would fire, then Create Alert.\n\nExample: Alert when SSH brute-force is detected, sending a Slack message via a notification channel.\nExpected result: A live alert that runs on schedule and notifies you when tripped.\nCommon mistakes: Forgetting to add an action (the alert will fire silently); setting the schedule tighter than the time range needs.\nTroubleshooting: Use Test Alert and the Alert History modal to confirm it evaluates as expected.",
+      "tokens": 168
+    },
+    {
+      "id": "workflow-build-a-dashboard-visually-studio-canvas-save",
+      "title": "Workflow: Build a dashboard visually (Studio → canvas → save)",
+      "level": 3,
+      "anchor": "workflow-build-a-dashboard-visually-studio-canvas-save",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide",
+        "6. Main User Workflows"
+      ],
+      "text": "Goal: Create an at-a-glance operational view without editing config.\nWho uses this: User/Admin.\nSteps:\n1. Open Dashboards → Open Studio (or Dashboard Studio directly).\n2. On the left, type or click a starter query (e.g. Top hosts) and Run it — a live preview appears.\n3. Use Visualize as to flip the chart type; LogNog marks a Recommended type for your data.\n4. Click Add to canvas. Repeat for more panels, or use the Field Explorer to make a panel from any field in one click (\"Top hostname\", \"hostname over time\").\n5. Drag panels to reorder, duplicate, or remove them on the right.\n6. Click Save dashboard, name it (or pick an existing one), and you're done.\n\nExample: A \"Homelab Overview\" with events-over-time, top hosts, errors by app, and a total-count stat — built in about a minute.\nExpected result: A saved, shareable dashboard.\nCommon mistakes: Saving with zero panels (the Save button is disabled until you add one).\nTroubleshooting: If a preview errors, fix the query in the editor — the preview updates live.",
+      "tokens": 175
+    },
+    {
+      "id": "workflow-connect-a-new-app-get-a-key-send-logs-verify",
+      "title": "Workflow: Connect a new app (get a key → send logs → verify)",
+      "level": 3,
+      "anchor": "workflow-connect-a-new-app-get-a-key-send-logs-verify",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide",
+        "6. Main User Workflows"
+      ],
+      "text": "Goal: Start collecting logs from one of your applications.\nWho uses this: Developers/Admins.\nSteps:\n1. Go to Settings → API Keys (or Account → API Keys) and create a key. Copy it — it's shown only once.\n2. Point your app at POST /api/ingest/http with the header X-API-Key: <your key> and a JSON array of logs (see the curl example in §7.12).\n3. Optionally add X-Index: my-app to group the logs under a named index.\n4. In Search, run search index=my-app to confirm they arrived. The source also appears under Data Sources on its own.\n\nExample: A Next.js app posts batches of 50 events every 5 seconds; they land in the my-app index and show up under Data Sources within seconds.\nExpected result: {\"accepted\":N,\"index\":\"my-app\"} from the API, and searchable logs.\nCommon mistakes: Not flushing buffered logs before a script exits (logs get lost); reading the API key from env before it's loaded.\nTroubleshooting: A 401 Unauthorized means the key is missing or wrong; check the X-API-Key header and the key in Settings.\n\n---",
+      "tokens": 173
+    },
+    {
+      "id": "7-feature-reference",
+      "title": "7. Feature Reference",
+      "level": 2,
+      "anchor": "7-feature-reference",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide"
+      ],
+      "text": "Every feature gets: what it does · where to find it · how to use it · a concrete example · inputs/outputs · admin notes · limitations.",
+      "tokens": 27
+    },
+    {
+      "id": "71-search-explore",
+      "title": "7.1 Search & Explore",
+      "level": 3,
+      "anchor": "71-search-explore",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide",
+        "7. Feature Reference"
+      ],
+      "text": "Status: Available.\nWhat it does: The heart of LogNog. Write a query in the DSL or plain English (AI mode), pick a time range, and see matching logs — as a log view, a table, or raw JSON — plus a timeline of when events occurred. Explore fields, live-tail incoming logs, and turn any search into an alert, report, or export.\nWhere to find it: Sidebar → Explore → Search (/search). The page title is \"Search & Explore.\"\n\nHow to use it:\n1. Choose a mode with the toggle top-right: DSL (query syntax) or AI (natural language — LogNog writes the query for you).\n2. Type your query. In DSL mode you get autocomplete; a history dropdown remembers your recent queries and a templates dropdown offers ready-made queries (Basic, Statistics, Time Series, Data Shaping, Advanced).\n3. Set the time range with the picker (relative like -15m, -24h, -7d, or an absolute window).\n4. Click Search (or Ctrl+Enter).\n\nReading the results:\n- The header shows the result count and execution time (e.g. \"1,204 results in 87ms\").\n- A timeline histogram (\"Events over time\") shows volume; click a bar to zoom into that bucket or drag to select a custom range.\n- Toggle the view with Log / Table / JSON.\n- The field sidebar (left) lists discovered fields and their top values; click to filter. Toggle it with the panel icon.\n- Click a value inside a log line to add it as a filter (a chip appears; click the × to remove it).\n- On any log line, use \"Events ±5 min on this host\" (Nearby Events) to see the surrounding activity on that machine.\n\nLive tail: Click the Live button (or press l) to stream new logs in real time. It shows a per-second rate and total; scroll up to pause (auto-resumes after 5 seconds), or use Pause / Resume / Clear / Stop.\n\nExport & share:\n- Copy results as JSON, CSV, or NDJSON (NDJSON preserves nested fields).\n- curl copies the search as a runnable curl command (replace <YOURTOKEN> with an API token).\n- The current query and time range live in the URL (?q=…&earliest=…&latest=…), so you can bookmark or share a search link — it re-runs automatically when opened.\n- Save the search, or one-click Alert / Report from the toolbar.\n\nKeyboard shortcuts (press ? to see them; disabled while typing in a field):\n\n| Key | Action |\n|-----|--------|\n| / or Ctrl+K | Focus the query input |\n| t | Open the time range picker |\n| l | Toggle live tail |\n| Ctrl+Enter | Run the search |\n| ? | Show the shortcuts cheat sheet |\n| Esc | Close modals and dropdowns |\n\nSaving a search: Click Save, then give it a Name (required), optional Description, Folder, and Tags. Optionally toggle Schedule Search to precompute results on a cron (every 5 min up to daily).\n\nExample use case: search appname=nginx statuscode>=500 | stats count by url | sort -count | limit 10 — the top ten URLs throwing server errors.\nInputs: A DSL or natural-language query and a time range.\nOutputs: Matching log rows, counts/aggregations, a timeline, and exportable data.\nAdmin notes: Muting a source (in Data Sources) injects exclusion filters into everyone's searches so noisy sources disappear from results.\nLimitations: Very broad queries over long time ranges are slow — narrow the time range, add filters, or aggregate with stats. AI mode quality depends on a configured AI model.",
+      "tokens": 581
+    },
+    {
+      "id": "72-the-dsl-query-language",
+      "title": "7.2 The DSL Query Language",
+      "level": 3,
+      "anchor": "72-the-dsl-query-language",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide",
+        "7. Feature Reference"
+      ],
+      "text": "Status: Available.\nWhat it does: LogNog's Splunk-style query language. Every query starts with search and pipes results through transformation commands that compile to fast database SQL under the hood.\nWhere to find it: Used on the Search page; full reference in Documentation and in docs/DSLREFERENCE.md.\n\nShape of a query:\n``\nsearch <conditions> | command1 | command2 | command3\n`\n\nSearch operators: = (equals), != (not equals), > >= < <= (numeric), (contains / regex), ! (does not contain). Conditions are combined with implicit AND; AND, OR, and IN (a, b, c) are also supported. For OR-style matching you can also use regex alternation: hostname\"^(router|firewall)$\".\n\nField aliases (either form works): host→hostname, app→appname, src→sourceip, dst→destip, srcport→sourceport, dstport→destport, msg→message.\n\nCommands (all live today):\n\n| Command | What it does | Example |\n|---------|--------------|---------|\n| search | Start the query; filter by field conditions. | search severity<=3 host=web-01 |\n| filter / where | Filter again mid-pipeline. | … | where count>10 |\n| stats | Aggregate: count, sum, avg, min, max, dc (distinct count), values, earliest, latest, with by. | … | stats count by hostname |\n| sort | Order results (sort -count = descending by count; sort asc timestamp). | … | sort -count |\n| limit | Keep the first N rows. | … | limit 10 |\n| head / tail | First / last N rows. | … | head 100 |\n| table / fields | Choose which columns to show. | … | table timestamp hostname message |\n| dedup | Remove duplicates by field(s). | … | dedup hostname |\n| rename | Rename a column. | … | rename hostname as host |\n| top | Most common values of a field. | … | top 10 hostname |\n| rare | Least common values. | … | rare 10 hostname |\n| bin | Bucket a numeric/time field. | … | bin span=1h timestamp |\n| timechart | Time-bucketed aggregation for line/area charts. | … | timechart span=1h count |\n| rex | Extract fields from text with regex named groups. | … | rex field=message \"user=(?<user>\\w+)\" |\n| eval | Compute a new field. | … | eval mb=bytes/1024/1024 |\n| filldown | Fill blank values from the row above. | … | filldown hostname |\n| lookup | Enrich rows from a lookup table. | … | lookup geoip field=sourceip output country, city |\n| transaction | Group related events into transactions. | … | transaction host |\n\nSeverity levels: 0 Emergency, 1 Alert, 2 Critical, 3 Error, 4 Warning, 5 Notice, 6 Info, 7 Debug. Common filters: severity<=2 (critical+), severity<=4 (warnings+), severity<=6 (exclude debug).\n\nExample use case:\n`\nsearch message\"failed password\" | stats count by sourceip | sort -count | limit 20\n`\nThe twenty IPs with the most failed logins.\nInputs: A text query.\nOutputs: Rows, aggregations, or time series.\nAdmin notes: The compiler targets ClickHouse in the Docker deployment and SQLite in the single-machine \"Lite\" deployment; the DSL is the same either way.\nLimitations: Leading-wildcard/regex patterns (message\".error.\") are slow — prefer message\"error\". Not every Splunk command exists; the table above is the complete set. Some advanced patterns shown in older docs (e.g. hour(timestamp) grouping) are best expressed with bin/timechart`.",
+      "tokens": 541
+    },
+    {
+      "id": "73-saved-searches",
+      "title": "7.3 Saved Searches",
+      "level": 3,
+      "anchor": "73-saved-searches",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide",
+        "7. Feature Reference"
+      ],
+      "text": "Status: Available.\nWhat it does: Stores queries so you can rerun, schedule, share, and reuse them — and spin them into alerts, reports, or dashboard panels.\nWhere to find it: Sidebar → Explore → Saved Searches (/saved-searches). Also created from the Search page's Save button.\n\nHow to use it:\n1. Click New Saved Search (or Save from the Search page).\n2. Fill in Name, Query, optional Description, a Default Time Range, a Cache TTL (how long precomputed results stay fresh), an optional Schedule (with an Enabled toggle), Tags, and optionally Share with all users.\n3. Back on the list, each card shows the query, time range, version, run count, and cache status. Use Play to run it (cached or forced), or the ⋮ menu for Force Refresh, Edit, Duplicate, Create Alert, Add to Dashboard, Create Report, Delete.\n\nFiltering the list: Search by name/query/description, and toggle My Searches, Shared, Scheduled, or filter by Tags.\n\nExample use case: Save \"Top attacking IPs,\" schedule it every 15 minutes, and add it to a Security dashboard as a bar chart.\nInputs: A query plus metadata.\nOutputs: A reusable, optionally scheduled saved search with cached results.\nAdmin notes: Sharing makes a search visible to all users; scheduling precomputes results in the background.\nLimitations: Results modals show up to 100 rows; heavy scheduled searches add background load.",
+      "tokens": 221
+    },
+    {
+      "id": "74-dashboards",
+      "title": "7.4 Dashboards",
+      "level": 3,
+      "anchor": "74-dashboards",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide",
+        "7. Feature Reference"
+      ],
+      "text": "Status: Available.\nWhat it does: Saved pages of panels (charts, tables, stats) that visualize your logs, with time control, auto-refresh, drilldown, sharing, branding, and import/export.\nWhere to find it: Sidebar → Explore → Dashboards (/dashboards); open one to view it (/dashboards/:id).\n\nCreating a dashboard — four ways from the Dashboards page toolbar:\n- Open Studio — the visual builder (see §7.5).\n- Build from Index — a wizard that generates a dashboard from an index's structure.\n- Blank — an empty dashboard you fill with panels.\n- Import — load a dashboard someone exported as JSON.\n\nThere are also Starter Templates: System Overview, Network Traffic, Security Events, Application Logs. Clicking one pre-fills the create dialog.\n\nViewing & using a dashboard:\n- Time picker and Auto-Refresh (Off, 30s, 1m, 5m, 15m — with a live countdown; pauses for 30s after you interact, then resumes) sit in the header.\n- Refresh re-runs all panels; Share opens the share dialog; the Settings dropdown holds Edit Layout, Branding, Export JSON, Export PDF, Duplicate, Set as Default, and AI Insights.\n- Drilldown: click a bar, pie slice, table row, word, scatter point, funnel stage, or treemap node to jump into a filtered Search.\n- Variables: dashboards can define variables (text/number/date/query, single or multi-select) referenced in panel queries with $variable$; a variables bar appears above the panels.\n- Pages/tabs: a dashboard can have multiple pages (with emoji icons), always starting with an All Panels tab.\n\nPanel visualization types: table, bar, pie (donut), line/area, single stat, heatmap, gauge, word cloud, scatter, funnel, treemap. Each panel supports Fullscreen, View Origin, Edit, Duplicate, and Delete.\n\nEditing: turn on Edit Layout (a banner reads \"Drag panels to rearrange, resize from corners\"), then drag/resize panels, add pages, and use Add Panel (Title, Description, Query, and a visualization picker). Copy Panel pulls panels in from other dashboards. The Studio button jumps to the visual builder for the current dashboard.\n\nSharing: the share dialog can make a dashboard public (a token URL anyone can open) and optionally password-protect it. Public dashboards are read-only, render a subset of chart types, and show a \"Powered by LogNog\" footer. Branding lets you set a logo, accent color, and header color.\n\nExample use case: A public, password-protected \"Status\" dashboard for stakeholders showing uptime and error rates.\nInputs: Panels (each a query + visualization), time range, optional variables and branding.\nOutputs: A live, shareable, exportable (JSON/PDF) visual view.\nAdmin notes: \"Set as Default\" pins a dashboard as your landing dashboard. Public links bypass login — only share what's safe to expose.\nLimitations: Public view supports fewer chart types than the private view; PDF export renders the current on-screen layout.",
+      "tokens": 441
+    },
+    {
+      "id": "75-dashboard-studio",
+      "title": "7.5 Dashboard Studio",
+      "level": 3,
+      "anchor": "75-dashboard-studio",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide",
+        "7. Feature Reference"
+      ],
+      "text": "Status: Available. (Flagship, newer feature.)\nWhat it does: A visual, two-pane dashboard builder: search on the left with a live preview, drop panels onto a canvas on the right, reorder by dragging, then save to a new or existing dashboard — no config files, no guessing.\nWhere to find it: Dashboards → Open Studio, or /dashboards/studio. To edit an existing dashboard in Studio, use its Studio button or open /dashboards/studio?dashboard=<id>.\n\nHow to use it:\n1. Search & preview (left). Type a query (with autocomplete) or click a starter — Events over time, Top hosts, Errors by app, Total event count — and it runs automatically. The result renders as a live panel preview.\n2. Pick the visualization. Under \"Visualize as,\" flip between table, stat, line, area, bar, pie, gauge, heatmap, and word cloud. LogNog auto-suggests the best type and marks it Recommended with a sparkle.\n3. Name and add. The panel title auto-fills from the query (a \"smart title\" like \"Count by hostname\"); override it if you like, then click Add to canvas.\n4. Field Explorer. Below the preview, every field in your results appears as a pill with one-click buttons: \"Top <field>\" and \"<field> over time\" — instantly turning any field into a panel.\n5. Arrange (right). Panels you add appear on the Canvas. Drag to reorder, Duplicate, or Remove them; click a panel's title to load it back into the editor for tweaking.\n6. Save. Click Save dashboard, choose ➕ New dashboard (and name it) or an existing dashboard, and Studio lays the panels out for you (two per row). In edit mode the button reads Save changes and updates the existing dashboard in place — creating new panels, updating edited ones, and deleting removed ones.\n\nWhy it's easier than Splunk Dashboard Studio: there's no JSON/XML source to hand-edit and no separate \"data source\" objects to wire up. You literally search, see the panel, flip its chart type, and drop it on a canvas. The Field Explorer turns exploration into panels in a single click, and editing an existing dashboard is the same flow — so building and refining feel identical.\n\nExample use case: From search | stats count by appname, accept the recommended bar chart, click Add to canvas, then click \"Top severity\" in the Field Explorer to add a second panel — save both as \"App Health\" in under a minute.\nInputs: Queries and chart-type choices.\nOutputs: A new or updated dashboard with laid-out panels.\nAdmin notes: Works against live data, so previews reflect exactly what a viewer will see.\nLimitations: The canvas arranges panels in a simple two-per-row grid on save; fine-grained sizing/positioning is done afterward in the dashboard's Edit Layout mode.",
+      "tokens": 447
+    },
+    {
+      "id": "76-alerts",
+      "title": "7.6 Alerts",
+      "level": 3,
+      "anchor": "76-alerts",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide",
+        "7. Feature Reference"
+      ],
+      "text": "Status: Available.\nWhat it does: Rules that run a query on a schedule and notify you (or run an action) when a condition is met — with severity, throttling, testing, history, and silences.\nWhere to find it: Sidebar → Monitor → Alerts (/alerts).\n\nCreating an alert:\n1. Click + Create Alert (or arrive from the Search/Saved Search Alert button with the query pre-filled).\n2. Basic Information: Alert Name (required) and optional Description.\n3. Search Query: the DSL Query that finds what you care about.\n4. Trigger Condition:\n - Type — Number of Results, Number of Hosts, Custom (any results), or No Data (silence).\n - Condition — is greater than, is less than, is equal to, is not equal to, drops by, rises by.\n - Threshold — the number to compare against.\n5. Schedule: a Run Schedule (every minute up to daily) and a Time Range to Search (last 1 minute up to last 24 hours).\n6. Severity: Info, Low, Medium, High, or Critical.\n7. Throttling (optional): enable to suppress repeat notifications for N seconds (prevents alert fatigue).\n8. Actions (add one or more):\n - Notify (a notification channel or a custom Apprise URL → Slack, Discord, Telegram, PagerDuty, Teams, and 100+ services), with Title, Message, and Format (Plain/Markdown/HTML).\n - Email (recipient, subject, body).\n - Webhook (URL, GET/POST/PUT, optional custom JSON payload).\n - Script (a shell command — runs with the server's permissions; use with care).\n - Log (writes to LogNog's own logs).\n - On Login (shows a notification in the UI on next login, with an expiry).\n9. Click Test Alert to preview whether it would fire and see sample results, then Create Alert.\n\nMessage variables: action text supports {{variables}} — e.g. {{alertname}}, {{alertseverity}}, {{resultcount}}, {{timestamp}}, {{searchquery}}, log fields like {{hostname}}/{{message}}/{{sourceip}}, and stats like {{count}}/{{avg}}. Filters ({{count:comma}}, {{name:upper}}, {{ts:relative}}, {{severity:badge}}), aggregate helpers ({{results:sum:bytes}}), conditionals ({{#if …}}), loops ({{#each results}}), and even an AI summary ({{aisummary}}) are available. Use the VariableHelper button next to any message field.\n\nManaging alerts: the list shows severity, query, schedule, and trigger count. Per alert you can Run Now (▶), Snooze (quick 15 min–24 h, or \"More options\" for a custom silence), Enable/Disable, Edit, and Delete. Select several for bulk Enable/Disable. Alert History shows every time an alert fired and whether each action succeeded. Expanding an alert reveals its health: trigger condition, time range, Last Run, Last Triggered, and trigger count.\n\nExample use case: \"High Error Rate\" — search severity<=3 | stats count → Number of Results is greater than 100, every 5 minutes over the last 5 minutes, Critical, Notify a Slack channel with {{aisummary}}.\nInputs: A query, condition, schedule, severity, and actions.\nOutputs: Notifications/actions when tripped, plus history.\nAdmin notes: Notification channels are configured centrally in Settings → Notifications; email needs SMTP configured server-side; scripts run with API-server permissions.\nLimitations: \"No Data\" triggers depend on a source having sent data before; script actions are powerful and should be restricted to trusted admins.",
+      "tokens": 488
+    },
+    {
+      "id": "77-silences",
+      "title": "7.7 Silences",
+      "level": 3,
+      "anchor": "77-silences",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide",
+        "7. Feature Reference"
+      ],
+      "text": "Status: Available.\nWhat it does: Temporarily mutes alerts so maintenance windows or known issues don't spam you.\nWhere to find it: /silences (also reachable from an alert's Snooze → More options).\n\nHow to use it:\n1. Click + Create Silence.\n2. Pick a Silence Level: Global (all alerts), Host (enter a hostname), or Alert (pick a specific alert).\n3. Choose a Duration (1 hour, 4 hours, 24 hours, 1 week, or Indefinite) and optionally a Reason and Created By.\n4. Active silences appear as cards showing the level, target, reason, remaining time, and who created them; delete a card to end the silence early.\n\nExample use case: Silence host web-01 for 2 hours during a planned reboot.\nInputs: Level, target, duration, reason.\nOutputs: Suppressed alert notifications for the window.\nLimitations: Silences suppress notifications, not evaluation — the underlying condition is still checked.",
+      "tokens": 142
+    },
+    {
+      "id": "78-anomaly-detection",
+      "title": "7.8 Anomaly Detection",
+      "level": 3,
+      "anchor": "78-anomaly-detection",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide",
+        "7. Feature Reference"
+      ],
+      "text": "Status: Available (AI analysis requires a configured model).\nWhat it does: UEBA — \"User and Entity Behavior Analytics.\" LogNog learns each entity's normal baseline (logins per user, data per host, error rates per app, activity by time) and flags statistically unusual behavior, with optional AI risk scoring.\nWhere to find it: Sidebar → Monitor → Anomaly Detection (/anomaly).\n\nHow to use it:\n1. Click Calculate Baselines to learn what \"normal\" looks like from your history.\n2. Click Run Detection to scan for outliers.\n3. Review the stat cards (Total Anomalies, Critical, High Risk, Entities Affected) and charts (Anomaly Trend, Top Affected Entities).\n4. In the Recent Anomalies list, each row shows the entity, severity, anomaly type (Spike, Drop, Unusual Time, New Behavior, Peer Anomaly), the metric (observed vs expected), a deviation (σ), and a risk score. Filter by severity.\n5. Click Analyze (brain icon) for an AI risk assessment and suggested actions, and mark each anomaly a true positive (👎 confirm) or false positive (👍 dismiss) to improve accuracy.\n\nExample use case: A service account that normally has 0 failed logins suddenly has 50 in five minutes — flagged as a Spike with a high risk score.\nInputs: Historical logs (for baselines); your true/false feedback.\nOutputs: Ranked anomalies with explanations.\nAdmin notes: AI analysis uses the configured Ollama/OpenRouter model; baselines need enough history to be meaningful.\nLimitations: Without baselines or with sparse data, detection is limited; AI explanations require an AI model.",
+      "tokens": 242
+    },
+    {
+      "id": "79-synthetic-monitoring",
+      "title": "7.9 Synthetic Monitoring",
+      "level": 3,
+      "anchor": "79-synthetic-monitoring",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide",
+        "7. Feature Reference"
+      ],
+      "text": "Status: Available (Browser test type is Planned).\nWhat it does: Proactively tests that your websites, APIs, and services are up and responding correctly — like a robot user checking from the outside — and can alert after repeated failures.\nWhere to find it: Sidebar → Monitor → Synthetic (/synthetic).\n\nHow to use it:\n1. Click New Test.\n2. Enter a Test Name and optional description, then pick a type: HTTP (URL check), API (endpoint with assertions), TCP (port connectivity), or Browser (Planned).\n3. Configure the target (method + URL for HTTP/API; host + port for TCP), a Schedule (every minute up to daily via cron), and a Timeout.\n4. Set Alert after consecutive failures (1–10).\n5. Save. The dashboard shows Total Tests, Healthy, Avg Response, and a by-type breakdown. Each test card shows its status (success/failure/timeout/error), response time, and last run.\n6. Use Run now (▶) to test immediately, the play/pause toggle to enable/disable, and View results (bar-chart icon) to see the last 50 runs (timestamp, status, response time, status code, assertions passed/failed, error).\n\nExample use case: \"Production API Health\" — HTTP GET https://api.example.com/health every 5 minutes, alert after 3 consecutive failures.\nInputs: A target, schedule, timeout, and failure threshold.\nOutputs: Uptime/response history and (via alerts) notifications on failure.\nAdmin notes: Tests run from the LogNog server; Browser tests use Playwright and require backend support.\nLimitations: The assertion builder isn't fully exposed in the UI yet; scheduling granularity is limited to cron; Browser type is Planned.",
+      "tokens": 246
+    },
+    {
+      "id": "710-analytics",
+      "title": "7.10 Analytics",
+      "level": 3,
+      "anchor": "710-analytics",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide",
+        "7. Feature Reference"
+      ],
+      "text": "Status: Available.\nWhat it does: A live, auto-refreshing metrics dashboard summarizing your logs: volume, severity mix, and the busiest hosts and applications.\nWhere to find it: Sidebar → Analyze → Analytics (/stats). Two tabs: Analytics and Storage.\n\nHow to use it:\n- Stat cards: Total Logs, Last 24 Hours, Errors (24h), Active Hosts.\n- Charts: Log Volume (events per hour, total vs errors), Severity Distribution (donut — click a slice to search that severity), Top Hosts (bar — click to search that host), Top Applications (bar — click to search that app).\n- The page auto-refreshes (stats every 30s, trends every 60s); a \"Live\" indicator confirms this.\n- The Storage tab shows disk usage.\n\nExample use case: Spot an error spike in the last 24 hours, click the Error slice, and land in Search already filtered.\nInputs: None — it reads your existing logs.\nOutputs: Charts and drill-through links into Search.\nAdmin notes: An empty state (\"No data yet\") appears until logs are ingested.\nLimitations: Time windows are fixed (24h for trends, all-time for totals); drilldown is from charts, not the stat cards.",
+      "tokens": 183
+    },
+    {
+      "id": "711-reports",
+      "title": "7.11 Reports",
+      "level": 3,
+      "anchor": "711-reports",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide",
+        "7. Feature Reference"
+      ],
+      "text": "Status: Available (email delivery requires SMTP).\nWhat it does: Generates HTML reports from a query — view in the browser, print to PDF, download — and schedules them to be emailed automatically.\nWhere to find it: Sidebar → Analyze → Reports (/reports).\n\nHow to use it:\n- Generate now: click Generate Report, enter a Report Title, a Query, and a Time Range (last hour to last 30 days), then Preview (opens an in-browser HTML report you can print or make fullscreen) or Download the HTML.\n- Schedule: click Schedule, enter a Report Name, Query, a Schedule (every hour, every 6 hours, daily at midnight, daily at 8 AM, weekly, monthly), and Recipients (comma-separated emails), then Create Schedule.\n- Scheduled reports list their query, schedule, recipients, and last run; toggle each on/off or delete it.\n\nExample use case: A \"Daily Error Summary\" (search severity<=3 | stats count by hostname) emailed to the team every morning.\nInputs: A query, schedule, and recipients.\nOutputs: An HTML report (viewable/downloadable) and scheduled emails.\nAdmin notes: Email delivery needs SMTPHOST, SMTPPORT, SMTPUSER, SMTPPASS, and SMTPFROM set on the server; in production, reports are triggered from inside the API container which holds the SMTP credentials.\nLimitations: No manual \"run now\" for a scheduled report from the UI; no built-in report templates (you supply the query); no email preview before scheduling.",
+      "tokens": 223
+    },
+    {
+      "id": "712-data-sources-onboarding",
+      "title": "7.12 Data Sources & Onboarding",
+      "level": 3,
+      "anchor": "712-data-sources-onboarding",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide",
+        "7. Feature Reference"
+      ],
+      "text": "Status: Available.\nWhat it does: Shows every source currently sending logs (with indexes and volumes) and walks you through connecting new ones. The key idea: all you need is an API key. You never pre-declare or request access to an index — indexes are created automatically on the first log, and sources appear here on their own.\nWhere to find it: Sidebar → Configure → Data Sources (/data-sources). Three tabs: Active Sources, Source Templates, Source Config.\n\nThe simplified onboarding message (verbatim from the UI): \"All you need is an API key. There's nothing to provision — no index to create or request access to. Name a key, paste it into your app, and start sending logs. They'll show up under Data Sources automatically.\" The optional X-Index header just groups logs into a named index (like a folder); leave it off and logs land in a default index.\n\nActive Sources tab:\n- An index summary row (each index is clickable → Search filtered to it) with log counts and a mute toggle.\n- A table of active sources: Status (green Active <15 min, yellow Recent, orange Inactive, gray Stale), Source (app + hostname), Index, Protocol (http/syslog/agent…), Logs (7d), Errors, Last Seen, and Actions (mute, or View Logs which opens Search scoped to that source).\n- If nothing is sending yet, an empty state shows three ways to start: Syslog (port 514), HTTP API (POST /api/ingest/http with X-Index), and the LogNog In Agent.\n\nAdd Data Source wizard — click Add Data Source:\n1. Choose Type: HTTP / JSON (popular), Syslog, LogNog Agent, Supabase, or Vercel.\n2. Configure: create a new API key (or pick an existing one) right in the wizard, see the read-only endpoint URL, and optionally set an Index Name (with the reassurance that a blank index just uses a default and any name auto-creates). Syslog and Agent show their own setup notes (port 514; download the agent).\n3. Test & code snippets: paste sample JSON to Preview Fields, click Send Test Event (\"Event received! View in Search\" on success), and copy ready-made curl / Node.js / Python / Go snippets with your key and index pre-filled.\n\nSource types and how they connect:\n\n| Type | How logs arrive |\n|------|-----------------|\n| HTTP / JSON | POST /api/ingest/http with X-API-Key and a JSON array; optional X-Index. Best for apps. |\n| Syslog | Point routers/firewalls/servers at UDP/TCP port 514. Best for network gear (pfSense, Synology, UniFi, rsyslog). |\n| LogNog Windows Agent | Install the agent to ship log files and Windows Event Logs (see §7.13). |\n| Supabase | Supabase Log Drains → POST /api/ingest/supabase; index supabase (Postgres, Auth, Storage, Realtime, Edge Functions). |\n| Vercel | Vercel Log Drains → POST /api/ingest/vercel; index vercel (Static, Lambda, Edge, Build). |\n\ncurl example (HTTP/JSON):\n``bash\ncurl -X POST https://logs.machinekinglabs.com/api/ingest/http \\\n -H \"Content-Type: application/json\" \\\n -H \"X-API-Key: lnogyourkeyhere\" \\\n -H \"X-Index: my-app\" \\\n -d '[{\"level\":\"info\",\"message\":\"Hello from my app!\",\"userId\":\"user123\"}]'\n# → {\"accepted\":1,\"index\":\"my-app\"}\n`\nThen confirm with search index=my-app on the Search page.\n\nField mapping niceties: LogNog auto-maps common field names — timestamp/time/@timestamp/date → timestamp; level/severity/loglevel → severity (mapped to syslog levels); message/msg/log/text/body → message; hostname/host/source/server → hostname. Everything else is stored as searchable structured data.\n\nSource Templates tab: pre-built parsing profiles (database, security, web, system, application) with setup instructions, agent/syslog config examples, field extractions, sample log lines, and example queries. Filter by category and click a template for details.\n\nExample use case: Connect Hey You're Hired by creating a key named \"HYH Production,\" setting X-Index: hey-youre-hired, and posting batched events — they appear under Data Sources within seconds.\nInputs: An API key and log payloads.\nOutputs: Searchable logs, an auto-created index, and a listed source.\nAdmin notes: Keys can be scoped to ingest/read/write/admin; in production the /api/ingest` path is exempt from the Cloudflare Access login so machines can ship logs.\nLimitations: Only the HTTP ingest path currently enforces per-key index scoping; syslog is unauthenticated by design (network-restricted).",
+      "tokens": 655
+    },
+    {
+      "id": "713-the-lognog-windows-agent-lognog-in",
+      "title": "7.13 The LogNog Windows Agent (LogNog In)",
+      "level": 3,
+      "anchor": "713-the-lognog-windows-agent-lognog-in",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide",
+        "7. Feature Reference"
+      ],
+      "text": "Status: Available (Windows/Linux/macOS; some collectors are Partial/Planned).\nWhat it does: A lightweight agent you install on a machine to ship its log files and Windows Event Logs to LogNog, with offline buffering so nothing is lost during an outage. It also offers File Integrity Monitoring (FIM).\nWhere to find it: Download from the project releases (linked in the Add Data Source wizard's LogNog Agent step); configured via a system-tray menu or config.yaml.\n\nInstalling & first run:\n1. Download and run the agent (Windows lognog-in.exe --install; Linux/macOS packages also available).\n2. It appears in the system tray. Right-click → Configure.\n3. Enter your LogNog server URL and paste an API key (from Settings → API Keys).\n4. Add Watch Paths (files/globs to ship) and, optionally, FIM paths to monitor for changes.\n5. Save. The tray icon shows 🟢 connected, 🟡 buffering (server unreachable, will retry), or 🔴 error.\n\nWhat it collects:\n- Log files — any files/globs you point it at (e.g. C:\\Logs\\.txt, /var/log//.log).\n- Windows Event Logs — Security, System, Application channels, with a built-in focus on high-value security events (4624 logon, 4625 failed logon, 4740 lockout, 7045 service installed, etc.). Configure in config.yaml under windowsevents.\n- File Integrity Monitoring — SHA-256 hashes of monitored files; alerts on create/modify/delete.\n\nRunning as a Windows Service / reliability: enable Start on boot so the agent runs unattended. It keeps a local SQLite buffer of pending events and a FIM baseline, so if the server or machine restarts, queued logs are shipped when the connection returns — no data loss on an outage or restart. It's designed to be light (target <50 MB RAM, <1% CPU).\n\nQuerying agent data:\n``\nsearch sourcetype=windowsevents eventid=4625 | stats count by computer # failed logons\nsearch sourcetype=windowsevents eventid=7045 | table timestamp computer message # new services\n`\nInputs: Watch paths, event-log channels, server URL, API key.\nOutputs: Log and FIM events shipped to LogNog (index typically agent`).\nAdmin notes: Store the API key securely (the agent uses the OS keychain where available) and require TLS to the server.\nLimitations: macOS Unified Log and Linux journald collection are Partial/Planned; the richest, best-tested path today is Windows (files + Event Log).",
+      "tokens": 362
+    },
+    {
+      "id": "714-data-models-cim",
+      "title": "7.14 Data Models (CIM)",
+      "level": 3,
+      "anchor": "714-data-models-cim",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide",
+        "7. Feature Reference"
+      ],
+      "text": "Status: Available.\nWhat it does: The Common Information Model — normalize different sources' field names to standard ones so a single search works everywhere (e.g. Windows AccountName, Linux user, and AWS userName all become user).\nWhere to find it: Sidebar → Configure → Data Models (/cim). Two tabs: Data Models and Field Mappings.\n\nHow to use it:\n1. Data Models tab: browse built-in models by category (Authentication, Network, Endpoint, Web, Custom). Expand one to see its fields (name, type, description, required, aliases). Create your own with Add Model.\n2. Field Mappings tab: click Add Mapping and set Source Type (e.g. nginx), Source Field (e.g. remoteaddr), a Data Model, the target CIM Field, and an optional Transform (lower(), int(), float() 1000, substr(0,10), …). Enable it.\n3. Now searches using the standard field (search user=admin) match across all mapped sources.\n\nExample use case: Map AccountName (Windows) and user (Linux) both to the CIM user field, then investigate search user=admin everywhere at once.\nInputs: Models and per-source field mappings.\nOutputs: Normalized fields usable in searches.\nAdmin notes: Built-in models can't be edited or deleted; create Custom models for your own needs.\nLimitations: Mappings must be maintained as you add new source types.",
+      "tokens": 199
+    },
+    {
+      "id": "715-knowledge",
+      "title": "7.15 Knowledge",
+      "level": 3,
+      "anchor": "715-knowledge",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide",
+        "7. Feature Reference"
+      ],
+      "text": "Status: Available.\nWhat it does: The \"brain\" layer that turns raw text into structured, enriched, actionable data. Six tools: Field Extractions, Event Types, Tags, Lookups, Workflow Actions, and Source Annotations.\nWhere to find it: Sidebar → Configure → Knowledge (/knowledge), with a tab per tool.\n\nField Extractions — parse fields out of message text using regex (named groups) or grok patterns. Create one with a name, source type, field name, pattern type, and pattern; Test it against a sample log before saving. Example grok: SRC=%{IP:sourceip} DPT=%{NUMBER:destport}.\n\nEvent Types — auto-classify logs by a DSL search string. Give it a name, a search string (e.g. appname=sshd message\"Failed password\"), a priority (lower = evaluated first), and enable it. Then query search eventtype=sshfailure.\n\nTags — attach a label to a field value (Tag Name + Field + Value Pattern), e.g. tag production when hostname matches prod-. Query search tag=env:production.\n\nLookups — enrichment tables (Manual JSON or CSV) with a key field and output fields, e.g. map an IP to a location/owner or a status code to its meaning. Use in the DSL with lookup.\n\nWorkflow Actions — quick actions from a log value: URL (open an external page with $fieldvalue$ substituted, e.g. an AbuseIPDB reputation check) or Search (run a related query). Advanced script-type actions (Slack, PagerDuty, block-IP, threat scoring) are available via the API.\n\nSource Annotations — add context that appears as a tooltip when you hover over hostname, appname, or source in results: an emoji, title, description, extended details, a linked lookup, tags, and a highlight color.\n\nExample use case: Extract sourceip from firewall logs, classify them as firewallblock, tag internal IPs, and add a \"Check IP reputation\" workflow action — so investigators get structure, labels, and one-click enrichment.\nInputs: Patterns, search strings, tables, and action definitions.\nOutputs: Richer, classified, enriched, and actionable logs.\nAdmin notes: Extraction/event-type priority controls order (lower first); test patterns before enabling.\nLimitations: Script workflow actions run server-side with a timeout and should be reserved for trusted admins; tags and lookup keys are case-sensitive.",
+      "tokens": 337
+    },
+    {
+      "id": "716-assets",
+      "title": "7.16 Assets",
+      "level": 3,
+      "anchor": "716-assets",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide",
+        "7. Feature Reference"
+      ],
+      "text": "Status: Available.\nWhat it does: An inventory of the \"things\" in your environment (servers, workstations, network devices, containers, cloud instances), auto-discovered from logs and enrichable with owner and criticality.\nWhere to find it: Sidebar → Configure → Assets (/assets).\n\nHow to use it:\n1. Click Discover to auto-populate assets from the last 24 hours of logs, or Add Asset manually.\n2. Each asset has a Type, Status (Active/Inactive/Decommissioned), Criticality (0–100), Owner, Department, Location, identifier, and display name.\n3. Filter by type/status or search; edit to add context.\n\nExample use case: Mark the production database as criticality 95 with an owner, so incident responders instantly know its importance.\nInputs: Discovery + manual enrichment.\nOutputs: A searchable asset inventory (usable in lookups/correlation).\nAdmin notes: Discovered assets are marked source auto; manual ones manual.\nLimitations: Discovery is a background job; criticality is set by you, not inferred.",
+      "tokens": 144
+    },
+    {
+      "id": "717-identities",
+      "title": "7.17 Identities",
+      "level": 3,
+      "anchor": "717-identities",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide",
+        "7. Feature Reference"
+      ],
+      "text": "Status: Available.\nWhat it does: An inventory of the \"people/accounts\" in your environment (users, service accounts, system, external), auto-discovered from logs, with privilege flags and risk scores.\nWhere to find it: Sidebar → Configure → Identities (/identities).\n\nHow to use it:\n1. Discover from recent logs or Add Identity manually.\n2. Each identity has a Type, Status, Privileged flag, Risk Score (0–100), plus email, department, title, manager.\n3. Filter by type, status, or privilege; edit to enrich.\n\nExample use case: Flag svc-backup as a privileged service account and review privileged identities that haven't logged in for 90 days.\nInputs: Discovery + manual enrichment.\nOutputs: A searchable identity inventory for investigations and access reviews.\nAdmin notes: Pairs with Anomaly Detection (per-identity baselines) and Assets for full incident context.\nLimitations: Risk scores are set by you unless enriched by other tooling.",
+      "tokens": 139
+    },
+    {
+      "id": "718-ai-features-ai-agent-nogchat-nldsl",
+      "title": "7.18 AI features (AI Agent, NogChat, NL→DSL)",
+      "level": 3,
+      "anchor": "718-ai-features-ai-agent-nogchat-nldsl",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide",
+        "7. Feature Reference"
+      ],
+      "text": "Status: Available (requires a configured AI model — local Ollama or OpenRouter).\nWhat they do: Three ways to work with your logs in plain English.\n\nNatural language → DSL (AI search mode). On the Search page, flip to AI mode and ask a question (\"Show me all errors in the last hour\"). LogNog generates a DSL query, shows its confidence (High/Medium/Low) and an explanation, and you can run or Edit it. Suggested questions help you start.\n\nAI Agent (sidebar → Tools → AI Agent, /agent). A full conversational assistant that can search logs, look up assets/identities, check anomalies, enrich IPs, and create alerts — reasoning step by step and showing its tool calls and results. Pick a persona (e.g. Security Analyst, SRE, Compliance) from the header; keep multiple conversations in the left panel. A status badge shows AI Online/Offline.\n\nNogChat (the floating chat button, bottom-right, on every page). Your always-available assistant. It answers \"how do I…\" questions about LogNog, helps you write queries (with copy-ready DSL and documentation citations), compares Splunk to LogNog, and can analyze your data (\"What are my top error sources?\") by running a query and summarizing the result. Quick-action buttons and starter prompts get you going.\n\nHow to use it: Open the AI Agent or NogChat, type a question, and follow up conversationally. In AI search mode, type your question in the query box and press Ask AI.\nInputs: Plain-English questions.\nOutputs: Generated queries, answers, analyses, and (via the Agent) actions.\nAdmin notes: Configure the model in Settings → AI (Ollama URL + models, or an OpenRouter API key); test the connection there. Everything can run locally with Ollama — no cloud, no per-query cost.\nLimitations: All AI features are disabled/limited when no model is configured (badges read \"AI Offline\"); generated queries should be reviewed, especially at lower confidence.",
+      "tokens": 303
+    },
+    {
+      "id": "719-mcp-server-for-claude-desktop",
+      "title": "7.19 MCP server for Claude Desktop",
+      "level": 3,
+      "anchor": "719-mcp-server-for-claude-desktop",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide",
+        "7. Feature Reference"
+      ],
+      "text": "Status: Available.\nWhat it does: Lets Claude Desktop talk to LogNog through the Model Context Protocol — so you can search logs, build dashboards, set alerts, and generate reports by chatting with Claude, while your data stays on your infrastructure.\nWhere to find it: Configured in Claude Desktop; LogNog exposes it at /mcp/sse.\n\nHow to use it:\n1. In Settings → API Keys, create a key named e.g. \"Claude Desktop.\"\n2. Add LogNog to your Claude Desktop config (claudedesktopconfig.json) pointing at /mcp/sse with your X-API-Key.\n3. Restart Claude Desktop and ask things like \"Show me error logs from the last hour\" or \"Create a dashboard for nginx traffic.\"\n\nInputs: Natural-language prompts in Claude Desktop.\nOutputs: Searches, dashboards, alerts, silences, ingested logs, and reports created in LogNog.\nAdmin notes: MCP respects LogNog roles (admin full, user read + create, readonly read); all traffic stays on your network.\nLimitations: Requires Claude Desktop and a valid API key; SSE connections can drop behind aggressive reverse proxies.\n\n---",
+      "tokens": 164
+    },
+    {
+      "id": "8-admin-guide",
+      "title": "8. Admin Guide",
+      "level": 2,
+      "anchor": "8-admin-guide",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide"
+      ],
+      "text": "Administrators use the same app plus extra tabs in Settings (gear icon, bottom of the sidebar). Admin-only tabs are Users, Data, GeoIP, System, and AI; everyone sees Preferences, Account, and Notifications.",
+      "tokens": 31
+    },
+    {
+      "id": "first-time-setup",
+      "title": "First-time setup",
+      "level": 3,
+      "anchor": "first-time-setup",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide",
+        "8. Admin Guide"
+      ],
+      "text": "On a brand-new LogNog with no accounts, the login page becomes a Setup screen. Enter a username, email, and password (8+ characters) and click Create Admin Account — you become the first administrator and are logged in automatically.",
+      "tokens": 38
+    },
+    {
+      "id": "managing-users-settings-users",
+      "title": "Managing users (Settings → Users)",
+      "level": 3,
+      "anchor": "managing-users-settings-users",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide",
+        "8. Admin Guide"
+      ],
+      "text": "- Create user: click New, enter Username (letters/numbers/underscore/hyphen), Email, Password (8+ chars), and a Role (user, readonly, or admin).\n- Change a role: use the role dropdown on a user's card (takes effect immediately).\n- Activate/Deactivate: toggle a user's access without deleting them.\n- Role reminder shown in-page: \"Admin has full access. User can search and view dashboards. Read Only can only view data.\"\n- You can't change your own role/status from your own card.",
+      "tokens": 75
+    },
+    {
+      "id": "api-keys-settings-api-keys-also-under-account",
+      "title": "API keys (Settings → API Keys, also under Account)",
+      "level": 3,
+      "anchor": "api-keys-settings-api-keys-also-under-account",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide",
+        "8. Admin Guide"
+      ],
+      "text": "- Create a key: click New Key, give it a descriptive Name (e.g. \"LogNog In Agent – Server 1\"), choose Permissions (read, write, admin; the Add-Data-Source wizard uses an ingest scope), and optionally an expiry in days.\n- Save it immediately: the full key is shown once in a banner (\"This is the only time you'll see this key\") with a copy button. After that only a masked prefix is visible.\n- Restrict by index (optional): keys can be scoped so an app can only write to its own index (enforced on the HTTP ingest path).\n- Revoke: click the trash icon on a key; confirm. Revoked keys are marked and stop working immediately.",
+      "tokens": 114
+    },
+    {
+      "id": "notification-channels-settings-notifications",
+      "title": "Notification channels (Settings → Notifications)",
+      "level": 3,
+      "anchor": "notification-channels-settings-notifications",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide",
+        "8. Admin Guide"
+      ],
+      "text": "- Add a channel: name it, pick a Service, paste an Apprise URL (e.g. slack://tokenA/tokenB/tokenC/#channel), add a description, and enable it. LogNog uses Apprise, supporting 100+ services (Slack, Discord, Telegram, Teams, PagerDuty, ntfy, Pushover, SMS, email, generic webhooks…).\n- Test a channel with the send button; a green/red result tells you if delivery worked.\n- Channels appear as options in every alert's Notify action, so you configure a destination once and reuse it everywhere.\n- A banner tells you whether Apprise is configured on the backend.",
+      "tokens": 86
+    },
+    {
+      "id": "scheduled-reports-reports-page-smtp",
+      "title": "Scheduled reports (Reports page + SMTP)",
+      "level": 3,
+      "anchor": "scheduled-reports-reports-page-smtp",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide",
+        "8. Admin Guide"
+      ],
+      "text": "Email delivery requires SMTP configured on the server: SMTPHOST, SMTPPORT, SMTPUSER, SMTPPASS, SMTPFROM. In the containerized production deployment, reports are triggered from inside the API container (which holds the SMTP credentials). Create and manage schedules from the Reports page (see §7.11).",
+      "tokens": 41
+    },
+    {
+      "id": "data-management-settings-data",
+      "title": "Data management (Settings → Data)",
+      "level": 3,
+      "anchor": "data-management-settings-data",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide",
+        "8. Admin Guide"
+      ],
+      "text": "- Generate demo data: choose a count (10–10,000), a time range, and log types (syslog, nginx, auth, app, firewall, database) — great for demos and screenshots.\n- Export data: download recent logs as JSON.\n- Clear all data or delete logs by criteria (index, app, app-scope, older-than-N-days) — both require confirmation. In ClickHouse, deletions are asynchronous.\n- The tab also shows total log count and the oldest→newest time range.",
+      "tokens": 69
+    },
+    {
+      "id": "geoip-settings-geoip",
+      "title": "GeoIP (Settings → GeoIP)",
+      "level": 3,
+      "anchor": "geoip-settings-geoip",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide",
+        "8. Admin Guide"
+      ],
+      "text": "Enable geographic IP lookups (country/city/ASN) using MaxMind GeoLite2 databases. If not configured, the tab shows setup instructions (register at MaxMind, generate a license key, run the download script in the API container, restart the API). Once enabled you can test a lookup (e.g. 8.8.8.8) and see country, city, coordinates, timezone, and ASN.",
+      "tokens": 52
+    },
+    {
+      "id": "system-settings-system",
+      "title": "System (Settings → System)",
+      "level": 3,
+      "anchor": "system-settings-system",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide",
+        "8. Admin Guide"
+      ],
+      "text": "Read-only system info (API version, Node version, uptime, memory) and configuration (retention, rate limit, max batch size). Also configure Internal Logging — LogNog logging its own operations to the lognog-internal index (toggle self-monitoring, set a minimum level and categories). Query it with search appname=\"lognog-internal\".",
+      "tokens": 44
+    },
+    {
+      "id": "ai-settings-ai",
+      "title": "AI (Settings → AI)",
+      "level": 3,
+      "anchor": "ai-settings-ai",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide",
+        "8. Admin Guide"
+      ],
+      "text": "Configure the AI backend that powers AI search, the AI Agent, NogChat, and anomaly analysis:\n- Ollama: URL, Chat Model, optional Reasoning Model, Embedding Model; Test Connection lists available models.\n- OpenRouter (cloud fallback): API key + model.",
+      "tokens": 38
+    },
+    {
+      "id": "preferences-account-all-users",
+      "title": "Preferences & Account (all users)",
+      "level": 3,
+      "anchor": "preferences-account-all-users",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide",
+        "8. Admin Guide"
+      ],
+      "text": "Preferences: Theme (Light/Dark/System), Default Time Range, Date & Time Format, Display Timezone, Default View Mode (Log/Table/JSON), Field Sidebar default, Query History Limit, and a button to re-show the welcome wizard. Account: view profile/role/last login, change password, and manage your own API keys.",
+      "tokens": 42
+    },
+    {
+      "id": "production-operations-self-hosted",
+      "title": "Production operations (self-hosted)",
+      "level": 3,
+      "anchor": "production-operations-self-hosted",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide",
+        "8. Admin Guide"
+      ],
+      "text": "- Deployment: everything runs in Docker (docker-compose up -d) — ClickHouse (storage), Vector (syslog on 514), API (4000), UI + Nginx (80), Apprise (notifications). A single-machine \"Lite\" mode uses SQLite instead of ClickHouse.\n- Remote access: commonly a Cloudflare Tunnel or a reverse proxy with automatic HTTPS (Caddy). The /api/ingest path is exempt from the login gate so machines can ship logs.\n- If the site is down (502/530): the Docker containers are usually stopped or wedged. Check docker ps, docker start lognog-api, then docker restart lognog-nginx. If ClickHouse is wedged, wsl --shutdown (engine auto-restarts) then docker compose up -d.\n- Backups: back up the ClickHouse data volume (or the /data/lognog.db SQLite file in Lite/production auth) on a schedule.\n\n---",
+      "tokens": 120
+    },
+    {
+      "id": "scenario-1-our-website-is-throwing-500s",
+      "title": "Scenario 1: \"Our website is throwing 500s\"",
+      "level": 3,
+      "anchor": "scenario-1-our-website-is-throwing-500s",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide",
+        "9. Examples and Scenarios"
+      ],
+      "text": "User goal: Find and explain a spike in server errors.\nSteps taken:\n1. Search: search appname=nginx statuscode>=500 over Last 24 hours.\n2. Notice a spike in the timeline; click the bar to zoom.\n3. search appname=nginx statuscode>=500 | stats count by url | sort -count | limit 10 to find the worst endpoints.\n4. Nearby Events on the first error to see what else happened on that host.\nExpected outcome: A short list of failing URLs and the surrounding events (e.g. an upstream timeout).\nWhat the user learns: How to go from broad → zoomed → aggregated → root cause using pipes and the timeline.",
+      "tokens": 105
+    },
+    {
+      "id": "scenario-2-alert-me-about-ssh-brute-force",
+      "title": "Scenario 2: \"Alert me about SSH brute-force\"",
+      "level": 3,
+      "anchor": "scenario-2-alert-me-about-ssh-brute-force",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide",
+        "9. Examples and Scenarios"
+      ],
+      "text": "User goal: Get a Slack ping when someone hammers SSH.\nSteps taken:\n1. Build search appname=sshd message\"Failed password\" | stats count by sourceip | filter count>10.\n2. Click Alert, set Number of Results is greater than 0, every 5 minutes, severity High.\n3. Add a Notify action to the \"slack-ops\" channel with message {{aisummary}} — {{resultcount}} sources.\n4. Test Alert, then Create Alert.\nExpected outcome: A live alert that Slacks you when brute-force is detected.\nWhat the user learns: Search → Alert handoff, message variables, notification channels.",
+      "tokens": 87
+    },
+    {
+      "id": "scenario-3-give-leadership-a-status-page",
+      "title": "Scenario 3: \"Give leadership a status page\"",
+      "level": 3,
+      "anchor": "scenario-3-give-leadership-a-status-page",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide",
+        "9. Examples and Scenarios"
+      ],
+      "text": "User goal: A shareable, always-current health view.\nSteps taken:\n1. Dashboard Studio: add Events over time, Errors by app, and a Total event count stat; use the Field Explorer to add Top hostname.\n2. Save as \"Ops Status.\"\n3. Open it, set Auto-Refresh to 1 minute, add Branding (logo + accent), then Share → make public with a password.\nExpected outcome: A password-protected public URL that refreshes itself.\nWhat the user learns: Visual building, auto-refresh, and safe public sharing.",
+      "tokens": 79
+    },
+    {
+      "id": "scenario-4-instrument-a-new-app",
+      "title": "Scenario 4: \"Instrument a new app\"",
+      "level": 3,
+      "anchor": "scenario-4-instrument-a-new-app",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide",
+        "9. Examples and Scenarios"
+      ],
+      "text": "User goal: Get a Next.js app's logs into LogNog.\nSteps taken:\n1. Settings → API Keys → New Key (\"MyApp Prod\"); copy it.\n2. In the app, POST batches to /api/ingest/http with X-API-Key and X-Index: my-app (flush the buffer before the process exits).\n3. search index=my-app to verify; the source shows up under Data Sources.\n4. Optionally use AI Onboarding to get framework-specific logging code.\nExpected outcome: Live app logs in a dedicated index.\nWhat the user learns: The \"just an API key\" model, indexes as auto-created folders, and verification.\n\n---",
+      "tokens": 91
+    },
+    {
+      "id": "10-troubleshooting",
+      "title": "10. Troubleshooting",
+      "level": 2,
+      "anchor": "10-troubleshooting",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide"
+      ],
+      "text": "| Problem | Likely cause | What to try | When to contact admin |\n|---------|--------------|-------------|-----------------------|\n| Search returns no results | Time range too narrow, wrong field name, or no data yet | Widen the time range; start with search ; check hostname vs host; confirm the source is active in Data Sources | If the source shows Stale/Inactive in Data Sources |\n| Logs from my app aren't arriving | Missing/invalid API key, wrong endpoint, or unflushed buffer | Test with the curl example; expect {\"accepted\":N,…}; ensure the endpoint is /api/ingest/http; flush before script exit | A 401 means the key is missing/invalid — ask an admin to check it |\n| Search is slow | Broad query over a long time range | Narrow the time range, add filters, aggregate with stats, avoid leading-wildcard regex | If consistently slow across small ranges (server sizing) |\n| Alert never fires | Wrong condition/threshold, or an active silence | Use Test Alert; check Alert History; check for a matching silence on /silences | If the schedule/evaluation itself looks broken |\n| Alert fired but no notification | No action added, or channel misconfigured | Confirm the alert has an action; test the notification channel in Settings | Email needs SMTP; Notify needs a configured channel |\n| Report email didn't send | SMTP not configured | Verify SMTP env vars; in production trigger from inside the API container | SMTP is an admin/server task |\n| AI Agent / NogChat says \"AI Offline\" | No model configured or unreachable | Ask an admin to set Ollama/OpenRouter in Settings → AI and Test Connection | This is an admin-only setting |\n| Public dashboard asks for a password I don't have | It's password-protected | Ask the dashboard owner for the password | — |\n| Whole site returns 502 / 530 | Docker containers stopped or ClickHouse wedged | (Admin) docker start lognog-api; docker restart lognog-nginx; if wedged, wsl --shutdown then docker compose up -d | Admin/server task |\n| Can't see the Users/Data/System tabs | You're not an admin | These tabs are admin-only | Ask an admin to grant the role if you need it |\n\n---",
+      "tokens": 370
+    },
+    {
+      "id": "11-faq",
+      "title": "11. FAQ",
+      "level": 2,
+      "anchor": "11-faq",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide"
+      ],
+      "text": "Do I have to create an index before sending logs?\nNo. Indexes are created automatically on the first log. The optional X-Index header just groups logs under a name of your choosing; leave it off and logs land in a default index.\n\nWhat's the difference between an index and a source?\nAn index is a named folder for logs; a source is a single app/device that's sending them. Many sources can write into one index, and one source writes into one index at a time.\n\nIs my data sent anywhere?\nNo. LogNog is self-hosted — logs stay in your ClickHouse/SQLite on your infrastructure. Even the AI features can run against a local Ollama model.\n\nDo I need to know Splunk?\nNo, but if you do, you'll feel at home: the DSL is Splunk-style (search … | stats … | sort …). If you don't, use AI mode on the Search page or ask NogChat to write queries for you.\n\nHow do I share a search or a dashboard?\nFor a search, copy the browser URL — it contains the query and time range and re-runs on open. For a dashboard, use Share to create a public (optionally password-protected) link, or Export JSON to hand off the whole dashboard.\n\nHow do I get alerts into Slack/Discord/Teams?\nAn admin adds a Notification channel in Settings → Notifications (via Apprise). Then any alert's Notify action can target it.\n\nCan I export my results?\nYes — from the Search toolbar: CSV, NDJSON (keeps nested fields), Copy as JSON, or Copy as curl. Dashboards export to JSON and PDF.\n\nWhat's the LogNog In agent for?\nShipping logs from a machine that can't easily POST JSON — log files and Windows Event Logs — with offline buffering so nothing is lost during outages.\n\nWhy can't I see the admin settings tabs?\nThey're restricted to the admin role. Ask an administrator if you need access.\n\nHow is the AI Agent different from NogChat?\nNogChat is the lightweight, always-available helper (great for \"how do I…\" and quick queries). The AI Agent is a fuller assistant that runs multi-step investigations with tools and personas.\n\nCan Claude Desktop use LogNog?\nYes — via the MCP server. Create an API key and add LogNog to Claude Desktop's config (see §7.19).\n\n---",
+      "tokens": 380
+    },
+    {
+      "id": "12-glossary",
+      "title": "12. Glossary",
+      "level": 2,
+      "anchor": "12-glossary",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide"
+      ],
+      "text": "- Alert — A saved rule that runs a query on a schedule and notifies you or runs an action when a condition is met.\n- Anomaly / UEBA — An event that deviates from an entity's learned baseline; UEBA is the technique that learns those baselines.\n- API key — A secret token (lnog…) that lets an app send logs or an integration read data without a password.\n- Apprise — The notification gateway LogNog uses to reach 100+ services (Slack, Discord, PagerDuty, etc.).\n- CIM (Common Information Model) — Standard field names that let one search work across differently-named sources.\n- ClickHouse — The high-volume database that stores logs in the Docker deployment (SQLite in \"Lite\").\n- Dashboard / Panel — A saved page of visualizations; a panel is one chart/table backed by a query.\n- DSL — LogNog's Splunk-style query language.\n- Field — A named piece of a log (hostname, severity, message, custom values).\n- FIM (File Integrity Monitoring) — The agent feature that hashes files and alerts on changes.\n- Index — A named folder that groups logs; auto-created on first log.\n- Ingest — Sending logs into LogNog (HTTP, syslog, agent, Supabase, Vercel).\n- Live tail — Streaming new logs in real time on the Search page.\n- Lookup — An enrichment table that adds context to logs.\n- MCP — Model Context Protocol; lets Claude Desktop drive LogNog.\n- NogChat — The floating in-app AI helper.\n- Severity — Syslog urgency 0–7 (lower = more urgent).\n- Silence — A temporary mute for alerts.\n- Source — A single app/device sending logs.\n- Synthetic monitoring — Proactive uptime/endpoint checks run from the server.\n\n---",
+      "tokens": 281
+    },
+    {
+      "id": "13-known-gaps-unclear-areas-and-suggested-improvements",
+      "title": "13. Known Gaps, Unclear Areas, and Suggested Improvements",
+      "level": 2,
+      "anchor": "13-known-gaps-unclear-areas-and-suggested-improvements",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide"
+      ],
+      "text": "Written honestly, based on inspecting the running product.\n\n| Area | What's missing or unclear | Why it matters | Suggested fix |\n|------|---------------------------|----------------|---------------|\n| Synthetic assertions | The assertion builder (status code, response time, body-contains, JSON path) is described in docs but not fully exposed in the create-test UI | Users can't fully define \"success\" from the UI | Add an assertions section to the test modal |\n| Synthetic Browser tests | \"Browser\" type is offered but labeled coming soon / needs Playwright backend | Sets an expectation that may not be met | Clearly mark Browser as Planned in the UI |\n| Reports \"run now\" | No manual trigger for a scheduled report from the UI (only one-off Generate) | Admins must wait for the schedule or use the container | Add a \"Run now\" button per scheduled report |\n| Index scope enforcement | Only the /api/ingest/http path enforces per-key index scoping | Other ingest paths could write outside a key's intended index | Extend scope checks to syslog/agent/other ingest routes |\n| AI availability | All AI features silently degrade to \"Offline\" without a model; the reason isn't always obvious to non-admins | Users may think the feature is broken | Show a clear \"ask an admin to configure AI\" hint to non-admins |\n| AI Onboarding wizard | The multi-step \"codebase interview\" flow is partly a design/roadmap doc; the live page's depth may differ | Expectations vs. reality | Confirm which steps are live and label the rest Planned |\n| Analytics time windows | Fixed 24h/all-time windows; no custom range on the Analytics page | Limits ad-hoc analysis there | Add a time picker to Analytics |\n| Public dashboards | Render a smaller set of chart types than the private view | A public dashboard may look different from the authored one | Note the supported subset in the share dialog |\n| Shipping log link | This guide links ../SHIPPING-LOG.md, which may not exist yet in docs/ | Broken \"what's new\" link | Generate docs/SHIPPING-LOG.md (shipping-log skill) |\n| Deletions in ClickHouse | Log deletions are asynchronous; the UI doesn't always show progress | Admins may think a delete failed | Surface deletion status/progress |\n\n---",
+      "tokens": 376
+    },
+    {
+      "id": "14-documentation-maintenance-notes",
+      "title": "14. Documentation Maintenance Notes",
+      "level": 2,
+      "anchor": "14-documentation-maintenance-notes",
+      "breadcrumb": [
+        "LogNog — User & Admin Guide"
+      ],
+      "text": "- Documents version: v0.9.0 (matches docs/VERSION).\n- Last updated: 2026-07-03.\n- Inspected:\n - Routes/nav: ui/src/App.tsx.\n - Pages: ui/src/pages/ — SearchPage, SavedSearchesPage, DashboardsPage, DashboardViewPage, DashboardStudioPage, PublicDashboardPage, AlertsPage, SilencesPage, AnomalyPage, SyntheticPage, StatsPage, ReportsPage, DataSourcesPage, OnboardingPage, CIMPage, KnowledgePage, AssetsPage, IdentitiesPage, AgentPage, SettingsPage, LoginPage, LandingPage.\n - Components: ShortcutsModal.tsx, NogChat.tsx, onboarding WelcomeWizard/AddDataSourceWizard, AuthContext.tsx.\n - DSL implementation: api/src/dsl/ (lexer, parser, compiler, compiler-sqlite, types) to confirm the real command set.\n - Docs: DSLREFERENCE.md, APP-ONBOARDING.md, LOGNOGINAGENT.md, QUICKSTART.md, KNOWLEDGEMANAGEMENT.md, MCP-INTEGRATION.md, NEW-FEATURES-GUIDE.md, DEPLOYMENT-GUIDE.md, SUPABASE-INTEGRATION.md, VERCEL-INTEGRATION.md, docs/VERSION.\n- Assumptions:\n - Role behavior (admin/user/readonly) is inferred from the code and MCP docs; exact per-route enforcement wasn't re-verified endpoint-by-endpoint.\n - The AI Onboarding page's live depth is assumed to match its design doc where the code wasn't fully read; labeled accordingly.\n - Production ops steps reflect the project's CLAUDE.md/memory notes for the machinekinglabs deployment.\n- Needs future review:\n - Synthetic assertions UI, Browser test type, and Reports \"run now\" — confirm status each release.\n - Whether docs/SHIPPING-LOG.md exists; update the header link if the path changes.\n - Any new nav destinations, DSL commands, or visualization types added after v0.9.0.\n - Replace every marker with a real capture via the screenshot-capture skill.",
+      "tokens": 188
+    }
+  ]
+}

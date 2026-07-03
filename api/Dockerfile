@@ -35,6 +35,10 @@ RUN npm install --omit=dev
 # Copy built files
 COPY --from=builder /app/dist ./dist
 
+# Help-bot retrieval corpus (chunked user guide). Read at runtime by the
+# /api/ask-docs route. Regenerated from docs/ on each release.
+COPY docs/guide-index.json ./guide-index.json
+
 # Create data and backup directories
 RUN mkdir -p /data /backups
 

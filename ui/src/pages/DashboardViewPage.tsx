@@ -40,6 +40,7 @@ import {
   Star,
   ArrowLeft,
   MoreVertical,
+  LayoutDashboard,
 } from 'lucide-react';
 import { AreaChart, BarChart, PieChart, ScatterChart, FunnelChart, TreemapChart } from '../components/charts';
 import { useTheme } from '../contexts/ThemeContext';
@@ -1297,6 +1298,15 @@ export default function DashboardViewPage() {
         backLink="/dashboards"
         actions={
           <div className="flex items-center gap-2">
+            {/* Open this dashboard in the Studio to add/edit panels visually. */}
+            <button
+              onClick={() => navigate(`/dashboards/studio?dashboard=${id}`)}
+              className="btn-secondary"
+              title="Edit in Dashboard Studio"
+            >
+              <LayoutDashboard className="w-4 h-4" />
+              <span className="hidden sm:inline ml-1 text-sm">Studio</span>
+            </button>
             {/* Variables — always available so the FIRST variable can be created
                 (previously gated on length > 0, an unbreakable chicken-and-egg). */}
             <button

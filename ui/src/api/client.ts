@@ -1540,6 +1540,25 @@ export async function getAIInsights(dashboardId: string, timeRange: string): Pro
   });
 }
 
+export interface HelpbotCitation { title: string; anchor: string; url: string; breadcrumb: string[] }
+export interface HelpbotAnswer {
+  answer: string;
+  mode: 'docs' | 'data';
+  citations: HelpbotCitation[];
+  data?: { query: string; rowCount: number; rows: Record<string, unknown>[]; link: string; error: string | null };
+  provider: string;
+}
+
+// Ask the in-app help bot. Answers "how do I…" questions from the user guide
+// (with citations that deep-link) AND "how many…/show me…" questions about the
+// user's own logs (via NL→DSL, with a link to open the results in Search).
+export async function askHelpbot(question: string): Promise<HelpbotAnswer> {
+  return request('/ai/ask-docs', {
+    method: 'POST',
+    body: JSON.stringify({ question }),
+  });
+}
+
 // Ingestion Validation API
 export interface ValidatedField {
   value: unknown;

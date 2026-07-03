@@ -104,7 +104,16 @@ log {
 
         <div className="card p-4 bg-honey-50 border-honey-200 dark:bg-honey-900/20 dark:border-honey-800 mb-4">
           <p className="text-honey-800 dark:text-honey-300 text-sm">
-            <strong>API Key Required:</strong> Generate an API key from <strong>Settings &rarr; API Keys</strong> before using HTTP ingestion endpoints.
+            <strong>An API key is all you need.</strong> Generate one from <strong>Settings &rarr; API Keys</strong> (or the
+            <strong> Add Data Source</strong> wizard) and send it as <code className="code">X-API-Key</code>. That's it —
+            there is nothing else to provision.
+          </p>
+          <p className="text-honey-800 dark:text-honey-300 text-sm mt-2">
+            <strong>Indexes are created automatically.</strong> You never pre-declare an index or request access to one.
+            Logs default to the <code className="code">http</code> index; add an optional{' '}
+            <code className="code">X-Index: my-app</code> header only if you want to group logs under a name of your
+            choosing. LogNog creates that index the first time a log arrives, and it appears under{' '}
+            <strong>Data Sources</strong> on its own.
           </p>
         </div>
 

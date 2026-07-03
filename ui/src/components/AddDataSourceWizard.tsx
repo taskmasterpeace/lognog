@@ -407,6 +407,17 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
           {/* Step 2: Configure */}
           {step === 2 && (
             <div className="space-y-6">
+              {/* Reassurance: all you need is a key */}
+              {sourceType !== 'syslog' && (
+                <div className="flex gap-3 p-3 rounded-lg bg-honey-50 dark:bg-honey-900/20 border border-honey-200 dark:border-honey-900/40">
+                  <CheckCircle2 className="w-5 h-5 text-honey-600 dark:text-honey-400 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-nog-700 dark:text-nog-300">
+                    <span className="font-medium">All you need is an API key.</span> There's nothing to provision — no
+                    index to create or request access to. Name a key, paste it into your app, and start sending logs.
+                    They'll show up under <span className="font-medium">Data Sources</span> automatically.
+                  </p>
+                </div>
+              )}
               {/* Endpoint URL */}
               <div>
                 <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-2">
@@ -512,18 +523,24 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
               {/* Index Name */}
               <div>
                 <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-2">
-                  Index Name <span className="text-nog-400">(optional)</span>
+                  Index <span className="text-nog-400">(optional — auto-created)</span>
                 </label>
                 <input
                   type="text"
                   value={indexName}
                   onChange={(e) => setIndexName(e.target.value)}
-                  placeholder="e.g., my-app"
+                  placeholder={sourceType === 'http' ? 'e.g. my-app (blank = "http")' : 'e.g. my-app'}
                   className="w-full px-4 py-2 border border-nog-200 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-900 text-nog-900 dark:text-nog-100"
                 />
-                {indexName && (
+                {indexName ? (
                   <p className="text-xs text-honey-600 dark:text-honey-400 mt-1">
                     Logs will be searchable as: <code className="bg-honey-50 dark:bg-honey-900/30 px-1 rounded">search index={indexName}</code>
+                  </p>
+                ) : (
+                  <p className="text-xs text-nog-500 dark:text-nog-400 mt-1">
+                    You never set up an index ahead of time. Leave this blank and logs land in{' '}
+                    <code className="bg-nog-100 dark:bg-nog-800 px-1 rounded">http</code>, or name it (like your app)
+                    to group logs — LogNog creates it automatically on the first log.
                   </p>
                 )}
               </div>

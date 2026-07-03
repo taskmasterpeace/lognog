@@ -33,7 +33,7 @@ import { MuteProvider } from './contexts/MuteContext';
 import { ToastProvider } from './contexts/ToastContext';
 import { ConfirmProvider } from './components/ui/ConfirmDialog';
 import ThemeToggle from './components/ThemeToggle';
-import NogChat from './components/NogChat';
+import HelpBot from './components/HelpBot';
 import AnimatedPage from './components/ui/AnimatedPage';
 import ErrorBoundary from './components/ErrorBoundary';
 import WelcomeWizard from './components/onboarding/WelcomeWizard';
@@ -45,6 +45,7 @@ import DashboardStudioPage from './pages/DashboardStudioPage';
 import StatsPage from './pages/StatsPage';
 import ReportsPage from './pages/ReportsPage';
 import DocsPage from './pages/DocsPage';
+import GuidePage from './pages/GuidePage';
 import KnowledgePage from './pages/KnowledgePage';
 import LoginPage from './pages/LoginPage';
 import LandingPage from './pages/LandingPage';
@@ -282,6 +283,7 @@ function Layout({ children }: { children: React.ReactNode }) {
           <NavGroup title="Tools" storageKey="tools" defaultExpanded={false}>
             <NavLink to="/agent" icon={Bot} onClick={closeSidebar}>AI Agent</NavLink>
             <NavLink to="/onboarding" icon={Sparkles} onClick={closeSidebar}>AI Onboarding</NavLink>
+            <NavLink to="/guide" icon={BookOpen} onClick={closeSidebar}>User Guide</NavLink>
             <NavLink to="/docs" icon={FileText} onClick={closeSidebar}>Documentation</NavLink>
           </NavGroup>
         </nav>
@@ -332,8 +334,9 @@ function Layout({ children }: { children: React.ReactNode }) {
         </ErrorBoundary>
       </main>
 
-      {/* NogChat - Intelligent Assistant */}
-      <NogChat />
+      {/* Help bot — answers guide questions (with deep-link citations) and
+          questions about the user's live logs (NL→DSL, with a Search link). */}
+      <HelpBot />
     </div>
   );
 }
@@ -628,6 +631,18 @@ function AppRoutes() {
             <Layout>
               <AnimatedPage>
                 <DocsPage />
+              </AnimatedPage>
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/guide"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <AnimatedPage>
+                <GuidePage />
               </AnimatedPage>
             </Layout>
           </ProtectedRoute>

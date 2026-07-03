@@ -1,0 +1,19 @@
+{
+  "name": "LogNog",
+  "tagline": "Your Logs, Your Control",
+  "colors": {
+    "bg": "#1a120b",
+    "surface": "#241811",
+    "brand": "#5A3F24",
+    "accent": "#C8862B",
+    "heading": "#FAF8F5",
+    "text": "#e8ddd0",
+    "muted": "#b8a389",
+    "border": "#3D2A18"
+  },
+  "fonts": {
+    "display": "Inter",
+    "body": "Inter",
+    "mono": "JetBrains Mono"
+  }
+}
