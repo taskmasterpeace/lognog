@@ -76,7 +76,17 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen lg:grid lg:grid-cols-[1.1fr_1fr] bg-gradient-to-br from-nog-100 to-nog-200 dark:from-nog-950 dark:to-nog-900">
+    <div className="relative min-h-screen lg:grid lg:grid-cols-[1.1fr_1fr] bg-gradient-to-br from-nog-100 to-nog-200 dark:from-nog-950 dark:to-nog-900">
+      {/* Back to Home — pinned to the far top-left of the page, over the hero */}
+      <Link
+        to="/"
+        className="absolute top-4 sm:top-6 left-4 sm:left-6 z-30 flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 text-honey-50 bg-nog-950/45 hover:bg-nog-950/65 backdrop-blur-md border border-white/15 shadow-lg rounded-lg transition-all text-sm sm:text-base"
+      >
+        <ArrowLeft className="w-4 sm:w-5 h-4 sm:h-5" />
+        <span className="font-medium hidden sm:inline">Back to Home</span>
+        <span className="font-medium sm:hidden">Back</span>
+      </Link>
+
       {/* Hero panel — real LogNog dashboard on a desk (hidden on small screens) */}
       <aside className="relative hidden lg:block overflow-hidden">
         <img
@@ -117,7 +127,7 @@ export default function LoginPage() {
 
       {/* Form panel */}
       <main className="relative flex items-center justify-center p-4 min-h-screen lg:min-h-0 overflow-hidden">
-        {/* Warm macro backdrop (caramel & cream swirl) */}
+        {/* Warm macro backdrop — LogNog Search on a phone (DP product shot) */}
         <img
           src="/login-macro.jpg?v=2"
           alt=""
@@ -126,16 +136,6 @@ export default function LoginPage() {
         />
         {/* Warm vignette: keeps the phone visible but lets the glass card + light text pop */}
         <div className="absolute inset-0 bg-[radial-gradient(130%_120%_at_50%_40%,rgba(42,27,14,0.20)_0%,rgba(58,40,22,0.44)_58%,rgba(30,19,10,0.68)_100%)] dark:bg-[radial-gradient(130%_120%_at_50%_40%,rgba(30,19,10,0.42)_0%,rgba(30,19,10,0.66)_60%,rgba(20,12,6,0.82)_100%)]" />
-
-        {/* Back to Landing */}
-        <Link
-          to="/"
-          className="absolute top-4 sm:top-6 left-4 sm:left-6 z-20 flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 text-nog-800 dark:text-honey-50 bg-white/85 dark:bg-nog-900/70 backdrop-blur-md hover:bg-white dark:hover:bg-nog-900/90 border border-[#5A3F24]/25 dark:border-white/10 shadow-md rounded-lg transition-all text-sm sm:text-base"
-        >
-          <ArrowLeft className="w-4 sm:w-5 h-4 sm:h-5" />
-          <span className="font-medium hidden sm:inline">Back to Home</span>
-          <span className="font-medium sm:hidden">Back</span>
-        </Link>
 
         <div className="relative z-10 w-full max-w-md mt-12 lg:mt-0">
         {/* Frosted glass sign-in panel */}

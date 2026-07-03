@@ -36,9 +36,9 @@ const integrations = [
 ];
 
 const shots = [
-  { src: '/screenshot-search.png', label: 'Search', blurb: 'Pipe a query, watch it resolve in milliseconds.' },
-  { src: '/screenshot-dashboards.png', label: 'Dashboards', blurb: 'Compose panels that update on their own.' },
-  { src: '/screenshot-alerts.png', label: 'Alerts', blurb: 'Get told the moment something goes quiet — or loud.' },
+  { src: '/guide-screenshots/search-page.jpg', label: 'Search', blurb: 'Pipe a query, watch it resolve in milliseconds.' },
+  { src: '/guide-screenshots/dashboard-view.jpg', label: 'Dashboards', blurb: 'Compose panels that update on their own.' },
+  { src: '/guide-screenshots/alerts-page.jpg', label: 'Alerts', blurb: 'Get told the moment something goes quiet — or loud.' },
 ];
 
 const comparison = [
@@ -108,8 +108,32 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* Hero visual — the real product, warm and lived-in */}
+        <section className="mx-auto max-w-5xl px-6 pb-6 pt-4">
+          <div className="ln-rise relative mx-auto max-w-4xl" style={{ animationDelay: '300ms' }}>
+            <div className="pointer-events-none absolute -inset-6 -z-10 rounded-[2.5rem] bg-honey-500/10 blur-[90px]" aria-hidden="true" />
+            <div className="overflow-hidden rounded-2xl border border-nog-700/70 shadow-2xl shadow-black/50 ring-1 ring-honey-500/10">
+              <img
+                src="/login-hero.jpg"
+                alt="A LogNog dashboard glowing on a monitor on a warm desk"
+                className="w-full"
+                loading="lazy"
+              />
+            </div>
+            {/* phone, overlapping the corner */}
+            <div className="absolute -bottom-5 right-2 w-24 rotate-3 overflow-hidden rounded-[1.25rem] border border-nog-700/70 shadow-2xl shadow-black/60 ring-1 ring-honey-500/15 sm:-bottom-9 sm:right-6 sm:w-36">
+              <img
+                src="/login-macro.jpg?v=2"
+                alt="LogNog search running on a phone"
+                className="w-full"
+                loading="lazy"
+              />
+            </div>
+          </div>
+        </section>
+
         {/* DSL terminal */}
-        <section className="mx-auto max-w-3xl px-6 pb-8">
+        <section className="mx-auto max-w-3xl px-6 pb-8 pt-6">
           <div className="ln-rise overflow-hidden rounded-2xl border border-nog-700/80 bg-nog-900/80 shadow-2xl shadow-black/40 backdrop-blur" style={{ animationDelay: '320ms' }}>
             <div className="flex items-center gap-2 border-b border-nog-800 px-4 py-3">
               <span className="h-3 w-3 rounded-full bg-nog-600" /><span className="h-3 w-3 rounded-full bg-nog-600" /><span className="h-3 w-3 rounded-full bg-honey-500" />
