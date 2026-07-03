@@ -116,18 +116,30 @@ export default function LoginPage() {
       </aside>
 
       {/* Form panel */}
-      <main className="relative flex items-center justify-center p-4 min-h-screen lg:min-h-0">
+      <main className="relative flex items-center justify-center p-4 min-h-screen lg:min-h-0 overflow-hidden">
+        {/* Warm macro backdrop (caramel & cream swirl) */}
+        <img
+          src="/login-macro.jpg?v=2"
+          alt=""
+          aria-hidden="true"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        {/* Warm vignette: keeps the phone visible but lets the glass card + light text pop */}
+        <div className="absolute inset-0 bg-[radial-gradient(130%_120%_at_50%_40%,rgba(42,27,14,0.20)_0%,rgba(58,40,22,0.44)_58%,rgba(30,19,10,0.68)_100%)] dark:bg-[radial-gradient(130%_120%_at_50%_40%,rgba(30,19,10,0.42)_0%,rgba(30,19,10,0.66)_60%,rgba(20,12,6,0.82)_100%)]" />
+
         {/* Back to Landing */}
         <Link
           to="/"
-          className="absolute top-4 sm:top-6 left-4 sm:left-6 flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 text-nog-600 dark:text-nog-400 hover:text-nog-900 dark:hover:text-nog-100 hover:bg-nog-200/50 dark:hover:bg-nog-700/50 rounded-lg transition-all text-sm sm:text-base"
+          className="absolute top-4 sm:top-6 left-4 sm:left-6 z-20 flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 sm:py-2 text-nog-800 dark:text-honey-50 bg-white/85 dark:bg-nog-900/70 backdrop-blur-md hover:bg-white dark:hover:bg-nog-900/90 border border-[#5A3F24]/25 dark:border-white/10 shadow-md rounded-lg transition-all text-sm sm:text-base"
         >
           <ArrowLeft className="w-4 sm:w-5 h-4 sm:h-5" />
           <span className="font-medium hidden sm:inline">Back to Home</span>
           <span className="font-medium sm:hidden">Back</span>
         </Link>
 
-        <div className="w-full max-w-md mt-12 lg:mt-0">
+        <div className="relative z-10 w-full max-w-md mt-12 lg:mt-0">
+        {/* Frosted glass sign-in panel */}
+        <div className="bg-white/80 dark:bg-nog-900/75 backdrop-blur-2xl rounded-3xl shadow-2xl ring-1 ring-white/50 dark:ring-white/10 p-8">
         {/* Logo */}
         <div className="text-center mb-6 sm:mb-8">
           <img
@@ -138,13 +150,10 @@ export default function LoginPage() {
           <h1 className="mt-3 sm:mt-4 text-2xl sm:text-3xl font-bold text-nog-900 dark:text-nog-100">
             LogNog
           </h1>
-          <p className="text-nog-500 dark:text-nog-400">
+          <p className="text-nog-600 dark:text-nog-300 font-medium">
             {isSetupMode ? 'Create your admin account' : 'Sign in to continue'}
           </p>
         </div>
-
-        {/* Card */}
-        <div className="bg-white dark:bg-nog-800 rounded-2xl shadow-xl p-8">
           {/* Setup notice */}
           {setupRequired && (
             <div className="mb-6 p-4 bg-honey-50 dark:bg-honey-900/20 rounded-lg border border-honey-200 dark:border-honey-800">
@@ -182,7 +191,7 @@ export default function LoginPage() {
                     required
                     minLength={3}
                     maxLength={50}
-                    className="w-full pl-10 pr-4 py-2.5 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-900 text-nog-900 dark:text-nog-100 placeholder-nog-400 focus:ring-2 focus:ring-honey-500 focus:border-transparent transition-all"
+                    className="w-full pl-10 pr-4 py-2.5 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-900 text-nog-900 dark:text-nog-100 placeholder-nog-500 focus:ring-2 focus:ring-honey-500 focus:border-transparent transition-all"
                   />
                 </div>
               </div>
@@ -199,7 +208,7 @@ export default function LoginPage() {
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="admin@example.com"
                     required
-                    className="w-full pl-10 pr-4 py-2.5 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-900 text-nog-900 dark:text-nog-100 placeholder-nog-400 focus:ring-2 focus:ring-honey-500 focus:border-transparent transition-all"
+                    className="w-full pl-10 pr-4 py-2.5 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-900 text-nog-900 dark:text-nog-100 placeholder-nog-500 focus:ring-2 focus:ring-honey-500 focus:border-transparent transition-all"
                   />
                 </div>
               </div>
@@ -217,7 +226,7 @@ export default function LoginPage() {
                     placeholder="At least 8 characters"
                     required
                     minLength={8}
-                    className="w-full pl-10 pr-4 py-2.5 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-900 text-nog-900 dark:text-nog-100 placeholder-nog-400 focus:ring-2 focus:ring-honey-500 focus:border-transparent transition-all"
+                    className="w-full pl-10 pr-4 py-2.5 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-900 text-nog-900 dark:text-nog-100 placeholder-nog-500 focus:ring-2 focus:ring-honey-500 focus:border-transparent transition-all"
                   />
                 </div>
               </div>
@@ -235,7 +244,7 @@ export default function LoginPage() {
                     placeholder="Confirm your password"
                     required
                     minLength={8}
-                    className="w-full pl-10 pr-4 py-2.5 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-900 text-nog-900 dark:text-nog-100 placeholder-nog-400 focus:ring-2 focus:ring-honey-500 focus:border-transparent transition-all"
+                    className="w-full pl-10 pr-4 py-2.5 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-900 text-nog-900 dark:text-nog-100 placeholder-nog-500 focus:ring-2 focus:ring-honey-500 focus:border-transparent transition-all"
                   />
                 </div>
               </div>
@@ -270,7 +279,7 @@ export default function LoginPage() {
                     onChange={(e) => setUsername(e.target.value)}
                     placeholder="Enter your username or email"
                     required
-                    className="w-full pl-10 pr-4 py-2.5 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-900 text-nog-900 dark:text-nog-100 placeholder-nog-400 focus:ring-2 focus:ring-honey-500 focus:border-transparent transition-all"
+                    className="w-full pl-10 pr-4 py-2.5 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-900 text-nog-900 dark:text-nog-100 placeholder-nog-500 focus:ring-2 focus:ring-honey-500 focus:border-transparent transition-all"
                   />
                 </div>
               </div>
@@ -287,7 +296,7 @@ export default function LoginPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter your password"
                     required
-                    className="w-full pl-10 pr-4 py-2.5 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-900 text-nog-900 dark:text-nog-100 placeholder-nog-400 focus:ring-2 focus:ring-honey-500 focus:border-transparent transition-all"
+                    className="w-full pl-10 pr-4 py-2.5 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-900 text-nog-900 dark:text-nog-100 placeholder-nog-500 focus:ring-2 focus:ring-honey-500 focus:border-transparent transition-all"
                   />
                 </div>
               </div>
@@ -311,7 +320,7 @@ export default function LoginPage() {
         </div>
 
           {/* Footer */}
-          <p className="mt-6 text-center text-sm text-nog-500 dark:text-nog-400">
+          <p className="mt-6 text-center text-sm font-medium text-white/90 [text-shadow:0_1px_3px_rgba(42,27,14,0.7)]">
             LogNog - Your Logs, Your Control
           </p>
         </div>
