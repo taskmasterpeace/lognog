@@ -41,6 +41,7 @@ import { useOnboarding } from './hooks/useOnboarding';
 import SearchPage from './pages/SearchPage';
 import DashboardsPage from './pages/DashboardsPage';
 import DashboardViewPage from './pages/DashboardViewPage';
+import DashboardStudioPage from './pages/DashboardStudioPage';
 import StatsPage from './pages/StatsPage';
 import ReportsPage from './pages/ReportsPage';
 import DocsPage from './pages/DocsPage';
@@ -447,6 +448,18 @@ function AppRoutes() {
             <Layout>
               <AnimatedPage>
                 <DashboardsPage />
+              </AnimatedPage>
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboards/studio"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <AnimatedPage>
+                <DashboardStudioPage />
               </AnimatedPage>
             </Layout>
           </ProtectedRoute>

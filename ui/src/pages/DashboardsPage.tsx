@@ -218,12 +218,19 @@ export default function DashboardsPage() {
                   <option value="created_at-asc">Oldest</option>
                 </select>
               </div>
-              <button
-                onClick={() => setShowWizard(true)}
+              <Link
+                to="/dashboards/studio"
                 className="btn-primary flex-1 sm:flex-initial justify-center"
               >
+                <LayoutDashboard className="w-5 h-5" />
+                <span>Open Studio</span>
+              </Link>
+              <button
+                onClick={() => setShowWizard(true)}
+                className="btn-secondary flex-1 sm:flex-initial justify-center"
+              >
                 <Wand2 className="w-5 h-5" />
-                <span>Build from Index</span>
+                <span className="hidden sm:inline">Build from Index</span>
               </button>
               <button
                 onClick={() => setShowCreateModal(true)}

@@ -13,6 +13,7 @@ import {
   Code,
   List,
   Layers,
+  Clock,
   Sparkles,
 } from 'lucide-react';
 import { AnnotatedValue, useSourceAnnotationsOptional } from './SourceAnnotations';
@@ -34,6 +35,7 @@ export interface LogEntry {
 interface LogViewerProps {
   logs: LogEntry[];
   onAddFilter?: (field: string, value: string, exclude?: boolean) => void;
+  onShowContext?: (log: LogEntry) => void;
   searchTerms?: string[];
   isLoading?: boolean;
 }
@@ -268,6 +270,7 @@ interface LogRowProps {
   onAddFilter?: (field: string, value: string, exclude?: boolean) => void;
   onLoadFullMessage?: (logId: string) => void;
   onViewContext?: (logId: string) => void;
+  onShowContext?: (log: LogEntry) => void;
   searchTerms?: string[];
 }
 
@@ -280,6 +283,7 @@ const LogRow: React.FC<LogRowProps> = ({
   onAddFilter,
   onLoadFullMessage,
   onViewContext,
+  onShowContext,
   searchTerms,
 }) => {
   const { formatDate } = useDateFormat();
@@ -502,6 +506,18 @@ const LogRow: React.FC<LogRowProps> = ({
                     View context
                   </button>
                 )}
+                {/* Surrounding events: re-run search scoped to this host in a
+                    ±5 min window (Splunk's "Nearby Events"). */}
+                {onShowContext && (log.hostname || log.host || log.source) && (
+                  <button
+                    onClick={() => onShowContext(log)}
+                    className="text-xs text-honey-600 hover:text-honey-700 dark:text-honey-400 dark:hover:text-honey-300 flex items-center gap-1 font-medium"
+                    title="Search all events on this host within 5 minutes of this log"
+                  >
+                    <Clock className="w-3 h-3" />
+                    Events ±5 min on this host
+                  </button>
+                )}
                 {/* AI Error Diagnosis button for error logs (severity <= 3) */}
                 {severity <= 3 && !aiDiagnosis.data && (
                   <button
@@ -685,6 +701,7 @@ const LogRow: React.FC<LogRowProps> = ({
 export default function LogViewer({
   logs,
   onAddFilter,
+  onShowContext,
   searchTerms,
   isLoading = false,
 }: LogViewerProps) {
@@ -872,6 +889,7 @@ export default function LogViewer({
               onAddFilter={onAddFilter}
               onLoadFullMessage={loadFullMessage}
               onViewContext={viewContext}
+              onShowContext={onShowContext}
               searchTerms={searchTerms}
             />
           );

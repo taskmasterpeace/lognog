@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Search,
   Play,
@@ -30,10 +30,13 @@ import {
   Pause,
   Square,
   Zap,
+  Terminal,
+  Keyboard,
 } from 'lucide-react';
 import { executeSearch, getSavedSearches, createSavedSearch, aiSearch, getAISuggestions, SavedSearchCreateRequest, authFetch } from '../api/client';
 import { useMute } from '../contexts/MuteContext';
-import LogViewer from '../components/LogViewer';
+import { useToast } from '../contexts/ToastContext';
+import LogViewer, { LogEntry } from '../components/LogViewer';
 import TimePicker from '../components/TimePicker';
 import FieldSidebar from '../components/FieldSidebar';
 import { TimeSeriesChart } from '../components/charts/TimeSeriesChart';
@@ -43,6 +46,8 @@ import { SourceAnnotationProvider } from '../components/SourceAnnotations';
 import { InfoIcon } from '../components/ui/InfoTip';
 import NewSourceBanner from '../components/NewSourceBanner';
 import { useLiveTail } from '../hooks/useLiveTail';
+import { useHotkeys } from '../hooks/useHotkeys';
+import ShortcutsModal from '../components/ShortcutsModal';
 
 const SEVERITY_NAMES = ['Emergency', 'Alert', 'Critical', 'Error', 'Warning', 'Notice', 'Info', 'Debug'];
 
@@ -93,16 +98,66 @@ const QUERY_TEMPLATES = [
   ]},
 ];
 
+// Build a runnable curl command for the /search/query endpoint with a token
+// placeholder. Pure + exported for testing.
+export function buildCurlCommand(
+  origin: string,
+  query: string,
+  earliest?: string,
+  latest?: string
+): string {
+  const body = JSON.stringify({ query, earliest: earliest || undefined, latest });
+  // Single-quote the JSON body for the shell; escape embedded single quotes.
+  const shellBody = body.replace(/'/g, `'\\''`);
+  return (
+    `curl -X POST ${origin}/api/search/query \\\n` +
+    `  -H 'Authorization: Bearer <YOUR_TOKEN>' \\\n` +
+    `  -H 'Content-Type: application/json' \\\n` +
+    `  -d '${shellBody}'`
+  );
+}
+
+// Serialize results as NDJSON (one JSON object per line). Pure + exported.
+export function toNDJSON(data: Record<string, unknown>[]): string {
+  return data.map(r => JSON.stringify(r)).join('\n');
+}
+
+// Read the persisted query history once (used to restore the last query on load).
+function readInitialQuery(): string {
+  try {
+    const saved = localStorage.getItem('lognog_query_history');
+    if (saved) {
+      const history = JSON.parse(saved);
+      if (Array.isArray(history) && typeof history[0] === 'string' && history[0].trim()) {
+        return history[0];
+      }
+    }
+  } catch {
+    // Ignore malformed history; fall through to default.
+  }
+  return 'search *';
+}
+
 export default function SearchPage() {
   const navigate = useNavigate();
   const { mutedValues } = useMute();
-  const [query, setQuery] = useState('search *');
+  const toast = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
+  // URL param takes precedence over restored history; else restore last query.
+  const [query, setQuery] = useState(() => searchParams.get('q') || readInitialQuery());
   const [timeRange, setTimeRange] = useState(() => {
+    // URL params take precedence for shareable/bookmarkable searches.
+    const urlEarliest = searchParams.get('earliest');
+    if (urlEarliest) return urlEarliest;
     // Use lognog_time_range (TimePicker's key) as primary, fall back to default
     return localStorage.getItem('lognog_time_range') ||
            localStorage.getItem('lognog_default_time_range') || '-24h';
   });
-  const [timeRangeLatest, setTimeRangeLatest] = useState<string | undefined>(undefined);
+  const [timeRangeLatest, setTimeRangeLatest] = useState<string | undefined>(
+    () => searchParams.get('latest') || undefined
+  );
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  const didAutoRunFromUrl = useRef(false);
   const [showSaveModal, setShowSaveModal] = useState(false);
   const [showSqlPreview, setShowSqlPreview] = useState(false);
   const [saveName, setSaveName] = useState('');
@@ -137,6 +192,7 @@ export default function SearchPage() {
   const [showHistory, setShowHistory] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
   const [jsonCopied, setJsonCopied] = useState(false);
+  const [curlCopied, setCurlCopied] = useState(false);
 
   const historyDropdownRef = useRef<HTMLDivElement>(null);
   const templatesDropdownRef = useRef<HTMLDivElement>(null);
@@ -356,6 +412,7 @@ export default function SearchPage() {
         setShowSaveModal(false);
         setShowSqlPreview(false);
         setShowTemplates(false);
+        setShowShortcuts(false);
         return;
       }
     };
@@ -389,6 +446,15 @@ export default function SearchPage() {
     },
   });
 
+  // Sync the current query + time range into the URL so searches are
+  // linkable and bookmarkable. Use replace to avoid history spam.
+  const syncUrl = useCallback((q: string, earliest?: string, latest?: string) => {
+    const params: Record<string, string> = { q };
+    if (earliest) params.earliest = earliest;
+    if (latest) params.latest = latest;
+    setSearchParams(params, { replace: true });
+  }, [setSearchParams]);
+
   const handleSearch = useCallback(() => {
     // Add to query history (dedupe, limit to 10)
     if (query && query.trim() !== 'search *') {
@@ -402,14 +468,50 @@ export default function SearchPage() {
         return updated;
       });
     }
+    syncUrl(query, timeRange || undefined, timeRangeLatest);
     searchMutation.mutate();
-  }, [query, searchMutation]);
+  }, [query, timeRange, timeRangeLatest, syncUrl, searchMutation]);
 
   const handleAISearch = useCallback(() => {
     if (aiQuestion.trim()) {
       aiSearchMutation.mutate(aiQuestion);
     }
   }, [aiSearchMutation, aiQuestion]);
+
+  // Auto-run the search once on mount if a query came in via URL params
+  // (shareable/bookmarkable searches). Runs only once.
+  useEffect(() => {
+    if (didAutoRunFromUrl.current) return;
+    const urlQuery = searchParams.get('q');
+    if (urlQuery && urlQuery.trim()) {
+      didAutoRunFromUrl.current = true;
+      handleSearch();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Global keyboard shortcuts (the hook suppresses itself inside form fields
+  // and normalizes Cmd/Ctrl). Single-key shortcuts: / t l ?.
+  const hotkeyMap = useMemo(() => ({
+    '/': () => {
+      const input = document.querySelector('[data-search-input]') as
+        | HTMLInputElement
+        | HTMLTextAreaElement
+        | null;
+      input?.focus();
+    },
+    't': () => {
+      // TimePicker owns its open state internally; trigger its button.
+      const btn = document.querySelector('[data-time-picker] button') as HTMLButtonElement | null;
+      btn?.click();
+    },
+    'l': () => {
+      if (searchMode === 'dsl') handleLiveTailToggle();
+    },
+    'shift+/': () => setShowShortcuts((v) => !v),
+  }), [searchMode, handleLiveTailToggle]);
+
+  useHotkeys(hotkeyMap);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
@@ -471,6 +573,50 @@ export default function SearchPage() {
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   }, []);
+
+  // Export results as NDJSON (one JSON object per line) so nested
+  // structured_data survives round-trips.
+  const exportToNDJSON = useCallback((data: Record<string, unknown>[]) => {
+    if (!data || data.length === 0) return;
+
+    const ndjson = toNDJSON(data);
+    const blob = new Blob([ndjson], { type: 'application/x-ndjson;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `lognog-export-${new Date().toISOString().slice(0, 19).replace(/[T:]/g, '-')}.ndjson`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, []);
+
+  // Copy the current search as a runnable curl command with a token placeholder.
+  const copyAsCurl = useCallback(async () => {
+    const finalQuery = injectMuteFilters(query);
+    const curl = buildCurlCommand(
+      window.location.origin,
+      finalQuery,
+      timeRange || undefined,
+      timeRangeLatest
+    );
+
+    try {
+      await navigator.clipboard.writeText(curl);
+    } catch {
+      const textArea = document.createElement('textarea');
+      textArea.value = curl;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+    }
+    setCurlCopied(true);
+    setTimeout(() => setCurlCopied(false), 2000);
+    toast.success('Copied as curl', 'Replace <YOUR_TOKEN> with your API token to run it.');
+  }, [query, timeRange, timeRangeLatest, injectMuteFilters, toast]);
 
   // Copy results to clipboard as JSON
   const copyToClipboard = useCallback(async (data: Record<string, unknown>[]) => {
@@ -554,9 +700,38 @@ export default function SearchPage() {
     }
 
     setQuery(newQuery);
-    // Re-run search
-    searchMutation.mutate();
-  }, [query, searchMutation]);
+    // Sync URL and re-run search
+    syncUrl(newQuery, timeRange || undefined, timeRangeLatest);
+    searchMutation.mutate({ query: newQuery, earliest: timeRange || undefined, latest: timeRangeLatest });
+  }, [query, timeRange, timeRangeLatest, syncUrl, searchMutation]);
+
+  // Show surrounding events: scope the search to this log's host and set a
+  // custom ±5 min time window around its timestamp, then run. Splunk's
+  // beloved "Nearby Events" in one click.
+  const handleShowContext = useCallback((log: LogEntry) => {
+    const host = log.hostname || log.host || log.source;
+    if (!host) return;
+
+    const ts = new Date(log.timestamp).getTime();
+    if (Number.isNaN(ts)) {
+      toast.error('Cannot show context', 'This log has no valid timestamp.');
+      return;
+    }
+
+    const fiveMin = 5 * 60 * 1000;
+    const earliest = new Date(ts - fiveMin).toISOString();
+    const latest = new Date(ts + fiveMin).toISOString();
+    const field = log.hostname ? 'hostname' : log.host ? 'host' : 'source';
+    const newQuery = `search ${field}="${host}"`;
+
+    setSearchMode('dsl');
+    setQuery(newQuery);
+    setTimeRange(earliest);
+    setTimeRangeLatest(latest);
+    syncUrl(newQuery, earliest, latest);
+    searchMutation.mutate({ query: newQuery, earliest, latest });
+    toast.info('Nearby events', `Showing events on ${host} within ±5 min.`);
+  }, [syncUrl, searchMutation, toast]);
 
   // Parse active filters from query to show as chips
   const activeFilterChips = useMemo(() => {
@@ -663,6 +838,16 @@ export default function SearchPage() {
                 <Bookmark className="w-4 h-4" />
                 <span className="hidden sm:inline">Save</span>
               </button>
+              <Tooltip content="Keyboard shortcuts (?)" placement="bottom">
+                <button
+                  onClick={() => setShowShortcuts(true)}
+                  className="btn-ghost p-2"
+                  title="Keyboard shortcuts"
+                  aria-label="Keyboard shortcuts"
+                >
+                  <Keyboard className="w-4 h-4" />
+                </button>
+              </Tooltip>
             </div>
           </div>
 
@@ -833,13 +1018,15 @@ export default function SearchPage() {
             {/* Controls Row - Time Range and Search Button */}
             <div className="flex gap-2">
               {/* Time Range */}
-              <TimePicker
-                onRangeChange={(earliest, latest) => {
-                  setTimeRange(earliest);
-                  setTimeRangeLatest(latest);
-                }}
-                defaultRange={timeRange}
-              />
+              <div data-time-picker>
+                <TimePicker
+                  onRangeChange={(earliest, latest) => {
+                    setTimeRange(earliest);
+                    setTimeRangeLatest(latest);
+                  }}
+                  defaultRange={timeRange}
+                />
+              </div>
 
               {/* Search Button */}
               {searchMode === 'ai' ? (
@@ -1293,6 +1480,26 @@ export default function SearchPage() {
                     <Download className="w-4 h-4" />
                     <span className="hidden sm:inline">CSV</span>
                   </button>
+                  <button
+                    onClick={() => exportToNDJSON(results as Record<string, unknown>[])}
+                    className="btn-ghost text-xs flex-shrink-0"
+                    title="Export as NDJSON (one JSON object per line, preserves nested fields)"
+                  >
+                    <FileJson className="w-4 h-4" />
+                    <span className="hidden sm:inline">NDJSON</span>
+                  </button>
+                  <button
+                    onClick={copyAsCurl}
+                    className="btn-ghost text-xs flex-shrink-0"
+                    title="Copy this search as a curl command"
+                  >
+                    {curlCopied ? (
+                      <Check className="w-4 h-4 text-green-500" />
+                    ) : (
+                      <Terminal className="w-4 h-4" />
+                    )}
+                    <span className="hidden sm:inline">{curlCopied ? 'Copied!' : 'curl'}</span>
+                  </button>
 
                   {/* Divider - hidden on mobile */}
                   <div className="hidden sm:block w-px h-6 bg-nog-200 dark:bg-nog-600 flex-shrink-0" />
@@ -1391,6 +1598,7 @@ export default function SearchPage() {
                   <LogViewer
                     logs={results as any[]}
                     onAddFilter={handleAddFilter}
+                    onShowContext={handleShowContext}
                     searchTerms={extractSearchTerms(query)}
                     isLoading={false}
                   />
@@ -1473,6 +1681,7 @@ export default function SearchPage() {
                 <LogViewer
                   logs={liveTail.logs as any[]}
                   onAddFilter={handleAddFilter}
+                  onShowContext={handleShowContext}
                   searchTerms={extractSearchTerms(query)}
                   isLoading={false}
                 />
@@ -1710,6 +1919,9 @@ export default function SearchPage() {
           </div>
         </div>
       )}
+
+      {/* Keyboard Shortcuts Cheat Sheet */}
+      {showShortcuts && <ShortcutsModal onClose={() => setShowShortcuts(false)} />}
     </div>
   );
 }
