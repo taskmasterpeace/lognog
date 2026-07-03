@@ -180,6 +180,10 @@ export default function DashboardStudioPage() {
   };
 
   const editPanel = (p: StagedPanel) => {
+    // Pull the panel OFF the canvas into the editor (marking any existing DB
+    // panel for replacement) so "Add to canvas" re-adds it once instead of
+    // leaving the original and creating a duplicate.
+    removePanel(p);
     setQuery(p.query);
     setViz(p.visualization);
     setPanelTitle(p.title);

@@ -210,9 +210,12 @@ export class Compiler {
           isAggregation = true;
           aggregationSelect = this.compileStats(stage);
           groupByFields = stage.groupBy.map(f => this.mapFieldForSelect(f, 'string'));
-          // Track sortable output columns: aggregation aliases + group-by names.
+          // Track sortable output columns: ONLY the aggregation aliases. Group-by
+          // fields are projected UNALIASED (e.g. JSONExtractString(structured_data,
+          // 'user_id')), so a `sort` on one must reuse that same expression via
+          // mapFieldForSelect — registering the bare name here made ORDER BY emit
+          // a nonexistent identifier (`ORDER BY user_id`).
           aggregationSelect.forEach(s => outputAliases.add(this.outputFieldName(s).toLowerCase()));
-          stage.groupBy.forEach(f => outputAliases.add(f.toLowerCase()));
           break;
 
         case 'sort':
@@ -281,10 +284,12 @@ export class Compiler {
         }
 
         case 'eval':
-          // Eval creates new computed fields
+          // Eval creates new computed fields, aliased AS the field name — so a
+          // downstream `sort` on that field can reference it directly.
           for (const assignment of stage.assignments) {
             const compiledExpr = this.compileEvalExpression(assignment.expression);
             selectFields.push(`${compiledExpr} AS ${assignment.field}`);
+            outputAliases.add(assignment.field.toLowerCase());
           }
           break;
 
@@ -296,6 +301,7 @@ export class Compiler {
           groupByFields = [topField];
           orderByFields = ['count DESC'];
           limitCount = stage.limit;
+          outputAliases.add('count');
           break;
 
         case 'rare':
@@ -306,6 +312,7 @@ export class Compiler {
           groupByFields = [rareField];
           orderByFields = ['count ASC'];
           limitCount = stage.limit;
+          outputAliases.add('count');
           break;
 
         case 'bin':
@@ -325,8 +332,9 @@ export class Compiler {
           });
           groupByFields = [timeBucket];
           if (stage.groupBy) {
+            // Split-by is projected unaliased — do NOT register its bare name (see
+            // the stats case); a sort on it resolves via mapFieldForSelect.
             groupByFields.push(this.mapFieldForSelect(stage.groupBy, 'string'));
-            outputAliases.add(stage.groupBy.toLowerCase());
           }
           orderByFields = [`${timeBucket} ASC`];
           aggregationSelect.forEach(s => outputAliases.add(this.outputFieldName(s).toLowerCase()));

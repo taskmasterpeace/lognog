@@ -47,7 +47,7 @@ import {
   reorderDashboardLogos,
   getProjects,
 } from '../db/sqlite.js';
-import { authenticate, denyReadonly } from '../auth/middleware.js';
+import { authenticate, denyReadonly, rateLimit } from '../auth/middleware.js';
 import { executeDSLQuery } from '../db/backend.js';
 
 const router = Router();
@@ -108,7 +108,7 @@ router.get('/public/:token', async (req: Request, res: Response) => {
 // panelId within the shared dashboard), so a public viewer can't run arbitrary
 // queries. Password is taken from the body (not the query string) so it doesn't
 // leak into access logs. Registered BEFORE the auth guard.
-router.post('/public/:token/query', async (req: Request, res: Response) => {
+router.post('/public/:token/query', rateLimit(60, 60000), async (req: Request, res: Response) => {
   try {
     const { token } = req.params;
     const { panelId, earliest, latest, password } = req.body || {};

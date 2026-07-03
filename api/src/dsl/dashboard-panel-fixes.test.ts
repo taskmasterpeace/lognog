@@ -41,6 +41,24 @@ describe('Dashboard panel DSL fixes', () => {
     expect(r.sql).toContain("JSONExtractString(structured_data, 'response_time') DESC");
   });
 
+  it('sort by a structured_data group-by field reuses the JSONExtract expression, not a bare identifier', () => {
+    // Regression from the outputAliases fix: `stats count by user_id | sort -user_id`
+    // must ORDER BY the same JSONExtract as the GROUP BY, not a nonexistent `user_id`.
+    const r = parseAndCompile('search * | stats count by user_id | sort -user_id');
+    expect(r.sql).toContain("ORDER BY JSONExtractString(structured_data, 'user_id') DESC");
+    expect(r.sql).not.toMatch(/ORDER BY user_id\b/);
+  });
+
+  it('sort by a known group-by column still works', () => {
+    const r = parseAndCompile('search * | stats count by hostname | sort hostname');
+    expect(r.sql).toContain('ORDER BY hostname');
+  });
+
+  it('timechart split-by sort reuses the JSONExtract expression', () => {
+    const r = parseAndCompile('search * | timechart count by response_code | sort -response_code');
+    expect(r.sql).toContain("ORDER BY JSONExtractString(structured_data, 'response_code') DESC");
+  });
+
   it('table with custom fields projects them from structured_data (Bug D)', () => {
     // `table timestamp, user_id, model_id` previously selected bare column names
     // and ClickHouse errored "Missing columns".

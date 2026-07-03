@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { isAnyAIAvailable, generateText } from './shared.js';
 import { rank, loadGuideIndex } from '../../services/helpbot-retrieve.js';
 import { executeDSLQuery } from '../../db/backend.js';
+import { authenticate, rateLimit } from '../../auth/middleware.js';
 import {
   DSL_COMMANDS,
   DSL_AGGREGATION_FUNCTIONS,
@@ -75,7 +76,9 @@ function extractQuery(text: string): string {
   return q;
 }
 
-router.post('/ask-docs', async (req: Request, res: Response) => {
+// Require auth (it runs LLM completions + a ClickHouse query) and rate-limit
+// per user/IP so it can't be used to hammer the LLM/DB.
+router.post('/ask-docs', authenticate, rateLimit(20, 60000), async (req: Request, res: Response) => {
   try {
     const question = typeof req.body?.question === 'string' ? req.body.question.trim() : '';
     if (!question) return res.status(400).json({ error: 'question is required' });
@@ -117,7 +120,8 @@ router.post('/ask-docs', async (req: Request, res: Response) => {
 
         let answer: string;
         if (runError) {
-          answer = `I tried to answer that from your logs with \`${dslQuery}\`, but the query errored (${runError}). Open it in Search to adjust it.`;
+          // Don't surface raw backend/ClickHouse error text to the client.
+          answer = `I tried to answer that from your logs with \`${dslQuery}\`, but that query didn't run cleanly. Open it in Search to adjust it.`;
         } else {
           const interpret = `The user asked: "${question}"
 I ran this LogNog query over the last 24h: ${dslQuery}
@@ -138,7 +142,7 @@ Answer the user's question in 1-3 short sentences using ONLY these results. Cite
         return res.json({
           answer,
           mode: 'data',
-          data: { query: dslQuery, rowCount: rows.length, rows: rows.slice(0, 20), link: searchLink, error: runError },
+          data: { query: dslQuery, rowCount: rows.length, rows: rows.slice(0, 20), link: searchLink, error: runError ? 'query failed' : null },
           citations,
           provider: 'ai',
         });
