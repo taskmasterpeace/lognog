@@ -108,24 +108,15 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* Hero visual — the real product, warm and lived-in */}
+        {/* Hero visual — the real product, warm and lived-in (landscape crop) */}
         <section className="mx-auto max-w-5xl px-6 pb-6 pt-4">
           <div className="ln-rise relative mx-auto max-w-4xl" style={{ animationDelay: '300ms' }}>
             <div className="pointer-events-none absolute -inset-6 -z-10 rounded-[2.5rem] bg-honey-500/10 blur-[90px]" aria-hidden="true" />
-            <div className="overflow-hidden rounded-2xl border border-nog-700/70 shadow-2xl shadow-black/50 ring-1 ring-honey-500/10">
+            <div className="aspect-[16/9] overflow-hidden rounded-2xl border border-nog-700/70 shadow-2xl shadow-black/50 ring-1 ring-honey-500/10">
               <img
                 src="/login-hero.jpg"
                 alt="A LogNog dashboard glowing on a monitor on a warm desk"
-                className="w-full"
-                loading="lazy"
-              />
-            </div>
-            {/* phone, overlapping the corner */}
-            <div className="absolute -bottom-5 right-2 w-24 rotate-3 overflow-hidden rounded-[1.25rem] border border-nog-700/70 shadow-2xl shadow-black/60 ring-1 ring-honey-500/15 sm:-bottom-9 sm:right-6 sm:w-36">
-              <img
-                src="/login-macro.jpg?v=2"
-                alt="LogNog search running on a phone"
-                className="w-full"
+                className="h-full w-full object-cover object-[50%_38%]"
                 loading="lazy"
               />
             </div>
@@ -177,8 +168,8 @@ export default function LandingPage() {
                   <p className="mt-3 text-nog-300">{shot.blurb}</p>
                 </div>
                 <div className="lg:w-3/5">
-                  <div className="overflow-hidden rounded-xl border border-nog-700/80 bg-nog-900 shadow-2xl shadow-black/40 ring-1 ring-honey-500/5">
-                    <img src={shot.src} alt={`LogNog ${shot.label}`} className="w-full" loading="lazy" />
+                  <div className="aspect-[2/1] overflow-hidden rounded-xl border border-nog-700/80 bg-nog-900 shadow-2xl shadow-black/40 ring-1 ring-honey-500/5">
+                    <img src={shot.src} alt={`LogNog ${shot.label}`} className="h-full w-full object-cover object-[46%_32%]" loading="lazy" />
                   </div>
                 </div>
               </div>
