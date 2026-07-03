@@ -1,5 +1,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import { readFileSync, existsSync } from 'node:fs';
+import path from 'node:path';
 import type { Request, Response } from 'express';
 import { authenticate, requirePermission, authenticateIngestion } from '../auth/middleware.js';
 import { logAuthEvent } from '../auth/auth.js';
@@ -10,6 +12,70 @@ import { logIngestionStats } from '../services/internal-logger.js';
 import { processLogs } from '../services/source-processor.js';
 
 const router = Router();
+
+// ---------------------------------------------------------------------------
+// Public self-service docs (NO auth) — under the /api/ingest carve-out, which is
+// CSRF-exempt and Cloudflare-bypassed, so any app or AI coding agent can fetch
+// the integration contract and configure itself to send LogNog the right logs.
+//   GET /api/ingest/guide   -> the full markdown integration guide
+//   GET /api/ingest/schema  -> the machine-readable ingest contract (JSON)
+// ---------------------------------------------------------------------------
+function agentGuidePath(): string | null {
+  const candidates = [
+    path.join(process.cwd(), 'agent-guide.md'),                       // baked into the image
+    path.join(process.cwd(), '..', 'docs', 'LOGNOG-AGENT-GUIDE.md'),  // dev (repo)
+    path.join(process.cwd(), 'docs', 'LOGNOG-AGENT-GUIDE.md'),
+  ];
+  return candidates.find((p) => existsSync(p)) || null;
+}
+
+router.get('/guide', (_req: Request, res: Response) => {
+  const p = agentGuidePath();
+  if (!p) {
+    return res.status(404).type('text/plain').send('LogNog agent guide is not available on this instance.');
+  }
+  try {
+    return res.type('text/markdown; charset=utf-8').send(readFileSync(p, 'utf8'));
+  } catch {
+    return res.status(500).type('text/plain').send('Failed to read the agent guide.');
+  }
+});
+
+const INGEST_SCHEMA = {
+  name: 'lognog-ingest',
+  description: 'Send structured JSON log events to LogNog over HTTP so they are searchable, dashboardable, and alertable.',
+  endpoint: { method: 'POST', path: '/api/ingest/http', body: 'JSON array of event objects (batch 1-500)' },
+  headers: {
+    'Content-Type': { required: true, value: 'application/json' },
+    'X-API-Key': { required: true, description: 'Ingestion API key (server-side only). 401 if missing/invalid.' },
+    'X-Index': { required: false, description: 'Groups logs under this name; auto-created on first event. Omit -> default index "http".' },
+    'X-App-Name': { required: false, description: 'Default app_name for events that do not set one.' },
+  },
+  event: {
+    message: { type: 'string', required: true, description: 'Human-readable log line.' },
+    timestamp: { type: 'string(ISO-8601)', required: false, description: 'Event time; defaults to arrival time.' },
+    level: { type: 'enum', required: false, values: ['debug', 'info', 'notice', 'warning', 'error', 'critical'], description: 'Preferred severity. Mapped to numeric severity.' },
+    severity: { type: 'number(0-7)', required: false, description: 'Syslog severity if not sending level. 0=emergency..7=debug.' },
+    app_name: { type: 'string', required: false },
+    hostname: { type: 'string', required: false },
+    source: { type: 'string', required: false, description: 'Logical component, e.g. auth/checkout/worker.' },
+    '*': { type: 'string|number|boolean', required: false, description: 'Any other key is stored as a searchable structured field (user_id, route, status_code, duration_ms, ...).' },
+  },
+  levelToSeverity: { debug: 7, info: 6, notice: 5, warning: 4, error: 3, critical: 2 },
+  env: {
+    LOGNOG_URL: 'Base URL only (client appends /api/ingest/http), e.g. https://logs.machinekinglabs.com',
+    LOGNOG_API_KEY: 'The ingestion key (server-side only).',
+    LOGNOG_APP_NAME: 'Stable kebab-case app name.',
+    LOGNOG_INDEX: 'Optional; groups logs. Defaults to app name.',
+  },
+  verify: {
+    search: 'search app_name=<your-app>',
+    bySeverity: 'search app_name=<your-app> severity<=3 | stats count by source | sort -count',
+  },
+  guideUrl: '/api/ingest/guide',
+};
+
+router.get('/schema', (_req: Request, res: Response) => res.json(INGEST_SCHEMA));
 
 /**
  * Audit-log an out-of-scope ingest attempt and send the standard 403 response.

@@ -39,6 +39,9 @@ COPY --from=builder /app/dist ./dist
 # /api/ask-docs route. Regenerated from docs/ on each release.
 COPY docs/guide-index.json ./guide-index.json
 
+# Integration guide for AI coding agents, served at GET /api/ingest/guide.
+COPY docs/LOGNOG-AGENT-GUIDE.md ./agent-guide.md
+
 # Create data and backup directories
 RUN mkdir -p /data /backups
 
