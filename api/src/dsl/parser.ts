@@ -483,7 +483,22 @@ export class Parser {
           this.check(TokenType.COUNT) || this.check(TokenType.SUM) ||
           this.check(TokenType.AVG) || this.check(TokenType.MIN) ||
           this.check(TokenType.MAX)) {
-        const field = this.advance().value;
+        const fn = this.advance().value;
+        let field = fn;
+        // Aggregation-function sort target, e.g. `sort -sum(credits_cost)`.
+        // Convert to the alias the stats compiler generates (`sum_credits_cost`,
+        // or `count` for a bare `count()`), so it resolves to the output column.
+        if (this.match(TokenType.LPAREN)) {
+          let inner = '';
+          if (this.check(TokenType.IDENTIFIER) || this.check(TokenType.MULTIPLY) ||
+              this.check(TokenType.COUNT) || this.check(TokenType.SUM) ||
+              this.check(TokenType.AVG) || this.check(TokenType.MIN) ||
+              this.check(TokenType.MAX)) {
+            inner = this.advance().value;
+          }
+          this.consume(TokenType.RPAREN, 'Expected ")" after sort field');
+          field = inner && inner !== '*' ? `${fn}_${inner}` : (fn === 'count' ? 'count' : `${fn}_all`);
+        }
         let direction = fieldDirection ?? defaultDirection;
 
         // Also allow trailing desc/asc keywords
@@ -793,32 +808,35 @@ export class Parser {
   private parseTimechart(): TimechartNode {
     this.consume(TokenType.TIMECHART, 'Expected "timechart"');
 
-    // Parse span=<value>
-    this.consume(TokenType.SPAN, 'Expected "span"');
-    this.consume(TokenType.EQUALS, 'Expected "="');
+    // span=<value> is OPTIONAL (Splunk defaults it). `timechart count by level`
+    // is valid; only parse a span when the `span=` clause is actually present.
+    let span = '1h'; // default bucket size
+    if (this.check(TokenType.SPAN)) {
+      this.consume(TokenType.SPAN, 'Expected "span"');
+      this.consume(TokenType.EQUALS, 'Expected "="');
 
-    // Parse span value (time like "1h")
-    let span: string;
-    if (this.check(TokenType.NUMBER)) {
-      const numStr = this.advance().value;
-      // Check if followed by a time unit identifier
-      if (this.check(TokenType.IDENTIFIER)) {
-        const unit = this.peek().value;
-        if (/^[smhd]$/.test(unit)) {
-          span = numStr + unit;
-          this.advance();
+      // Parse span value (time like "1h")
+      if (this.check(TokenType.NUMBER)) {
+        const numStr = this.advance().value;
+        // Check if followed by a time unit identifier
+        if (this.check(TokenType.IDENTIFIER)) {
+          const unit = this.peek().value;
+          if (/^[smhd]$/.test(unit)) {
+            span = numStr + unit;
+            this.advance();
+          } else {
+            span = numStr + 'h'; // default to hours
+          }
         } else {
           span = numStr + 'h'; // default to hours
         }
+      } else if (this.check(TokenType.IDENTIFIER)) {
+        span = this.advance().value;
+      } else if (this.check(TokenType.STRING)) {
+        span = this.advance().value;
       } else {
-        span = numStr + 'h'; // default to hours
+        throw new ParseError('Expected span value', this.peek().line, this.peek().column);
       }
-    } else if (this.check(TokenType.IDENTIFIER)) {
-      span = this.advance().value;
-    } else if (this.check(TokenType.STRING)) {
-      span = this.advance().value;
-    } else {
-      throw new ParseError('Expected span value', this.peek().line, this.peek().column);
     }
 
     // Parse aggregations (similar to stats)

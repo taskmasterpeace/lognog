@@ -71,7 +71,7 @@ Screenshots: spots are marked with SCREENSHOT bracket-tags (e.g. search-page); t
 
 **Documentation status.** This is the **first versioned edition** of the full guide, written against LogNog **v0.9.0**. Each feature below is honestly labeled **Available**, **Partially available**, **Planned**, or **Unclear** based on what the running product actually does.
 
-[SCREENSHOT: landing-page]
+![landing-page](/guide-screenshots/landing-page.png)
 
 ---
 
@@ -93,7 +93,7 @@ The fastest path from "logged in" to "I can see and search my logs."
 
 The default local development credentials are username `admin`, password `admin` — change these immediately in production.
 
-[SCREENSHOT: login-page]
+![login-page](/guide-screenshots/login-page.png)
 
 ### The welcome wizard (first login)
 
@@ -117,7 +117,7 @@ You can **Skip Setup** at any time, and re-run the wizard later from **Settings 
 
 You'll see a results count (e.g. *"1,204 results in 87ms"*), a small **timeline histogram** of events over time, and your log lines below. If you generated demo data, you'll see a healthy mix of web, database, firewall, and auth logs. Click any value in a log line to filter by it. Congratulations — you're searching.
 
-[SCREENSHOT: search-page]
+![search-page](/guide-screenshots/search-page.png)
 
 ---
 
@@ -162,7 +162,7 @@ The left sidebar groups every page into five collapsible sections. Each group re
 
 The sidebar footer shows the storage backend (**ClickHouse**) and reminds you that **syslog ingest listens on port 514**. On mobile, the sidebar collapses behind a hamburger menu.
 
-[SCREENSHOT: sidebar-nav]
+![sidebar-nav](/guide-screenshots/sidebar-nav.png)
 
 ---
 
@@ -411,7 +411,7 @@ There are also **Starter Templates**: **System Overview**, **Network Traffic**, 
 **Admin notes:** "Set as Default" pins a dashboard as your landing dashboard. Public links bypass login — only share what's safe to expose.
 **Limitations:** Public view supports fewer chart types than the private view; PDF export renders the current on-screen layout.
 
-[SCREENSHOT: dashboard-view]
+![dashboard-view](/guide-screenshots/dashboard-view.png)
 
 ### 7.5 Dashboard Studio
 
@@ -435,7 +435,7 @@ There are also **Starter Templates**: **System Overview**, **Network Traffic**, 
 **Admin notes:** Works against live data, so previews reflect exactly what a viewer will see.
 **Limitations:** The canvas arranges panels in a simple two-per-row grid on save; fine-grained sizing/positioning is done afterward in the dashboard's **Edit Layout** mode.
 
-[SCREENSHOT: dashboard-studio]
+![dashboard-studio](/guide-screenshots/dashboard-studio.png)
 
 ### 7.6 Alerts
 
@@ -473,7 +473,7 @@ There are also **Starter Templates**: **System Overview**, **Network Traffic**, 
 **Admin notes:** Notification channels are configured centrally in **Settings → Notifications**; email needs SMTP configured server-side; scripts run with API-server permissions.
 **Limitations:** "No Data" triggers depend on a source having sent data before; script actions are powerful and should be restricted to trusted admins.
 
-[SCREENSHOT: alerts-page]
+![alerts-page](/guide-screenshots/alerts-page.png)
 
 ### 7.7 Silences
 
@@ -615,7 +615,7 @@ Then confirm with `search index=my-app` on the Search page.
 **Admin notes:** Keys can be scoped to `ingest`/`read`/`write`/`admin`; in production the `/api/ingest` path is exempt from the Cloudflare Access login so machines can ship logs.
 **Limitations:** Only the HTTP ingest path currently enforces per-key **index scoping**; syslog is unauthenticated by design (network-restricted).
 
-[SCREENSHOT: data-sources]
+![data-sources](/guide-screenshots/data-sources.png)
 
 ### 7.13 The LogNog Windows Agent (LogNog In)
 
@@ -739,7 +739,7 @@ search source_type=windows_events event_id=7045 | table timestamp computer messa
 **Admin notes:** Configure the model in **Settings → AI** (Ollama URL + models, or an OpenRouter API key); test the connection there. Everything can run locally with Ollama — no cloud, no per-query cost.
 **Limitations:** All AI features are disabled/limited when no model is configured (badges read "AI Offline"); generated queries should be reviewed, especially at lower confidence.
 
-[SCREENSHOT: nogchat]
+![nogchat](/guide-screenshots/nogchat.png)
 
 ### 7.19 MCP server for Claude Desktop
 

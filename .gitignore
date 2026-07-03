@@ -103,3 +103,4 @@ ui/*.cjs
 ui/e2e/screenshots/
 ui/playwright-report/
 ui/e2e/debug-*.spec.ts
+.playwright-mcp/

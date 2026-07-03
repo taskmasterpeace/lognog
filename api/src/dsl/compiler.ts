@@ -189,6 +189,10 @@ export class Compiler {
     let isAggregation = false;
     let aggregationSelect: string[] = [];
     let dedupFields: string[] = [];
+    // Output column names available downstream (e.g. to `sort`). After a stats/
+    // timechart these are the aggregation aliases (`count`, `sum_credits_cost`, …)
+    // and group-by field names — NOT structured_data fields, which are collapsed.
+    const outputAliases = new Set<string>();
 
     // Metadata for post-processing (compare, timewrap)
     let compareMetadata: { offset: string; fields?: string[] } | undefined;
@@ -206,10 +210,13 @@ export class Compiler {
           isAggregation = true;
           aggregationSelect = this.compileStats(stage);
           groupByFields = stage.groupBy.map(f => this.mapFieldForSelect(f, 'string'));
+          // Track sortable output columns: aggregation aliases + group-by names.
+          aggregationSelect.forEach(s => outputAliases.add(this.outputFieldName(s).toLowerCase()));
+          stage.groupBy.forEach(f => outputAliases.add(f.toLowerCase()));
           break;
 
         case 'sort':
-          orderByFields = this.compileSort(stage);
+          orderByFields = this.compileSort(stage, outputAliases);
           break;
 
         case 'limit':
@@ -227,10 +234,15 @@ export class Compiler {
 
         case 'table':
         case 'fields':
-          if (stage.type === 'table') {
-            selectFields = stage.fields.map(f => this.mapField(f));
-          } else if (stage.include) {
-            selectFields = stage.fields.map(f => this.mapField(f));
+          if (stage.type === 'table' || stage.include) {
+            // Custom fields (user_id, model_id, …) live in structured_data — they
+            // are not real columns, so project them via JSONExtract aliased back
+            // to the field name. Previously `mapField` left them as bare column
+            // names and ClickHouse errored "Missing columns".
+            selectFields = stage.fields.map(f => {
+              const mapped = this.mapFieldForSelect(f);
+              return mapped.startsWith('JSONExtract') ? `${mapped} AS ${sanitizeFieldName(f)}` : mapped;
+            });
           } else {
             selectFields = DEFAULT_FIELDS.filter(
               f => !stage.fields.includes(f)
@@ -314,8 +326,10 @@ export class Compiler {
           groupByFields = [timeBucket];
           if (stage.groupBy) {
             groupByFields.push(this.mapFieldForSelect(stage.groupBy, 'string'));
+            outputAliases.add(stage.groupBy.toLowerCase());
           }
           orderByFields = [`${timeBucket} ASC`];
+          aggregationSelect.forEach(s => outputAliases.add(this.outputFieldName(s).toLowerCase()));
           break;
 
         case 'rex':
@@ -604,13 +618,18 @@ export class Compiler {
     });
   }
 
-  private compileSort(sort: SortNode): string[] {
+  private compileSort(sort: SortNode, outputAliases?: Set<string>): string[] {
     return sort.fields.map(f => {
-      // Bug #41-7: a sort on a structured_data field (e.g. `sort -response_time`)
-      // must use the same JSONExtract projection the SELECT clause uses, or
-      // ClickHouse errors with "Unknown identifier". mapFieldForSelect resolves
-      // known columns to their name and extracts custom fields from
-      // structured_data (matching the SELECT default 'string' mapping).
+      // Sorting by an aggregation output alias (`count`, `sum_credits_cost`, …)
+      // or a group-by field after a stats/timechart must reference that column
+      // by name — NOT extract it from structured_data (which was over-eager in
+      // the prior structured_data-sort fix and broke every `stats … | sort -count`).
+      if (outputAliases && outputAliases.has(f.field.toLowerCase())) {
+        return `${f.field} ${f.direction.toUpperCase()}`;
+      }
+      // Otherwise (sorting raw search results) a structured_data field must use
+      // the same JSONExtract projection the SELECT clause uses, or ClickHouse
+      // errors with "Unknown identifier".
       const field = this.mapFieldForSelect(f.field);
       return `${field} ${f.direction.toUpperCase()}`;
     });
