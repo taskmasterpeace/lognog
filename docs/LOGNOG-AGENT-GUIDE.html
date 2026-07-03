@@ -132,6 +132,7 @@
       <a class="" href="#drop-in-client-python">Drop-in client — Python</a>
       <a class="" href="#what-to-log">What to log</a>
       <a class="" href="#verify-it-works">Verify it works</a>
+      <a class="" href="#query-language-dsl-cheat-sheet">Query language (DSL) cheat-sheet</a>
       <a class="" href="#read-act-the-agent-api">Read &amp; act — the Agent API</a>
       <a class="lvl3" href="#read">Read</a>
       <a class="lvl3" href="#act-create-and-manage-alerts">Act — create and manage alerts</a>
@@ -307,6 +308,17 @@ if _ENABLED:
 <h2 id="verify-it-works">Verify it works</h2>
 <ol><li><strong>Send a test event</strong> (the curl above, or <code>logger.info('LogNog integration test', { source: 'setup', test: true })</code>). A <code>200</code> with <code>{"accepted":1}</code> means the key + endpoint are correct.</li><li><strong>Confirm in the UI:</strong> open LogNog → <strong>Search</strong>, run: ``<code> search app_name=my-app </code>`<code> (or </code>search index=my-app`). Your event should appear within a few seconds.</li><li><strong>Confirm the source registered:</strong> <strong>Data Sources</strong> now lists your app/index with a recent "Last Seen".</li><li><strong>Sanity queries</strong> to prove the fields are structured: ``<code> search app_name=my-app | stats count by level search app_name=my-app severity&lt;=3 | stats count by source | sort -count </code>``</li></ol>
 <p>If nothing shows: check <code>LOGNOG_URL</code> has no trailing <code>/api/...</code> path, the key is valid (a <code>401</code> means it's wrong), the body is a JSON <strong>array</strong>, and events were flushed (the clients flush on interval/shutdown — call <code>flush()</code> in short-lived scripts).</p>
+<hr>
+<h2 id="query-language-dsl-cheat-sheet">Query language (DSL) cheat-sheet</h2>
+<p>You'll need this to search (below, and via the ingest verify step). It's Splunk-like and piped: start with <code>search &lt;filters&gt;</code>, then <code>| &lt;command&gt;</code>.</p>
+<p><strong>Filters:</strong> <code>field=value</code> · <code>field!=value</code> · <code>severity&lt;=3</code> · <code>message="some text"</code> · <code>AND</code> / <code>OR</code> / <code>NOT</code> · <code>index=&lt;name&gt;</code> · <code>app_name=&lt;name&gt;</code>. Severity: <code>0</code>=emergency … <code>3</code>=error … <code>7</code>=debug, so <strong><code>severity&lt;=3</code> = errors and worse</strong>.</p>
+<p><strong>Commands (pipe after the search):</strong></p>
+<div class="table-wrap"><table><thead><tr><th>Command</th><th>Example</th></tr></thead><tbody><tr><td><code>stats</code></td><td><code>stats count by app_name</code> · <code>stats avg(duration_ms) by route</code> · <code>stats dc(user_id)</code></td></tr><tr><td><code>timechart</code></td><td><code>timechart count by level</code> (span optional; <code>timechart span=1h count</code>)</td></tr><tr><td><code>sort</code></td><td><code>sort -count</code> ( <code>-</code> desc, <code>+</code> asc)</td></tr><tr><td><code>head</code> / <code>tail</code> / <code>limit</code></td><td><code>head 10</code></td></tr><tr><td><code>top</code> / <code>rare</code></td><td><code>top hostname</code> · <code>rare status_code</code></td></tr><tr><td><code>table</code> / <code>fields</code></td><td><code>table timestamp, message, user_id</code></td></tr><tr><td><code>dedup</code></td><td><code>dedup user_id</code></td></tr><tr><td><code>rex</code></td><td><code>rex field=message "(?&lt;code&gt;\d{3})"</code> (extract a field)</td></tr><tr><td><code>eval</code></td><td><code>eval slow = duration_ms &gt; 1000</code></td></tr><tr><td><code>where</code></td><td><code>where status_code &gt;= 500</code></td></tr><tr><td><code>rename</code></td><td><code>rename hostname as host</code></td></tr></tbody></table></div>
+<p><strong>Ready examples:</strong></p>
+<pre><code>search severity&lt;=3 | stats count by app_name | sort -count | head 10
+search app_name=my-app | timechart count by level
+search * | stats count by index_name
+search message="timeout" | stats count by hostname | sort -count</code></pre>
 <hr>
 <h2 id="read-act-the-agent-api">Read &amp; act — the Agent API</h2>
 <p>Everything above is about <em>sending</em> logs. LogNog also has an <strong>Agent API</strong> so a program or AI agent can <strong>read</strong> logs (search, check status) and <strong>act</strong> (create and manage alerts) — with the same API key, no browser login, no CSRF token.</p>

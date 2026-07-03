@@ -281,6 +281,38 @@ If nothing shows: check `LOGNOG_URL` has no trailing `/api/...` path, the key is
 
 ---
 
+## Query language (DSL) cheat-sheet
+
+You'll need this to search (below, and via the ingest verify step). It's Splunk-like and piped: start with `search <filters>`, then `| <command>`.
+
+**Filters:** `field=value` · `field!=value` · `severity<=3` · `message="some text"` · `AND` / `OR` / `NOT` · `index=<name>` · `app_name=<name>`. Severity: `0`=emergency … `3`=error … `7`=debug, so **`severity<=3` = errors and worse**.
+
+**Commands (pipe after the search):**
+
+| Command | Example |
+|---|---|
+| `stats` | `stats count by app_name` · `stats avg(duration_ms) by route` · `stats dc(user_id)` |
+| `timechart` | `timechart count by level` (span optional; `timechart span=1h count`) |
+| `sort` | `sort -count` ( `-` desc, `+` asc) |
+| `head` / `tail` / `limit` | `head 10` |
+| `top` / `rare` | `top hostname` · `rare status_code` |
+| `table` / `fields` | `table timestamp, message, user_id` |
+| `dedup` | `dedup user_id` |
+| `rex` | `rex field=message "(?<code>\d{3})"` (extract a field) |
+| `eval` | `eval slow = duration_ms > 1000` |
+| `where` | `where status_code >= 500` |
+| `rename` | `rename hostname as host` |
+
+**Ready examples:**
+```
+search severity<=3 | stats count by app_name | sort -count | head 10
+search app_name=my-app | timechart count by level
+search * | stats count by index_name
+search message="timeout" | stats count by hostname | sort -count
+```
+
+---
+
 ## Read & act — the Agent API
 
 Everything above is about *sending* logs. LogNog also has an **Agent API** so a program or AI agent can **read** logs (search, check status) and **act** (create and manage alerts) — with the same API key, no browser login, no CSRF token.

@@ -65,38 +65,113 @@ router.get('/guide', (req: Request, res: Response) => {
   }
 });
 
+// Complete, machine-readable capabilities contract: everything an agent can do
+// with a LogNog API key — SEND logs, READ/search, and manage ALERTS — plus the
+// query language. Served publicly at GET /api/ingest/schema (no key required to
+// read the contract; a key is needed to actually call the ingest/agent APIs).
 const INGEST_SCHEMA = {
-  name: 'lognog-ingest',
-  description: 'Send structured JSON log events to LogNog over HTTP so they are searchable, dashboardable, and alertable.',
-  endpoint: { method: 'POST', path: '/api/ingest/http', body: 'JSON array of event objects (batch 1-500)' },
-  headers: {
-    'Content-Type': { required: true, value: 'application/json' },
-    'X-API-Key': { required: true, description: 'Ingestion API key (server-side only). 401 if missing/invalid.' },
-    'X-Index': { required: false, description: 'Groups logs under this name; auto-created on first event. Omit -> default index "http".' },
-    'X-App-Name': { required: false, description: 'Default app_name for events that do not set one.' },
+  name: 'lognog',
+  description: 'Self-hosted log platform. This contract covers everything an agent can do with an API key: send logs, read/search them, and create/manage alerts.',
+  docs: {
+    guide: '/api/ingest/guide',
+    guide_note: 'Open in a browser for a styled page; curl/fetch for markdown. Full how-to with drop-in clients and examples.',
+    schema: '/api/ingest/schema',
+    agent_api_self_describe: '/api/agent (send your key; returns endpoints + your key permissions)',
+    help_bot: 'In-app "Ask LogNog" answers docs + data questions (requires login).',
   },
-  event: {
-    message: { type: 'string', required: true, description: 'Human-readable log line.' },
-    timestamp: { type: 'string(ISO-8601)', required: false, description: 'Event time; defaults to arrival time.' },
-    level: { type: 'enum', required: false, values: ['debug', 'info', 'notice', 'warning', 'error', 'critical'], description: 'Preferred severity. Mapped to numeric severity.' },
-    severity: { type: 'number(0-7)', required: false, description: 'Syslog severity if not sending level. 0=emergency..7=debug.' },
-    app_name: { type: 'string', required: false },
-    hostname: { type: 'string', required: false },
-    source: { type: 'string', required: false, description: 'Logical component, e.g. auth/checkout/worker.' },
-    '*': { type: 'string|number|boolean', required: false, description: 'Any other key is stored as a searchable structured field (user_id, route, status_code, duration_ms, ...).' },
+  auth: {
+    how: 'Create a key in the LogNog UI (Settings -> API Keys). Send it as `X-API-Key: <key>` or `Authorization: ApiKey <key>`.',
+    permissions: '`read` = search/check; `write` = also create/manage alerts. Choose when creating the key.',
+    index_scoping: 'A key can optionally be restricted to specific indexes (allowed_indexes); searches and ingest are then limited to those.',
+    note: 'The key is server-side only. Reading these public docs needs NO key; calling the APIs does.',
   },
-  levelToSeverity: { debug: 7, info: 6, notice: 5, warning: 4, error: 3, critical: 2 },
-  env: {
-    LOGNOG_URL: 'Base URL only (client appends /api/ingest/http), e.g. https://logs.machinekinglabs.com',
-    LOGNOG_API_KEY: 'The ingestion key (server-side only).',
-    LOGNOG_APP_NAME: 'Stable kebab-case app name.',
-    LOGNOG_INDEX: 'Optional; groups logs. Defaults to app name.',
+  // 1) SEND logs -----------------------------------------------------------
+  ingest: {
+    endpoint: { method: 'POST', path: '/api/ingest/http', body: 'JSON array of event objects (batch 1-500)' },
+    headers: {
+      'Content-Type': { required: true, value: 'application/json' },
+      'X-API-Key': { required: true, description: 'API key with `write`. 401 if missing/invalid.' },
+      'X-Index': { required: false, description: 'Groups logs under this name; auto-created on first event. Omit -> default index "http". You never pre-declare an index.' },
+      'X-App-Name': { required: false, description: 'Default app_name for events that do not set one.' },
+    },
+    event: {
+      message: { type: 'string', required: true, description: 'Human-readable log line.' },
+      timestamp: { type: 'string(ISO-8601)', required: false, description: 'Event time; defaults to arrival time.' },
+      level: { type: 'enum', required: false, values: ['debug', 'info', 'notice', 'warning', 'error', 'critical'], description: 'Preferred severity. Mapped to numeric severity.' },
+      severity: { type: 'number(0-7)', required: false, description: 'Syslog severity if not sending level. 0=emergency..7=debug.' },
+      app_name: { type: 'string', required: false },
+      hostname: { type: 'string', required: false },
+      source: { type: 'string', required: false, description: 'Logical component, e.g. auth/checkout/worker.' },
+      '*': { type: 'string|number|boolean', required: false, description: 'Any other key is stored as a searchable structured field (user_id, route, status_code, duration_ms, ...).' },
+    },
+    levelToSeverity: { debug: 7, info: 6, notice: 5, warning: 4, error: 3, critical: 2 },
+    env: {
+      LOGNOG_URL: 'Base URL only (client appends /api/ingest/http), e.g. https://logs.machinekinglabs.com',
+      LOGNOG_API_KEY: 'The key (server-side only).',
+      LOGNOG_APP_NAME: 'Stable kebab-case app name.',
+      LOGNOG_INDEX: 'Optional; groups logs. Defaults to app name.',
+    },
+  },
+  // 2) READ + ACT ----------------------------------------------------------
+  agent_api: {
+    base: '/api/agent',
+    auth: 'Same key via `X-API-Key` or `Authorization: ApiKey <key>`.',
+    self_describe: 'GET /api/agent returns the live endpoint list + your key permissions.',
+    read: {
+      'POST /api/agent/search': 'Run a DSL query. Body { query, earliest?, latest?, limit? } -> { count, fields, results }. Needs read.',
+      'GET /api/agent/summary': '24h health: event/error totals, per-index counts, alert status (incl. which are failing). Needs read.',
+      'GET /api/agent/indexes': 'Indexes/sources with recent counts. Needs read.',
+      'GET /api/agent/fields': 'Core searchable fields. Needs read.',
+      'GET /api/agent/alerts': 'List alerts with health (last_status/last_error). Needs read.',
+      'GET /api/agent/alerts/:id': 'Get one alert. Needs read.',
+      'POST /api/agent/alerts/test': 'Preview would-fire without saving. Body { search_query, trigger_condition?, trigger_threshold?, time_range? }. Needs read.',
+    },
+    act: {
+      'POST /api/agent/alerts': 'Create an alert. Body { name*, search_query*, trigger_type?, trigger_condition?, trigger_threshold?, cron_expression?, time_range?, severity?, enabled?, actions? }. Needs write.',
+      'PATCH /api/agent/alerts/:id': 'Update alert fields. Needs write.',
+      'POST /api/agent/alerts/:id/evaluate': 'Evaluate the alert now. Needs write.',
+      'DELETE /api/agent/alerts/:id': 'Delete the alert. Needs write.',
+    },
+    alert_fields: {
+      trigger_type: ['number_of_results (aka threshold/results_count)', 'number_of_hosts', 'custom_condition', 'no_data'],
+      trigger_condition: ['greater_than', 'less_than', 'equal_to', 'not_equal_to'],
+      trigger_threshold: 'number to compare against',
+      schedule: 'cron_expression (e.g. "*/5 * * * *") + time_range (e.g. "-5m")',
+      actions: 'array of { type: "email"|"webhook"|"apprise"|"log", config: {...} }',
+    },
+    cloudflare_note: 'External agents reaching this through Cloudflare Access need a bypass policy on /api/agent (like /api/ingest). Local/LAN works directly.',
+  },
+  // 3) The query language --------------------------------------------------
+  dsl: {
+    description: 'Splunk-like, piped. Start with `search <filters>` then `| <command>`.',
+    filters: 'field=value, field!=value, severity<=3, message="text", AND/OR/NOT, index=<name>, app_name=<name>.',
+    commands: {
+      search: 'search severity<=3 app_name=my-app',
+      stats: 'stats count|sum(f)|avg(f)|min|max|dc(f) by <field>',
+      timechart: 'timechart [span=1h] count by <field>   (span optional)',
+      sort: 'sort -count  (- = desc, + = asc)',
+      'head/tail/limit': 'head 10 | tail 10 | limit 100',
+      top_rare: 'top <field> | rare <field>',
+      table_fields: 'table timestamp, message, user_id | fields user_id',
+      dedup: 'dedup <field>',
+      rex: 'rex field=message "(?<code>\\\\d{3})"   (extract a field)',
+      eval: 'eval <newfield> = <expr>',
+      where: 'where <condition>',
+      rename: 'rename <from> as <to>',
+      lookup: 'lookup <table> <field>',
+    },
+    examples: [
+      'search severity<=3 | stats count by app_name | sort -count | head 10',
+      'search app_name=my-app | timechart count by level',
+      'search * | stats count by index_name',
+      'search message="timeout" | stats count by hostname | sort -count',
+    ],
+    severity: '0=emergency 1=alert 2=critical 3=error 4=warning 5=notice 6=info 7=debug. Use severity<=3 for errors.',
   },
   verify: {
-    search: 'search app_name=<your-app>',
-    bySeverity: 'search app_name=<your-app> severity<=3 | stats count by source | sort -count',
+    afterSending: 'search app_name=<your-app>',
+    health: 'GET /api/agent/summary  OR  search * severity<=3 | stats count by app_name | sort -count',
   },
-  guideUrl: '/api/ingest/guide',
 };
 
 router.get('/schema', (_req: Request, res: Response) => res.json(INGEST_SCHEMA));
