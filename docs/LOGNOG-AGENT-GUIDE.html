@@ -132,14 +132,17 @@
       <a class="" href="#drop-in-client-python">Drop-in client — Python</a>
       <a class="" href="#what-to-log">What to log</a>
       <a class="" href="#verify-it-works">Verify it works</a>
-      <a class="" href="#machine-readable-contract">Machine-readable contract</a>
+      <a class="" href="#read-act-the-agent-api">Read &amp; act — the Agent API</a>
+      <a class="lvl3" href="#read">Read</a>
+      <a class="lvl3" href="#act-create-and-manage-alerts">Act — create and manage alerts</a>
+      <a class="" href="#machine-readable-contracts">Machine-readable contracts</a>
     </nav>
   </aside>
   <main class="content">
 <h1 id="lognog-integration-guide-for-ai-coding-agents">LogNog — Integration Guide for AI Coding Agents</h1>
 <p><strong>You are an AI coding agent (e.g. Claude Code). Your job: instrument this project to send its logs to LogNog correctly.</strong> This guide is self-contained — everything you need to configure logging is below. Follow it top to bottom.</p>
 <p>LogNog is a self-hosted log platform (a friendlier Splunk). It ingests structured JSON log events over HTTP, stores them in ClickHouse, and lets a human search them with a Splunk-like query language, build dashboards, and get alerts. "The right logs" means <strong>structured, severity-tagged events with useful fields</strong> — not <code>console.log</code> spam. This guide tells you exactly what to send.</p>
-<ul><li><strong>Fetch the latest version of this guide:</strong> <code>GET https://logs.machinekinglabs.com/api/ingest/guide</code> (returns this markdown).</li><li><strong>Fetch the machine-readable contract:</strong> <code>GET https://logs.machinekinglabs.com/api/ingest/schema</code> (returns JSON).</li></ul>
+<ul><li><strong>Fetch the latest version of this guide:</strong> <code>GET https://logs.machinekinglabs.com/api/ingest/guide</code> (returns this markdown).</li><li><strong>Fetch the machine-readable contract:</strong> <code>GET https://logs.machinekinglabs.com/api/ingest/schema</code> (returns JSON).</li><li><strong>Want to READ logs and manage alerts programmatically</strong> (not just send logs)? See <a href="#read--act--the-agent-api">Read &amp; act — the Agent API</a>. Same API key.</li></ul>
 <hr>
 <h2 id="tldr-self-configure-in-4-steps">TL;DR — self-configure in 4 steps</h2>
 <ol><li><strong>Get an API key.</strong> A human creates one in LogNog under <strong>Settings → API Keys</strong> (or the <strong>Add Data Source</strong> wizard) and gives it to you. It looks like <code>lnog_xxxxxxxx_xxxxxxxxxxxxxxxx</code>. <strong>That is the only thing you need to provision.</strong> You do NOT create or request access to an "index" — see <a href="#indexes">Indexes</a>.</li><li><strong>Set env vars</strong> (see <a href="#configuration">Configuration</a>): <code>LOGNOG_URL</code>, <code>LOGNOG_API_KEY</code>, <code>LOGNOG_APP_NAME</code>, and optionally <code>LOGNOG_INDEX</code>.</li><li><strong>Drop in the client</strong> (<a href="#drop-in-client--typescript">TypeScript</a> or <a href="#drop-in-client--python">Python</a>) and wire it into app startup, request handling, and error paths per <a href="#what-to-log">What to log</a>.</li><li><strong>Verify</strong> (<a href="#verify-it-works">Verify it works</a>): send one test event, then confirm it appears.</li></ol>
@@ -305,8 +308,46 @@ if _ENABLED:
 <ol><li><strong>Send a test event</strong> (the curl above, or <code>logger.info('LogNog integration test', { source: 'setup', test: true })</code>). A <code>200</code> with <code>{"accepted":1}</code> means the key + endpoint are correct.</li><li><strong>Confirm in the UI:</strong> open LogNog → <strong>Search</strong>, run: ``<code> search app_name=my-app </code>`<code> (or </code>search index=my-app`). Your event should appear within a few seconds.</li><li><strong>Confirm the source registered:</strong> <strong>Data Sources</strong> now lists your app/index with a recent "Last Seen".</li><li><strong>Sanity queries</strong> to prove the fields are structured: ``<code> search app_name=my-app | stats count by level search app_name=my-app severity&lt;=3 | stats count by source | sort -count </code>``</li></ol>
 <p>If nothing shows: check <code>LOGNOG_URL</code> has no trailing <code>/api/...</code> path, the key is valid (a <code>401</code> means it's wrong), the body is a JSON <strong>array</strong>, and events were flushed (the clients flush on interval/shutdown — call <code>flush()</code> in short-lived scripts).</p>
 <hr>
-<h2 id="machine-readable-contract">Machine-readable contract</h2>
-<p><code>GET {LOGNOG_URL}/api/ingest/schema</code> returns JSON describing the endpoint, headers, event fields, and level→severity map — parse it to configure programmatically without scraping this doc.</p>
+<h2 id="read-act-the-agent-api">Read &amp; act — the Agent API</h2>
+<p>Everything above is about <em>sending</em> logs. LogNog also has an <strong>Agent API</strong> so a program or AI agent can <strong>read</strong> logs (search, check status) and <strong>act</strong> (create and manage alerts) — with the same API key, no browser login, no CSRF token.</p>
+<p><strong>Base:</strong> <code>{LOGNOG_URL}/api/agent</code> · <strong>Auth:</strong> <code>X-API-Key: &lt;key&gt;</code> (or <code>Authorization: ApiKey &lt;key&gt;</code>).</p>
+<p><strong>Permissions</strong> (set on the key when it's created): a <code>read</code> key can search/check; a <code>write</code> key can also create/manage alerts. A read-only key gets <code>403</code> on write endpoints.</p>
+<p><strong>Start here — the API describes itself:</strong></p>
+<pre><code>curl -H "X-API-Key: $KEY" "$LOGNOG_URL/api/agent"
+# -&gt; { name, you: { permissions, allowed_indexes }, endpoints: {...}, dsl, docs }</code></pre>
+<h3 id="read">Read</h3>
+<div class="table-wrap"><table><thead><tr><th>Endpoint</th><th>Does</th><th>Needs</th></tr></thead><tbody><tr><td><code>POST /api/agent/search</code></td><td>Run a DSL query. Body <code>{ query, earliest?, latest?, limit? }</code> → <code>{ count, fields, results }</code>.</td><td>read</td></tr><tr><td><code>GET /api/agent/summary</code></td><td>Health snapshot: 24h event/error totals, per-index counts, alert status (incl. which alerts are failing).</td><td>read</td></tr><tr><td><code>GET /api/agent/indexes</code></td><td>Indexes/sources with recent counts.</td><td>read</td></tr><tr><td><code>GET /api/agent/fields</code></td><td>The core searchable fields.</td><td>read</td></tr><tr><td><code>GET /api/agent/alerts</code></td><td>List alerts with health (<code>last_status</code>, <code>last_error</code>, <code>trigger_count</code>).</td><td>read</td></tr><tr><td><code>GET /api/agent/alerts/:id</code></td><td>One alert.</td><td>read</td></tr><tr><td><code>POST /api/agent/alerts/test</code></td><td>Preview whether a query+condition would fire, without saving. Body <code>{ search_query, trigger_condition?, trigger_threshold?, time_range? }</code>.</td><td>read</td></tr></tbody></table></div>
+<pre><code># Search
+curl -H "X-API-Key: $KEY" -H "Content-Type: application/json" \
+  -d '{"query":"search severity&lt;=3 | stats count by app_name | sort -count"}' \
+  "$LOGNOG_URL/api/agent/search"
+
+# Check overall health
+curl -H "X-API-Key: $KEY" "$LOGNOG_URL/api/agent/summary"</code></pre>
+<h3 id="act-create-and-manage-alerts">Act — create and manage alerts</h3>
+<div class="table-wrap"><table><thead><tr><th>Endpoint</th><th>Does</th><th>Needs</th></tr></thead><tbody><tr><td><code>POST /api/agent/alerts</code></td><td>Create an alert.</td><td>write</td></tr><tr><td><code>PATCH /api/agent/alerts/:id</code></td><td>Update fields (threshold, enabled, query, schedule, …).</td><td>write</td></tr><tr><td><code>POST /api/agent/alerts/:id/evaluate</code></td><td>Evaluate the alert now.</td><td>write</td></tr><tr><td><code>DELETE /api/agent/alerts/:id</code></td><td>Delete it.</td><td>write</td></tr></tbody></table></div>
+<p><strong>Create-alert body</strong> (only <code>name</code> + <code>search_query</code> are required):</p>
+<pre><code>{
+  "name": "HYH error spike",
+  "description": "created by an agent",
+  "search_query": "search app_name=hey-youre-hired severity&lt;=3 | stats count",
+  "trigger_type": "number_of_results",
+  "trigger_condition": "greater_than",
+  "trigger_threshold": 50,
+  "cron_expression": "*/5 * * * *",
+  "time_range": "-5m",
+  "severity": "high",
+  "enabled": true,
+  "actions": [{ "type": "apprise", "config": { "channel": "ops" } }]
+}</code></pre>
+<ul><li><code>trigger_type</code> accepts <code>number_of_results</code> (also <code>threshold</code>/<code>results_count</code>), <code>number_of_hosts</code>, <code>custom_condition</code>, <code>no_data</code>.</li><li><code>trigger_condition</code>: <code>greater_than</code> | <code>less_than</code> | <code>equal_to</code> | <code>not_equal_to</code>. <code>trigger_threshold</code> is the number to compare.</li><li>Tip: call <code>POST /api/agent/alerts/test</code> first to see it would fire before you save it.</li></ul>
+<pre><code>curl -X POST -H "X-API-Key: $KEY" -H "Content-Type: application/json" \
+  -d '{"name":"Error spike","search_query":"search severity&lt;=3 | stats count","trigger_condition":"greater_than","trigger_threshold":50,"cron_expression":"*/5 * * * *","time_range":"-5m","severity":"high"}' \
+  "$LOGNOG_URL/api/agent/alerts"</code></pre>
+<blockquote><strong>Reachability:</strong> the Agent API lives under <code>/api/agent</code>. On a self-hosted box an agent on the same network hits it directly. To reach it from <em>outside</em> through Cloudflare Access, add <code>/api/agent</code> to the Access <strong>bypass</strong> policy (same as <code>/api/ingest</code>) — otherwise external calls get the Cloudflare login page.</blockquote>
+<hr>
+<h2 id="machine-readable-contracts">Machine-readable contracts</h2>
+<ul><li><code>GET {LOGNOG_URL}/api/ingest/schema</code> — the <strong>ingest</strong> contract (endpoint, headers, event fields, level→severity map).</li><li><code>GET {LOGNOG_URL}/api/agent</code> — the <strong>Agent API</strong> self-describes (endpoints + your key's permissions). Parse either to configure programmatically without scraping this doc.</li></ul>
 <hr>
 <p><em>This guide is served live at <code>{LOGNOG_URL}/api/ingest/guide</code>. LogNog brand: chocolate/cream, warm. Questions a human can answer live in the in-app "Ask LogNog" help bot.</em></p>
     <div class="foot">LogNog user guide · <span class="mono">v0.9.0</span> · updated 2026-07-03</div>

@@ -6,6 +6,7 @@ LogNog is a self-hosted log platform (a friendlier Splunk). It ingests structure
 
 - **Fetch the latest version of this guide:** `GET https://logs.machinekinglabs.com/api/ingest/guide` (returns this markdown).
 - **Fetch the machine-readable contract:** `GET https://logs.machinekinglabs.com/api/ingest/schema` (returns JSON).
+- **Want to READ logs and manage alerts programmatically** (not just send logs)? See [Read & act — the Agent API](#read--act--the-agent-api). Same API key.
 
 ---
 
@@ -280,9 +281,83 @@ If nothing shows: check `LOGNOG_URL` has no trailing `/api/...` path, the key is
 
 ---
 
-## Machine-readable contract
+## Read & act — the Agent API
 
-`GET {LOGNOG_URL}/api/ingest/schema` returns JSON describing the endpoint, headers, event fields, and level→severity map — parse it to configure programmatically without scraping this doc.
+Everything above is about *sending* logs. LogNog also has an **Agent API** so a program or AI agent can **read** logs (search, check status) and **act** (create and manage alerts) — with the same API key, no browser login, no CSRF token.
+
+**Base:** `{LOGNOG_URL}/api/agent` · **Auth:** `X-API-Key: <key>` (or `Authorization: ApiKey <key>`).
+
+**Permissions** (set on the key when it's created): a `read` key can search/check; a `write` key can also create/manage alerts. A read-only key gets `403` on write endpoints.
+
+**Start here — the API describes itself:**
+```bash
+curl -H "X-API-Key: $KEY" "$LOGNOG_URL/api/agent"
+# -> { name, you: { permissions, allowed_indexes }, endpoints: {...}, dsl, docs }
+```
+
+### Read
+| Endpoint | Does | Needs |
+|---|---|---|
+| `POST /api/agent/search` | Run a DSL query. Body `{ query, earliest?, latest?, limit? }` → `{ count, fields, results }`. | read |
+| `GET /api/agent/summary` | Health snapshot: 24h event/error totals, per-index counts, alert status (incl. which alerts are failing). | read |
+| `GET /api/agent/indexes` | Indexes/sources with recent counts. | read |
+| `GET /api/agent/fields` | The core searchable fields. | read |
+| `GET /api/agent/alerts` | List alerts with health (`last_status`, `last_error`, `trigger_count`). | read |
+| `GET /api/agent/alerts/:id` | One alert. | read |
+| `POST /api/agent/alerts/test` | Preview whether a query+condition would fire, without saving. Body `{ search_query, trigger_condition?, trigger_threshold?, time_range? }`. | read |
+
+```bash
+# Search
+curl -H "X-API-Key: $KEY" -H "Content-Type: application/json" \
+  -d '{"query":"search severity<=3 | stats count by app_name | sort -count"}' \
+  "$LOGNOG_URL/api/agent/search"
+
+# Check overall health
+curl -H "X-API-Key: $KEY" "$LOGNOG_URL/api/agent/summary"
+```
+
+### Act — create and manage alerts
+| Endpoint | Does | Needs |
+|---|---|---|
+| `POST /api/agent/alerts` | Create an alert. | write |
+| `PATCH /api/agent/alerts/:id` | Update fields (threshold, enabled, query, schedule, …). | write |
+| `POST /api/agent/alerts/:id/evaluate` | Evaluate the alert now. | write |
+| `DELETE /api/agent/alerts/:id` | Delete it. | write |
+
+**Create-alert body** (only `name` + `search_query` are required):
+```json
+{
+  "name": "HYH error spike",
+  "description": "created by an agent",
+  "search_query": "search app_name=hey-youre-hired severity<=3 | stats count",
+  "trigger_type": "number_of_results",
+  "trigger_condition": "greater_than",
+  "trigger_threshold": 50,
+  "cron_expression": "*/5 * * * *",
+  "time_range": "-5m",
+  "severity": "high",
+  "enabled": true,
+  "actions": [{ "type": "apprise", "config": { "channel": "ops" } }]
+}
+```
+- `trigger_type` accepts `number_of_results` (also `threshold`/`results_count`), `number_of_hosts`, `custom_condition`, `no_data`.
+- `trigger_condition`: `greater_than` | `less_than` | `equal_to` | `not_equal_to`. `trigger_threshold` is the number to compare.
+- Tip: call `POST /api/agent/alerts/test` first to see it would fire before you save it.
+
+```bash
+curl -X POST -H "X-API-Key: $KEY" -H "Content-Type: application/json" \
+  -d '{"name":"Error spike","search_query":"search severity<=3 | stats count","trigger_condition":"greater_than","trigger_threshold":50,"cron_expression":"*/5 * * * *","time_range":"-5m","severity":"high"}' \
+  "$LOGNOG_URL/api/agent/alerts"
+```
+
+> **Reachability:** the Agent API lives under `/api/agent`. On a self-hosted box an agent on the same network hits it directly. To reach it from *outside* through Cloudflare Access, add `/api/agent` to the Access **bypass** policy (same as `/api/ingest`) — otherwise external calls get the Cloudflare login page.
+
+---
+
+## Machine-readable contracts
+
+- `GET {LOGNOG_URL}/api/ingest/schema` — the **ingest** contract (endpoint, headers, event fields, level→severity map).
+- `GET {LOGNOG_URL}/api/agent` — the **Agent API** self-describes (endpoints + your key's permissions). Parse either to configure programmatically without scraping this doc.
 
 ---
 
