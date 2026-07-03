@@ -76,18 +76,58 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-nog-100 to-nog-200 dark:from-nog-950 dark:to-nog-900 p-4 relative">
-      {/* Back to Landing */}
-      <Link
-        to="/"
-        className="absolute top-4 sm:top-6 left-4 sm:left-6 flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 text-nog-600 dark:text-nog-400 hover:text-nog-900 dark:hover:text-nog-100 hover:bg-nog-200/50 dark:hover:bg-nog-700/50 rounded-lg transition-all text-sm sm:text-base"
-      >
-        <ArrowLeft className="w-4 sm:w-5 h-4 sm:h-5" />
-        <span className="font-medium hidden sm:inline">Back to Home</span>
-        <span className="font-medium sm:hidden">Back</span>
-      </Link>
+    <div className="min-h-screen lg:grid lg:grid-cols-[1.1fr_1fr] bg-gradient-to-br from-nog-100 to-nog-200 dark:from-nog-950 dark:to-nog-900">
+      {/* Hero panel — real LogNog dashboard on a desk (hidden on small screens) */}
+      <aside className="relative hidden lg:block overflow-hidden">
+        <img
+          src="/login-hero.jpg"
+          alt="LogNog dashboard on a desk"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        {/* Chocolate brand wash for legibility + warmth */}
+        <div className="absolute inset-0 bg-gradient-to-t from-[#2A1B0E]/95 via-[#3D2A18]/55 to-[#3D2A18]/20" />
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent to-[#3D2A18]/40" />
 
-      <div className="w-full max-w-md mt-12 sm:mt-0">
+        {/* Copy overlay */}
+        <div className="relative h-full flex flex-col justify-end p-10 xl:p-14">
+          <div className="flex items-center gap-3 mb-5">
+            <img src="/logo.png" alt="" className="w-11 h-11 rounded-xl shadow-lg object-cover" />
+            <span className="text-2xl font-bold text-honey-50 tracking-tight">LogNog</span>
+          </div>
+          <h2 className="text-3xl xl:text-4xl font-bold text-honey-50 leading-tight tracking-tight max-w-md">
+            Every log, every signal — under your control.
+          </h2>
+          <p className="mt-4 text-honey-100/80 text-base max-w-md leading-relaxed">
+            Search, dashboard, and alert on your logs in one self-hosted place.
+            No seat limits, no data leaving your walls.
+          </p>
+          <ul className="mt-7 flex flex-wrap gap-x-6 gap-y-2 text-sm text-honey-100/90">
+            <li className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-honey-400" /> Splunk-style search
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-honey-400" /> Live dashboards
+            </li>
+            <li className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-honey-400" /> Smart alerts
+            </li>
+          </ul>
+        </div>
+      </aside>
+
+      {/* Form panel */}
+      <main className="relative flex items-center justify-center p-4 min-h-screen lg:min-h-0">
+        {/* Back to Landing */}
+        <Link
+          to="/"
+          className="absolute top-4 sm:top-6 left-4 sm:left-6 flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1.5 sm:py-2 text-nog-600 dark:text-nog-400 hover:text-nog-900 dark:hover:text-nog-100 hover:bg-nog-200/50 dark:hover:bg-nog-700/50 rounded-lg transition-all text-sm sm:text-base"
+        >
+          <ArrowLeft className="w-4 sm:w-5 h-4 sm:h-5" />
+          <span className="font-medium hidden sm:inline">Back to Home</span>
+          <span className="font-medium sm:hidden">Back</span>
+        </Link>
+
+        <div className="w-full max-w-md mt-12 lg:mt-0">
         {/* Logo */}
         <div className="text-center mb-6 sm:mb-8">
           <img
@@ -270,11 +310,12 @@ export default function LoginPage() {
           )}
         </div>
 
-        {/* Footer */}
-        <p className="mt-6 text-center text-sm text-nog-500 dark:text-nog-400">
-          LogNog - Your Logs, Your Control
-        </p>
-      </div>
+          {/* Footer */}
+          <p className="mt-6 text-center text-sm text-nog-500 dark:text-nog-400">
+            LogNog - Your Logs, Your Control
+          </p>
+        </div>
+      </main>
     </div>
   );
 }
