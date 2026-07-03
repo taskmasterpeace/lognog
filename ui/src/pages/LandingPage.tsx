@@ -14,6 +14,7 @@ import {
   Container,
   HardDrive,
   Home,
+  Bot,
 } from 'lucide-react';
 
 const features = [
@@ -265,6 +266,15 @@ export default function LandingPage() {
             </div>
             <div className="flex items-center gap-5 text-sm text-nog-400">
               <Link to="/docs" className="transition hover:text-nog-100">Docs</Link>
+              <a
+                href="/api/ingest/guide"
+                target="_blank"
+                rel="noreferrer"
+                title="Integration guide + API for AI coding agents"
+                className="flex items-center gap-1.5 transition hover:text-honey-400"
+              >
+                <Bot className="h-4 w-4" /> For AI agents
+              </a>
               <a href="https://github.com/taskmasterpeace/lognog" target="_blank" rel="noreferrer" className="transition hover:text-nog-100">GitHub</a>
               <span className="flex items-center gap-1.5"><Lock className="h-3.5 w-3.5" /> Self-hosted</span>
             </div>
