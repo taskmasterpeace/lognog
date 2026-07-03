@@ -20,6 +20,34 @@ import { listLookupTables } from '../services/lookup-tables.js';
 
 const router = Router();
 
+// Top-level log columns (mirrors the DSL compiler's KNOWN_COLUMNS). Any field
+// NOT in this set is queried out of the structured_data JSON blob, exactly like
+// the main compiler does — so the histogram builder never emits a bare column
+// name for a custom field (which ClickHouse rejects as "Unknown identifier").
+const HISTOGRAM_KNOWN_COLUMNS = new Set([
+  'timestamp', 'received_at',
+  'facility', 'severity', 'priority',
+  'hostname', 'app_name', 'proc_id', 'msg_id',
+  'message', 'raw', 'structured_data',
+  'source_ip', 'dest_ip', 'source_port', 'dest_port',
+  'protocol', 'action', 'user',
+  'index_name', 'message_tokens',
+]);
+
+// Reject field names that could break out of a JSON-path / column reference.
+// Matches the compiler's sanitizeFieldName allowlist.
+function histogramSafeFieldName(field: string): string | null {
+  return /^[a-zA-Z0-9_.\-]+$/.test(field) ? field : null;
+}
+
+// Single-quote-escape a string value for safe inline SQL (mirrors the
+// compiler's escape()): double single quotes, and (ClickHouse) backslashes.
+// Bug #41-1: DSL string values were interpolated UNESCAPED into raw SQL.
+function histogramEscapeValue(value: string, liteMode: boolean): string {
+  const escaped = value.replace(/'/g, "''");
+  return liteMode ? escaped : escaped.replace(/\\/g, '\\\\');
+}
+
 // Helper: Parse time string (e.g., "30m", "1h") to milliseconds
 function parseTimeToMs(timeStr: string): number {
   const match = timeStr.match(/^(\d+)([smhd])$/);
@@ -494,7 +522,7 @@ router.post('/query', authenticate, rateLimit(120, 60000), async (req: Request, 
     const { interval, intervalMs, clickhouseFunc, sqliteFunc } = calculateHistogramInterval(startMs, endMs);
 
     // Build histogram query (for both ClickHouse and SQLite)
-    let histogramPromise: Promise<{ bucket: string; count: number }[]> | null = null;
+    let histogramPromise: Promise<{ bucket: string; count: number }[] | null> | null = null;
 
     if (include_histogram) {
       // Parse the DSL to extract WHERE conditions
@@ -520,26 +548,42 @@ router.post('/query', authenticate, rateLimit(120, 60000), async (req: Request, 
                   continue;
                 }
 
-                let field: string;
-                // Apply field mapping (e.g., 'index' -> 'index_name')
+                // Bug #41-2: build the field reference the SAME way the main
+                // compiler does. Custom (non-column) fields must be read out of
+                // structured_data via JSONExtract/json_extract, NOT as a bare
+                // column name (ClickHouse) or invalid `structured_data['x']`
+                // syntax on a String column — both raised "Unknown identifier"
+                // and 500'd the whole search.
                 const mappedField = FIELD_MAP[cond.field.toLowerCase()] || cond.field;
+                const isWildcard = cond.field === '*' || cond.field === '_all';
 
-                if (mappedField === 'message' || cond.field === '*' || cond.field === '_all') {
+                let field: string;
+                if (mappedField === 'message' || isWildcard) {
                   field = 'message';
-                } else if (cond.field.includes('.')) {
-                  // Handle nested fields differently for SQLite vs ClickHouse
-                  field = liteMode
-                    ? `json_extract(structured_data, '$.${cond.field}')`
-                    : `structured_data['${cond.field}']`;
-                } else {
+                } else if (HISTOGRAM_KNOWN_COLUMNS.has(mappedField)) {
                   field = mappedField;
+                } else {
+                  // Custom field -> structured_data. Sanitize the field name to
+                  // keep a malicious key from breaking out of the string literal.
+                  const safe = histogramSafeFieldName(cond.field);
+                  if (safe === null) {
+                    // Unsafe field name -> skip this condition entirely.
+                    continue;
+                  }
+                  field = liteMode
+                    ? `json_extract(structured_data, '$.${safe}')`
+                    : `JSONExtractString(structured_data, '${safe}')`;
                 }
 
+                // Bug #41-1: escape string values so a value like
+                // `x' OR 1=1` cannot break out of the SQL literal.
                 if (cond.operator === '~') {
-                  // SQLite uses LIKE (case-insensitive by default), ClickHouse uses ILIKE
-                  conditions.push(`${field} ${liteMode ? 'LIKE' : 'ILIKE'} '%${cond.value}%'`);
+                  const v = histogramEscapeValue(String(cond.value), liteMode);
+                  conditions.push(`${field} ${liteMode ? 'LIKE' : 'ILIKE'} '%${v}%'`);
                 } else {
-                  const quotedValue = typeof cond.value === 'string' ? `'${cond.value}'` : cond.value;
+                  const quotedValue = typeof cond.value === 'string'
+                    ? `'${histogramEscapeValue(cond.value, liteMode)}'`
+                    : cond.value;
                   conditions.push(`${field} ${cond.operator} ${quotedValue}`);
                 }
               }
@@ -593,9 +637,18 @@ router.post('/query', authenticate, rateLimit(120, 60000), async (req: Request, 
           `;
         }
 
-        histogramPromise = executeRawQuery<{ bucket: string; count: number }>(histogramSql);
-      } catch {
-        // If parsing fails for histogram, just skip it
+        // Bug #41-2: the histogram is a non-essential side panel. If it fails
+        // (bad SQL, ClickHouse error, etc.) it must NEVER fail the main search,
+        // which is awaited alongside it in Promise.all below. Swallow errors and
+        // resolve to null so a broken histogram just omits the chart.
+        histogramPromise = executeRawQuery<{ bucket: string; count: number }>(histogramSql)
+          .catch((err) => {
+            console.error('Histogram query failed (non-fatal):', err);
+            return null;
+          });
+      } catch (histErr) {
+        // If parsing/building fails for histogram, just skip it
+        console.error('Histogram build failed (non-fatal):', histErr);
         histogramPromise = null;
       }
     }
@@ -720,16 +773,18 @@ router.post('/query', authenticate, rateLimit(120, 60000), async (req: Request, 
       });
     }
 
+    // Bug #41-10: do not leak internal error detail to clients; log it server-side.
     console.error('Query error:', error);
     return res.status(500).json({
       error: 'Query execution failed',
-      message: String(error),
+      message: 'An internal error occurred while executing the query.',
     });
   }
 });
 
 // Parse query to AST (for debugging/inspection)
-router.post('/parse', (req: Request, res: Response) => {
+// Bug #41-9: require auth for consistency with the rest of the search router.
+router.post('/parse', authenticate, (req: Request, res: Response) => {
   try {
     const { query } = req.body;
 
@@ -754,9 +809,11 @@ router.post('/parse', (req: Request, res: Response) => {
       });
     }
 
+    // Bug #41-10: do not leak internal error detail to clients; log it server-side.
+    console.error('Parse error:', error);
     return res.status(500).json({
       error: 'Parse failed',
-      message: String(error),
+      message: 'An internal error occurred while parsing the query.',
     });
   }
 });
@@ -807,10 +864,11 @@ router.post('/ai', authenticate, async (req: Request, res: Response) => {
 
     return res.json(response);
   } catch (error) {
+    // Bug #41-10: do not leak internal error detail to clients; log it server-side.
     console.error('AI search error:', error);
     return res.status(500).json({
       error: 'AI search failed',
-      message: String(error),
+      message: 'An internal error occurred while running the AI search.',
     });
   }
 });

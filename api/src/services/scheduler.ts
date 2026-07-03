@@ -463,6 +463,18 @@ async function runReport(report: ScheduledReport): Promise<void> {
     });
 
     console.error(`Error running report "${report.name}":`, error);
+
+    // Bug #41-8: even on failure, advance last_run so the scheduler's
+    // shouldRunNow() no longer sees this report as due every tick. Without this,
+    // a persistently-failing report re-ran every 60s forever. The error detail
+    // is already captured via logReportGenerated({ error }) above and console.
+    try {
+      const db = getSQLiteDB();
+      db.prepare("UPDATE scheduled_reports SET last_run = datetime('now') WHERE id = ?")
+        .run(report.id);
+    } catch (updateError) {
+      console.error(`Failed to record last_run for report "${report.name}":`, updateError);
+    }
   }
 }
 

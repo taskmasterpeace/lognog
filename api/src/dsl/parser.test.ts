@@ -455,4 +455,26 @@ describe('Parser', () => {
     const timewrap = ast.stages[2] as { type: 'timewrap'; span: string };
     expect(timewrap.span).toBe('1w');
   });
+
+  // #41-11: unit regex must be fully anchored so a stray word (e.g. "seconds")
+  // is NOT mistaken for a bare unit and glued onto the number.
+  it('does not treat a spelled-out unit word as a unit in compare', () => {
+    const ast = parse('search * | stats count | compare 1 seconds');
+    const compare = ast.stages[2] as { type: 'compare'; offset: string; fields?: string[] };
+    expect(compare.offset).toBe('1d'); // falls back to days, does NOT become "1seconds"
+    expect(compare.offset).not.toContain('seconds');
+  });
+
+  it('does not glue a spelled-out unit word onto the span in timewrap', () => {
+    // The word "minutes" must NOT be mistaken for the "m" unit and glued into
+    // "1minutes". timewrap has no trailing field list, so the leftover word is a
+    // parse error — the key point is it is never silently absorbed as a unit.
+    expect(() => parse('search * | timechart span=1h count | timewrap 1 minutes')).toThrow();
+  });
+
+  it('still accepts the valid "mo" (month) unit', () => {
+    const ast = parse('search * | stats count | compare 1mo');
+    const compare = ast.stages[2] as { type: 'compare'; offset: string };
+    expect(compare.offset).toBe('1mo');
+  });
 });

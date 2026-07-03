@@ -36,6 +36,8 @@ const EXEMPT_PATHS = [
   '/api/auth/setup-required',
   '/onboarding',        // Onboarding - JWT protected, low risk
   '/api/onboarding',    // Alternate path
+  '/dashboards/public', // Public shared dashboards - anonymous, token-gated, read-only
+  '/api/dashboards/public',
 ];
 
 /**

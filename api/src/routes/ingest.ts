@@ -151,6 +151,33 @@ const ingestRequestSchema = z.object({
 });
 
 /**
+ * Map an agent event's severity to a syslog severity number.
+ *
+ * The LogNog In agent ships a per-event severity as a string in
+ * `metadata.severity` (e.g. the Windows Event collector emits
+ * "error"/"warning"/"info"). Previously this was discarded and every agent log
+ * event was stored as severity 6 (informational). Map the known string levels
+ * (and numeric passthroughs) to the syslog scale; default to 6 when unknown.
+ */
+function agentSeverityToSyslog(raw: unknown): number {
+  if (typeof raw === 'number' && Number.isFinite(raw)) {
+    return Math.min(7, Math.max(0, Math.round(raw)));
+  }
+  if (typeof raw === 'string') {
+    const lvl = raw.trim().toLowerCase();
+    if (lvl.includes('emerg')) return 0;
+    if (lvl.includes('alert')) return 1;
+    if (lvl.includes('fatal') || lvl.includes('crit')) return 2;
+    if (lvl.includes('error') || lvl === 'err') return 3;
+    if (lvl.includes('warn')) return 4;
+    if (lvl.includes('notice')) return 5;
+    if (lvl.includes('info')) return 6;
+    if (lvl.includes('debug') || lvl.includes('verbose')) return 7;
+  }
+  return 6; // informational default
+}
+
+/**
  * POST /api/ingest/agent
  *
  * Receive events from LogNog In agents.
@@ -210,7 +237,10 @@ router.post(
             source_type: event.source_type,
             ...event.metadata,
           }),
-          severity: 6, // informational
+          // Map the agent's per-event severity (e.g. Windows Event collector
+          // puts "error"/"warning"/"info" in metadata.severity) through to the
+          // syslog severity column instead of hardcoding informational (6).
+          severity: agentSeverityToSyslog(event.metadata?.severity),
         };
       });
 

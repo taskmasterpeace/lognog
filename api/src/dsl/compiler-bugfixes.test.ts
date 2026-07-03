@@ -190,7 +190,9 @@ describe('#37/#41-11 time bounds are built into the compiled WHERE', () => {
 
   it('SQLite: relative earliest adds a datetime() bound', () => {
     const sql = lite('search host=router', undefined, { earliest: '-1h' }).sql;
-    expect(sql).toContain("timestamp >= datetime('now', '-1 hours')");
+    // #41-4: the timestamp column is normalized (T -> space) so its ISO-with-T
+    // stored form compares correctly against datetime('now', ...).
+    expect(sql).toContain("replace(timestamp, 'T', ' ') >= datetime('now', '-1 hours')");
   });
 
   it('ClickHouse: time bound coexists with index scope and aggregation', () => {

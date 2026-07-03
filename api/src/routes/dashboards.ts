@@ -48,6 +48,7 @@ import {
   getProjects,
 } from '../db/sqlite.js';
 import { authenticate, denyReadonly } from '../auth/middleware.js';
+import { executeDSLQuery } from '../db/backend.js';
 
 const router = Router();
 
@@ -58,7 +59,9 @@ const router = Router();
 router.get('/public/:token', async (req: Request, res: Response) => {
   try {
     const { token } = req.params;
-    const { password } = req.query;
+    // Prefer the header (query-string passwords leak into access logs); fall
+    // back to the query param for older links.
+    const password = req.header('X-Dashboard-Password') || req.query.password;
 
     const dashboard = getDashboardByToken(token);
     if (!dashboard) {
@@ -96,6 +99,59 @@ router.get('/public/:token', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error fetching public dashboard:', error);
     return res.status(500).json({ error: 'Failed to fetch dashboard' });
+  }
+});
+
+// Public panel data for a shared dashboard. Anonymous viewers previously got
+// empty panels because the public page called the AUTHENTICATED /search/query
+// and silently 401'd. This runs ONLY a stored panel's own query (looked up by
+// panelId within the shared dashboard), so a public viewer can't run arbitrary
+// queries. Password is taken from the body (not the query string) so it doesn't
+// leak into access logs. Registered BEFORE the auth guard.
+router.post('/public/:token/query', async (req: Request, res: Response) => {
+  try {
+    const { token } = req.params;
+    const { panelId, earliest, latest, password } = req.body || {};
+
+    const dashboard = getDashboardByToken(token);
+    if (!dashboard) {
+      return res.status(404).json({ error: 'Dashboard not found or link expired' });
+    }
+
+    if (dashboard.public_password) {
+      if (!password) {
+        return res.status(401).json({ error: 'Password required', needs_password: true });
+      }
+      const ok = await bcrypt.compare(String(password), dashboard.public_password);
+      if (!ok) {
+        return res.status(401).json({ error: 'Invalid password', needs_password: true });
+      }
+    }
+
+    const panels = getDashboardPanels(dashboard.id);
+    const panel = panels.find((p) => p.id === panelId);
+    if (!panel) {
+      return res.status(404).json({ error: 'Panel not found' });
+    }
+
+    // Substitute variable placeholders with their stored default values so
+    // parameterized panels don't fail for anonymous viewers.
+    let query = panel.query;
+    const variables = getDashboardVariables(dashboard.id);
+    for (const v of variables) {
+      if (v.default_value != null) {
+        query = query.split(`$${v.name}$`).join(String(v.default_value));
+      }
+    }
+
+    const result = await executeDSLQuery(query, {
+      earliest: earliest || '-24h',
+      latest: latest || 'now',
+    });
+    return res.json({ results: result.results });
+  } catch (error) {
+    console.error('Error running public panel query:', error);
+    return res.status(500).json({ error: 'Failed to run panel query' });
   }
 });
 
@@ -159,6 +215,44 @@ router.get('/all-panels', (_req: Request, res: Response) => {
   } catch (error) {
     console.error('Error fetching all panels:', error);
     return res.status(500).json({ error: 'Failed to fetch panels' });
+  }
+});
+
+// Template routes MUST be registered before '/:id', otherwise GET /templates
+// is matched as getDashboard('templates') and 404s (breaking the onboarding
+// template gallery).
+router.get('/templates', (_req: Request, res: Response) => {
+  try {
+    const category = _req.query.category as string | undefined;
+    const templates = getDashboardTemplates(category);
+    return res.json(templates.map(t => ({
+      ...t,
+      template_json: undefined, // Don't send full template in list
+      required_sources: safeJsonParse(t.required_sources, []),
+    })));
+  } catch (error) {
+    console.error('Error fetching templates:', error);
+    return res.status(500).json({ error: 'Failed to fetch templates' });
+  }
+});
+
+router.get('/templates/:templateId', (req: Request, res: Response) => {
+  try {
+    const template = getDashboardTemplate(req.params.templateId);
+    if (!template) {
+      return res.status(404).json({ error: 'Template not found' });
+    }
+
+    incrementTemplateDownloads(template.id);
+
+    return res.json({
+      ...template,
+      template_json: safeJsonParse(template.template_json, {}),
+      required_sources: safeJsonParse(template.required_sources, []),
+    });
+  } catch (error) {
+    console.error('Error fetching template:', error);
+    return res.status(500).json({ error: 'Failed to fetch template' });
   }
 });
 
@@ -315,7 +409,7 @@ router.post('/:id/panels', (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Dashboard not found' });
     }
 
-    const { title, query, visualization, options, position } = req.body;
+    const { title, description, query, visualization, options, position } = req.body;
 
     if (!title || !query) {
       return res.status(400).json({ error: 'Title and query are required' });
@@ -327,7 +421,8 @@ router.post('/:id/panels', (req: Request, res: Response) => {
       query,
       visualization,
       options,
-      position
+      position,
+      description
     );
 
     return res.status(201).json({
@@ -348,10 +443,11 @@ router.put('/:id/panels/:panelId', (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Dashboard not found' });
     }
 
-    const { title, query, visualization, options, position_x, position_y, width, height } = req.body;
+    const { title, description, query, visualization, options, position_x, position_y, width, height } = req.body;
 
     const panel = updateDashboardPanel(req.params.panelId, {
       title,
+      description,
       query,
       visualization,
       options,
@@ -579,6 +675,58 @@ router.post('/:id/share', async (req: Request, res: Response) => {
   }
 });
 
+// Update sharing settings (unified enable/disable/edit). The UI's share modal
+// PUTs { is_public, public_password?, public_expires_at? }; previously only
+// POST/DELETE existed, so the PUT 404'd and the modal silently "saved" nothing.
+router.put('/:id/share', async (req: Request, res: Response) => {
+  try {
+    const dashboard = getDashboard(req.params.id);
+    if (!dashboard) {
+      return res.status(404).json({ error: 'Dashboard not found' });
+    }
+
+    const { is_public, public_password, public_expires_at } = req.body;
+
+    if (!is_public) {
+      updateDashboard(req.params.id, {
+        is_public: false,
+        public_token: '',
+        public_password: '',
+        public_expires_at: '',
+      });
+      return res.json({ is_public: false });
+    }
+
+    // Enabling (or updating an already-public dashboard): keep the existing
+    // token if there is one so old links don't break.
+    const token = dashboard.public_token || uuidv4();
+
+    // Empty string => explicitly clear; undefined => leave unchanged.
+    let passwordUpdate: string | undefined;
+    if (public_password === '' || public_password === null) {
+      passwordUpdate = '';
+    } else if (typeof public_password === 'string') {
+      passwordUpdate = await bcrypt.hash(public_password, 10);
+    }
+
+    updateDashboard(req.params.id, {
+      is_public: true,
+      public_token: token,
+      ...(passwordUpdate !== undefined ? { public_password: passwordUpdate } : {}),
+      ...(public_expires_at !== undefined ? { public_expires_at: public_expires_at || '' } : {}),
+    });
+
+    return res.json({
+      is_public: true,
+      public_token: token,
+      public_url: `/public/dashboard/${token}`,
+    });
+  } catch (error) {
+    console.error('Error updating sharing:', error);
+    return res.status(500).json({ error: 'Failed to update sharing' });
+  }
+});
+
 // Disable public sharing
 router.delete('/:id/share', (req: Request, res: Response) => {
   try {
@@ -785,6 +933,22 @@ router.post('/:id/pages', (req: Request, res: Response) => {
   }
 });
 
+// Reorder pages — MUST be registered before '/:id/pages/:pageId', otherwise
+// Express matches 'reorder' as :pageId and the reorder call 404s.
+router.put('/:id/pages/reorder', (req: Request, res: Response) => {
+  try {
+    const { pageIds } = req.body;
+    if (!Array.isArray(pageIds)) {
+      return res.status(400).json({ error: 'pageIds array is required' });
+    }
+    reorderDashboardPages(req.params.id, pageIds);
+    return res.json({ success: true });
+  } catch (error) {
+    console.error('Error reordering pages:', error);
+    return res.status(500).json({ error: 'Failed to reorder pages' });
+  }
+});
+
 router.put('/:id/pages/:pageId', (req: Request, res: Response) => {
   try {
     const { name, icon, sort_order } = req.body;
@@ -809,20 +973,6 @@ router.delete('/:id/pages/:pageId', (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error deleting page:', error);
     return res.status(500).json({ error: 'Failed to delete page' });
-  }
-});
-
-router.put('/:id/pages/reorder', (req: Request, res: Response) => {
-  try {
-    const { pageIds } = req.body;
-    if (!Array.isArray(pageIds)) {
-      return res.status(400).json({ error: 'pageIds array is required' });
-    }
-    reorderDashboardPages(req.params.id, pageIds);
-    return res.json({ success: true });
-  } catch (error) {
-    console.error('Error reordering pages:', error);
-    return res.status(500).json({ error: 'Failed to reorder pages' });
   }
 });
 
@@ -1013,43 +1163,6 @@ router.post('/import', (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error importing dashboard:', error);
     return res.status(500).json({ error: 'Failed to import dashboard' });
-  }
-});
-
-// Get dashboard templates
-router.get('/templates', (_req: Request, res: Response) => {
-  try {
-    const category = _req.query.category as string | undefined;
-    const templates = getDashboardTemplates(category);
-    return res.json(templates.map(t => ({
-      ...t,
-      template_json: undefined, // Don't send full template in list
-      required_sources: safeJsonParse(t.required_sources, []),
-    })));
-  } catch (error) {
-    console.error('Error fetching templates:', error);
-    return res.status(500).json({ error: 'Failed to fetch templates' });
-  }
-});
-
-// Get single dashboard template
-router.get('/templates/:templateId', (req: Request, res: Response) => {
-  try {
-    const template = getDashboardTemplate(req.params.templateId);
-    if (!template) {
-      return res.status(404).json({ error: 'Template not found' });
-    }
-
-    incrementTemplateDownloads(template.id);
-
-    return res.json({
-      ...template,
-      template_json: safeJsonParse(template.template_json, {}),
-      required_sources: safeJsonParse(template.required_sources, []),
-    });
-  } catch (error) {
-    console.error('Error fetching template:', error);
-    return res.status(500).json({ error: 'Failed to fetch template' });
   }
 });
 

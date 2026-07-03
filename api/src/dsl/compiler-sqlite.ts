@@ -111,13 +111,21 @@ export class SQLiteCompiler {
     const latest = tb.latest || (earliest ? 'now' : undefined);
     const conditions: string[] = [];
 
+    // Bug #41-4: timestamps are stored ISO-8601 with a 'T' separator
+    // (e.g. 2026-07-03T14:59), but datetime('now') / datetime('now','-1 hours')
+    // produce a space separator (2026-07-03 14:59). A lexicographic compare then
+    // makes '...T14:59' sort AFTER '... 14:59' (T=0x54 > space=0x20), so a
+    // same-day row with a `latest=now` bound matched 0 times. Normalize the
+    // column side to a space separator so both operands share one format.
+    const tsCol = "replace(timestamp, 'T', ' ')";
+
     if (earliest) {
       const expr = parseRelativeTimeSQLite(earliest);
-      if (expr) conditions.push(`timestamp >= ${expr}`);
+      if (expr) conditions.push(`${tsCol} >= ${expr}`);
     }
     if (latest) {
       const expr = parseRelativeTimeSQLite(latest);
-      if (expr) conditions.push(`timestamp <= ${expr}`);
+      if (expr) conditions.push(`${tsCol} <= ${expr}`);
     }
 
     return conditions;
@@ -156,6 +164,7 @@ export class SQLiteCompiler {
     let limitCount: number | null = null;
     let isAggregation = false;
     let aggregationSelect: string[] = [];
+    let dedupFields: string[] = [];
 
     // Metadata for post-processing (compare, timewrap)
     let compareMetadata: { offset: string; fields?: string[] } | undefined;
@@ -184,8 +193,13 @@ export class SQLiteCompiler {
           break;
 
         case 'dedup':
-          // Dedup is handled with DISTINCT
-          selectFields = stage.fields.map(f => this.mapField(f));
+          // Bug #41-3: dedup was a silent no-op (overwrote selectFields with
+          // just the keys, emitted no DISTINCT). Keep one row per distinct key
+          // combination while preserving ALL columns. SQLite has no LIMIT BY, so
+          // we pick the newest row per key via a rowid subquery (see below) and
+          // keep the full select list. Map keys with the same select-mapping so
+          // structured_data fields dedup correctly.
+          dedupFields = stage.fields.map(f => this.mapFieldForSelect(f));
           break;
 
         case 'table':
@@ -338,6 +352,13 @@ export class SQLiteCompiler {
 
     if (groupByFields.length > 0) {
       sql += ' GROUP BY ' + groupByFields.join(', ');
+    } else if (dedupFields.length > 0) {
+      // Bug #41-3: real dedup on SQLite. GROUP BY the dedup keys collapses each
+      // distinct combination to a single row while the bare (non-aggregated)
+      // select list still returns every column. SQLite (3.7.11+) resolves each
+      // bare column from the max(rowid) row of the group, so we deterministically
+      // keep the most-recently-inserted row per key.
+      sql += ' GROUP BY ' + dedupFields.join(', ');
     }
 
     if (orderByFields.length > 0) {
@@ -503,7 +524,10 @@ export class SQLiteCompiler {
   private compileStats(stats: StatsNode): string[] {
     return stats.aggregations.map(agg => {
       const field = agg.field ? this.mapFieldForSelect(agg.field) : null;
-      const alias = agg.alias || `${agg.function}_${agg.field || 'all'}`;
+      // Bug #41-5 (parity): bare `count` (no field) aliases to just `count`,
+      // matching the ClickHouse compiler, so `stats count by h | sort -count`
+      // works on Lite instead of throwing "no such column: count".
+      const alias = agg.alias || (agg.function === 'count' && !agg.field ? 'count' : `${agg.function}_${agg.field || 'all'}`);
 
       switch (agg.function) {
         case 'count':
@@ -1057,9 +1081,11 @@ export function parseRelativeTimeSQLite(timeStr: string): string | null {
     }
   }
 
-  // If it looks like an absolute datetime, use it directly
+  // If it looks like an absolute datetime, use it directly. Normalize any 'T'
+  // separator to a space so it lexicographically compares against the (also
+  // space-normalized) timestamp column (#41-4).
   if (/^\d{4}-\d{2}-\d{2}/.test(timeStr)) {
-    return `'${timeStr.replace(/'/g, "''")}'`;
+    return `'${timeStr.replace(/'/g, "''").replace('T', ' ')}'`;
   }
 
   return null;

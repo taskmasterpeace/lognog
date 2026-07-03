@@ -9,6 +9,7 @@ import {
   Alert,
   AlertAction,
   AlertSeverity,
+  AlertTriggerType,
   getAlerts,
   getAlert,
   updateAlert,
@@ -148,6 +149,61 @@ function checkTriggerCondition(
     default:
       return value > threshold;
   }
+}
+
+// Normalize a stored trigger_type to a canonical value the evaluator understands.
+// Production alerts were created with legacy/UI values ('threshold', 'results_count')
+// that matched no switch case, leaving every alert permanently un-fireable. This
+// maps historical aliases onto the four canonical types and defaults unknown
+// values to number_of_results rather than silently dropping the alert.
+export function normalizeTriggerType(raw: string | undefined | null): AlertTriggerType {
+  switch ((raw || '').toLowerCase()) {
+    case 'number_of_hosts':
+    case 'host_count':
+    case 'hosts':
+      return 'number_of_hosts';
+    case 'custom_condition':
+    case 'custom':
+      return 'custom_condition';
+    case 'no_data':
+    case 'nodata':
+    case 'no_results':
+      return 'no_data';
+    case 'number_of_results':
+    case 'results_count':
+    case 'result_count':
+    case 'threshold':
+    case 'count':
+    default:
+      return 'number_of_results';
+  }
+}
+
+// Choose the value a number_of_results alert compares against its threshold.
+// For an aggregate that collapses to a single numeric cell (e.g. `stats count`,
+// `stats avg(x)`), the meaningful value is that cell — not the row count, which
+// is always 1. This is what makes the "Logging Dead" monitors (`stats count`
+// with `less_than 1`) actually fire when a source goes silent. For raw result
+// sets we fall back to the row count.
+function getComparisonValue(
+  results: Record<string, unknown>[],
+  resultCount: number
+): number {
+  if (results.length === 1) {
+    const row = results[0] as Record<string, unknown>;
+    const keys = Object.keys(row);
+    const countKey = keys.find((k) => k === 'count' || k === 'count_all');
+    if (countKey !== undefined) {
+      const n = Number(row[countKey]);
+      if (Number.isFinite(n)) return n;
+    }
+    // Single numeric column from any other aggregation.
+    if (keys.length === 1) {
+      const n = Number(row[keys[0]]);
+      if (Number.isFinite(n)) return n;
+    }
+  }
+  return resultCount;
 }
 
 // Execute email action
@@ -669,16 +725,25 @@ export async function evaluateAlert(alertId: string): Promise<{
     // cron matcher uses this to know the alert was evaluated this cycle). The
     // *throttle*/double-fire guard is handled atomically via claimAlertTrigger()
     // below, keyed on last_triggered, not last_run (issue #39 bug 4).
-    updateAlert(alertId, { last_run: new Date().toISOString() });
+    updateAlert(alertId, {
+      last_run: new Date().toISOString(),
+      last_error: null,
+      last_status: 'ok',
+    });
 
     // Check trigger condition
     let triggered = false;
+    const triggerType = normalizeTriggerType(alert.trigger_type);
+    const comparisonValue = getComparisonValue(
+      results as Record<string, unknown>[],
+      resultCount
+    );
 
-    switch (alert.trigger_type) {
+    switch (triggerType) {
       case 'number_of_results':
         triggered = checkTriggerCondition(
           alert.trigger_condition,
-          resultCount,
+          comparisonValue,
           alert.trigger_threshold
         );
         break;
@@ -858,6 +923,19 @@ export async function evaluateAlert(alertId: string): Promise<{
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error(`Error evaluating alert ${alert.name}:`, errorMessage);
 
+    // Persist the failure so the UI can surface a broken alert instead of
+    // showing it as healthy (previously these failures were console-only and
+    // went unnoticed for months).
+    try {
+      updateAlert(alertId, {
+        last_run: new Date().toISOString(),
+        last_error: errorMessage,
+        last_status: 'error',
+      });
+    } catch {
+      // Never let health-bookkeeping mask the original evaluation error.
+    }
+
     const duration_ms = Math.round(performance.now() - startTime);
     logAlertEvaluated({
       alert_id: alertId,
@@ -920,12 +998,18 @@ export async function testAlert(
     const { results } = await executeDSLQuery(searchQuery, { earliest, latest });
     const resultCount = results.length;
 
-    // Check trigger condition
+    // Check trigger condition (mirror evaluateAlert: normalize legacy types and
+    // compare the aggregate value for single-cell stats results).
     let wouldTrigger = false;
+    const normalizedType = normalizeTriggerType(triggerType);
+    const comparisonValue = getComparisonValue(
+      results as Record<string, unknown>[],
+      resultCount
+    );
 
-    switch (triggerType) {
+    switch (normalizedType) {
       case 'number_of_results':
-        wouldTrigger = checkTriggerCondition(triggerCondition, resultCount, triggerThreshold);
+        wouldTrigger = checkTriggerCondition(triggerCondition, comparisonValue, triggerThreshold);
         break;
 
       case 'number_of_hosts':

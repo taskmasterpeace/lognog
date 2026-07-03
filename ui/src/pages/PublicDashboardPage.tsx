@@ -6,7 +6,6 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { AreaChart, BarChart, PieChart, HeatmapChart, GaugeChart, WordCloudChart, CHART_PALETTE } from '../components/charts';
-import { executeSearch } from '../api/client';
 
 const CHART_COLORS = CHART_PALETTE;
 
@@ -42,11 +41,11 @@ export default function PublicDashboardPage() {
     setError(null);
 
     try {
-      const url = pwd
-        ? `/api/dashboards/public/${token}?password=${encodeURIComponent(pwd)}`
-        : `/api/dashboards/public/${token}`;
-
-      const response = await fetch(url);
+      // Password goes in a header, not the query string, so it doesn't leak
+      // into access logs / browser history.
+      const response = await fetch(`/api/dashboards/public/${token}`, {
+        headers: pwd ? { 'X-Dashboard-Password': pwd } : undefined,
+      });
       const data = await response.json();
 
       if (!response.ok) {
@@ -61,9 +60,10 @@ export default function PublicDashboardPage() {
       setDashboard(data);
       setNeedsPassword(false);
 
-      // Load panel data
+      // Load panel data via the public, token-scoped endpoint (anonymous
+      // viewers can't call the authenticated /search/query).
       for (const panel of data.panels) {
-        loadPanelData(panel);
+        loadPanelData(panel, pwd);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load dashboard');
@@ -72,11 +72,21 @@ export default function PublicDashboardPage() {
     }
   };
 
-  const loadPanelData = async (panel: DashboardPanel) => {
+  const loadPanelData = async (panel: DashboardPanel, pwd?: string) => {
     setPanelData((prev) => ({ ...prev, [panel.id]: { data: [], loading: true } }));
 
     try {
-      const result = await executeSearch(panel.query, '-24h', 'now');
+      const response = await fetch(`/api/dashboards/public/${token}/query`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          panelId: panel.id,
+          earliest: '-24h',
+          latest: 'now',
+          password: pwd,
+        }),
+      });
+      const result = response.ok ? await response.json() : { results: [] };
       setPanelData((prev) => ({
         ...prev,
         [panel.id]: { data: result.results || [], loading: false },

@@ -80,6 +80,7 @@ import {
 import { InfoTip } from '../components/ui/InfoTip';
 import { Tooltip as FloatingTooltip } from '../components/ui/Tooltip';
 import { useConfirm } from '../components/ui/ConfirmDialog';
+import { useToast } from '../contexts/ToastContext';
 import PanelCopyModal from '../components/PanelCopyModal';
 import PanelProvenanceModal from '../components/PanelProvenanceModal';
 import { getDefaultDashboard, setDefaultDashboard } from './DashboardsPage';
@@ -159,8 +160,21 @@ function PanelVisualization({
 
   const results = data.results;
   const keys = Object.keys(results[0] || {});
-  const valueKey = keys.find(k => typeof results[0][k] === 'number') || keys[keys.length - 1];
-  const labelKey = keys.find(k => k !== valueKey) || keys[0];
+  // ClickHouse returns numeric aggregates as strings, so `typeof === 'number'`
+  // silently fails. Detect numeric columns by whether their values parse as
+  // finite numbers across the result set.
+  const isNumericColumn = (k: string) =>
+    results.some((r) => r[k] !== null && r[k] !== '' && Number.isFinite(Number(r[k])));
+  const numericKeys = keys.filter(isNumericColumn);
+  const valueKey =
+    keys.find((k) => /^(count|count_all|total|value|sum|avg|min|max)$/i.test(k) && isNumericColumn(k)) ||
+    numericKeys[0] ||
+    keys[keys.length - 1];
+  const labelKey = keys.find((k) => k !== valueKey) || keys[0];
+  // Series columns for time/multi-series charts: every numeric column except the label/time axis.
+  const seriesKeys = (numericKeys.filter((k) => k !== labelKey).length > 0
+    ? numericKeys.filter((k) => k !== labelKey)
+    : [valueKey]);
 
   const handleChartClick = (chartData: Record<string, unknown>) => {
     if (onDrilldown && labelKey && chartData[labelKey]) {
@@ -222,11 +236,16 @@ function PanelVisualization({
       );
     }
 
+    case 'area':
     case 'line':
       return (
         <AreaChart
           data={results}
-          series={[{ name: valueKey, dataKey: valueKey, color: '#C8862B' }]}
+          series={seriesKeys.map((k, i) => ({
+            name: k,
+            dataKey: k,
+            color: CHART_COLORS[i % CHART_COLORS.length],
+          }))}
           xAxisKey={labelKey}
           height={200}
           darkMode={isDarkMode}
@@ -239,22 +258,47 @@ function PanelVisualization({
         />
       );
 
-    case 'stat':
-      const statValue = results[0] ? Object.values(results[0])[0] : 0;
+    case 'single':
+    case 'stat': {
+      // Show the metric value (numeric column), not the first column — for
+      // `stats count by hostname` the first column is the hostname string.
+      const raw = results[0] ? results[0][valueKey] : 0;
+      const num = Number(raw);
+      const statValue = Number.isFinite(num) ? num : raw;
       return (
         <div className="flex flex-col items-center justify-center h-full">
           <p className="text-4xl font-bold text-nog-900 dark:text-nog-100">
-            {typeof statValue === 'number' ? statValue.toLocaleString() : String(statValue)}
+            {typeof statValue === 'number' ? statValue.toLocaleString() : String(statValue ?? 0)}
           </p>
+          {results.length === 1 && labelKey !== valueKey && results[0][labelKey] != null && (
+            <p className="text-xs text-nog-500 mt-1 truncate max-w-full">{String(results[0][labelKey])}</p>
+          )}
         </div>
       );
+    }
 
-    case 'heatmap':
-      const heatmapData: HeatmapData[] = results.map((item, i) => {
-        const hour = typeof item.hour === 'number' ? item.hour :
-                    typeof item.timestamp === 'string' ? new Date(item.timestamp).getHours() : i % 24;
-        const day = typeof item.day === 'number' ? item.day :
-                   typeof item.timestamp === 'string' ? new Date(item.timestamp).getDay() : Math.floor(i / 24) % 7;
+    case 'heatmap': {
+      // Derive hour/day from a real time column when present. Never fabricate
+      // positions from the row index — that produced plausible-looking but
+      // meaningless plots for queries without hour/day fields.
+      const timeKey = keys.find((k) => /(^|_)(time|timestamp|bucket|date)/i.test(k));
+      const hasHour = keys.includes('hour') || keys.includes('day') || !!timeKey;
+      if (!hasHour) {
+        return (
+          <div className="flex items-center justify-center h-full text-nog-400 text-sm text-center px-4">
+            Heatmap needs an <code className="mx-1">hour</code>/<code className="mx-1">day</code> or time field.
+            Try <code className="mx-1">bin _time span=1h</code> in the query.
+          </div>
+        );
+      }
+      const heatmapData: HeatmapData[] = results.map((item) => {
+        const t = timeKey && item[timeKey] != null ? new Date(String(item[timeKey])) : null;
+        const hour = item.hour != null && Number.isFinite(Number(item.hour))
+          ? Number(item.hour)
+          : t && !isNaN(t.getTime()) ? t.getHours() : 0;
+        const day = item.day != null && Number.isFinite(Number(item.day))
+          ? Number(item.day)
+          : t && !isNaN(t.getTime()) ? t.getDay() : 0;
         const value = Number(item[valueKey]) || Number(item.count) || Number(item.value) || 0;
         return { hour, day, value };
       });
@@ -263,6 +307,7 @@ function PanelVisualization({
           <HeatmapChart data={heatmapData} height={240} darkMode={isDarkMode} />
         </div>
       );
+    }
 
     case 'gauge':
       // Handle both number and string values from API (ClickHouse returns strings)
@@ -769,8 +814,13 @@ export default function DashboardViewPage() {
   const navigate = useNavigate();
   const { drilldown } = useDrilldown();
   const { confirm } = useConfirm();
+  const toast = useToast();
 
   const [timeRange, setTimeRange] = useState('-24h');
+  const [timeRangeLatest, setTimeRangeLatest] = useState<string>('now');
+  // Per-panel request sequence numbers, so a slow in-flight fetch can't clobber
+  // a newer one (race guard for auto-refresh + manual + time/variable changes).
+  const panelFetchSeq = useRef<Record<string, number>>({});
   const [showAutoRefreshDropdown, setShowAutoRefreshDropdown] = useState(false);
   const [autoRefreshInterval, setAutoRefreshInterval] = useState(0);
   const [showPanelEditor, setShowPanelEditor] = useState(false);
@@ -937,6 +987,12 @@ export default function DashboardViewPage() {
   });
 
   const fetchPanelData = useCallback(async (panel: DashboardPanel) => {
+    // Sequence guard: a slow older request must not overwrite a newer one for
+    // the same panel (auto-refresh + manual refresh + time/variable changes can
+    // otherwise land stale results for the wrong range).
+    const seq = (panelFetchSeq.current[panel.id] || 0) + 1;
+    panelFetchSeq.current[panel.id] = seq;
+
     setPanelData((prev) => ({
       ...prev,
       [panel.id]: { results: prev[panel.id]?.results || [], loading: true, error: null },
@@ -944,26 +1000,35 @@ export default function DashboardViewPage() {
 
     try {
       const queryWithVars = substituteVariables(panel.query);
-      const result = await executeSearch(queryWithVars, timeRange);
+      const result = await executeSearch(queryWithVars, timeRange, timeRangeLatest);
+      if (panelFetchSeq.current[panel.id] !== seq) return; // superseded
       setPanelData((prev) => ({
         ...prev,
         [panel.id]: { results: result.results, loading: false, error: null },
       }));
     } catch (err) {
+      if (panelFetchSeq.current[panel.id] !== seq) return; // superseded
       setPanelData((prev) => ({
         ...prev,
-        [panel.id]: { results: [], loading: false, error: String(err) },
+        [panel.id]: { results: [], loading: false, error: err instanceof Error ? err.message : String(err) },
       }));
     }
-  }, [timeRange, substituteVariables]);
+  }, [timeRange, timeRangeLatest, substituteVariables]);
 
+  // Refetch only when something that affects RESULTS changes (queries, time,
+  // variables, refresh) — not on every layout drag/resize, which merely changes
+  // panel positions and previously triggered a full refetch storm.
+  const panelQuerySignature = dashboard?.panels
+    ?.map((p) => `${p.id}:${p.query}`)
+    .join('|');
   useEffect(() => {
     if (dashboard?.panels) {
       dashboard.panels.forEach((panel) => {
         fetchPanelData(panel);
       });
     }
-  }, [dashboard?.panels, timeRange, refreshKey, fetchPanelData, variableValues]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [panelQuerySignature, timeRange, timeRangeLatest, refreshKey, fetchPanelData, variableValues]);
 
   const handleRefreshAll = () => {
     setRefreshKey((k) => k + 1);
@@ -1232,21 +1297,24 @@ export default function DashboardViewPage() {
         backLink="/dashboards"
         actions={
           <div className="flex items-center gap-2">
-            {/* Variables */}
-            {dashboardVariables.length > 0 && (
-              <button
-                onClick={() => setShowVariableEditor(true)}
-                className="btn-secondary"
-                title="Edit Variables"
-              >
-                <Variable className="w-4 h-4" />
-              </button>
-            )}
+            {/* Variables — always available so the FIRST variable can be created
+                (previously gated on length > 0, an unbreakable chicken-and-egg). */}
+            <button
+              onClick={() => setShowVariableEditor(true)}
+              className="btn-secondary"
+              title={dashboardVariables.length > 0 ? 'Edit variables' : 'Add a variable'}
+            >
+              <Variable className="w-4 h-4" />
+              {dashboardVariables.length > 0 && (
+                <span className="ml-1 text-xs">{dashboardVariables.length}</span>
+              )}
+            </button>
 
             {/* Time Range Selector - Enhanced */}
             <TimePickerEnhanced
-              onRangeChange={(earliest, _latest) => {
+              onRangeChange={(earliest, latest) => {
                 setTimeRange(earliest);
+                setTimeRangeLatest(latest || 'now');
               }}
               defaultRange={timeRange}
             />
@@ -1679,13 +1747,20 @@ export default function DashboardViewPage() {
           }}
           onCancel={() => setShowShareModal(false)}
           onSave={async (settings) => {
-            await authFetch(`/dashboards/${id}/share`, {
+            const res = await authFetch(`/dashboards/${id}/share`, {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify(settings),
             });
+            if (!res.ok) {
+              const msg = await res.text().catch(() => '');
+              toast.error('Sharing Failed', msg ? msg.slice(0, 120) : 'Could not update sharing settings');
+              return;
+            }
             queryClient.invalidateQueries({ queryKey: ['dashboard', id] });
             setShowShareModal(false);
+            toast.success(settings.is_public ? 'Sharing Enabled' : 'Sharing Disabled',
+              settings.is_public ? 'Anyone with the link can view this dashboard' : 'Public link revoked');
           }}
         />
       )}

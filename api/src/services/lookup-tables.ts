@@ -336,11 +336,13 @@ export function setLookupTable(
  * Load custom lookup tables from SQLite into the in-memory map.
  * Called on startup and after any CRUD operation on lookups.
  */
-export function loadCustomLookups(): void {
+export async function loadCustomLookups(): Promise<void> {
   try {
-    // Dynamic import to avoid circular dependency — sqlite.ts may import from services
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const { getLookups } = require('../db/sqlite.js');
+    // Dynamic import to avoid a circular dependency (sqlite.ts may import from
+    // services). Using import() rather than require() so it resolves under both
+    // tsx/vitest (.ts) and the built dist (.js) — require('../db/sqlite.js')
+    // threw MODULE_NOT_FOUND in dev/test, so custom lookups never loaded.
+    const { getLookups } = await import('../db/sqlite.js');
     const dbLookups = getLookups();
 
     for (const lookup of dbLookups) {

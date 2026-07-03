@@ -53,6 +53,8 @@ export interface Alert {
   trigger_count: number;
   app_scope?: string;
   playbook?: string;  // Markdown runbook/instructions for when alert fires
+  last_error?: string | null;   // Error message from the most recent evaluation, or null if healthy
+  last_status?: string | null;  // 'ok' | 'error' | 'triggered' — outcome of the most recent evaluation
   created_at: string;
   updated_at: string;
 }
@@ -167,6 +169,8 @@ export function updateAlert(
     trigger_count?: number;
     app_scope?: string;
     playbook?: string;
+    last_error?: string | null;
+    last_status?: string | null;
   }
 ): Alert | undefined {
   const database = getSQLiteDB();
@@ -248,6 +252,14 @@ export function updateAlert(
   if (updates.playbook !== undefined) {
     fields.push('playbook = ?');
     values.push(updates.playbook);
+  }
+  if (updates.last_error !== undefined) {
+    fields.push('last_error = ?');
+    values.push(updates.last_error);
+  }
+  if (updates.last_status !== undefined) {
+    fields.push('last_status = ?');
+    values.push(updates.last_status);
   }
 
   if (fields.length === 0) {

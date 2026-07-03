@@ -188,6 +188,7 @@ export class Compiler {
     let limitCount: number | null = null;
     let isAggregation = false;
     let aggregationSelect: string[] = [];
+    let dedupFields: string[] = [];
 
     // Metadata for post-processing (compare, timewrap)
     let compareMetadata: { offset: string; fields?: string[] } | undefined;
@@ -216,8 +217,12 @@ export class Compiler {
           break;
 
         case 'dedup':
-          // Dedup is handled with DISTINCT ON
-          selectFields = stage.fields.map(f => this.mapField(f));
+          // Bug #41-3: dedup was a silent no-op (it overwrote selectFields with
+          // just the dedup keys and emitted no DISTINCT/LIMIT BY). ClickHouse's
+          // `LIMIT 1 BY <fields>` keeps the first row per distinct combination
+          // while preserving ALL selected columns. Map each key with the same
+          // select-mapping so structured_data fields dedup correctly too.
+          dedupFields = stage.fields.map(f => this.mapFieldForSelect(f));
           break;
 
         case 'table':
@@ -383,6 +388,13 @@ export class Compiler {
       sql += ' ORDER BY ' + orderByFields.join(', ');
     } else if (!isAggregation) {
       sql += ' ORDER BY timestamp DESC';
+    }
+
+    // Bug #41-3: real dedup via ClickHouse `LIMIT 1 BY <fields>` — keeps the
+    // first row (per the ORDER BY above) for each distinct key combination,
+    // preserving all selected columns. Must precede the row-count LIMIT.
+    if (dedupFields.length > 0) {
+      sql += ` LIMIT 1 BY ${dedupFields.join(', ')}`;
     }
 
     if (limitCount !== null) {
@@ -594,7 +606,12 @@ export class Compiler {
 
   private compileSort(sort: SortNode): string[] {
     return sort.fields.map(f => {
-      const field = this.mapField(f.field);
+      // Bug #41-7: a sort on a structured_data field (e.g. `sort -response_time`)
+      // must use the same JSONExtract projection the SELECT clause uses, or
+      // ClickHouse errors with "Unknown identifier". mapFieldForSelect resolves
+      // known columns to their name and extracts custom fields from
+      // structured_data (matching the SELECT default 'string' mapping).
+      const field = this.mapFieldForSelect(f.field);
       return `${field} ${f.direction.toUpperCase()}`;
     });
   }
@@ -746,14 +763,23 @@ export class Compiler {
       namedGroups.push(match[1]);
     }
 
-    // Generate ClickHouse extractAll or extract statements
-    const extractions: string[] = [];
-    for (const group of namedGroups) {
-      // Use extractGroups or match function in ClickHouse
-      extractions.push(`extract(${field}, '${this.escape(pattern)}') AS ${group}`);
+    if (namedGroups.length === 0) {
+      return [`${field} AS _raw`];
     }
 
-    return extractions.length > 0 ? extractions : [`${field} AS _raw`];
+    // Bug #41-6: ClickHouse extract() returns ONLY the first captured
+    // subpattern, so compiling every named group to extract(field, <full
+    // pattern>) gave every column group 1's value. extractGroups() returns an
+    // array of ALL capturing groups in order; index each named group by its
+    // 1-based position. RE2 does not support (?P<name>...) named-group syntax,
+    // so strip the name prefix down to a plain capturing group first.
+    const re2Pattern = pattern.replace(/\(\?P?<\w+>/g, '(');
+    const escaped = this.escape(re2Pattern);
+    const extractions: string[] = namedGroups.map(
+      (group, i) => `extractGroups(${field}, '${escaped}')[${i + 1}] AS ${group}`
+    );
+
+    return extractions;
   }
 
   private compileEvalExpression(expr: EvalExpression): string {

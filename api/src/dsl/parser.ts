@@ -128,6 +128,12 @@ export class Parser {
       case TokenType.IDENTIFIER:
         // Implicit search with field=value
         return this.parseImplicitSearch();
+      case TokenType.MULTIPLY:
+      case TokenType.STRING:
+        // Implicit search-all / bare-phrase search: `* | stats count by level`
+        // and `"timeout" | stats count` work like their `search`-prefixed forms
+        // (Splunk allows the same shorthand).
+        return this.parseImplicitSearch();
       default:
         if (token.type === TokenType.EOF) return null;
         throw new ParseError(
@@ -256,6 +262,14 @@ export class Parser {
   }
 
   private parseCondition(negate: boolean): SimpleCondition | null {
+    // A bare quoted phrase with no field/operator (e.g. `search "User login"`
+    // or `("A" OR "B")`) is a full-text match on _raw, mirroring how bare
+    // keyword identifiers are handled at the end of this method.
+    if (this.check(TokenType.STRING)) {
+      const phrase = this.advance().value;
+      return { field: '_raw', operator: '~', value: phrase, negate };
+    }
+
     const field = this.consume(
       TokenType.IDENTIFIER,
       'Expected field name'
@@ -1061,7 +1075,10 @@ export class Parser {
       // Check if followed by a time unit identifier
       if (this.check(TokenType.IDENTIFIER)) {
         const unit = this.peek().value.toLowerCase();
-        if (/^[smhdwmoy]|mo$/.test(unit)) {
+        // Anchor both ends so only a bare valid unit matches (e.g. "1 seconds"
+        // tokenizes "seconds" and must NOT be treated as the "s" unit). Valid
+        // units: s, m, h, d, w, mo, y.
+        if (/^(?:mo|[smhdwy])$/.test(unit)) {
           offset = numStr + this.advance().value;
         } else {
           offset = numStr + 'd'; // default to days
@@ -1114,7 +1131,8 @@ export class Parser {
       // Check if followed by a time unit identifier
       if (this.check(TokenType.IDENTIFIER)) {
         const unit = this.peek().value.toLowerCase();
-        if (/^[smhdwmoy]|mo$/.test(unit)) {
+        // Anchor both ends so only a bare valid unit matches (see parseCompare).
+        if (/^(?:mo|[smhdwy])$/.test(unit)) {
           span = numStr + this.advance().value;
         } else {
           span = numStr + 'd'; // default to days

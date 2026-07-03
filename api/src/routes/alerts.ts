@@ -15,12 +15,11 @@ import {
   getAlertHistoryEntry,
   acknowledgeAlertHistory,
   AlertAction,
-  AlertTriggerType,
   AlertTriggerCondition,
   AlertSeverity,
   AlertScheduleType,
 } from '../db/sqlite.js';
-import { evaluateAlert, testAlert, evaluateAllAlerts } from '../services/alerts.js';
+import { evaluateAlert, testAlert, evaluateAllAlerts, normalizeTriggerType } from '../services/alerts.js';
 import { ALERT_TEMPLATES } from '../data/alert-templates.js';
 import { authenticate, denyReadonly } from '../auth/middleware.js';
 
@@ -149,7 +148,7 @@ router.post('/', (req: Request, res: Response) => {
 
     const alert = createAlert(name, search_query, {
       description,
-      trigger_type: trigger_type as AlertTriggerType,
+      trigger_type: normalizeTriggerType(trigger_type),
       trigger_condition: trigger_condition as AlertTriggerCondition,
       trigger_threshold,
       schedule_type: schedule_type as AlertScheduleType,
@@ -203,7 +202,7 @@ router.put('/:id', (req: Request, res: Response) => {
       name,
       description,
       search_query,
-      trigger_type: trigger_type as AlertTriggerType,
+      trigger_type: trigger_type !== undefined ? normalizeTriggerType(trigger_type) : undefined,
       trigger_condition: trigger_condition as AlertTriggerCondition,
       trigger_threshold,
       schedule_type: schedule_type as AlertScheduleType,
@@ -300,7 +299,7 @@ router.post('/test', async (req: Request, res: Response) => {
 
     const result = await testAlert(
       search_query,
-      trigger_type || 'number_of_results',
+      normalizeTriggerType(trigger_type),
       trigger_condition || 'greater_than',
       trigger_threshold ?? 0,
       time_range || '-5m'

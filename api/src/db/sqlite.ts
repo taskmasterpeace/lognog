@@ -830,6 +830,15 @@ function initializeSchema(): void {
   if (!alertColumnNames.includes('playbook')) {
     database.exec("ALTER TABLE alerts ADD COLUMN playbook TEXT");
   }
+  // Health surfacing: record the outcome of the most recent evaluation so the
+  // UI can show alerts that are silently failing (previously invisible — three
+  // production alerts threw parse errors for months with no signal).
+  if (!alertColumnNames.includes('last_error')) {
+    database.exec("ALTER TABLE alerts ADD COLUMN last_error TEXT");
+  }
+  if (!alertColumnNames.includes('last_status')) {
+    database.exec("ALTER TABLE alerts ADD COLUMN last_status TEXT");
+  }
 
   const reportColumns = database.pragma('table_info(scheduled_reports)') as Array<{ name: string }>;
   const reportColumnNames = reportColumns.map((col) => col.name);
