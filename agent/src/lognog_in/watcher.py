@@ -64,12 +64,18 @@ class LogFileHandler(FileSystemEventHandler):
             return stat_result.st_ino
         return hash((stat_result.st_dev, stat_result.st_ctime_ns, stat_result.st_size))
 
-    def _read_new_lines(self, file_path: str) -> list[str]:
+    def _read_new_lines(self, file_path: str) -> tuple[list[str], int | None, int]:
         """Read new lines from a file since last read.
 
-        The offset is loaded from and flushed to the persistent offset store,
-        keyed by (file_id, path). This means after an agent restart the file
-        resumes from where it left off instead of re-reading from offset 0.
+        Returns ``(lines, file_id, new_pos)``. The offset is loaded from the
+        persistent store (keyed by (file_id, path)) so the file resumes where it
+        left off after a restart, but the new offset is deliberately NOT
+        committed here — the caller must call :meth:`_commit_offset` only AFTER
+        the lines are durably buffered. Committing on read created a crash window
+        in which the offset advanced past lines that were never buffered,
+        permanently losing them. Committing after buffering makes delivery
+        at-least-once (a crash re-reads the tail; duplicates are deduplicated
+        downstream) instead of at-most-once.
         """
         try:
             # Resolve a stable identity for this file.
@@ -90,16 +96,22 @@ class LogFileHandler(FileSystemEventHandler):
                 lines = f.readlines()
                 new_pos = f.tell()
 
-            # Flush the new offset immediately so a crash between now and the
-            # next read doesn't re-emit these lines.
-            self._offsets.set_offset(file_id, file_path, new_pos)
-
             self._prune_dead_positions()
 
-            return [line.rstrip("\n\r") for line in lines if line.strip()]
+            return [line.rstrip("\n\r") for line in lines if line.strip()], file_id, new_pos
         except Exception as e:
             logger.error(f"Error reading file {file_path}: {e}")
-            return []
+            return [], None, 0
+
+    def _commit_offset(self, file_id: int | None, file_path: str, new_pos: int) -> None:
+        """Persist the read position AFTER the lines have been buffered.
+
+        See :meth:`_read_new_lines` for why this is separate: it must run only
+        once the events are durably in the buffer, so a crash cannot skip them.
+        """
+        if file_id is None:
+            return
+        self._offsets.set_offset(file_id, file_path, new_pos)
 
     def _prune_dead_positions(self) -> None:
         """Drop persisted offsets for files that no longer exist.
@@ -137,7 +149,7 @@ class LogFileHandler(FileSystemEventHandler):
         if not os.path.isfile(file_path):
             return
 
-        lines = self._read_new_lines(file_path)
+        lines, file_id, new_pos = self._read_new_lines(file_path)
         timestamp = datetime.now(timezone.utc).isoformat()
 
         for line in lines:
@@ -154,6 +166,11 @@ class LogFileHandler(FileSystemEventHandler):
                 },
             )
             self.on_event(event)
+
+        # Commit the read position only AFTER every line above has been handed to
+        # the buffer, so a crash mid-processing re-reads the tail instead of
+        # losing it (at-least-once).
+        self._commit_offset(file_id, file_path, new_pos)
 
     def on_created(self, event: FileCreatedEvent) -> None:
         """Handle file creation."""

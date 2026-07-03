@@ -66,20 +66,49 @@ class TestLogFileHandler:
         test_file = tmp_path / "test.log"
         test_file.write_text("Line 1\nLine 2\nLine 3\n")
 
-        # First read
-        lines = handler._read_new_lines(str(test_file))
+        # First read — offset is committed only after the lines are "buffered"
+        # (the caller's responsibility), so we commit explicitly here.
+        lines, fid, pos = handler._read_new_lines(str(test_file))
         assert lines == ["Line 1", "Line 2", "Line 3"]
+        handler._commit_offset(fid, str(test_file), pos)
 
-        # Second read should return nothing
-        lines = handler._read_new_lines(str(test_file))
+        # Second read should return nothing (offset committed past the tail)
+        lines, fid, pos = handler._read_new_lines(str(test_file))
         assert lines == []
+        handler._commit_offset(fid, str(test_file), pos)
 
         # Append more lines
         with open(test_file, "a") as f:
             f.write("Line 4\nLine 5\n")
 
-        lines = handler._read_new_lines(str(test_file))
+        lines, fid, pos = handler._read_new_lines(str(test_file))
         assert lines == ["Line 4", "Line 5"]
+        handler._commit_offset(fid, str(test_file), pos)
+
+    def test_offset_not_committed_until_buffered(self, tmp_path: Path):
+        """A read that is NOT committed must be re-read (at-least-once).
+
+        This guards the crash-window fix: if the process dies after reading but
+        before the lines are buffered, the offset stays put and the next read
+        returns the same lines rather than losing them.
+        """
+        events: list = []
+        handler = _handler(tmp_path, on_event=events.append)
+        test_file = tmp_path / "test.log"
+        test_file.write_text("A\nB\n")
+
+        # Read but do NOT commit (simulating a crash before buffering).
+        lines, _fid, _pos = handler._read_new_lines(str(test_file))
+        assert lines == ["A", "B"]
+
+        # Next read re-returns the same lines — nothing was lost.
+        lines, fid, pos = handler._read_new_lines(str(test_file))
+        assert lines == ["A", "B"]
+        handler._commit_offset(fid, str(test_file), pos)
+
+        # After committing, a subsequent read is empty.
+        lines, _fid, _pos = handler._read_new_lines(str(test_file))
+        assert lines == []
 
     def test_position_tracked_by_file_id_survives_rename(self, tmp_path: Path):
         """Rotate-by-rename must not lose the read offset (issue #42).
@@ -94,7 +123,9 @@ class TestLogFileHandler:
 
         log = tmp_path / "app.log"
         log.write_text("Line 1\nLine 2\n")
-        assert handler._read_new_lines(str(log)) == ["Line 1", "Line 2"]
+        lines, fid, pos = handler._read_new_lines(str(log))
+        assert lines == ["Line 1", "Line 2"]
+        handler._commit_offset(fid, str(log), pos)
 
         # Append a line, then rotate by renaming the file.
         with open(log, "a") as f:
@@ -104,7 +135,9 @@ class TestLogFileHandler:
 
         # Reading the rotated path (same inode) must only return the new line,
         # not re-emit Line 1 / Line 2 from offset 0.
-        assert handler._read_new_lines(str(rotated)) == ["Line 3"]
+        lines, fid, pos = handler._read_new_lines(str(rotated))
+        assert lines == ["Line 3"]
+        handler._commit_offset(fid, str(rotated), pos)
 
     def test_new_file_same_name_reads_from_start(self, tmp_path: Path):
         """A brand-new file reusing an old name must read from offset 0."""
@@ -115,14 +148,17 @@ class TestLogFileHandler:
 
         log = tmp_path / "app.log"
         log.write_text("Old 1\nOld 2\n")
-        assert handler._read_new_lines(str(log)) == ["Old 1", "Old 2"]
+        lines, fid, pos = handler._read_new_lines(str(log))
+        assert lines == ["Old 1", "Old 2"]
+        handler._commit_offset(fid, str(log), pos)
 
         # Rotate away and create a fresh file at the same path (new inode).
         os.replace(log, tmp_path / "app.log.1")
         log.write_text("Fresh 1\n")
 
         # New inode => starts at 0 => reads the fresh content.
-        assert handler._read_new_lines(str(log)) == ["Fresh 1"]
+        lines, _fid, _pos = handler._read_new_lines(str(log))
+        assert lines == ["Fresh 1"]
 
     def test_prune_dead_positions_evicts_deleted_files(self, tmp_path: Path):
         """Persisted offsets for deleted files are pruned (no unbounded growth)."""
@@ -133,7 +169,8 @@ class TestLogFileHandler:
 
         log = tmp_path / "app.log"
         log.write_text("Line 1\n")
-        handler._read_new_lines(str(log))
+        lines, fid, pos = handler._read_new_lines(str(log))
+        handler._commit_offset(fid, str(log), pos)
         assert len(store.all_offsets()) == 1
 
         os.remove(log)
@@ -149,12 +186,13 @@ class TestLogFileHandler:
 
         # Write initial content
         test_file.write_text("Old Line 1\nOld Line 2\nOld Line 3\n")
-        handler._read_new_lines(str(test_file))
+        lines, fid, pos = handler._read_new_lines(str(test_file))
+        handler._commit_offset(fid, str(test_file), pos)
 
         # "Rotate" the file (truncate and write new content)
         test_file.write_text("New Line 1\n")
 
-        lines = handler._read_new_lines(str(test_file))
+        lines, _fid, _pos = handler._read_new_lines(str(test_file))
         assert lines == ["New Line 1"]
 
     def test_process_file_generates_events(self, tmp_path: Path):

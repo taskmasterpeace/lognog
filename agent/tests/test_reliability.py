@@ -181,18 +181,23 @@ class TestRestartNoDuplication:
         h3._process_file(str(log))
         assert [e.message for e in events3] == ["D", "E"]
 
-    def test_offset_flushed_immediately(self, tmp_path: Path):
-        """The offset is durable right after a read, not only on clean stop."""
+    def test_offset_committed_after_processing(self, tmp_path: Path):
+        """The offset is durable after a file is processed (lines buffered), so a
+        restart resumes correctly. It is deliberately NOT committed on read alone
+        — see test_watcher.test_offset_not_committed_until_buffered for the
+        at-least-once guarantee that protects against a crash mid-processing."""
         log = tmp_path / "app.log"
         log.write_text("one\ntwo\n")
         store = FileOffsetStore(tmp_path / "offsets.db")
+        events: list = []
         h = LogFileHandler(
             watch_path=WatchPath(path=str(tmp_path), pattern="*.log"),
             hostname="h",
-            on_event=[].append,
+            on_event=events.append,
             offset_store=store,
         )
-        h._read_new_lines(str(log))
+        h._process_file(str(log))
+        assert [e.message for e in events] == ["one", "two"]
         # A fresh store reading the same db sees the persisted offset.
         assert len(FileOffsetStore(tmp_path / "offsets.db").all_offsets()) == 1
 

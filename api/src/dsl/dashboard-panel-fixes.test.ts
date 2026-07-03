@@ -59,6 +59,20 @@ describe('Dashboard panel DSL fixes', () => {
     expect(r.sql).toContain("ORDER BY JSONExtractString(structured_data, 'response_code') DESC");
   });
 
+  it('a rex-extracted field used as a stats by-key groups by the extraction, not structured_data', () => {
+    const r = parseAndCompile('search * | rex field=message "(?<status>\\\\d{3})" | stats count by status | sort status');
+    // Group-by + order-by must use the rex extraction expression, not JSONExtract.
+    expect(r.sql).toContain('extractGroups(message');
+    expect(r.sql).not.toContain("JSONExtractString(structured_data, 'status')");
+    expect(r.sql).toContain('GROUP BY');
+  });
+
+  it('a numeric aggregation over a rex-extracted field coerces it to a number', () => {
+    const r = parseAndCompile('search * | rex field=message "\\\\((?<latency>\\\\d+)ms\\\\)" | stats avg(latency) as avg_latency by endpoint');
+    expect(r.sql).toContain('toFloat64OrZero(extractGroups(message');
+    expect(r.sql).toContain('AS avg_latency');
+  });
+
   it('table with custom fields projects them from structured_data (Bug D)', () => {
     // `table timestamp, user_id, model_id` previously selected bare column names
     // and ClickHouse errored "Missing columns".

@@ -100,6 +100,10 @@ export class Compiler {
   private params: unknown[] = [];
   private allowedIndexes?: string[];
   private timeBounds?: TimeBounds;
+  // Fields created by `rex` (name -> SQL extraction expression). A later
+  // stats/timechart `by`, sort, or aggregation on one of these must reuse the
+  // extraction expression rather than extract from structured_data.
+  private extractedFieldExprs = new Map<string, string>();
 
   constructor(ast: QueryAST, allowedIndexes?: string[], timeBounds?: TimeBounds) {
     this.ast = ast;
@@ -341,9 +345,17 @@ export class Compiler {
           break;
 
         case 'rex':
-          // Rex extracts fields using regex - add to select
+          // Rex extracts fields using regex - add to select AND remember each
+          // extraction expression so a downstream `stats by`/sort on the field
+          // reuses it (otherwise it would be extracted from structured_data,
+          // where it does not exist, and group everything into one empty bucket).
           const rexExtractions = this.compileRex(stage);
           selectFields.push(...rexExtractions);
+          for (const ext of rexExtractions) {
+            const alias = this.outputFieldName(ext);
+            const expr = this.selectExpr(ext);
+            if (alias && expr) this.extractedFieldExprs.set(alias.toLowerCase(), expr);
+          }
           break;
 
         case 'filldown':
@@ -671,6 +683,13 @@ export class Compiler {
    * @param type 'string' for group by, 'number' for aggregations (default: 'string')
    */
   private mapFieldForSelect(field: string, type: 'string' | 'number' = 'string'): string {
+    // A field created by an earlier `rex` resolves to its extraction expression,
+    // not a structured_data lookup. This makes `rex … (?<x>…) | stats count by x`
+    // group by the real extracted value.
+    const rexExpr = this.extractedFieldExprs.get(field.toLowerCase());
+    if (rexExpr) {
+      return type === 'number' ? `toFloat64OrZero(${rexExpr})` : rexExpr;
+    }
     const mappedField = this.mapField(field);
     if (KNOWN_COLUMNS.has(mappedField)) {
       return mappedField;
