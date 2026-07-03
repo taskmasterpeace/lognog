@@ -71,6 +71,17 @@ def parse_args() -> argparse.Namespace:
         help="Path to monitor for file integrity (can be repeated)",
     )
 
+    # Windows Service management. Running as a service (LocalSystem) is what
+    # unlocks the Security event channel. Actions: install, uninstall, run,
+    # start, stop.
+    parser.add_argument(
+        "--service",
+        type=str,
+        metavar="ACTION",
+        choices=["install", "uninstall", "run", "start", "stop"],
+        help="Manage the Windows service (install|uninstall|run|start|stop)",
+    )
+
     # Subcommands
     subparsers = parser.add_subparsers(dest="command")
 
@@ -214,6 +225,14 @@ def cmd_config(args: argparse.Namespace) -> int:
 def main() -> int:
     """Main entry point."""
     args = parse_args()
+
+    # Windows Service management takes precedence over everything else.
+    if getattr(args, "service", None):
+        if sys.platform != "win32":
+            print("--service is only supported on Windows", file=sys.stderr)
+            return 2
+        from .service import dispatch_service_command
+        return dispatch_service_command(args.service)
 
     # Handle subcommands
     if args.command == "init":

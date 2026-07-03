@@ -119,7 +119,10 @@ class Agent:
         self._instance_lock = SingleInstanceLock()
 
         # Components
-        self.buffer = EventBuffer()
+        self.buffer = EventBuffer(
+            max_rows=self.config.buffer_max_rows,
+            max_bytes=self.config.buffer_max_bytes,
+        )
         self.shipper = HTTPShipper(
             config=self.config,
             buffer=self.buffer,
@@ -178,12 +181,22 @@ class Agent:
         log_dir.mkdir(parents=True, exist_ok=True)
         log_file = log_dir / "agent.log"
 
-        # Configure logging
+        # Rotating file handler so the agent log can't grow without bound.
+        # 10 MB per file, 5 backups (~50 MB max on disk).
+        from logging.handlers import RotatingFileHandler
+
+        file_handler = RotatingFileHandler(
+            str(log_file),
+            maxBytes=10 * 1024 * 1024,
+            backupCount=5,
+            encoding="utf-8",
+        )
+
         logging.basicConfig(
             level=log_level,
             format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
             handlers=[
-                logging.FileHandler(str(log_file)),
+                file_handler,
                 logging.StreamHandler(sys.stdout),
             ],
         )

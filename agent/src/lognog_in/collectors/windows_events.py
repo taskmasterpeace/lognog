@@ -6,7 +6,7 @@ import sqlite3
 import threading
 import time
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable, Optional
 
@@ -62,6 +62,39 @@ HIGH_VALUE_EVENTS = {
     7045: "Service installed",
     7040: "Service start type changed",
 }
+
+
+def local_event_time_to_utc_iso(time_generated) -> str:
+    """Convert a pywin32 event ``TimeGenerated`` (LOCAL time) to a UTC ISO string.
+
+    pywin32 surfaces ``TimeGenerated`` as a naive local-time value. The old code
+    took that value and appended "Z", falsely labelling local time as UTC — so
+    every event was off by the machine's UTC offset. Here we interpret the value
+    as local time using the actual system offset and convert to real UTC.
+
+    Accepts a ``PyTime`` (has ``.timestamp()`` in modern pywin32), a naive
+    ``datetime`` (assumed local), or an aware ``datetime`` (converted directly).
+    Falls back to "now" in UTC if the value can't be interpreted.
+    """
+    try:
+        # PyTime and datetime both support timestamp() in modern pywin32/py3.
+        # For a naive/local datetime, timestamp() already interprets it as local
+        # time, giving a correct POSIX timestamp we can render as UTC.
+        if hasattr(time_generated, "timestamp"):
+            ts = time_generated.timestamp()
+            return datetime.fromtimestamp(ts, tz=timezone.utc).isoformat()
+    except (OSError, OverflowError, ValueError):
+        pass
+
+    # Fallback: aware datetime -> convert; anything else -> now.
+    if isinstance(time_generated, datetime):
+        if time_generated.tzinfo is not None:
+            return time_generated.astimezone(timezone.utc).isoformat()
+        # Naive datetime assumed local: attach local tz then convert.
+        local_tz = datetime.now().astimezone().tzinfo
+        return time_generated.replace(tzinfo=local_tz).astimezone(timezone.utc).isoformat()
+
+    return datetime.now(timezone.utc).isoformat()
 
 
 def detect_record_reset(bookmark: Optional[int], oldest: int, total: int) -> Optional[int]:
@@ -136,7 +169,7 @@ class EventBookmark:
                     INSERT OR REPLACE INTO bookmarks (channel, record_number, timestamp)
                     VALUES (?, ?, ?)
                     """,
-                    (channel, record_number, datetime.utcnow().isoformat())
+                    (channel, record_number, datetime.now(timezone.utc).isoformat())
                 )
                 conn.commit()
 
@@ -290,19 +323,42 @@ class WindowsEventCollector:
                     bookmark = max(oldest, total - 100) if total > 100 else oldest
                     logger.info(f"No bookmark for {channel}, starting from record {bookmark}")
 
-                # Read flags: sequential read, forward direction
-                flags = win32evtlog.EVENTLOG_FORWARDS_READ | win32evtlog.EVENTLOG_SEQUENTIAL_READ
-
-                # Seek to bookmark position
-                # Note: We need to read from the bookmark, but Win32 doesn't have direct seek
-                # We'll read sequentially and skip events we've already processed
+                # Seek directly to the record AFTER the bookmark instead of
+                # re-scanning the whole log from the start on every poll. The
+                # first read uses EVENTLOG_SEEK_READ to jump to (bookmark + 1);
+                # subsequent reads in this poll continue with SEQUENTIAL_READ.
+                #
+                # ReadEventLog reads the record at the seek offset, so we seek to
+                # bookmark + 1 to get the first UNread record. If that record no
+                # longer exists yet (offset beyond the newest), Windows raises
+                # ERROR_HANDLE_EOF / ERROR_INVALID_PARAMETER, which we treat as
+                # "nothing new".
+                base_flags = win32evtlog.EVENTLOG_FORWARDS_READ
+                seek_offset = bookmark + 1
+                # Guard: never seek before the oldest available record.
+                if seek_offset < oldest:
+                    seek_offset = oldest
 
                 events_read = 0
                 last_record = bookmark
+                first_read = True
 
                 while events_read < self.batch_size and not self._stop_event.is_set():
-                    # Read next batch of events
-                    raw_events = win32evtlog.ReadEventLog(hand, flags, 0)
+                    try:
+                        if first_read:
+                            flags = base_flags | win32evtlog.EVENTLOG_SEEK_READ
+                            raw_events = win32evtlog.ReadEventLog(hand, flags, seek_offset)
+                            first_read = False
+                        else:
+                            flags = base_flags | win32evtlog.EVENTLOG_SEQUENTIAL_READ
+                            raw_events = win32evtlog.ReadEventLog(hand, flags, 0)
+                    except pywintypes.error as e:
+                        # EOF / invalid offset just means there's nothing new past
+                        # the bookmark this poll. Any other error is logged above.
+                        winerror = getattr(e, "winerror", None)
+                        if winerror in (38, 87):  # ERROR_HANDLE_EOF, ERROR_INVALID_PARAMETER
+                            break
+                        raise
 
                     if not raw_events:
                         break
@@ -310,7 +366,8 @@ class WindowsEventCollector:
                     for raw_event in raw_events:
                         record_number = raw_event.RecordNumber
 
-                        # Skip events we've already processed
+                        # Defensive: skip anything at/under the bookmark (can
+                        # happen right at the seek boundary).
                         if record_number <= bookmark:
                             continue
 
@@ -396,11 +453,12 @@ class WindowsEventCollector:
             if raw_event.StringInserts:
                 structured_data["event_data"] = list(raw_event.StringInserts)
 
-            # Create LogEvent
-            timestamp = time_generated.isoformat() if hasattr(time_generated, 'isoformat') else datetime.utcnow().isoformat()
+            # Convert the LOCAL TimeGenerated to a correct UTC ISO timestamp.
+            # (The old code appended "Z" to a local time, mislabelling it.)
+            timestamp = local_event_time_to_utc_iso(time_generated)
 
             return LogEvent(
-                timestamp=timestamp + "Z" if not timestamp.endswith("Z") else timestamp,
+                timestamp=timestamp,
                 hostname=self.hostname,
                 source="lognog-in-winevents",
                 source_type=f"windows_{channel.lower()}",

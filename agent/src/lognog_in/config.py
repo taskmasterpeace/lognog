@@ -71,6 +71,11 @@ class Config:
     batch_interval_seconds: float = 5.0
     retry_max_attempts: int = 5
     retry_backoff_seconds: float = 2.0
+    retry_backoff_max_seconds: float = 60.0
+
+    # Buffer capacity caps (oldest-drop when exceeded). 0/unset uses defaults.
+    buffer_max_rows: int = 500_000
+    buffer_max_bytes: int = 512 * 1024 * 1024
 
     # Behavior
     start_on_boot: bool = False
@@ -91,6 +96,63 @@ class Config:
     # Wizard state tracking
     _wizard_completed: bool = field(default=False, repr=False)
     _wizard_skipped: bool = field(default=False, repr=False)
+
+    def __post_init__(self) -> None:
+        """Validate / clamp numeric settings and normalize the server URL.
+
+        Rejecting bad values here rather than at use-site means one place is
+        responsible for keeping the agent from busy-looping (poll_interval=0)
+        or discarding data (batch_size=0), and from emitting `//api/...` URLs.
+        """
+        self.normalize()
+
+    def normalize(self) -> None:
+        """Clamp out-of-range settings to safe values and tidy the URL."""
+        # Strip trailing slashes so f"{server_url}/api/..." never doubles up.
+        if isinstance(self.server_url, str):
+            self.server_url = self.server_url.rstrip("/")
+
+        # batch_size: at least 1 event per batch.
+        if not isinstance(self.batch_size, int) or self.batch_size < 1:
+            self.batch_size = 1
+
+        # batch_interval: must be strictly positive to avoid a hot loop.
+        try:
+            self.batch_interval_seconds = float(self.batch_interval_seconds)
+        except (TypeError, ValueError):
+            self.batch_interval_seconds = 5.0
+        if self.batch_interval_seconds <= 0:
+            self.batch_interval_seconds = 5.0
+
+        # retry backoff base / cap.
+        try:
+            self.retry_backoff_seconds = float(self.retry_backoff_seconds)
+        except (TypeError, ValueError):
+            self.retry_backoff_seconds = 2.0
+        if self.retry_backoff_seconds <= 0:
+            self.retry_backoff_seconds = 2.0
+        try:
+            self.retry_backoff_max_seconds = float(self.retry_backoff_max_seconds)
+        except (TypeError, ValueError):
+            self.retry_backoff_max_seconds = 60.0
+        if self.retry_backoff_max_seconds < self.retry_backoff_seconds:
+            self.retry_backoff_max_seconds = max(self.retry_backoff_seconds, 60.0)
+
+        # retry_max_attempts: at least 1.
+        if not isinstance(self.retry_max_attempts, int) or self.retry_max_attempts < 1:
+            self.retry_max_attempts = 5
+
+        # Buffer caps: fall back to defaults if non-positive.
+        if not isinstance(self.buffer_max_rows, int) or self.buffer_max_rows < 1:
+            self.buffer_max_rows = 500_000
+        if not isinstance(self.buffer_max_bytes, int) or self.buffer_max_bytes < 1:
+            self.buffer_max_bytes = 512 * 1024 * 1024
+
+        # Windows Events poll interval: at least 1 second.
+        we = getattr(self, "windows_events", None)
+        if we is not None:
+            if not isinstance(we.poll_interval, int) or we.poll_interval < 1:
+                we.poll_interval = 10
 
     @classmethod
     def get_config_dir(cls) -> Path:
@@ -163,6 +225,9 @@ class Config:
             batch_interval_seconds=data.get("batch_interval_seconds", 5.0),
             retry_max_attempts=data.get("retry_max_attempts", 5),
             retry_backoff_seconds=data.get("retry_backoff_seconds", 2.0),
+            retry_backoff_max_seconds=data.get("retry_backoff_max_seconds", 60.0),
+            buffer_max_rows=data.get("buffer_max_rows", 500_000),
+            buffer_max_bytes=data.get("buffer_max_bytes", 512 * 1024 * 1024),
             start_on_boot=data.get("start_on_boot", False),
             send_hostname=data.get("send_hostname", True),
             debug_logging=data.get("debug_logging", False),

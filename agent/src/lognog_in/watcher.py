@@ -4,7 +4,7 @@ import fnmatch
 import logging
 import os
 import threading
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable, Optional
 
@@ -18,6 +18,7 @@ from watchdog.events import (
 
 from .config import Config, WatchPath
 from .buffer import LogEvent
+from .offset_store import FileOffsetStore
 
 logger = logging.getLogger(__name__)
 
@@ -35,13 +36,16 @@ class LogFileHandler(FileSystemEventHandler):
         watch_path: WatchPath,
         hostname: str,
         on_event: Callable[[LogEvent], None],
+        offset_store: Optional[FileOffsetStore] = None,
     ):
         self.watch_path = watch_path
         self.hostname = hostname
         self.on_event = on_event
-        # Track read position keyed by stable file identity (inode/file-id) so a
-        # rotate-by-rename doesn't lose the offset or carry it onto a new file.
-        self._file_positions: dict[int, int] = {}
+        # Persistent offset store keyed by (file_id, path) so offsets survive an
+        # agent restart -> no full-file re-read / duplication. If none is
+        # provided (e.g. some unit tests) fall back to an in-process store so
+        # behavior is still correct within a single run.
+        self._offsets = offset_store or FileOffsetStore()
         self._lock = threading.Lock()
 
     def _matches_pattern(self, file_path: str) -> bool:
@@ -61,13 +65,17 @@ class LogFileHandler(FileSystemEventHandler):
         return hash((stat_result.st_dev, stat_result.st_ctime_ns, stat_result.st_size))
 
     def _read_new_lines(self, file_path: str) -> list[str]:
-        """Read new lines from a file since last read."""
+        """Read new lines from a file since last read.
+
+        The offset is loaded from and flushed to the persistent offset store,
+        keyed by (file_id, path). This means after an agent restart the file
+        resumes from where it left off instead of re-reading from offset 0.
+        """
         try:
-            # Resolve a stable identity for this file. Read the offset under the
-            # lock, but perform the blocking file I/O outside it.
+            # Resolve a stable identity for this file.
             file_id = self._file_id(os.stat(file_path))
-            with self._lock:
-                current_pos = self._file_positions.get(file_id, 0)
+            stored = self._offsets.get_offset(file_id, file_path)
+            current_pos = stored if stored is not None else 0
 
             with open(file_path, "r", errors="replace") as f:
                 # Check if file was truncated (rotated in place)
@@ -82,8 +90,9 @@ class LogFileHandler(FileSystemEventHandler):
                 lines = f.readlines()
                 new_pos = f.tell()
 
-            with self._lock:
-                self._file_positions[file_id] = new_pos
+            # Flush the new offset immediately so a crash between now and the
+            # next read doesn't re-emit these lines.
+            self._offsets.set_offset(file_id, file_path, new_pos)
 
             self._prune_dead_positions()
 
@@ -93,28 +102,26 @@ class LogFileHandler(FileSystemEventHandler):
             return []
 
     def _prune_dead_positions(self) -> None:
-        """Drop tracked positions for files that no longer exist.
+        """Drop persisted offsets for files that no longer exist.
 
-        Positions are keyed by file id; once watchdog stops emitting events for a
-        rotated/deleted file its entry would otherwise leak. We can only check a
-        file id against currently-tracked watched files, so we rely on the
-        watched directory tree to enumerate live ids.
+        Offsets are keyed by (file_id, path); once watchdog stops emitting
+        events for a rotated/deleted file its row would otherwise leak. We
+        enumerate the live files under the watched tree and prune everything
+        else from the offset store.
         """
         try:
-            live_ids = set()
+            live_keys: set[tuple[int, str]] = set()
             watch_root = self.watch_path.path
             for root, _dirs, files in os.walk(watch_root):
                 for name in files:
+                    full = os.path.join(root, name)
                     try:
-                        live_ids.add(self._file_id(os.stat(os.path.join(root, name))))
+                        live_keys.add((self._file_id(os.stat(full)), full))
                     except OSError:
                         continue
                 if not self.watch_path.recursive:
                     break
-            with self._lock:
-                stale = [fid for fid in self._file_positions if fid not in live_ids]
-                for fid in stale:
-                    del self._file_positions[fid]
+            self._offsets.prune(live_keys)
         except Exception as e:
             logger.debug(f"Position prune skipped: {e}")
 
@@ -131,7 +138,7 @@ class LogFileHandler(FileSystemEventHandler):
             return
 
         lines = self._read_new_lines(file_path)
-        timestamp = datetime.utcnow().isoformat() + "Z"
+        timestamp = datetime.now(timezone.utc).isoformat()
 
         for line in lines:
             event = LogEvent(
@@ -186,9 +193,16 @@ class FileWatcher:
     Uses watchdog for cross-platform file system events.
     """
 
-    def __init__(self, config: Config, on_event: Callable[[LogEvent], None]):
+    def __init__(
+        self,
+        config: Config,
+        on_event: Callable[[LogEvent], None],
+        offset_store: Optional[FileOffsetStore] = None,
+    ):
         self.config = config
         self.on_event = on_event
+        # One shared, persistent offset store for every handler.
+        self._offset_store = offset_store or FileOffsetStore()
         self._observer: Optional[Observer] = None
         self._handlers: list[LogFileHandler] = []
         self._running = False
@@ -224,6 +238,7 @@ class FileWatcher:
                 watch_path=watch_path,
                 hostname=self.config.hostname,
                 on_event=self.on_event,
+                offset_store=self._offset_store,
             )
             self._handlers.append(handler)
 

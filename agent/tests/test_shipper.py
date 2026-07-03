@@ -96,39 +96,31 @@ class TestSendBatchClassification:
 
 
 class TestPoisonBatchPurge:
-    """A permanently-failing (transient) head batch must eventually be purged."""
+    """A batch the server permanently REJECTS (4xx) must be dropped so the
+    queue advances. Purge is driven by server rejection, never by a transient
+    outage."""
 
-    def test_poison_batch_purged_after_max_attempts_then_newer_ships(self, tmp_path: Path):
+    def test_permanent_reject_drops_then_newer_ships(self, tmp_path: Path):
         shipper, buffer = _shipper(tmp_path, retry_max_attempts=3, batch_size=1)
 
-        # Two events; the first is "poison" (server keeps returning 503).
+        # Two events; the first is "poison" (server rejects it with a 422).
         poison_id = buffer.add_log_event(_make_event(0))
         good_id = buffer.add_log_event(_make_event(1))
         assert buffer.count() == 2
 
-        failing_client = FakeClient(503)  # transient -> retried
+        bad_client = FakeClient(422)  # permanent -> dropped
 
-        # Simulate the loop fetching the oldest batch (the poison event) and
-        # failing repeatedly. After retry_max_attempts transient failures the
-        # stale-purge should drop it so the queue can advance.
-        for _ in range(5):
-            batch = buffer.get_batch(shipper.config.batch_size)
-            assert batch, "buffer should not be empty while poison event remains"
-            head_id = batch[0][0]
-            if head_id != poison_id:
-                # Poison event was purged; the head is now the good event.
-                break
-            result = asyncio.run(shipper._send_batch(failing_client, batch))
-            assert result == SendResult.TRANSIENT
-            shipper._handle_batch_result(batch, result)
-        else:
-            pytest.fail("poison event was never purged")
+        batch = buffer.get_batch(shipper.config.batch_size)
+        assert batch[0][0] == poison_id
+        result = asyncio.run(shipper._send_batch(bad_client, batch))
+        assert result == SendResult.PERMANENT
+        shipper._handle_batch_result(batch, result)
 
         # Poison event is gone; the good event survives and is next in line.
         batch = buffer.get_batch(shipper.config.batch_size)
         assert batch[0][0] == good_id
 
-        # Now the server recovers; the good event ships successfully.
+        # Now the server accepts; the good event ships successfully.
         ok_client = FakeClient(200)
         result = asyncio.run(shipper._send_batch(ok_client, batch))
         assert result == SendResult.SUCCESS
@@ -155,18 +147,25 @@ class TestPermanentFailureDrops:
         shipper._handle_batch_result(batch, result)
         assert buffer.count() == 0
 
-    def test_handle_transient_keeps_events_until_max(self, tmp_path: Path):
-        """Transient failures keep events until they exceed retry_max_attempts."""
+    def test_handle_transient_never_purges_during_outage(self, tmp_path: Path):
+        """Transient failures must NEVER drop events, no matter how many.
+
+        This is the outage-data-loss showstopper: a connection-level / 5xx
+        failure is not the event's fault, so the buffer must survive an
+        arbitrarily long outage. The attempt counter is not touched and nothing
+        is purged.
+        """
         shipper, buffer = _shipper(tmp_path, retry_max_attempts=2, batch_size=10)
         buffer.add_log_event(_make_event(0))
 
-        batch = buffer.get_batch(shipper.config.batch_size)
+        # Hammer it with far more transient failures than retry_max_attempts.
+        for _ in range(50):
+            batch = buffer.get_batch(shipper.config.batch_size)
+            assert batch, "event must survive every transient failure"
+            shipper._handle_batch_result(batch, SendResult.TRANSIENT)
+            assert buffer.count() == 1
 
-        # First transient failure: attempts -> 1, still buffered.
-        shipper._handle_batch_result(batch, SendResult.TRANSIENT)
-        assert buffer.count() == 1
-
-        # Second transient failure: attempts -> 2 (>= max), purged.
+        # Once the server recovers, the event ships.
         batch = buffer.get_batch(shipper.config.batch_size)
-        shipper._handle_batch_result(batch, SendResult.TRANSIENT)
+        shipper._handle_batch_result(batch, SendResult.SUCCESS)
         assert buffer.count() == 0

@@ -8,7 +8,7 @@ import os
 import sqlite3
 import stat
 import threading
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable, Optional
 from contextlib import contextmanager
@@ -104,7 +104,7 @@ class BaselineDatabase:
 
     def set_baseline(self, file_path: str, file_hash: str, metadata: dict) -> None:
         """Set or update the baseline for a file."""
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(timezone.utc).isoformat()
         with self._lock:
             with self._get_connection() as conn:
                 conn.execute(
@@ -176,7 +176,7 @@ class FIMHandler(FileSystemEventHandler):
         metadata = get_file_metadata(file_path) if os.path.exists(file_path) else {}
 
         return FIMEvent(
-            timestamp=datetime.utcnow().isoformat() + "Z",
+            timestamp=datetime.now(timezone.utc).isoformat(),
             hostname=self.hostname,
             source="lognog-in",
             source_type="fim",
@@ -427,7 +427,7 @@ class FileIntegrityMonitor:
             if not os.path.exists(file_path):
                 # File was deleted
                 event = FIMEvent(
-                    timestamp=datetime.utcnow().isoformat() + "Z",
+                    timestamp=datetime.now(timezone.utc).isoformat(),
                     hostname=self.config.hostname,
                     source="lognog-in",
                     source_type="fim",
@@ -448,7 +448,7 @@ class FileIntegrityMonitor:
                 # File was modified
                 metadata = get_file_metadata(file_path)
                 event = FIMEvent(
-                    timestamp=datetime.utcnow().isoformat() + "Z",
+                    timestamp=datetime.now(timezone.utc).isoformat(),
                     hostname=self.config.hostname,
                     source="lognog-in",
                     source_type="fim",

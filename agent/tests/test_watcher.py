@@ -8,6 +8,22 @@ import pytest
 from lognog_in.config import Config, WatchPath
 from lognog_in.buffer import LogEvent
 from lognog_in.watcher import LogFileHandler, FileWatcher
+from lognog_in.offset_store import FileOffsetStore
+
+
+def _handler(tmp_path: Path, pattern: str = "*.log", recursive: bool = True,
+             on_event=None, store: FileOffsetStore = None) -> LogFileHandler:
+    """Build a LogFileHandler with an isolated offset store under tmp_path.
+
+    Using an isolated store keeps tests from touching the real user data dir
+    or leaking offsets between tests.
+    """
+    return LogFileHandler(
+        watch_path=WatchPath(path=str(tmp_path), pattern=pattern, recursive=recursive),
+        hostname="testhost",
+        on_event=on_event if on_event is not None else [].append,
+        offset_store=store or FileOffsetStore(tmp_path / "offsets.db"),
+    )
 
 
 class TestLogFileHandler:
@@ -16,11 +32,7 @@ class TestLogFileHandler:
     def test_matches_pattern_wildcard(self, tmp_path: Path):
         """Test pattern matching with wildcard."""
         events = []
-        handler = LogFileHandler(
-            watch_path=WatchPath(path=str(tmp_path), pattern="*.log"),
-            hostname="testhost",
-            on_event=events.append,
-        )
+        handler = _handler(tmp_path, on_event=events.append)
 
         assert handler._matches_pattern("/var/log/app.log") is True
         assert handler._matches_pattern("/var/log/system.log") is True
@@ -30,11 +42,7 @@ class TestLogFileHandler:
     def test_matches_pattern_specific(self, tmp_path: Path):
         """Test pattern matching with specific filename."""
         events = []
-        handler = LogFileHandler(
-            watch_path=WatchPath(path=str(tmp_path), pattern="syslog"),
-            hostname="testhost",
-            on_event=events.append,
-        )
+        handler = _handler(tmp_path, pattern="syslog", on_event=events.append)
 
         assert handler._matches_pattern("/var/log/syslog") is True
         assert handler._matches_pattern("/var/log/syslog2") is False
@@ -42,11 +50,7 @@ class TestLogFileHandler:
     def test_matches_pattern_complex(self, tmp_path: Path):
         """Test pattern matching with complex pattern."""
         events = []
-        handler = LogFileHandler(
-            watch_path=WatchPath(path=str(tmp_path), pattern="app*.log"),
-            hostname="testhost",
-            on_event=events.append,
-        )
+        handler = _handler(tmp_path, pattern="app*.log", on_event=events.append)
 
         assert handler._matches_pattern("/var/log/app.log") is True
         assert handler._matches_pattern("/var/log/app1.log") is True
@@ -56,11 +60,7 @@ class TestLogFileHandler:
     def test_read_new_lines(self, tmp_path: Path):
         """Test reading new lines from file."""
         events = []
-        handler = LogFileHandler(
-            watch_path=WatchPath(path=str(tmp_path), pattern="*.log"),
-            hostname="testhost",
-            on_event=events.append,
-        )
+        handler = _handler(tmp_path, on_event=events.append)
 
         # Create test file
         test_file = tmp_path / "test.log"
@@ -90,11 +90,7 @@ class TestLogFileHandler:
         import os
 
         events = []
-        handler = LogFileHandler(
-            watch_path=WatchPath(path=str(tmp_path), pattern="*.log"),
-            hostname="testhost",
-            on_event=events.append,
-        )
+        handler = _handler(tmp_path, on_event=events.append)
 
         log = tmp_path / "app.log"
         log.write_text("Line 1\nLine 2\n")
@@ -115,11 +111,7 @@ class TestLogFileHandler:
         import os
 
         events = []
-        handler = LogFileHandler(
-            watch_path=WatchPath(path=str(tmp_path), pattern="*.log"),
-            hostname="testhost",
-            on_event=events.append,
-        )
+        handler = _handler(tmp_path, on_event=events.append)
 
         log = tmp_path / "app.log"
         log.write_text("Old 1\nOld 2\n")
@@ -133,32 +125,25 @@ class TestLogFileHandler:
         assert handler._read_new_lines(str(log)) == ["Fresh 1"]
 
     def test_prune_dead_positions_evicts_deleted_files(self, tmp_path: Path):
-        """Tracked positions for deleted files are pruned (no unbounded growth)."""
+        """Persisted offsets for deleted files are pruned (no unbounded growth)."""
         import os
 
-        handler = LogFileHandler(
-            watch_path=WatchPath(path=str(tmp_path), pattern="*.log", recursive=False),
-            hostname="testhost",
-            on_event=[].append,
-        )
+        store = FileOffsetStore(tmp_path / "offsets.db")
+        handler = _handler(tmp_path, recursive=False, store=store)
 
         log = tmp_path / "app.log"
         log.write_text("Line 1\n")
         handler._read_new_lines(str(log))
-        assert len(handler._file_positions) == 1
+        assert len(store.all_offsets()) == 1
 
         os.remove(log)
         handler._prune_dead_positions()
-        assert len(handler._file_positions) == 0
+        assert len(store.all_offsets()) == 0
 
     def test_read_new_lines_handles_rotation(self, tmp_path: Path):
         """Test that rotation (truncation) is handled."""
         events = []
-        handler = LogFileHandler(
-            watch_path=WatchPath(path=str(tmp_path), pattern="*.log"),
-            hostname="testhost",
-            on_event=events.append,
-        )
+        handler = _handler(tmp_path, on_event=events.append)
 
         test_file = tmp_path / "test.log"
 
@@ -175,11 +160,7 @@ class TestLogFileHandler:
     def test_process_file_generates_events(self, tmp_path: Path):
         """Test that processing file generates log events."""
         events = []
-        handler = LogFileHandler(
-            watch_path=WatchPath(path=str(tmp_path), pattern="*.log"),
-            hostname="testhost",
-            on_event=events.append,
-        )
+        handler = _handler(tmp_path, on_event=events.append)
 
         test_file = tmp_path / "app.log"
         test_file.write_text("Log message 1\nLog message 2\n")
@@ -195,11 +176,7 @@ class TestLogFileHandler:
     def test_process_file_skips_non_matching(self, tmp_path: Path):
         """Test that non-matching files are skipped."""
         events = []
-        handler = LogFileHandler(
-            watch_path=WatchPath(path=str(tmp_path), pattern="*.log"),
-            hostname="testhost",
-            on_event=events.append,
-        )
+        handler = _handler(tmp_path, on_event=events.append)
 
         test_file = tmp_path / "data.txt"
         test_file.write_text("Some content\n")
@@ -220,7 +197,7 @@ class TestFileWatcher:
             ],
         )
 
-        watcher = FileWatcher(config, on_event=lambda e: None)
+        watcher = FileWatcher(config, on_event=lambda e: None, offset_store=FileOffsetStore(tmp_path / 'offsets.db'))
 
         assert watcher.is_running() is False
         watcher.start()
@@ -238,7 +215,7 @@ class TestFileWatcher:
             ],
         )
 
-        watcher = FileWatcher(config, on_event=lambda e: None)
+        watcher = FileWatcher(config, on_event=lambda e: None, offset_store=FileOffsetStore(tmp_path / 'offsets.db'))
         paths = watcher.get_watched_paths()
 
         assert len(paths) == 2
@@ -254,7 +231,7 @@ class TestFileWatcher:
             ],
         )
 
-        watcher = FileWatcher(config, on_event=lambda e: None)
+        watcher = FileWatcher(config, on_event=lambda e: None, offset_store=FileOffsetStore(tmp_path / 'offsets.db'))
 
         # Start/stop cycle 1
         watcher.start()
@@ -276,7 +253,7 @@ class TestFileWatcher:
             ],
         )
 
-        watcher = FileWatcher(config, on_event=lambda e: None)
+        watcher = FileWatcher(config, on_event=lambda e: None, offset_store=FileOffsetStore(tmp_path / 'offsets.db'))
         watcher.start()  # Should not raise
 
         # Watcher started but no handlers added
@@ -293,7 +270,7 @@ class TestFileWatcher:
             ],
         )
 
-        watcher = FileWatcher(config, on_event=events.append)
+        watcher = FileWatcher(config, on_event=events.append, offset_store=FileOffsetStore(tmp_path / 'offsets.db'))
         watcher.start()
 
         try:

@@ -3,13 +3,18 @@
 import json
 import sqlite3
 import threading
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 from dataclasses import dataclass, asdict
 from contextlib import contextmanager
 
 from .config import Config
+
+
+def _utcnow_iso() -> str:
+    """Current UTC time as an ISO-8601 string (timezone-aware)."""
+    return datetime.now(timezone.utc).isoformat()
 
 
 @dataclass
@@ -63,12 +68,39 @@ class EventBuffer:
     - The batch hasn't been sent yet
 
     This ensures no events are lost during network issues or restarts.
+
+    Eviction policy:
+    - Events are NEVER dropped just because a send attempt failed at the
+      connection / 5xx level. Those failures are the server's fault and the
+      buffer must survive a multi-minute (or multi-hour) outage.
+    - The only automatic eviction is a hard capacity cap (max rows / max
+      bytes). When the buffer is full the OLDEST events are dropped to make
+      room, and a running ``dropped_count`` metric is bumped. This bounds
+      disk/memory use without silently discarding events during a transient
+      outage.
+    - ``remove_stale_events`` still exists for purging genuine "poison"
+      batches (events the server permanently rejects with a 4xx, tracked via
+      the attempt counter), but it must only be called for server-rejected
+      events, never for transient failures.
     """
 
-    def __init__(self, db_path: Optional[Path] = None):
+    #: Default maximum number of buffered rows before oldest-drop kicks in.
+    DEFAULT_MAX_ROWS = 500_000
+    #: Default maximum total ``data`` bytes before oldest-drop kicks in.
+    DEFAULT_MAX_BYTES = 512 * 1024 * 1024  # 512 MB
+
+    def __init__(
+        self,
+        db_path: Optional[Path] = None,
+        max_rows: int = DEFAULT_MAX_ROWS,
+        max_bytes: int = DEFAULT_MAX_BYTES,
+    ):
         self.db_path = db_path or (Config.get_data_dir() / "buffer.db")
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
+        self.max_rows = max_rows if max_rows and max_rows > 0 else self.DEFAULT_MAX_ROWS
+        self.max_bytes = max_bytes if max_bytes and max_bytes > 0 else self.DEFAULT_MAX_BYTES
         self._lock = threading.Lock()
+        self._dropped_count = 0
         self._init_db()
 
     def _init_db(self) -> None:
@@ -99,33 +131,75 @@ class EventBuffer:
         finally:
             conn.close()
 
+    def _insert(self, conn, event_type: str, data: str) -> int:
+        cursor = conn.execute(
+            """
+            INSERT INTO events (event_type, data, created_at)
+            VALUES (?, ?, ?)
+            """,
+            (event_type, data, _utcnow_iso()),
+        )
+        return cursor.lastrowid or 0
+
+    def _enforce_capacity(self, conn) -> None:
+        """Drop the oldest events until the buffer is under its caps.
+
+        Called while holding ``self._lock`` and inside an open connection.
+        Bumps ``self._dropped_count`` for each evicted row so the overflow is
+        observable rather than silent.
+        """
+        # Row cap.
+        row = conn.execute("SELECT COUNT(*) AS c FROM events").fetchone()
+        count = row["c"] if row else 0
+        if count > self.max_rows:
+            to_drop = count - self.max_rows
+            dropped = conn.execute(
+                """
+                DELETE FROM events WHERE id IN (
+                    SELECT id FROM events ORDER BY id ASC LIMIT ?
+                )
+                """,
+                (to_drop,),
+            ).rowcount
+            self._dropped_count += dropped
+
+        # Byte cap. Drop oldest rows until total data bytes fit the cap.
+        total = conn.execute(
+            "SELECT COALESCE(SUM(LENGTH(data)), 0) AS b FROM events"
+        ).fetchone()["b"]
+        while total > self.max_bytes:
+            # Delete oldest 1000 rows (or fewer) at a time until within cap.
+            row = conn.execute(
+                "SELECT id, LENGTH(data) AS n FROM events ORDER BY id ASC LIMIT 1000"
+            ).fetchall()
+            if not row:
+                break
+            ids = [r["id"] for r in row]
+            freed = sum(r["n"] for r in row)
+            placeholders = ",".join("?" * len(ids))
+            dropped = conn.execute(
+                f"DELETE FROM events WHERE id IN ({placeholders})", ids
+            ).rowcount
+            self._dropped_count += dropped
+            total -= freed
+
     def add_log_event(self, event: LogEvent) -> int:
         """Add a log event to the buffer."""
         with self._lock:
             with self._get_connection() as conn:
-                cursor = conn.execute(
-                    """
-                    INSERT INTO events (event_type, data, created_at)
-                    VALUES (?, ?, ?)
-                    """,
-                    ("log", json.dumps(event.to_dict()), datetime.utcnow().isoformat())
-                )
+                event_id = self._insert(conn, "log", json.dumps(event.to_dict()))
+                self._enforce_capacity(conn)
                 conn.commit()
-                return cursor.lastrowid or 0
+                return event_id
 
     def add_fim_event(self, event: FIMEvent) -> int:
         """Add a FIM event to the buffer."""
         with self._lock:
             with self._get_connection() as conn:
-                cursor = conn.execute(
-                    """
-                    INSERT INTO events (event_type, data, created_at)
-                    VALUES (?, ?, ?)
-                    """,
-                    ("fim", json.dumps(event.to_dict()), datetime.utcnow().isoformat())
-                )
+                event_id = self._insert(conn, "fim", json.dumps(event.to_dict()))
+                self._enforce_capacity(conn)
                 conn.commit()
-                return cursor.lastrowid or 0
+                return event_id
 
     def get_batch(self, batch_size: int = 100) -> list[tuple[int, str, dict]]:
         """
@@ -159,7 +233,13 @@ class EventBuffer:
                 conn.commit()
 
     def increment_attempts(self, event_ids: list[int]) -> None:
-        """Increment the attempt counter for failed events."""
+        """Increment the attempt counter for failed events.
+
+        This MUST only be called for events the server explicitly and
+        permanently rejected (a non-retryable 4xx). Transient / connection /
+        5xx failures must NOT bump this counter, or a multi-minute outage
+        would purge the whole buffer via ``remove_stale_events``.
+        """
         if not event_ids:
             return
         with self._lock:
@@ -172,7 +252,12 @@ class EventBuffer:
                 conn.commit()
 
     def remove_stale_events(self, max_attempts: int = 10) -> int:
-        """Remove events that have failed too many times."""
+        """Remove events that the server has rejected too many times.
+
+        Eviction here is keyed off the per-event ``attempts`` counter, which is
+        only bumped for genuine server rejections (see ``increment_attempts``).
+        It is NOT a time- or outage-based purge.
+        """
         with self._lock:
             with self._get_connection() as conn:
                 cursor = conn.execute(
@@ -187,6 +272,19 @@ class EventBuffer:
         with self._get_connection() as conn:
             row = conn.execute("SELECT COUNT(*) as count FROM events").fetchone()
             return row["count"] if row else 0
+
+    def total_bytes(self) -> int:
+        """Approximate total size of buffered event data in bytes."""
+        with self._get_connection() as conn:
+            row = conn.execute(
+                "SELECT COALESCE(SUM(LENGTH(data)), 0) AS b FROM events"
+            ).fetchone()
+            return row["b"] if row else 0
+
+    @property
+    def dropped_count(self) -> int:
+        """Number of events dropped by the capacity cap (oldest-drop policy)."""
+        return self._dropped_count
 
     def clear(self) -> None:
         """Clear all buffered events."""
