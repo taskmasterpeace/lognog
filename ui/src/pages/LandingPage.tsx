@@ -36,8 +36,8 @@ const integrations = [
 ];
 
 const shots = [
-  { src: '/shot-search.jpg', label: 'Search', blurb: 'Pipe a query, watch it resolve in milliseconds.', pos: 'object-top' },
-  { src: '/guide-screenshots/dashboard-view.jpg', label: 'Dashboards', blurb: 'Compose panels that update on their own.', pos: 'object-[46%_32%]' },
+  { src: '/shot-search.jpg?v=2', label: 'Search', blurb: 'Pipe a query, watch it resolve in milliseconds.', pos: 'object-top' },
+  { src: '/shot-dashboard.jpg', label: 'Dashboards', blurb: 'Compose panels that update on their own.', pos: 'object-top' },
   { src: '/shot-alerts.jpg', label: 'Alerts', blurb: 'Get told the moment something goes quiet — or loud.', pos: 'object-top' },
 ];
 
