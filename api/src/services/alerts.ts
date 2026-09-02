@@ -18,7 +18,7 @@ import {
   createAgentNotification,
   createLoginNotification,
   isAlertSilenced,
-  getNotificationChannelByName,
+  resolveNotificationChannel,
 } from '../db/sqlite.js';
 import { executeDSLQuery, getBackend } from '../db/backend.js';
 import { processTemplate, generateAISummary, TemplateContext } from './template-engine.js';
@@ -47,10 +47,10 @@ function parseTimeRange(timeRange: string): number {
  * Escape shell metacharacters to prevent command injection
  * This is critical for security when substituting user-controlled values into shell commands
  */
-function escapeShellArg(arg: string): string {
-  // Remove or escape dangerous shell metacharacters
-  // This prevents command injection attacks like: ; rm -rf / or $(malicious)
-  return arg.replace(/[;&|`$(){}[\]\\!#*?<>~'"]/g, '');
+export function escapeShellArg(arg: string): string {
+  // Remove dangerous shell metacharacters. Line breaks are included: with
+  // `shell: true` a "\n" in a log message becomes a second command.
+  return arg.replace(/[;&|`$(){}[\]\\!#*?<>~'"\r\n]/g, '');
 }
 
 function substituteVariables(
@@ -389,8 +389,8 @@ async function executeAppriseAction(
     let channelName: string | undefined;
 
     if (config.channel) {
-      // Look up channel by name
-      const channel = getNotificationChannelByName(config.channel);
+      // The UI stores the channel id; older alerts stored the name. Accept both.
+      const channel = resolveNotificationChannel(config.channel);
       if (!channel) {
         return { success: false, message: `Notification channel "${config.channel}" not found` };
       }
@@ -733,6 +733,7 @@ export async function evaluateAlert(alertId: string): Promise<{
 
     // Check trigger condition
     let triggered = false;
+    let uniqueHostCount = 0;
     const triggerType = normalizeTriggerType(alert.trigger_type);
     const comparisonValue = getComparisonValue(
       results as Record<string, unknown>[],
@@ -749,13 +750,16 @@ export async function evaluateAlert(alertId: string): Promise<{
         break;
 
       case 'number_of_hosts':
-        // Count unique hosts
+        // Count unique hosts (rows without any host field don't count as one)
         const uniqueHosts = new Set(
-          results.map((r: Record<string, unknown>) => r.hostname || r.host || r.source)
+          results
+            .map((r: Record<string, unknown>) => r.hostname || r.host || r.source)
+            .filter(Boolean)
         );
+        uniqueHostCount = uniqueHosts.size;
         triggered = checkTriggerCondition(
           alert.trigger_condition,
-          uniqueHosts.size,
+          uniqueHostCount,
           alert.trigger_threshold
         );
         break;
@@ -783,13 +787,19 @@ export async function evaluateAlert(alertId: string): Promise<{
       return { triggered: false, resultCount, message: 'Condition not met' };
     }
 
-    // Check if alert is silenced
-    // Extract hostname from results if available
-    const hostname = results.length > 0
-      ? (results[0] as Record<string, unknown>).hostname as string || undefined
-      : undefined;
+    // Check if alert is silenced. Global and alert-level silences apply
+    // outright; a host-level silence only suppresses the alert when every
+    // host in the results is silenced (previously only row 0 was consulted,
+    // so a silence for web-02 did nothing if web-01 happened to sort first).
+    const hostnames = Array.from(new Set(
+      results
+        .map((r: Record<string, unknown>) => r.hostname)
+        .filter((h): h is string => typeof h === 'string' && h.length > 0)
+    ));
+    const silenced = isAlertSilenced(alertId)
+      || (hostnames.length > 0 && hostnames.every(h => isAlertSilenced(alertId, h)));
 
-    if (isAlertSilenced(alertId, hostname)) {
+    if (silenced) {
       const duration_ms = Math.round(performance.now() - startTime);
       logAlertEvaluated({
         alert_id: alertId,
@@ -844,20 +854,25 @@ export async function evaluateAlert(alertId: string): Promise<{
       results.slice(0, 10) as Record<string, unknown>[]
     );
 
-    // Record in history
+    // Record in history. For aggregate searches (`stats count`) the value the
+    // condition was judged on is the single count cell, not the row count.
+    const triggerValue = triggerType === 'number_of_hosts'
+      ? uniqueHostCount
+      : triggerType === 'number_of_results' ? comparisonValue : resultCount;
     createAlertHistoryEntry(
       alertId,
       resultCount,
       alert.severity as AlertSeverity,
       {
-        trigger_value: String(resultCount),
+        trigger_value: String(triggerValue),
         actions_executed: actionResults,
         sample_results: results.slice(0, 5) as Record<string, unknown>[],
       }
     );
 
     // (last_triggered and trigger_count were already updated atomically by
-    // claimAlertTrigger above.)
+    // claimAlertTrigger above.) Mark the alert as fired so the list can show it.
+    updateAlert(alertId, { last_status: 'triggered' });
 
     // Create agent notification (push to system tray) with variable substitution
     const alertMetadata = {

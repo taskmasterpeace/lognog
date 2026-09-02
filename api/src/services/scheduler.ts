@@ -210,7 +210,14 @@ export function shouldRunNow(schedule: string, lastRun: string | null, now: Date
     return matchesDate(fields, now);
   }
 
-  const lastRunDate = new Date(lastRun);
+  // Rows written by older builds hold SQLite's `datetime('now')` form
+  // ("YYYY-MM-DD HH:MM:SS", UTC, no zone marker). `new Date()` parses that as
+  // LOCAL time, which on a non-UTC host pushes last_run hours into the future
+  // and stretches a */5 schedule into ~4h gaps. Normalise to an explicit UTC ISO.
+  const normalised = /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(lastRun)
+    ? `${lastRun.replace(' ', 'T')}Z`
+    : lastRun;
+  const lastRunDate = new Date(normalised);
   if (isNaN(lastRunDate.getTime())) {
     // Corrupt last_run — fall back to current-minute match.
     return matchesDate(fields, now);
@@ -342,7 +349,7 @@ async function runReport(report: ScheduledReport): Promise<void> {
       console.log(`Report "${report.name}" skipped - condition not met (${report.send_condition})`);
       // Still update last_run and last_result_count
       const db = getSQLiteDB();
-      db.prepare("UPDATE scheduled_reports SET last_run = datetime('now'), last_result_count = ? WHERE id = ?")
+      db.prepare("UPDATE scheduled_reports SET last_run = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), last_result_count = ? WHERE id = ?")
         .run(results.length, report.id);
       return;
     }
@@ -448,7 +455,7 @@ async function runReport(report: ScheduledReport): Promise<void> {
 
     // Update last_run and last_result_count
     const db = getSQLiteDB();
-    db.prepare("UPDATE scheduled_reports SET last_run = datetime('now'), last_result_count = ? WHERE id = ?")
+    db.prepare("UPDATE scheduled_reports SET last_run = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), last_result_count = ? WHERE id = ?")
       .run(results.length, report.id);
   } catch (error) {
     const duration_ms = Math.round(performance.now() - startTime);
@@ -470,7 +477,7 @@ async function runReport(report: ScheduledReport): Promise<void> {
     // is already captured via logReportGenerated({ error }) above and console.
     try {
       const db = getSQLiteDB();
-      db.prepare("UPDATE scheduled_reports SET last_run = datetime('now') WHERE id = ?")
+      db.prepare("UPDATE scheduled_reports SET last_run = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?")
         .run(report.id);
     } catch (updateError) {
       console.error(`Failed to record last_run for report "${report.name}":`, updateError);

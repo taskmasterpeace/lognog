@@ -435,8 +435,15 @@ function describeCron(cron: string): string {
 
   const [minute, hour, dayOfMonth, , dayOfWeek] = parts;
 
+  // Every X hours ("0 */6 * * *") — must be checked before the daily branch,
+  // which would otherwise parseInt('*/6') into "Daily at NaN:00".
+  if (hour.startsWith('*/') && dayOfMonth === '*' && dayOfWeek === '*') {
+    const every = hour.slice(2);
+    return every === '1' ? 'Hourly' : `Every ${every} hours`;
+  }
+
   // Daily at specific time
-  if (dayOfMonth === '*' && dayOfWeek === '*' && hour !== '*' && minute !== '*') {
+  if (dayOfMonth === '*' && dayOfWeek === '*' && hour !== '*' && minute !== '*' && /^\d+$/.test(hour) && /^\d+$/.test(minute)) {
     const h = parseInt(hour, 10);
     const m = parseInt(minute, 10);
     const time = `${h}:${m.toString().padStart(2, '0')}`;

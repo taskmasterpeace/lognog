@@ -248,7 +248,7 @@ export function updateSavedSearchCache(
       cached_sql = ?,
       cached_at = datetime('now'),
       cached_count = ?,
-      last_run = datetime('now'),
+      last_run = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
       last_run_duration_ms = ?,
       last_error = NULL,
       run_count = run_count + 1,
@@ -269,7 +269,7 @@ export function updateSavedSearchError(id: string, error: string): void {
   const database = getSQLiteDB();
   database.prepare(`
     UPDATE saved_searches SET
-      last_run = datetime('now'),
+      last_run = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'),
       last_error = ?,
       updated_at = datetime('now')
     WHERE id = ?

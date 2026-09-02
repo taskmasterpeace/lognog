@@ -30,10 +30,12 @@ import {
   Filter,
   ArrowUpDown,
   Timer,
+  CheckCheck,
 } from 'lucide-react';
 import {
   getAlerts,
   getAlertHistory,
+  acknowledgeAlertHistory,
   createAlert,
   updateAlert,
   deleteAlert,
@@ -232,6 +234,17 @@ export default function AlertsPage() {
     queryKey: ['alertHistory', selectedAlertId],
     queryFn: () => getAlertHistory(selectedAlertId || undefined) as Promise<LocalAlertHistory[]>,
     enabled: showHistoryModal,
+  });
+
+  const ackMutation = useMutation({
+    mutationFn: (entryId: string) => acknowledgeAlertHistory(entryId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['alertHistory'] });
+      toast.success('Acknowledged', 'Alert marked as acknowledged');
+    },
+    onError: (error) => {
+      toast.error('Acknowledge Failed', error instanceof Error ? error.message : 'Unknown error');
+    },
   });
 
   // Load notification channels for Apprise action
@@ -670,6 +683,15 @@ export default function AlertsPage() {
                         {alert.trigger_count}x
                       </div>
                     )}
+                    {alert.enabled === 1 && alert.last_status === 'error' && (
+                      <div
+                        className="px-2 py-0.5 sm:py-1 bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 rounded-full text-xs font-medium inline-flex items-center gap-1"
+                        title={alert.last_error || 'Last evaluation failed'}
+                      >
+                        <AlertCircle className="w-3 h-3" />
+                        Failing
+                      </div>
+                    )}
                   </div>
 
                   {/* Action buttons - scrollable on mobile */}
@@ -767,6 +789,15 @@ export default function AlertsPage() {
                         </div>
                       </div>
                     </div>
+                    {alert.last_status === 'error' && alert.last_error && (
+                      <div className="mt-3 flex items-start gap-2 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-3 py-2 text-xs sm:text-sm text-red-700 dark:text-red-300">
+                        <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                        <div>
+                          <span className="font-medium">Last evaluation failed:</span>{' '}
+                          <span className="font-mono break-all">{alert.last_error}</span>
+                        </div>
+                      </div>
+                    )}
                     {alert.actions.length > 0 && (
                       <div className="mt-4">
                         <div className="text-nog-500 dark:text-nog-400 text-sm mb-2">Actions</div>
@@ -1590,7 +1621,27 @@ export default function AlertsPage() {
                               </div>
                             </div>
                             <div className="text-sm text-nog-600 dark:text-nog-400 mt-1">
-                              {entry.result_count} results triggered this alert
+                              {entry.trigger_value && entry.trigger_value !== String(entry.result_count)
+                                ? `Value ${entry.trigger_value} (${entry.result_count} rows) triggered this alert`
+                                : `${entry.result_count} results triggered this alert`}
+                            </div>
+                            <div className="mt-2 flex items-center gap-2 text-xs">
+                              {entry.acknowledged ? (
+                                <span className="inline-flex items-center gap-1 px-2 py-1 rounded bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300">
+                                  <CheckCheck className="w-3 h-3" />
+                                  Acknowledged by {entry.acknowledged_by || 'unknown'}
+                                  {entry.acknowledged_at ? ` · ${formatDate(entry.acknowledged_at)}` : ''}
+                                </span>
+                              ) : (
+                                <button
+                                  onClick={() => ackMutation.mutate(entry.id)}
+                                  disabled={ackMutation.isPending}
+                                  className="inline-flex items-center gap-1 px-2 py-1 rounded border border-nog-300 dark:border-nog-600 text-nog-700 dark:text-nog-200 hover:bg-nog-100 dark:hover:bg-nog-700 disabled:opacity-50"
+                                >
+                                  <CheckCheck className="w-3 h-3" />
+                                  Acknowledge
+                                </button>
+                              )}
                             </div>
                             {entry.actions_executed && entry.actions_executed.length > 0 && (
                               <div className="mt-2 flex flex-wrap gap-2">

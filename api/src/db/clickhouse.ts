@@ -39,8 +39,12 @@ export async function insertLogs(logs: Record<string, unknown>[]): Promise<void>
 export async function healthCheck(): Promise<boolean> {
   try {
     const ch = getClickHouseClient();
-    await ch.ping();
-    return true;
+    // @clickhouse/client's ping() resolves with { success: false, error } on a
+    // refused/failed connection rather than throwing, so the result must be
+    // inspected — awaiting it alone reported ClickHouse "ok" through a 2-day
+    // crash loop (2026-08-31 -> 09-02).
+    const result = await ch.ping();
+    return result.success === true;
   } catch {
     return false;
   }

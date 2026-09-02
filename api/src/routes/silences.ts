@@ -2,6 +2,9 @@
  * Silences API Routes
  *
  * Manage alert silencing (global, host-specific, alert-specific).
+ *
+ * Static paths (`/check`, `/cleanup`) are registered before `/:id` so Express
+ * does not treat them as silence ids.
  */
 
 import { Router, Request, Response } from 'express';
@@ -35,82 +38,6 @@ router.get('/', (req: Request, res: Response) => {
   }
 });
 
-// Get single silence
-router.get('/:id', (req: Request, res: Response) => {
-  try {
-    const silence = getSilence(req.params.id);
-    if (!silence) {
-      return res.status(404).json({ error: 'Silence not found' });
-    }
-    res.json(silence);
-  } catch (error) {
-    console.error('Error getting silence:', error);
-    res.status(500).json({ error: 'Failed to get silence' });
-  }
-});
-
-// Create silence
-router.post('/', (req: Request, res: Response) => {
-  try {
-    const { level, target_id, duration, reason, created_by } = req.body;
-
-    if (!level) {
-      return res.status(400).json({ error: 'level is required' });
-    }
-
-    if (!['global', 'host', 'alert'].includes(level)) {
-      return res.status(400).json({ error: 'level must be global, host, or alert' });
-    }
-
-    if (!duration || typeof duration !== 'string') {
-      return res.status(400).json({ error: 'duration is required (e.g., "1h", "4h", "24h", "1w", "indefinite")' });
-    }
-
-    // Validate duration format
-    const validDurations = ['1h', '4h', '8h', '12h', '24h', '2d', '3d', '1w', 'indefinite'];
-    if (!validDurations.includes(duration) && !/^\d+[hdw]$/.test(duration)) {
-      return res.status(400).json({
-        error: 'Invalid duration format. Use: 1h, 4h, 24h, 1w, indefinite, or Nh/Nd/Nw'
-      });
-    }
-
-    const options: CreateSilenceOptions = {
-      level: level as SilenceLevel,
-      target_id,
-      duration,
-      reason,
-      created_by,
-    };
-
-    const result = createSilence(options);
-
-    if (!result.success) {
-      return res.status(400).json({ error: result.error });
-    }
-
-    res.status(201).json(result.silence);
-  } catch (error) {
-    console.error('Error creating silence:', error);
-    res.status(500).json({ error: 'Failed to create silence' });
-  }
-});
-
-// Delete silence
-router.delete('/:id', (req: Request, res: Response) => {
-  try {
-    const result = removeSilence(req.params.id);
-
-    if (!result.success) {
-      return res.status(404).json({ error: result.error });
-    }
-
-    res.json({ success: true });
-  } catch (error) {
-    console.error('Error deleting silence:', error);
-    res.status(500).json({ error: 'Failed to delete silence' });
-  }
-});
-
 // Check if alert is silenced
 router.get('/check', (req: Request, res: Response) => {
   try {
@@ -137,6 +64,83 @@ router.post('/cleanup', (_req: Request, res: Response) => {
   } catch (error) {
     console.error('Error cleaning up silences:', error);
     res.status(500).json({ error: 'Failed to cleanup silences' });
+  }
+});
+
+// Create silence
+router.post('/', (req: Request, res: Response) => {
+  try {
+    const { level, target_id, duration, reason } = req.body;
+
+    if (!level) {
+      return res.status(400).json({ error: 'level is required' });
+    }
+
+    if (!['global', 'host', 'alert'].includes(level)) {
+      return res.status(400).json({ error: 'level must be global, host, or alert' });
+    }
+
+    if (!duration || typeof duration !== 'string') {
+      return res.status(400).json({ error: 'duration is required (e.g., "1h", "4h", "24h", "1w", "indefinite")' });
+    }
+
+    // Validate duration format
+    const validDurations = ['1h', '4h', '8h', '12h', '24h', '2d', '3d', '1w', 'indefinite'];
+    if (!validDurations.includes(duration) && !/^[1-9]\d*[hdw]$/.test(duration)) {
+      return res.status(400).json({
+        error: 'Invalid duration format. Use: 1h, 4h, 24h, 1w, indefinite, or Nh/Nd/Nw'
+      });
+    }
+
+    const options: CreateSilenceOptions = {
+      level: level as SilenceLevel,
+      target_id,
+      duration,
+      reason,
+      // Attribute the silence to the authenticated user, not a client-supplied name.
+      created_by: req.user?.username,
+    };
+
+    const result = createSilence(options);
+
+    if (!result.success) {
+      return res.status(400).json({ error: result.error });
+    }
+
+    res.status(201).json(result.silence);
+  } catch (error) {
+    console.error('Error creating silence:', error);
+    res.status(500).json({ error: 'Failed to create silence' });
+  }
+});
+
+// Get single silence
+router.get('/:id', (req: Request, res: Response) => {
+  try {
+    const silence = getSilence(req.params.id);
+    if (!silence) {
+      return res.status(404).json({ error: 'Silence not found' });
+    }
+    res.json(silence);
+  } catch (error) {
+    console.error('Error getting silence:', error);
+    res.status(500).json({ error: 'Failed to get silence' });
+  }
+});
+
+// Delete silence
+router.delete('/:id', (req: Request, res: Response) => {
+  try {
+    const result = removeSilence(req.params.id);
+
+    if (!result.success) {
+      return res.status(404).json({ error: result.error });
+    }
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting silence:', error);
+    res.status(500).json({ error: 'Failed to delete silence' });
   }
 });
 

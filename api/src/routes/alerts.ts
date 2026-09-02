@@ -2,6 +2,10 @@
  * Alerts API Routes
  *
  * CRUD operations for Splunk-style alerts.
+ *
+ * Route order matters: every static path (`/history`, `/test`, `/templates`,
+ * `/evaluate-all`, ...) is registered BEFORE the `/:id` family, otherwise
+ * Express matches `/history` as an alert id and the history view 404s.
  */
 
 import { Router, Request, Response } from 'express';
@@ -12,7 +16,6 @@ import {
   updateAlert,
   deleteAlert,
   getAlertHistory,
-  getAlertHistoryEntry,
   acknowledgeAlertHistory,
   AlertAction,
   AlertTriggerCondition,
@@ -41,6 +44,29 @@ function safeJsonParse<T>(json: string | null | undefined, defaultValue: T): T {
   }
 }
 
+// Script actions run arbitrary commands on the API host, so only admins may
+// attach one. Returns an error message when the caller is not allowed.
+function scriptActionForbidden(req: Request, actions: unknown): string | null {
+  if (!Array.isArray(actions)) return null;
+  const hasScript = actions.some(a => a && typeof a === 'object' && (a as AlertAction).type === 'script');
+  if (hasScript && req.user?.role !== 'admin') {
+    return 'Only administrators can attach script actions to alerts';
+  }
+  return null;
+}
+
+function parseHistoryLimit(raw: unknown): number {
+  return Math.min(parseInt(String(raw ?? ''), 10) || 100, 1000);
+}
+
+function presentHistory<T extends { actions_executed?: string | null; sample_results?: string | null }>(h: T) {
+  return {
+    ...h,
+    actions_executed: safeJsonParse(h.actions_executed, null),
+    sample_results: safeJsonParse(h.sample_results, null),
+  };
+}
+
 // Get all alerts (optionally filtered by app_scope)
 router.get('/', (req: Request, res: Response) => {
   try {
@@ -65,6 +91,80 @@ router.get('/templates', (_req: Request, res: Response) => {
   } catch (error) {
     console.error('Error getting alert templates:', error);
     res.status(500).json({ error: 'Failed to get alert templates' });
+  }
+});
+
+// Get alert history (all alerts)
+router.get('/history', (req: Request, res: Response) => {
+  try {
+    const history = getAlertHistory(undefined, parseHistoryLimit(req.query.limit));
+    res.json(history.map(presentHistory));
+  } catch (error) {
+    console.error('Error getting alert history:', error);
+    res.status(500).json({ error: 'Failed to get alert history' });
+  }
+});
+
+// Acknowledge alert history entry. The acknowledger is always the
+// authenticated user — a client-supplied name is not trusted.
+router.post('/history/:id/acknowledge', (req: Request, res: Response) => {
+  try {
+    const { notes } = req.body ?? {};
+    const acknowledgedBy = req.user?.username;
+    if (!acknowledgedBy) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const entry = acknowledgeAlertHistory(req.params.id, acknowledgedBy, notes);
+    if (!entry) {
+      return res.status(404).json({ error: 'History entry not found' });
+    }
+
+    res.json(presentHistory(entry));
+  } catch (error) {
+    console.error('Error acknowledging alert:', error);
+    res.status(500).json({ error: 'Failed to acknowledge alert' });
+  }
+});
+
+// Test alert configuration (without saving)
+router.post('/test', async (req: Request, res: Response) => {
+  try {
+    const {
+      search_query,
+      trigger_type,
+      trigger_condition,
+      trigger_threshold,
+      time_range,
+    } = req.body;
+
+    if (!search_query) {
+      return res.status(400).json({ error: 'search_query is required' });
+    }
+
+    const result = await testAlert(
+      search_query,
+      normalizeTriggerType(trigger_type),
+      trigger_condition || 'greater_than',
+      trigger_threshold ?? 0,
+      time_range || '-5m'
+    );
+
+    res.json(result);
+  } catch (error) {
+    console.error('Error testing alert:', error);
+    res.status(500).json({ error: 'Failed to test alert' });
+  }
+});
+
+// Evaluate all enabled alerts (for manual trigger or testing)
+router.post('/evaluate-all', async (_req: Request, res: Response) => {
+  try {
+    const result = await evaluateAllAlerts();
+    res.json(result);
+  } catch (error) {
+    console.error('Error evaluating all alerts:', error);
+    res.status(500).json({ error: 'Failed to evaluate alerts' });
   }
 });
 
@@ -104,23 +204,6 @@ router.post('/from-template/:templateId', (req: Request, res: Response) => {
   }
 });
 
-// Get single alert
-router.get('/:id', (req: Request, res: Response) => {
-  try {
-    const alert = getAlert(req.params.id);
-    if (!alert) {
-      return res.status(404).json({ error: 'Alert not found' });
-    }
-    res.json({
-      ...alert,
-      actions: safeJsonParse<AlertAction[]>(alert.actions, []),
-    });
-  } catch (error) {
-    console.error('Error getting alert:', error);
-    res.status(500).json({ error: 'Failed to get alert' });
-  }
-});
-
 // Create alert
 router.post('/', (req: Request, res: Response) => {
   try {
@@ -144,6 +227,11 @@ router.post('/', (req: Request, res: Response) => {
 
     if (!name || !search_query) {
       return res.status(400).json({ error: 'Name and search_query are required' });
+    }
+
+    const forbidden = scriptActionForbidden(req, actions);
+    if (forbidden) {
+      return res.status(403).json({ error: forbidden });
     }
 
     const alert = createAlert(name, search_query, {
@@ -172,6 +260,25 @@ router.post('/', (req: Request, res: Response) => {
   }
 });
 
+// ---- /:id family (must stay below every static route) ----
+
+// Get single alert
+router.get('/:id', (req: Request, res: Response) => {
+  try {
+    const alert = getAlert(req.params.id);
+    if (!alert) {
+      return res.status(404).json({ error: 'Alert not found' });
+    }
+    res.json({
+      ...alert,
+      actions: safeJsonParse<AlertAction[]>(alert.actions, []),
+    });
+  } catch (error) {
+    console.error('Error getting alert:', error);
+    res.status(500).json({ error: 'Failed to get alert' });
+  }
+});
+
 // Update alert
 router.put('/:id', (req: Request, res: Response) => {
   try {
@@ -197,6 +304,11 @@ router.put('/:id', (req: Request, res: Response) => {
       enabled,
       app_scope,
     } = req.body;
+
+    const forbidden = scriptActionForbidden(req, actions);
+    if (forbidden) {
+      return res.status(403).json({ error: forbidden });
+    }
 
     const alert = updateAlert(req.params.id, {
       name,
@@ -282,109 +394,14 @@ router.post('/:id/evaluate', async (req: Request, res: Response) => {
   }
 });
 
-// Test alert configuration (without saving)
-router.post('/test', async (req: Request, res: Response) => {
-  try {
-    const {
-      search_query,
-      trigger_type,
-      trigger_condition,
-      trigger_threshold,
-      time_range,
-    } = req.body;
-
-    if (!search_query) {
-      return res.status(400).json({ error: 'search_query is required' });
-    }
-
-    const result = await testAlert(
-      search_query,
-      normalizeTriggerType(trigger_type),
-      trigger_condition || 'greater_than',
-      trigger_threshold ?? 0,
-      time_range || '-5m'
-    );
-
-    res.json(result);
-  } catch (error) {
-    console.error('Error testing alert:', error);
-    res.status(500).json({ error: 'Failed to test alert' });
-  }
-});
-
-// Evaluate all enabled alerts (for manual trigger or testing)
-router.post('/evaluate-all', async (_req: Request, res: Response) => {
-  try {
-    const result = await evaluateAllAlerts();
-    res.json(result);
-  } catch (error) {
-    console.error('Error evaluating all alerts:', error);
-    res.status(500).json({ error: 'Failed to evaluate alerts' });
-  }
-});
-
-// Get alert history
-router.get('/history', (_req: Request, res: Response) => {
-  try {
-    const limit = Math.min(parseInt(_req.query.limit as string, 10) || 100, 1000); // Add max limit
-    const history = getAlertHistory(undefined, limit);
-
-    // Parse JSON fields safely
-    const historyWithParsed = history.map(h => ({
-      ...h,
-      actions_executed: safeJsonParse(h.actions_executed, null),
-      sample_results: safeJsonParse(h.sample_results, null),
-    }));
-
-    res.json(historyWithParsed);
-  } catch (error) {
-    console.error('Error getting alert history:', error);
-    res.status(500).json({ error: 'Failed to get alert history' });
-  }
-});
-
 // Get history for specific alert
 router.get('/:id/history', (req: Request, res: Response) => {
   try {
-    const limit = Math.min(parseInt(req.query.limit as string, 10) || 100, 1000); // Add max limit
-    const history = getAlertHistory(req.params.id, limit);
-
-    // Parse JSON fields safely
-    const historyWithParsed = history.map(h => ({
-      ...h,
-      actions_executed: safeJsonParse(h.actions_executed, null),
-      sample_results: safeJsonParse(h.sample_results, null),
-    }));
-
-    res.json(historyWithParsed);
+    const history = getAlertHistory(req.params.id, parseHistoryLimit(req.query.limit));
+    res.json(history.map(presentHistory));
   } catch (error) {
     console.error('Error getting alert history:', error);
     res.status(500).json({ error: 'Failed to get alert history' });
-  }
-});
-
-// Acknowledge alert history entry
-router.post('/history/:id/acknowledge', (req: Request, res: Response) => {
-  try {
-    const { acknowledged_by, notes } = req.body;
-
-    if (!acknowledged_by) {
-      return res.status(400).json({ error: 'acknowledged_by is required' });
-    }
-
-    const entry = acknowledgeAlertHistory(req.params.id, acknowledged_by, notes);
-    if (!entry) {
-      return res.status(404).json({ error: 'History entry not found' });
-    }
-
-    res.json({
-      ...entry,
-      actions_executed: safeJsonParse(entry.actions_executed, null),
-      sample_results: safeJsonParse(entry.sample_results, null),
-    });
-  } catch (error) {
-    console.error('Error acknowledging alert:', error);
-    res.status(500).json({ error: 'Failed to acknowledge alert' });
   }
 });
 

@@ -118,6 +118,14 @@ export function getNotificationChannelByName(name: string): NotificationChannel 
   return database.prepare('SELECT * FROM notification_channels WHERE name = ?').get(name) as NotificationChannel | undefined;
 }
 
+/**
+ * Resolve a channel reference that may be either an id (what the alert editor
+ * stores) or a name (what older alert definitions and hand-written configs use).
+ */
+export function resolveNotificationChannel(idOrName: string): NotificationChannel | undefined {
+  return getNotificationChannel(idOrName) ?? getNotificationChannelByName(idOrName);
+}
+
 export function createNotificationChannel(
   name: string,
   service: NotificationService,

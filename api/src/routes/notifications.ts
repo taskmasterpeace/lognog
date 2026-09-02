@@ -199,16 +199,18 @@ router.get('/services', (_req: Request, res: Response) => {
   })));
 });
 
+// Apprise URLs embed bot tokens / webhook secrets. Reads are authenticated and
+// never return the raw URL — only the masked form. Editing a channel keeps the
+// stored URL unless a new one is supplied (see PUT below).
+function presentChannel<T extends { apprise_url: string }>(ch: T): Omit<T, 'apprise_url'> & { apprise_url_masked: string } {
+  const { apprise_url, ...safe } = ch;
+  return { ...safe, apprise_url_masked: maskAppriseUrl(apprise_url) };
+}
+
 // List all notification channels
-router.get('/channels', (_req: Request, res: Response) => {
+router.get('/channels', authenticate, (_req: Request, res: Response) => {
   try {
-    const channels = getNotificationChannels();
-    // Mask sensitive parts of apprise_url for security
-    const maskedChannels = channels.map(ch => ({
-      ...ch,
-      apprise_url_masked: maskAppriseUrl(ch.apprise_url),
-    }));
-    return res.json(maskedChannels);
+    return res.json(getNotificationChannels().map(presentChannel));
   } catch (error) {
     console.error('Error fetching notification channels:', error);
     return res.status(500).json({ error: 'Failed to fetch notification channels' });
@@ -216,16 +218,13 @@ router.get('/channels', (_req: Request, res: Response) => {
 });
 
 // Get a single notification channel
-router.get('/channels/:id', (req: Request, res: Response) => {
+router.get('/channels/:id', authenticate, (req: Request, res: Response) => {
   try {
     const channel = getNotificationChannel(req.params.id);
     if (!channel) {
       return res.status(404).json({ error: 'Channel not found' });
     }
-    return res.json({
-      ...channel,
-      apprise_url_masked: maskAppriseUrl(channel.apprise_url),
-    });
+    return res.json(presentChannel(channel));
   } catch (error) {
     console.error('Error fetching notification channel:', error);
     return res.status(500).json({ error: 'Failed to fetch notification channel' });
@@ -252,10 +251,7 @@ router.post('/channels', authenticate, (req: Request, res: Response) => {
       enabled,
     });
 
-    return res.status(201).json({
-      ...channel,
-      apprise_url_masked: maskAppriseUrl(channel.apprise_url),
-    });
+    return res.status(201).json(presentChannel(channel));
   } catch (error) {
     console.error('Error creating notification channel:', error);
     return res.status(500).json({ error: 'Failed to create notification channel' });
@@ -280,18 +276,21 @@ router.put('/channels/:id', authenticate, (req: Request, res: Response) => {
       }
     }
 
+    // The editor is pre-filled with the masked URL; an unchanged or empty value
+    // means "keep the stored secret".
+    const keepUrl = !apprise_url || apprise_url === maskAppriseUrl(existing.apprise_url);
     const channel = updateNotificationChannel(req.params.id, {
       name,
       service,
-      apprise_url,
+      apprise_url: keepUrl ? undefined : apprise_url,
       description,
       enabled,
     });
 
-    return res.json({
-      ...channel,
-      apprise_url_masked: channel ? maskAppriseUrl(channel.apprise_url) : undefined,
-    });
+    if (!channel) {
+      return res.status(404).json({ error: 'Channel not found' });
+    }
+    return res.json(presentChannel(channel));
   } catch (error) {
     console.error('Error updating notification channel:', error);
     return res.status(500).json({ error: 'Failed to update notification channel' });
@@ -442,13 +441,22 @@ router.get('/status', async (_req: Request, res: Response) => {
 });
 
 // Helper function to mask sensitive parts of Apprise URLs
+/**
+ * Mask an Apprise URL for display. Apprise packs credentials into every part
+ * of the URL (slack://T/B/token, discord://id/token, tgram://bottoken/chat,
+ * pagerduty://key@apikey, mailto://user:pass@host), so instead of trying to
+ * recognise each service's secret we keep the scheme and hostnames (segments
+ * containing a dot) and reduce every other segment to its first 3 characters.
+ */
 function maskAppriseUrl(url: string): string {
-  // Mask tokens, passwords, and keys in the URL
-  return url
-    .replace(/(:\/\/[^:]+:)([^@]+)(@)/g, '$1****$3')  // password in user:pass@host
-    .replace(/([?&]token=)([^&]+)/gi, '$1****')       // token query param
-    .replace(/([?&]key=)([^&]+)/gi, '$1****')         // key query param
-    .replace(/(\/)[A-Za-z0-9_-]{20,}(\/|$)/g, '/****$2'); // long tokens in path
+  const match = url.match(/^([a-z0-9+.-]+:\/\/)(.*)$/i);
+  if (!match) return '****';
+  const [, scheme, rest] = match;
+  const masked = rest.replace(/[^/@:?&=#]+/g, segment => {
+    if (segment.includes('.') || segment.length <= 3) return segment;
+    return `${segment.slice(0, 3)}****`;
+  });
+  return scheme + masked;
 }
 
 export default router;

@@ -1,0 +1,47 @@
+<?xml version="1.0"?>
+<!--
+  LogNog ClickHouse overrides (mounted at /etc/clickhouse-server/config.d/lognog.xml).
+
+  Why this file exists (2026-09-02 incident):
+  - The stock image logs at `trace` level with 10 x 1 GB rotation -> 4.4 GB of
+    server logs inside the container, and the system.*_log tables grew hundreds
+    of parts. A broken outdated part in those tables crash-looped ClickHouse 24.1
+    (std::terminate in MergeTreeData::loadOutdatedDataParts) every ~100 s.
+  - We keep only what we actually use for operations (query_log, crash_log),
+    give them a short TTL, and drop the profiler/metrics firehoses entirely.
+-->
+<clickhouse>
+  <logger>
+    <level>information</level>
+    <size>100M</size>
+    <count>3</count>
+  </logger>
+
+  <!-- Keep: query history is useful when debugging slow searches. 7 days is plenty. -->
+  <query_log>
+    <ttl>event_date + INTERVAL 7 DAY DELETE</ttl>
+  </query_log>
+  <crash_log>
+    <ttl>event_date + INTERVAL 30 DAY DELETE</ttl>
+  </crash_log>
+
+  <!-- Drop: sampling profiler + per-second metrics are the tables that broke. -->
+  <trace_log remove="1"/>
+  <text_log remove="1"/>
+  <metric_log remove="1"/>
+  <asynchronous_metric_log remove="1"/>
+  <part_log remove="1"/>
+  <query_views_log remove="1"/>
+  <query_thread_log remove="1"/>
+  <session_log remove="1"/>
+  <processors_profile_log remove="1"/>
+  <opentelemetry_span_log remove="1"/>
+  <zookeeper_log remove="1"/>
+  <transactions_info_log remove="1"/>
+  <asynchronous_insert_log remove="1"/>
+  <backup_log remove="1"/>
+  <blob_storage_log remove="1"/>
+  <s3queue_log remove="1"/>
+  <error_log remove="1"/>
+  <query_metric_log remove="1"/>
+</clickhouse>

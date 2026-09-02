@@ -1068,6 +1068,9 @@ export interface Alert {
   enabled: number;
   last_run?: string;
   last_triggered?: string;
+  /** Outcome of the most recent evaluation; `error` carries `last_error`. */
+  last_status?: 'ok' | 'error' | 'triggered' | null;
+  last_error?: string | null;
   trigger_count: number;
   app_scope?: string;
   created_at: string;
@@ -1159,10 +1162,11 @@ export async function testAlert(config: {
   });
 }
 
-export async function acknowledgeAlertHistory(id: string, acknowledgedBy: string, notes?: string): Promise<AlertHistory> {
+// The server attributes the acknowledgement to the authenticated user.
+export async function acknowledgeAlertHistory(id: string, notes?: string): Promise<AlertHistory> {
   return request(`/alerts/history/${id}/acknowledge`, {
     method: 'POST',
-    body: JSON.stringify({ acknowledged_by: acknowledgedBy, notes }),
+    body: JSON.stringify({ notes }),
   });
 }
 
@@ -1712,8 +1716,8 @@ export interface NotificationChannel {
   id: string;
   name: string;
   service: string;
-  apprise_url: string;
-  apprise_url_masked?: string;
+  /** The raw URL is never returned by the API (it embeds tokens); only the masked form is. */
+  apprise_url_masked: string;
   description?: string;
   enabled: number;
   last_test?: string;

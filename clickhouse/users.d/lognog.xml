@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<!--
+  LogNog ClickHouse user/profile overrides (mounted at /etc/clickhouse-server/users.d/lognog.xml).
+
+  allow_experimental_analyzer: ClickHouse 24.3+ turns the new query analyzer on by
+  default. It changes alias/GROUP BY resolution rules, and the DSL compiler's
+  generated SQL was written against the classic analyzer. Pin the classic one so
+  the 24.1 -> 24.8 upgrade is behavior-preserving; flip to 1 deliberately after
+  the DSL test suite has been run against it.
+-->
+<clickhouse>
+  <profiles>
+    <default>
+      <allow_experimental_analyzer>0</allow_experimental_analyzer>
+      <!-- Hard ceilings so one bad dashboard query can't take the box down. -->
+      <max_memory_usage>6000000000</max_memory_usage>
+      <max_execution_time>120</max_execution_time>
+    </default>
+  </profiles>
+</clickhouse>

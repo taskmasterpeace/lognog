@@ -1,13 +1,19 @@
 services:
   # ClickHouse - Log Storage
   clickhouse:
-    image: clickhouse/clickhouse-server:24.1
+    # 24.8 LTS. 24.1 crash-looped (std::terminate in loadOutdatedDataParts) on a
+    # single corrupt system.metric_log part; later releases detach broken parts
+    # instead of aborting. See clickhouse/config.d/lognog.xml.
+    image: clickhouse/clickhouse-server:24.8
     container_name: lognog-clickhouse
     ports:
       - "8123:8123"  # HTTP interface (internal services connect via docker network)
     volumes:
       - clickhouse-data:/var/lib/clickhouse
       - ./clickhouse/init:/docker-entrypoint-initdb.d
+      # Single-file mounts so the image's own docker_related_config.xml (listen_host) survives.
+      - ./clickhouse/config.d/lognog.xml:/etc/clickhouse-server/config.d/lognog.xml:ro
+      - ./clickhouse/users.d/lognog.xml:/etc/clickhouse-server/users.d/lognog.xml:ro
     environment:
       CLICKHOUSE_DB: lognog
       CLICKHOUSE_USER: lognog
@@ -69,6 +75,8 @@ services:
       CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-lognog-dev-only}
       CLICKHOUSE_DATABASE: lognog
       SQLITE_PATH: /data/lognog.db
+      # Public URL used for "View in LogNog" links in emailed reports/alerts.
+      BASE_URL: ${BASE_URL:-https://logs.machinekinglabs.com}
       JWT_SECRET: ${JWT_SECRET:-lognog-jwt-secret-change-me}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-lognog-refresh-secret-change-me}
       OTLP_REQUIRE_AUTH: ${OTLP_REQUIRE_AUTH:-true}

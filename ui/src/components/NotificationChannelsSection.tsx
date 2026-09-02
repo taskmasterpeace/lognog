@@ -100,7 +100,9 @@ export default function NotificationChannelsSection() {
     setEditingChannel(channel);
     setFormName(channel.name);
     setFormService(channel.service);
-    setFormUrl(channel.apprise_url);
+    // The API never returns the raw URL (it embeds tokens); editing shows the
+    // masked form and leaves the secret untouched unless a new URL is typed.
+    setFormUrl(channel.apprise_url_masked || '');
     setFormDescription(channel.description || '');
     setFormEnabled(channel.enabled === 1);
     setShowModal(true);
@@ -324,7 +326,7 @@ export default function NotificationChannelsSection() {
                       {channel.description && ` - ${channel.description}`}
                     </p>
                     <p className="text-xs text-nog-400 dark:text-nog-500 mt-1 font-mono">
-                      {channel.apprise_url_masked || channel.apprise_url}
+                      {channel.apprise_url_masked}
                     </p>
                   </div>
                 </div>
