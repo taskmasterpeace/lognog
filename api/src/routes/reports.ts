@@ -40,6 +40,7 @@ interface ScheduledReport {
 
 // ==================== Validation ====================
 
+const REPORT_TIME_RANGE = /^-\d+[mhdw]$/i;
 const REPORT_FORMATS = new Set(['html', 'csv', 'json']);
 const ATTACHMENT_FORMATS = new Set(['none', 'html', 'csv', 'json']);
 const SEND_CONDITIONS = new Set(['always', 'if_results', 'if_change', 'threshold']);
@@ -57,9 +58,15 @@ function validateReportFields(fields: {
   format?: unknown;
   attachment_format?: unknown;
   send_condition?: unknown;
+  time_range?: unknown;
 }): string | null {
-  const { schedule, recipients, format, attachment_format, send_condition } = fields;
+  const { schedule, recipients, format, attachment_format, send_condition, time_range } = fields;
 
+  if (time_range !== undefined && time_range !== null && time_range !== '') {
+    if (typeof time_range !== 'string' || !REPORT_TIME_RANGE.test(time_range)) {
+      return `Invalid time_range "${String(time_range)}": use a relative window such as -1h, -24h or -7d`;
+    }
+  }
   if (schedule !== undefined) {
     if (typeof schedule !== 'string' || !cron.validate(schedule)) {
       return `Invalid schedule "${String(schedule)}": use a 5-field cron expression such as "0 8 * * 1-5"`;
@@ -242,14 +249,15 @@ router.post('/', (req: Request, res: Response) => {
       send_condition = 'always',
       condition_threshold,
       compare_offset,
-      app_scope = 'default'
+      app_scope = 'default',
+      time_range,
     } = req.body;
 
     if (!name || !query || !schedule || !recipients) {
       return res.status(400).json({ error: 'Name, query, schedule, and recipients are required' });
     }
 
-    const invalid = validateReportFields({ schedule, recipients, format, attachment_format, send_condition });
+    const invalid = validateReportFields({ schedule, recipients, format, attachment_format, send_condition, time_range });
     if (invalid) {
       return res.status(400).json({ error: invalid });
     }
@@ -260,12 +268,13 @@ router.post('/', (req: Request, res: Response) => {
       INSERT INTO scheduled_reports (
         id, name, description, query, schedule, recipients, format,
         attachment_format, subject_template, message_template,
-        send_condition, condition_threshold, compare_offset, app_scope
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        send_condition, condition_threshold, compare_offset, app_scope, time_range
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id, name, description || null, query, schedule, recipients, format,
       attachment_format, subject_template || null, message_template || null,
-      send_condition, condition_threshold ?? null, compare_offset || null, app_scope
+      send_condition, condition_threshold ?? null, compare_offset || null, app_scope,
+      time_range || null
     );
 
     const report = db.prepare('SELECT * FROM scheduled_reports WHERE id = ?').get(id);
@@ -283,11 +292,11 @@ router.put('/:id', (req: Request, res: Response) => {
       name, description, query, schedule, recipients, format,
       attachment_format, subject_template, message_template,
       send_condition, condition_threshold, compare_offset,
-      enabled, app_scope
+      enabled, app_scope, time_range
     } = req.body;
     const db = getSQLiteDB();
 
-    const invalid = validateReportFields({ schedule, recipients, format, attachment_format, send_condition });
+    const invalid = validateReportFields({ schedule, recipients, format, attachment_format, send_condition, time_range });
     if (invalid) {
       return res.status(400).json({ error: invalid });
     }
@@ -296,6 +305,7 @@ router.put('/:id', (req: Request, res: Response) => {
     const values: unknown[] = [];
 
     if (name !== undefined) { fields.push('name = ?'); values.push(name); }
+    if (time_range !== undefined) { fields.push('time_range = ?'); values.push(time_range || null); }
     if (description !== undefined) { fields.push('description = ?'); values.push(description); }
     if (query !== undefined) { fields.push('query = ?'); values.push(query); }
     if (schedule !== undefined) { fields.push('schedule = ?'); values.push(schedule); }

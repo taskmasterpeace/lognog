@@ -35,6 +35,8 @@ interface ScheduledReport {
   last_run: string | null;
   last_result_count?: number;
   app_scope?: string;
+  /** Explicit query window ('-24h'); null/empty = derive from the cron cadence. */
+  time_range?: string | null;
   created_at: string;
 }
 
@@ -277,14 +279,15 @@ export function reportWindowForSchedule(schedule: string): string {
 
 // Map a relative window string to milliseconds (for computing display ranges).
 function windowToMs(window: string): number {
-  const match = window.match(/^-?(\d+)(s|m|h|d)$/);
+  const match = window.match(/^-?(\d+)(s|m|h|d|w)$/i);
   if (!match) return 7 * 24 * 60 * 60 * 1000;
   const value = parseInt(match[1], 10);
-  switch (match[2]) {
+  switch (match[2].toLowerCase()) {
     case 's': return value * 1000;
     case 'm': return value * 60 * 1000;
     case 'h': return value * 60 * 60 * 1000;
     case 'd': return value * 24 * 60 * 60 * 1000;
+    case 'w': return value * 7 * 24 * 60 * 60 * 1000;
     default: return 7 * 24 * 60 * 60 * 1000;
   }
 }
@@ -341,11 +344,13 @@ async function runReport(report: ScheduledReport, options: { manual?: boolean } 
   const elapsed = () => Math.round(performance.now() - startTime);
 
   try {
-    // Derive the query window from the report's schedule (issue #39 bug 5):
-    // hourly -> -1h, daily -> -24h, weekly -> -7d, etc. Previously hard-coded
-    // to -7d regardless of cadence, which skewed if_change/threshold/if_results
-    // comparisons for daily/hourly reports.
-    const window = reportWindowForSchedule(report.schedule);
+    // Query window: the report's explicit time_range when set, otherwise
+    // derived from the schedule (issue #39 bug 5): hourly -> -1h, daily ->
+    // -24h, weekly -> -7d, etc. (Previously hard-coded to -7d regardless of
+    // cadence, which skewed if_change/threshold/if_results comparisons.)
+    const window = report.time_range && /^-\d+[mhdw]$/i.test(report.time_range)
+      ? report.time_range
+      : reportWindowForSchedule(report.schedule);
     const now = new Date();
     const earliest = new Date(now.getTime() - windowToMs(window));
     const latestIso = now.toISOString();
@@ -695,7 +700,11 @@ async function checkPullCollectors(): Promise<void> {
   }
 }
 
-// Cleanup expired caches
+// Triggered-alert history is kept this long; nothing pruned it before, so
+// a chatty alert grew the SQLite file without bound.
+const ALERT_HISTORY_RETENTION_DAYS = 90;
+
+// Cleanup expired caches and old alert history
 async function runCacheCleanup(): Promise<void> {
   try {
     const cleaned = cleanupExpiredSearchCache();
@@ -704,6 +713,18 @@ async function runCacheCleanup(): Promise<void> {
     }
   } catch (error) {
     console.error('Error cleaning up expired caches:', error);
+  }
+  try {
+    const cutoff = new Date(Date.now() - ALERT_HISTORY_RETENTION_DAYS * 86_400_000).toISOString();
+    // triggered_at is stored via datetime('now') ("YYYY-MM-DD HH:MM:SS"); compare as datetimes.
+    const removed = getSQLiteDB()
+      .prepare("DELETE FROM alert_history WHERE datetime(triggered_at) < datetime(?)")
+      .run(cutoff.replace('T', ' ').replace(/\.\d+Z$/, '')).changes;
+    if (removed > 0) {
+      console.log(`Pruned ${removed} alert history rows older than ${ALERT_HISTORY_RETENTION_DAYS} days`);
+    }
+  } catch (error) {
+    console.error('Error pruning alert history:', error);
   }
 }
 

@@ -60,6 +60,16 @@ describe('scheduled report validation', () => {
     expect(res.body.error).toMatch(/not-an-email/);
   });
 
+  it('stores an explicit data window and rejects malformed ones', async () => {
+    const ok = await request(app).post('/reports').send({ ...valid, time_range: '-7d' });
+    expect(ok.status).toBe(201);
+    expect(ok.body.time_range).toBe('-7d');
+
+    const bad = await request(app).post('/reports').send({ ...valid, time_range: 'last week' });
+    expect(bad.status).toBe(400);
+    expect(bad.body.error).toMatch(/time_range/);
+  });
+
   it('validates on update too', async () => {
     const created = await request(app).post('/reports').send(valid);
     const res = await request(app).put(`/reports/${created.body.report?.id ?? created.body.id}`).send({ schedule: '* * *' });

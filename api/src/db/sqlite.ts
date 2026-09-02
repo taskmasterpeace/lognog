@@ -881,6 +881,10 @@ function initializeSchema(): void {
   if (!reportColumnNames.includes('updated_at')) {
     database.exec("ALTER TABLE scheduled_reports ADD COLUMN updated_at TEXT");
   }
+  // Explicit query window (e.g. '-24h', '-7d'); NULL = derive from the cron cadence.
+  if (!reportColumnNames.includes('time_range')) {
+    database.exec("ALTER TABLE scheduled_reports ADD COLUMN time_range TEXT");
+  }
 
   if (!ssColumnNames.includes('app_scope')) {
     database.exec("ALTER TABLE saved_searches ADD COLUMN app_scope TEXT DEFAULT 'default'");

@@ -53,6 +53,18 @@ const TIME_PRESETS = [
   { label: 'Last 30 days', value: '-30d' },
 ];
 
+// Query window for scheduled reports. '' = match the schedule's cadence
+// (hourly → last hour, daily → last 24h, weekly → last 7d …).
+const REPORT_WINDOWS = [
+  { label: 'Match schedule (auto)', value: '' },
+  { label: 'Last 15 minutes', value: '-15m' },
+  { label: 'Last hour', value: '-1h' },
+  { label: 'Last 6 hours', value: '-6h' },
+  { label: 'Last 24 hours', value: '-24h' },
+  { label: 'Last 7 days', value: '-7d' },
+  { label: 'Last 30 days', value: '-30d' },
+];
+
 export default function ReportsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -61,6 +73,7 @@ export default function ReportsPage() {
   const [reportQuery, setReportQuery] = useState('search * | stats count by hostname');
   const [reportSchedule, setReportSchedule] = useState('0 0 * * *');
   const [reportRecipients, setReportRecipients] = useState('');
+  const [reportTimeRange, setReportTimeRange] = useState('');
   const [appScope, setAppScope] = useState<string>('all');
 
   const [generateQuery, setGenerateQuery] = useState('search * | stats count by hostname');
@@ -84,6 +97,7 @@ export default function ReportsPage() {
     setReportQuery(report.query);
     setReportSchedule(report.schedule);
     setReportRecipients(report.recipients);
+    setReportTimeRange(report.time_range || '');
     setShowCreateModal(true);
   };
 
@@ -93,6 +107,7 @@ export default function ReportsPage() {
     setReportQuery(report.query);
     setReportSchedule(report.schedule);
     setReportRecipients(report.recipients);
+    setReportTimeRange(report.time_range || '');
     setShowCreateModal(true);
   };
 
@@ -108,6 +123,7 @@ export default function ReportsPage() {
       query: reportQuery,
       schedule: reportSchedule,
       recipients: reportRecipients,
+      time_range: reportTimeRange || null,
     }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['scheduledReports'] });
@@ -158,7 +174,7 @@ export default function ReportsPage() {
   });
 
   const createMutation = useMutation({
-    mutationFn: () => createScheduledReport(reportName, reportQuery, reportSchedule, reportRecipients, 'html', appScope === 'all' ? 'default' : appScope),
+    mutationFn: () => createScheduledReport(reportName, reportQuery, reportSchedule, reportRecipients, 'html', appScope === 'all' ? 'default' : appScope, reportTimeRange),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['scheduledReports'] });
       toast.success('Report Scheduled', `"${reportName}" will run ${getScheduleLabel(reportSchedule).toLowerCase()}`);
@@ -200,6 +216,7 @@ export default function ReportsPage() {
     setReportQuery('search * | stats count by hostname');
     setReportSchedule('0 0 * * *');
     setReportRecipients('');
+    setReportTimeRange('');
   };
 
   const handleGenerateReport = async (mode: 'download' | 'preview') => {
@@ -545,6 +562,20 @@ export default function ReportsPage() {
                     </option>
                   ))}
                 </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">Data window</label>
+                <select
+                  value={reportTimeRange}
+                  onChange={(e) => setReportTimeRange(e.target.value)}
+                  className="input"
+                >
+                  {REPORT_WINDOWS.map(option => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+                <p className="text-xs text-nog-500 mt-1">How far back each run searches, relative to when it runs.</p>
               </div>
 
               <div>

@@ -718,6 +718,8 @@ export interface ScheduledReport {
   message_template?: string;
   send_condition?: string;
   condition_threshold?: number;
+  /** Explicit query window ('-24h'); empty/null = derived from the schedule. */
+  time_range?: string | null;
   enabled: number;
   last_run: string | null;
   last_result_count?: number | null;
@@ -751,11 +753,12 @@ export async function createScheduledReport(
   schedule: string,
   recipients: string,
   format?: string,
-  app_scope?: string
+  app_scope?: string,
+  time_range?: string
 ): Promise<ScheduledReport> {
   return request('/reports', {
     method: 'POST',
-    body: JSON.stringify({ name, query, schedule, recipients, format, app_scope }),
+    body: JSON.stringify({ name, query, schedule, recipients, format, app_scope, time_range: time_range || undefined }),
   });
 }
 
