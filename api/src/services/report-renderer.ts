@@ -83,9 +83,11 @@ export function renderHtml(data: ReportData, options: RenderOptions = { format: 
   const accentColor = options.accentColor || DEFAULT_ACCENT_COLOR;
   const columns = context.columns;
 
-  // If custom message template is provided, process it
+  // If custom message template is provided, process it. Substituted values
+  // (log messages, hostnames …) are HTML-escaped; authors use `:raw` to opt
+  // out for a field they trust.
   if (options.messageTemplate) {
-    return processTemplate(options.messageTemplate, context);
+    return processTemplate(options.messageTemplate, context, { escapeHtml: true });
   }
 
   // Default HTML template with summary card and table
@@ -317,7 +319,8 @@ export function renderCsv(data: ReportData): string {
     columns.map(col => escapeCsvField(formatValue(row[col]))).join(',')
   );
 
-  return [header, ...rows].join('\n');
+  // BOM so Excel/Numbers decode UTF-8 (hostnames, messages) instead of mojibake.
+  return '﻿' + [header, ...rows].join('\n');
 }
 
 /**
@@ -398,8 +401,14 @@ function escapeHtml(str: string): string {
 }
 
 function escapeCsvField(value: string): string {
-  const str = String(value);
-  if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+  let str = String(value);
+  // CSV/formula injection: a log message such as "=HYPERLINK(...)" or "-2+3"
+  // is executed by Excel/Sheets when the file is opened. Prefix a quote so the
+  // cell is read as text (the standard OWASP mitigation).
+  if (/^[=+\-@\t\r]/.test(str)) {
+    str = `'${str}`;
+  }
+  if (str.includes(',') || str.includes('"') || str.includes('\n') || str.startsWith("'")) {
     return `"${str.replace(/"/g, '""')}"`;
   }
   return str;

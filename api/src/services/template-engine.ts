@@ -214,7 +214,30 @@ const FILTERS: Record<string, (value: unknown, ...args: string[]) => string> = {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;'),
   escape_url: (v) => encodeURIComponent(String(v)),
+  // Opt out of the HTML auto-escaping applied when rendering HTML reports.
+  raw: (v) => String(v ?? ''),
 };
+
+// Filters after which the value is already safe (or deliberately unsafe) HTML.
+const HTML_SAFE_FILTERS = new Set(['escape_html', 'escape_url', 'raw']);
+
+function htmlEscape(value: unknown): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+export interface TemplateOptions {
+  /**
+   * HTML-escape every substituted value (unless the expression ends in
+   * `:raw`, `:escape_html` or `:escape_url`). Set by the HTML report renderer;
+   * plain-text channels (Apprise text, email subjects) leave it off.
+   */
+  escapeHtml?: boolean;
+}
 
 // Aggregate functions for arrays
 const AGGREGATES: Record<string, (arr: Record<string, unknown>[], field?: string) => unknown> = {
@@ -540,7 +563,11 @@ function evaluateCondition(condition: string, context: TemplateContext | ReportC
 }
 
 // Process loop blocks: {{#each results limit=5}}...{{/each}}
-function processLoops(template: string, context: TemplateContext | ReportContext): string {
+function processLoops(
+  template: string,
+  context: TemplateContext | ReportContext,
+  options: TemplateOptions = {}
+): string {
   const eachPattern = /\{\{#each\s+(\w+)(?:\s+limit=(\d+))?\}\}([\s\S]*?)\{\{\/each\}\}/g;
 
   return template.replace(eachPattern, (_, arrayName, limitStr, itemTemplate) => {
@@ -574,13 +601,27 @@ function processLoops(template: string, context: TemplateContext | ReportContext
       result = result.replace(/\{\{@number\}\}/g, String(index + 1));
 
       // Process the item template with the item as context
-      return processExpression(result, itemContext);
+      return processExpression(result, itemContext, options);
     }).join('');
   });
 }
 
 // Process a single expression: {{variable:filter:args}}
-function processExpression(template: string, context: TemplateContext | ReportContext): string {
+function processExpression(
+  template: string,
+  context: TemplateContext | ReportContext,
+  options: TemplateOptions = {}
+): string {
+  // Final output step for every substituted value: escape for HTML unless
+  // the expression's filter chain already made it safe (or asked for raw).
+  const finalize = (value: unknown, filterChain: string): string => {
+    const text = String(value ?? '');
+    if (!options.escapeHtml) return text;
+    const filters = filterChain.split(':').map(f => f.trim()).filter(Boolean);
+    if (filters.some(f => HTML_SAFE_FILTERS.has(f))) return text;
+    return htmlEscape(text);
+  };
+
   return template.replace(/\{\{([^}]+)\}\}/g, (match, expr) => {
     const trimmedExpr = expr.trim();
 
@@ -621,7 +662,7 @@ function processExpression(template: string, context: TemplateContext | ReportCo
         value = applyFilters(value, filterChain);
       }
 
-      return String(value ?? '');
+      return finalize(value, filterChain);
     }
 
     // Check for filter chain: variable:filter:arg:filter2
@@ -634,32 +675,36 @@ function processExpression(template: string, context: TemplateContext | ReportCo
       if (/[+\-*/]/.test(varPath)) {
         const mathResult = evaluateMath(varPath, context);
         if (mathResult !== null) {
-          return applyFilters(mathResult, filterChain);
+          return finalize(applyFilters(mathResult, filterChain), filterChain);
         }
       }
 
       const value = resolveVariable(varPath, context);
-      return applyFilters(value, filterChain);
+      return finalize(applyFilters(value, filterChain), filterChain);
     }
 
     // Check for math expression without filters
     if (/[+\-*/]/.test(trimmedExpr)) {
       const mathResult = evaluateMath(trimmedExpr, context);
       if (mathResult !== null) {
-        return String(mathResult);
+        return finalize(mathResult, '');
       }
     }
 
     // Simple variable
     const value = resolveVariable(trimmedExpr, context);
-    return value !== undefined ? String(value) : match;
+    return value !== undefined ? finalize(value, '') : match;
   });
 }
 
 /**
  * Main template processing function
  */
-export function processTemplate(template: string, context: TemplateContext | ReportContext): string {
+export function processTemplate(
+  template: string,
+  context: TemplateContext | ReportContext,
+  options: TemplateOptions = {}
+): string {
   if (!template) return template;
 
   let result = template;
@@ -668,10 +713,10 @@ export function processTemplate(template: string, context: TemplateContext | Rep
   result = processConditionals(result, context);
 
   // 2. Process loops
-  result = processLoops(result, context);
+  result = processLoops(result, context, options);
 
   // 3. Process remaining expressions
-  result = processExpression(result, context);
+  result = processExpression(result, context, options);
 
   return result;
 }
