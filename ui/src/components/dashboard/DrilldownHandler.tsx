@@ -1,11 +1,37 @@
 import { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 
+/**
+ * Dashboard → Search drilldown.
+ *
+ * SearchPage reads `q`, `earliest` and `latest` from the URL (see
+ * SearchPage.tsx). Emitting anything else silently drops the filter and the
+ * user lands on their last search instead of the clicked slice.
+ */
+
 interface DrilldownOptions {
   field: string;
   value: string | number;
   originalQuery?: string;
   timeRange?: string;
+  timeRangeLatest?: string;
+}
+
+const DRILLDOWN_TABLE = '| table timestamp hostname app_name severity message';
+const AGGREGATE_FIELDS = new Set(['count', 'sum', 'avg', 'min', 'max', 'dc', 'p50', 'p95', 'p99']);
+
+function quoteValue(value: unknown): string {
+  const str = String(value);
+  // Quote anything that would break the DSL tokenizer (spaces, operators).
+  return /[\s"=<>|]/.test(str) ? `"${str.replace(/"/g, '\\"')}"` : str;
+}
+
+function searchUrl(query: string, earliest?: string, latest?: string): string {
+  const params = new URLSearchParams();
+  params.set('q', query);
+  if (earliest) params.set('earliest', earliest);
+  if (latest) params.set('latest', latest);
+  return `/search?${params.toString()}`;
 }
 
 export function useDrilldown() {
@@ -13,73 +39,38 @@ export function useDrilldown() {
 
   const drilldown = useCallback(
     (options: DrilldownOptions) => {
-      const { field, value, timeRange } = options;
-
-      // Build drilldown query
-      let query: string;
-      const escapedValue = String(value).includes(' ')
-        ? `"${value}"`
-        : String(value);
-
-      // Create a simple search query filtering by the clicked value
-      query = `search ${field}=${escapedValue} | table timestamp hostname app_name severity message`;
-
-      // Build URL params
-      const params = new URLSearchParams();
-      params.set('query', query);
-      if (timeRange) {
-        params.set('time', timeRange);
-      }
-
-      navigate(`/search?${params.toString()}`);
+      const { field, value, timeRange, timeRangeLatest } = options;
+      const query = `search ${field}=${quoteValue(value)} ${DRILLDOWN_TABLE}`;
+      navigate(searchUrl(query, timeRange, timeRangeLatest));
     },
     [navigate]
   );
 
   const drilldownFromRow = useCallback(
-    (row: Record<string, unknown>, keyFields?: string[], timeRange?: string) => {
+    (row: Record<string, unknown>, keyFields?: string[], timeRange?: string, timeRangeLatest?: string) => {
       // Build filter conditions from all key-value pairs
       const conditions: string[] = [];
       const fields = keyFields || Object.keys(row);
 
       for (const field of fields) {
         const value = row[field];
-        if (value !== null && value !== undefined && field !== 'count' && field !== 'sum' && field !== 'avg') {
-          const escapedValue = String(value).includes(' ')
-            ? `"${value}"`
-            : String(value);
-          conditions.push(`${field}=${escapedValue}`);
+        if (value !== null && value !== undefined && !AGGREGATE_FIELDS.has(field)) {
+          conditions.push(`${field}=${quoteValue(value)}`);
         }
       }
 
       if (conditions.length === 0) return;
 
-      const query = `search ${conditions.join(' ')} | table timestamp hostname app_name severity message`;
-
-      const params = new URLSearchParams();
-      params.set('query', query);
-      if (timeRange) {
-        params.set('time', timeRange);
-      }
-
-      navigate(`/search?${params.toString()}`);
+      const query = `search ${conditions.join(' ')} ${DRILLDOWN_TABLE}`;
+      navigate(searchUrl(query, timeRange, timeRangeLatest));
     },
     [navigate]
   );
 
   const drilldownTimeRange = useCallback(
     (start: Date, end: Date, originalQuery?: string) => {
-      const startStr = start.toISOString();
-      const endStr = end.toISOString();
-
       const query = originalQuery || 'search *';
-
-      const params = new URLSearchParams();
-      params.set('query', query);
-      params.set('start', startStr);
-      params.set('end', endStr);
-
-      navigate(`/search?${params.toString()}`);
+      navigate(searchUrl(query, start.toISOString(), end.toISOString()));
     },
     [navigate]
   );

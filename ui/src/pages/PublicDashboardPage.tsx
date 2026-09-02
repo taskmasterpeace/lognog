@@ -6,6 +6,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { AreaChart, BarChart, PieChart, HeatmapChart, GaugeChart, WordCloudChart, CHART_PALETTE } from '../components/charts';
+import type { HeatmapData } from '../components/charts';
 
 const CHART_COLORS = CHART_PALETTE;
 
@@ -14,6 +15,7 @@ interface DashboardPanel {
   title: string;
   query: string;
   visualization: string;
+  options?: Record<string, any>;
   position: { x: number; y: number; w: number; h: number };
 }
 
@@ -27,6 +29,12 @@ interface PublicDashboard {
   panels: DashboardPanel[];
 }
 
+interface PanelState {
+  data: Record<string, unknown>[];
+  loading: boolean;
+  error: string | null;
+}
+
 export default function PublicDashboardPage() {
   const { token } = useParams<{ token: string }>();
   const [dashboard, setDashboard] = useState<PublicDashboard | null>(null);
@@ -34,7 +42,7 @@ export default function PublicDashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const [needsPassword, setNeedsPassword] = useState(false);
   const [password, setPassword] = useState('');
-  const [panelData, setPanelData] = useState<Record<string, { data: any[]; loading: boolean }>>({});
+  const [panelData, setPanelData] = useState<Record<string, PanelState>>({});
 
   const fetchDashboard = async (pwd?: string) => {
     setLoading(true);
@@ -73,7 +81,7 @@ export default function PublicDashboardPage() {
   };
 
   const loadPanelData = async (panel: DashboardPanel, pwd?: string) => {
-    setPanelData((prev) => ({ ...prev, [panel.id]: { data: [], loading: true } }));
+    setPanelData((prev) => ({ ...prev, [panel.id]: { data: [], loading: true, error: null } }));
 
     try {
       const response = await fetch(`/api/dashboards/public/${token}/query`, {
@@ -86,15 +94,26 @@ export default function PublicDashboardPage() {
           password: pwd,
         }),
       });
-      const result = response.ok ? await response.json() : { results: [] };
+      if (!response.ok) {
+        // Surface the failure instead of rendering "No data" — a viewer can't
+        // tell an outage from an empty result otherwise.
+        let message = `Query failed (${response.status})`;
+        try {
+          const body = await response.json();
+          if (body?.error) message = body.error;
+        } catch { /* non-JSON error body */ }
+        setPanelData((prev) => ({ ...prev, [panel.id]: { data: [], loading: false, error: message } }));
+        return;
+      }
+      const result = await response.json();
       setPanelData((prev) => ({
         ...prev,
-        [panel.id]: { data: result.results || [], loading: false },
+        [panel.id]: { data: result.results || [], loading: false, error: null },
       }));
-    } catch {
+    } catch (err) {
       setPanelData((prev) => ({
         ...prev,
-        [panel.id]: { data: [], loading: false },
+        [panel.id]: { data: [], loading: false, error: err instanceof Error ? err.message : 'Query failed' },
       }));
     }
   };
@@ -203,31 +222,38 @@ export default function PublicDashboardPage() {
       <div className="p-6">
         <div className="grid grid-cols-12 gap-4">
           {dashboard.panels.map((panel) => {
-            const data = panelData[panel.id];
-            const pos = panel.position;
+            const state = panelData[panel.id];
+            // Defensive: older API builds returned flat position_x/width columns.
+            const pos = panel.position ?? { x: 0, y: 0, w: 6, h: 4 };
+            const span = Math.min(12, Math.max(1, Number(pos.w) || 6));
+            const height = Math.max(2, Number(pos.h) || 4) * 80;
 
             return (
               <div
                 key={panel.id}
                 className="card"
-                style={{
-                  gridColumn: `span ${pos.w}`,
-                }}
+                style={{ gridColumn: `span ${span} / span ${span}` }}
               >
                 <div className="p-4 border-b border-nog-100 dark:border-nog-700">
                   <h3 className="font-semibold text-nog-900 dark:text-nog-100">
                     {panel.title}
                   </h3>
                 </div>
-                <div className="p-4" style={{ height: pos.h * 80 }}>
-                  {data?.loading ? (
+                <div className="p-4" style={{ height }}>
+                  {!state || state.loading ? (
                     <div className="flex items-center justify-center h-full">
                       <Loader2 className="w-6 h-6 animate-spin text-nog-400" />
+                    </div>
+                  ) : state.error ? (
+                    <div className="flex flex-col items-center justify-center h-full text-center px-2">
+                      <AlertCircle className="w-6 h-6 text-red-400 mb-2" />
+                      <p className="text-sm text-red-600 dark:text-red-400">{state.error}</p>
                     </div>
                   ) : (
                     <PanelVisualization
                       type={panel.visualization}
-                      data={data?.data || []}
+                      options={panel.options || {}}
+                      data={state.data}
                       accentColor={accentColor}
                     />
                   )}
@@ -246,13 +272,36 @@ export default function PublicDashboardPage() {
   );
 }
 
+/**
+ * Column detection shared with the authenticated DashboardViewPage: ClickHouse
+ * returns aggregates as strings, so pick the value column by whether its
+ * values parse as numbers rather than by `typeof`.
+ */
+function detectColumns(results: Record<string, unknown>[]) {
+  const keys = Object.keys(results[0] || {});
+  const isNumericColumn = (k: string) =>
+    results.some((r) => r[k] !== null && r[k] !== '' && Number.isFinite(Number(r[k])));
+  const numericKeys = keys.filter(isNumericColumn);
+  const valueKey =
+    keys.find((k) => /^(count|count_all|total|value|sum|avg|min|max)$/i.test(k) && isNumericColumn(k)) ||
+    numericKeys[0] ||
+    keys[keys.length - 1];
+  const labelKey = keys.find((k) => k !== valueKey) || keys[0];
+  const seriesKeys = numericKeys.filter((k) => k !== labelKey).length > 0
+    ? numericKeys.filter((k) => k !== labelKey)
+    : [valueKey];
+  return { keys, numericKeys, valueKey, labelKey, seriesKeys };
+}
+
 function PanelVisualization({
   type,
+  options,
   data,
   accentColor,
 }: {
   type: string;
-  data: any[];
+  options: Record<string, any>;
+  data: Record<string, unknown>[];
   accentColor: string;
 }) {
   if (!data.length) {
@@ -263,114 +312,139 @@ function PanelVisualization({
     );
   }
 
+  const { keys, valueKey, labelKey, seriesKeys } = detectColumns(data);
+
+  const renderTable = () => (
+    <div className="overflow-auto h-full">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-nog-200 dark:border-nog-700">
+            {keys.slice(0, 6).map((key) => (
+              <th key={key} className="text-left p-2 font-medium text-nog-600 dark:text-nog-400">
+                {key}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {data.slice(0, 25).map((row, i) => (
+            <tr key={i} className="border-b border-nog-100 dark:border-nog-800">
+              {keys.slice(0, 6).map((key) => (
+                <td key={key} className="p-2 text-nog-900 dark:text-nog-100">
+                  {String(row[key] ?? '')}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+
   switch (type) {
     case 'table':
-      return (
-        <div className="overflow-auto h-full">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-nog-200 dark:border-nog-700">
-                {Object.keys(data[0]).slice(0, 5).map((key) => (
-                  <th key={key} className="text-left p-2 font-medium text-nog-600 dark:text-nog-400">
-                    {key}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {data.slice(0, 10).map((row, i) => (
-                <tr key={i} className="border-b border-nog-100 dark:border-nog-800">
-                  {Object.keys(row).slice(0, 5).map((key) => (
-                    <td key={key} className="p-2 text-nog-900 dark:text-nog-100">
-                      {String(row[key])}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      );
+      return renderTable();
 
-    case 'stat':
-      const statValue = data[0]?.[Object.keys(data[0])[0]] ?? 0;
+    case 'single':
+    case 'stat': {
+      const raw = data[0]?.[valueKey] ?? 0;
+      const num = Number(raw);
+      const statValue = Number.isFinite(num) ? num : raw;
       return (
-        <div className="flex items-center justify-center h-full">
+        <div className="flex flex-col items-center justify-center h-full">
           <p className="text-4xl font-bold" style={{ color: accentColor }}>
             {typeof statValue === 'number' ? statValue.toLocaleString() : String(statValue)}
           </p>
+          {data.length === 1 && labelKey !== valueKey && data[0][labelKey] != null && (
+            <p className="text-xs text-nog-500 mt-1 truncate max-w-full">{String(data[0][labelKey])}</p>
+          )}
         </div>
       );
+    }
 
-    case 'bar': {
-      const categoryKey = Object.keys(data[0])[0];
-      const valueKey = Object.keys(data[0])[1] || 'count';
+    case 'bar':
       return (
         <BarChart
-          data={data.slice(0, 10).map((d) => ({ category: String(d[categoryKey]), value: Number(d[valueKey]) || 0 }))}
+          data={data.slice(0, 15).map((d) => ({ category: String(d[labelKey] ?? ''), value: Number(d[valueKey]) || 0 }))}
           height={200}
+          horizontal={true}
           barColor={accentColor}
           showValues={false}
         />
       );
-    }
 
-    case 'pie': {
-      const nameKey = Object.keys(data[0])[0];
-      const valueKey = Object.keys(data[0])[1] || 'count';
+    case 'pie':
       return (
         <PieChart
-          data={data.slice(0, 8).map((d) => ({ name: String(d[nameKey]), value: Number(d[valueKey]) || 0 }))}
+          data={data.slice(0, 8).map((d, i) => ({ name: String(d[labelKey] ?? `Item ${i + 1}`), value: Number(d[valueKey]) || 0 }))}
           height={200}
+          donut={true}
           colors={CHART_COLORS}
         />
       );
-    }
 
-    case 'line': {
-      const xKey = Object.keys(data[0])[0];
-      const yKey = Object.keys(data[0])[1] || 'count';
+    case 'area':
+    case 'line':
       return (
         <AreaChart
           data={data}
-          series={[{ name: yKey, dataKey: yKey, color: accentColor }]}
-          xAxisKey={xKey}
+          series={seriesKeys.map((k, i) => ({ name: k, dataKey: k, color: i === 0 ? accentColor : CHART_COLORS[i % CHART_COLORS.length] }))}
+          xAxisKey={labelKey}
           height={200}
+          xAxisFormatter={(v) => {
+            if (String(v).match(/\d{4}-\d{2}-\d{2}/)) {
+              return new Date(v).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            }
+            return String(v).slice(0, 10);
+          }}
         />
       );
+
+    case 'heatmap': {
+      const timeKey = keys.find((k) => /(^|_)(time|timestamp|bucket|date)/i.test(k));
+      if (!keys.includes('hour') && !keys.includes('day') && !timeKey) {
+        return renderTable();
+      }
+      const heatmapData: HeatmapData[] = data.map((item) => {
+        const t = timeKey && item[timeKey] != null ? new Date(String(item[timeKey])) : null;
+        const hour = item.hour != null && Number.isFinite(Number(item.hour))
+          ? Number(item.hour)
+          : t && !isNaN(t.getTime()) ? t.getHours() : 0;
+        const day = item.day != null && Number.isFinite(Number(item.day))
+          ? Number(item.day)
+          : t && !isNaN(t.getTime()) ? t.getDay() : 0;
+        const value = Number(item[valueKey]) || Number(item.count) || Number(item.value) || 0;
+        return { hour, day, value };
+      });
+      return <HeatmapChart data={heatmapData} height={240} />;
     }
 
-    case 'heatmap':
-      return <HeatmapChart data={data} />;
-
     case 'gauge': {
-      const gaugeValue = data[0]?.[Object.keys(data[0])[0]] ?? 0;
+      const gaugeValue = data[0]
+        ? Number(Object.values(data[0]).find((v) => v !== null && v !== '' && !isNaN(Number(v))) || 0)
+        : 0;
+      const max = options.max ?? Math.max(gaugeValue * 1.2, 100);
+      const thresholds = options.thresholds
+        ? { low: options.thresholds.low, medium: options.thresholds.medium, high: options.thresholds.high ?? max }
+        : { low: max * 0.33, medium: max * 0.66, high: max };
       return (
-        <GaugeChart
-          value={typeof gaugeValue === 'number' ? gaugeValue : parseFloat(String(gaugeValue)) || 0}
-          min={0}
-          max={100}
-          thresholds={{ low: 33, medium: 66, high: 100 }}
-        />
+        <div className="h-full w-full flex flex-col items-center justify-center">
+          <GaugeChart value={gaugeValue} min={0} max={max} height={200} thresholds={thresholds} unit={options.unit || ''} title={options.subtitle} />
+        </div>
       );
     }
 
     case 'wordcloud': {
-      const wordCloudData = data.map(row => {
-        const values = Object.values(row);
-        return {
-          name: String(values[0] || ''),
-          value: Number(values[1]) || 1,
-        };
-      }).filter(item => item.name);
+      const wordCloudData = data.map((row) => ({
+        name: String(row[labelKey] ?? ''),
+        value: Number(row[valueKey]) || 1,
+      })).filter((item) => item.name);
       return <WordCloudChart data={wordCloudData} height={240} />;
     }
 
     default:
-      return (
-        <div className="flex items-center justify-center h-full text-nog-400">
-          Unsupported visualization: {type}
-        </div>
-      );
+      // Scatter/funnel/treemap have no lightweight public renderer yet; a table
+      // is far more useful to a viewer than "Unsupported visualization".
+      return renderTable();
   }
 }

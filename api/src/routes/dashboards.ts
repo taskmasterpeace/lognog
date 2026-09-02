@@ -79,8 +79,14 @@ router.get('/public/:token', async (req: Request, res: Response) => {
       }
     }
 
-    // Get panels for the dashboard
-    const panels = getDashboardPanels(dashboard.id);
+    // Get panels for the dashboard. Rows carry flat position_x/y/width/height;
+    // the public viewer (like the authenticated one) expects a `position`
+    // object, and without it every shared dashboard with panels white-screened.
+    const panels = getDashboardPanels(dashboard.id).map(p => ({
+      ...p,
+      options: safeJsonParse(p.options, {}),
+      position: { x: p.position_x, y: p.position_y, w: p.width, h: p.height },
+    }));
     const pages = getDashboardPages(dashboard.id);
     const variables = getDashboardVariables(dashboard.id);
 

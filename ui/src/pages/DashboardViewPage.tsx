@@ -849,6 +849,17 @@ export default function DashboardViewPage() {
   const [showPanelCopyModal, setShowPanelCopyModal] = useState(false);
   const [provenancePanel, setProvenancePanel] = useState<{ id: string; title: string } | null>(null);
 
+  // The router reuses this component when navigating between dashboards, so
+  // per-dashboard UI state must be reset explicitly. A page selected on
+  // dashboard A otherwise keeps filtering dashboard B's panels (which has no
+  // such page) down to nothing, with the tab bar hidden and no way out.
+  useEffect(() => {
+    setSelectedPageId(null);
+    setEditMode(false);
+    setFullscreenPanel(null);
+    setVariableValues({});
+  }, [id]);
+
   const { data: dashboard, isLoading, error } = useQuery({
     queryKey: ['dashboard', id],
     queryFn: () => getDashboard(id!),

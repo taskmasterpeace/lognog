@@ -177,7 +177,8 @@ export function AIInsightsPanel({
                           if (insight.action?.label === 'Configure AI' && onConfigureAI) {
                             onConfigureAI();
                           } else if (insight.action?.query) {
-                            window.location.href = `/search?query=${encodeURIComponent(insight.action.query)}`;
+                            // SearchPage reads `q` (not `query`) from the URL.
+                            window.location.href = `/search?q=${encodeURIComponent(insight.action.query)}`;
                           }
                         }}
                         className="mt-2 text-sm text-honey-600 dark:text-honey-400 hover:underline"
