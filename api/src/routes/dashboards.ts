@@ -1103,15 +1103,23 @@ router.post('/:id/export', (req: Request, res: Response) => {
 
     const panels = getDashboardPanels(req.params.id);
     const variables = getDashboardVariables(req.params.id);
+    const pages = getDashboardPages(req.params.id);
 
+    // Everything a dashboard is made of round-trips through export/import:
+    // pages (panels reference them by name), panel descriptions and page
+    // membership, scope/category. Previously all of these were dropped.
     const exportData = {
       name: dashboard.name,
       description: dashboard.description,
+      app_scope: dashboard.app_scope,
+      category: dashboard.category,
       logo_url: dashboard.logo_url,
       accent_color: dashboard.accent_color,
       header_color: dashboard.header_color,
+      pages: pages.map(pg => ({ name: pg.name, icon: pg.icon, sort_order: pg.sort_order })),
       panels: panels.map(p => ({
         title: p.title,
+        description: p.description,
         query: p.query,
         visualization: p.visualization,
         options: safeJsonParse(p.options, {}),
@@ -1119,6 +1127,7 @@ router.post('/:id/export', (req: Request, res: Response) => {
         position_y: p.position_y,
         width: p.width,
         height: p.height,
+        page: pages.find(pg => pg.id === p.page_id)?.name,
       })),
       variables: variables.map(v => ({
         name: v.name,
@@ -1131,7 +1140,7 @@ router.post('/:id/export', (req: Request, res: Response) => {
         sort_order: v.sort_order,
       })),
       exported_at: new Date().toISOString(),
-      version: '1.0',
+      version: '1.1',
     };
 
     return res.json(exportData);
@@ -1151,11 +1160,16 @@ router.post('/:id/duplicate', (req: Request, res: Response) => {
 
     const sourcePanels = getDashboardPanels(req.params.id);
     const sourceVariables = getDashboardVariables(req.params.id);
+    const sourcePages = getDashboardPages(req.params.id);
 
-    // Create new dashboard with "- Copy" suffix
+    // Create new dashboard with "- Copy" suffix in the same scope/category so
+    // the copy shows up next to the original in a scope-filtered list.
     const newDashboard = createDashboard(
       `${sourceDashboard.name} - Copy`,
-      sourceDashboard.description
+      sourceDashboard.description,
+      sourceDashboard.app_scope,
+      sourceDashboard.category,
+      sourceDashboard.project_id
     );
 
     // Copy branding settings
@@ -1167,7 +1181,14 @@ router.post('/:id/duplicate', (req: Request, res: Response) => {
       });
     }
 
-    // Copy all panels with their positions and options
+    // Copy pages, keeping a map so panels land on the corresponding new page
+    const pageIdMap = new Map<string, string>();
+    for (const page of sourcePages) {
+      const copy = createDashboardPage(newDashboard.id, page.name, { icon: page.icon, sort_order: page.sort_order });
+      pageIdMap.set(page.id, copy.id);
+    }
+
+    // Copy all panels with their positions, options, descriptions and pages
     for (const panel of sourcePanels) {
       createDashboardPanel(
         newDashboard.id,
@@ -1180,7 +1201,9 @@ router.post('/:id/duplicate', (req: Request, res: Response) => {
           y: panel.position_y,
           width: panel.width,
           height: panel.height,
-        }
+        },
+        panel.description,
+        panel.page_id ? pageIdMap.get(panel.page_id) ?? null : null
       );
     }
 
@@ -1224,7 +1247,9 @@ router.post('/import', (req: Request, res: Response) => {
     // Create dashboard
     const dashboard = createDashboard(
       name || template.name || 'Imported Dashboard',
-      template.description
+      template.description,
+      typeof template.app_scope === 'string' ? template.app_scope : undefined,
+      typeof template.category === 'string' ? template.category : undefined
     );
 
     // Apply branding
@@ -1234,6 +1259,16 @@ router.post('/import', (req: Request, res: Response) => {
         accent_color: template.accent_color,
         header_color: template.header_color,
       });
+    }
+
+    // Recreate pages; exported panels reference them by name
+    const pageIdByName = new Map<string, string>();
+    if (Array.isArray(template.pages)) {
+      for (const page of template.pages) {
+        if (!page || typeof page.name !== 'string') continue;
+        const created = createDashboardPage(dashboard.id, page.name, { icon: page.icon, sort_order: page.sort_order });
+        pageIdByName.set(page.name, created.id);
+      }
     }
 
     // Create panels
@@ -1249,7 +1284,9 @@ router.post('/import', (req: Request, res: Response) => {
           y: panel.position_y || 0,
           width: panel.width || 6,
           height: panel.height || 4,
-        }
+        },
+        typeof panel.description === 'string' ? panel.description : undefined,
+        typeof panel.page === 'string' ? pageIdByName.get(panel.page) ?? null : null
       );
     }
 

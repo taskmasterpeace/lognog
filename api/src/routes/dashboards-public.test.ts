@@ -89,6 +89,38 @@ describe('public dashboard share link', () => {
     expect(foreign.status).toBe(400);
   });
 
+  it('round-trips pages, descriptions and scope through export → import and duplicate', async () => {
+    const created = await request(app).post('/dashboards').send({ name: 'Round trip', app_scope: 'hey-youre-hired', category: 'ops' });
+    const id = created.body.id;
+    const page = await request(app).post(`/dashboards/${id}/pages`).send({ name: 'Traffic' });
+    await request(app).post(`/dashboards/${id}/panels`).send({
+      title: 'Requests', description: 'per host', query: 'search *', visualization: 'bar', page_id: page.body.id,
+      position: { x: 0, y: 0, width: 12, height: 5 },
+    });
+
+    const exported = await request(app).post(`/dashboards/${id}/export`);
+    expect(exported.status).toBe(200);
+    expect(exported.body.pages).toEqual([expect.objectContaining({ name: 'Traffic' })]);
+    expect(exported.body.panels[0]).toMatchObject({ description: 'per host', page: 'Traffic' });
+    expect(exported.body.app_scope).toBe('hey-youre-hired');
+
+    const imported = await request(app).post('/dashboards/import').send({ template: exported.body, name: 'Imported copy' });
+    expect(imported.status).toBe(201);
+    const importedFull = await request(app).get(`/dashboards/${imported.body.id}`);
+    expect(importedFull.body.app_scope).toBe('hey-youre-hired');
+    expect(importedFull.body.pages).toHaveLength(1);
+    expect(importedFull.body.panels[0].description).toBe('per host');
+    expect(importedFull.body.panels[0].page_id).toBe(importedFull.body.pages[0].id);
+
+    const dup = await request(app).post(`/dashboards/${id}/duplicate`);
+    expect(dup.status).toBe(201);
+    const dupFull = await request(app).get(`/dashboards/${dup.body.id}`);
+    expect(dupFull.body.app_scope).toBe('hey-youre-hired');
+    expect(dupFull.body.pages).toHaveLength(1);
+    expect(dupFull.body.panels[0].page_id).toBe(dupFull.body.pages[0].id);
+    expect(dupFull.body.panels[0].description).toBe('per host');
+  });
+
   it('never exposes the share-password hash to API clients', async () => {
     const list = await request(app).get('/dashboards');
     expect(list.status).toBe(200);

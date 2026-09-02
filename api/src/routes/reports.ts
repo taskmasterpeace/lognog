@@ -334,11 +334,21 @@ router.put('/:id', (req: Request, res: Response) => {
 // Trigger a scheduled report manually (rate limited: 10/min - CPU intensive)
 router.post('/:id/trigger', rateLimit(10, 60000), async (req: Request, res: Response) => {
   try {
-    await triggerReport(req.params.id);
-    return res.json({ message: 'Report triggered successfully' });
+    // Report the real outcome: previously this returned "triggered
+    // successfully" even when the send condition skipped it, SMTP wasn't
+    // configured, or the query threw.
+    const result = await triggerReport(req.params.id);
+    const messages: Record<typeof result.status, string> = {
+      sent: `Sent to ${result.recipients?.join(', ') ?? 'recipients'} (${result.row_count} rows)`,
+      generated: 'Generated, but not emailed — SMTP is not configured',
+      skipped: result.reason || 'Skipped by send condition',
+      error: result.reason || 'Report failed',
+    };
+    return res.status(result.status === 'error' ? 500 : 200).json({ ...result, message: messages[result.status] });
   } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
     console.error('Error triggering report:', error);
-    return res.status(500).json({ error: String(error) });
+    return res.status(message === 'Report not found' ? 404 : 500).json({ error: message });
   }
 });
 

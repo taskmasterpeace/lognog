@@ -708,14 +708,36 @@ export async function getActiveSources(): Promise<ActiveSourcesResult> {
 export interface ScheduledReport {
   id: string;
   name: string;
+  description?: string;
   query: string;
   schedule: string;
   recipients: string;
   format: string;
+  attachment_format?: string;
+  subject_template?: string;
+  message_template?: string;
+  send_condition?: string;
+  condition_threshold?: number;
   enabled: number;
   last_run: string | null;
+  last_result_count?: number | null;
   app_scope?: string;
   created_at: string;
+  updated_at?: string;
+}
+
+export interface ReportRunResult {
+  status: 'sent' | 'skipped' | 'generated' | 'error';
+  row_count: number;
+  recipients?: string[];
+  reason?: string;
+  duration_ms: number;
+  message: string;
+}
+
+/** Run a scheduled report immediately; resolves with what actually happened. */
+export async function triggerScheduledReport(id: string): Promise<ReportRunResult> {
+  return request(`/reports/${id}/trigger`, { method: 'POST' });
 }
 
 export async function getScheduledReports(appScope?: string): Promise<ScheduledReport[]> {

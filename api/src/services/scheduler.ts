@@ -321,9 +321,24 @@ function shouldSendReport(
   }
 }
 
-async function runReport(report: ScheduledReport): Promise<void> {
-  console.log(`Running scheduled report: ${report.name}`);
+export interface ReportRunResult {
+  status: 'sent' | 'skipped' | 'generated' | 'error';
+  row_count: number;
+  recipients?: string[];
+  /** Why a run was skipped (send condition) or failed. */
+  reason?: string;
+  duration_ms: number;
+}
+
+/**
+ * Run one report. `manual` runs (Run-now from the UI/API) leave the
+ * scheduling bookkeeping (last_run / last_result_count) untouched so a manual
+ * check can't shift the cron cadence or poison an if_change comparison.
+ */
+async function runReport(report: ScheduledReport, options: { manual?: boolean } = {}): Promise<ReportRunResult> {
+  console.log(`Running ${options.manual ? 'manual' : 'scheduled'} report: ${report.name}`);
   const startTime = performance.now();
+  const elapsed = () => Math.round(performance.now() - startTime);
 
   try {
     // Derive the query window from the report's schedule (issue #39 bug 5):
@@ -348,10 +363,17 @@ async function runReport(report: ScheduledReport): Promise<void> {
     if (!shouldSendReport(report, results, previousCount)) {
       console.log(`Report "${report.name}" skipped - condition not met (${report.send_condition})`);
       // Still update last_run and last_result_count
-      const db = getSQLiteDB();
-      db.prepare("UPDATE scheduled_reports SET last_run = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), last_result_count = ? WHERE id = ?")
-        .run(results.length, report.id);
-      return;
+      if (!options.manual) {
+        const db = getSQLiteDB();
+        db.prepare("UPDATE scheduled_reports SET last_run = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), last_result_count = ? WHERE id = ?")
+          .run(results.length, report.id);
+      }
+      return {
+        status: 'skipped',
+        row_count: results.length,
+        reason: `Send condition "${report.send_condition}" not met (${results.length} rows${previousCount !== null ? `, previously ${previousCount}` : ''})`,
+        duration_ms: elapsed(),
+      };
     }
 
     // Get branding from project first, then fall back to system settings
@@ -408,6 +430,7 @@ async function runReport(report: ScheduledReport): Promise<void> {
     const attachment = generateAttachment(reportData, renderOptions.attachmentFormat || 'none');
 
     // Send email
+    let outcome: ReportRunResult;
     if (transporter) {
       const recipients = report.recipients.split(',').map(e => e.trim());
 
@@ -441,6 +464,7 @@ async function runReport(report: ScheduledReport): Promise<void> {
       });
 
       console.log(`Report "${report.name}" sent to ${recipients.join(', ')}`);
+      outcome = { status: 'sent', row_count: results.length, recipients, duration_ms };
     } else {
       const duration_ms = Math.round(performance.now() - startTime);
       logReportGenerated({
@@ -451,12 +475,21 @@ async function runReport(report: ScheduledReport): Promise<void> {
       });
 
       console.log(`Report "${report.name}" generated but SMTP not configured`);
+      outcome = {
+        status: 'generated',
+        row_count: results.length,
+        reason: 'SMTP is not configured (SMTP_HOST/SMTP_USER); the report was rendered but not emailed',
+        duration_ms,
+      };
     }
 
     // Update last_run and last_result_count
-    const db = getSQLiteDB();
-    db.prepare("UPDATE scheduled_reports SET last_run = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), last_result_count = ? WHERE id = ?")
-      .run(results.length, report.id);
+    if (!options.manual) {
+      const db = getSQLiteDB();
+      db.prepare("UPDATE scheduled_reports SET last_run = strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), last_result_count = ? WHERE id = ?")
+        .run(results.length, report.id);
+    }
+    return outcome;
   } catch (error) {
     const duration_ms = Math.round(performance.now() - startTime);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -475,13 +508,16 @@ async function runReport(report: ScheduledReport): Promise<void> {
     // shouldRunNow() no longer sees this report as due every tick. Without this,
     // a persistently-failing report re-ran every 60s forever. The error detail
     // is already captured via logReportGenerated({ error }) above and console.
-    try {
-      const db = getSQLiteDB();
-      db.prepare("UPDATE scheduled_reports SET last_run = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?")
-        .run(report.id);
-    } catch (updateError) {
-      console.error(`Failed to record last_run for report "${report.name}":`, updateError);
+    if (!options.manual) {
+      try {
+        const db = getSQLiteDB();
+        db.prepare("UPDATE scheduled_reports SET last_run = strftime('%Y-%m-%dT%H:%M:%fZ', 'now') WHERE id = ?")
+          .run(report.id);
+      } catch (updateError) {
+        console.error(`Failed to record last_run for report "${report.name}":`, updateError);
+      }
     }
+    return { status: 'error', row_count: 0, reason: errorMessage, duration_ms };
   }
 }
 
@@ -742,7 +778,7 @@ export function startScheduler(): void {
 }
 
 // Manual trigger for testing
-export async function triggerReport(reportId: string): Promise<void> {
+export async function triggerReport(reportId: string): Promise<ReportRunResult> {
   const db = getSQLiteDB();
   const report = db.prepare('SELECT * FROM scheduled_reports WHERE id = ?').get(reportId) as ScheduledReport | undefined;
 
@@ -750,5 +786,5 @@ export async function triggerReport(reportId: string): Promise<void> {
     throw new Error('Report not found');
   }
 
-  await runReport(report);
+  return runReport(report, { manual: true });
 }

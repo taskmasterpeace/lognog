@@ -20,16 +20,22 @@ import {
   Minimize2,
   Printer,
   Filter,
+  Pencil,
+  Copy,
+  Send,
 } from 'lucide-react';
 import {
   getScheduledReports,
   createScheduledReport,
   updateScheduledReport,
   deleteScheduledReport,
+  triggerScheduledReport,
   generateReport,
   ScheduledReport,
 } from '../api/client';
 import AppScopeFilter from '../components/AppScopeFilter';
+import { useToast } from '../contexts/ToastContext';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 
 const SCHEDULE_OPTIONS = [
   { label: 'Every hour', value: '0 * * * *', desc: 'Runs at the start of every hour' },
@@ -67,6 +73,62 @@ export default function ReportsPage() {
   const [previewFullscreen, setPreviewFullscreen] = useState(false);
 
   const queryClient = useQueryClient();
+  const toast = useToast();
+  const { confirm } = useConfirm();
+  // Report being edited in the schedule modal (null = creating a new one).
+  const [editingReport, setEditingReport] = useState<ScheduledReport | null>(null);
+
+  const openEditModal = (report: ScheduledReport) => {
+    setEditingReport(report);
+    setReportName(report.name);
+    setReportQuery(report.query);
+    setReportSchedule(report.schedule);
+    setReportRecipients(report.recipients);
+    setShowCreateModal(true);
+  };
+
+  const openCloneModal = (report: ScheduledReport) => {
+    setEditingReport(null);
+    setReportName(`${report.name} (copy)`);
+    setReportQuery(report.query);
+    setReportSchedule(report.schedule);
+    setReportRecipients(report.recipients);
+    setShowCreateModal(true);
+  };
+
+  const closeScheduleModal = () => {
+    setShowCreateModal(false);
+    setEditingReport(null);
+    resetForm();
+  };
+
+  const updateReportMutation = useMutation({
+    mutationFn: () => updateScheduledReport(editingReport!.id, {
+      name: reportName,
+      query: reportQuery,
+      schedule: reportSchedule,
+      recipients: reportRecipients,
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['scheduledReports'] });
+      toast.success('Report Updated', `"${reportName}" saved`);
+      closeScheduleModal();
+    },
+    onError: (err) => toast.error('Update Failed', err instanceof Error ? err.message : 'Unknown error'),
+  });
+
+  const runNowMutation = useMutation({
+    mutationFn: (id: string) => triggerScheduledReport(id),
+    onSuccess: (result, id) => {
+      const name = reports?.find((r) => r.id === id)?.name ?? 'Report';
+      if (result.status === 'sent') toast.success('Report Sent', `${name}: ${result.message}`);
+      else if (result.status === 'generated') toast.warning('Report Not Emailed', `${name}: ${result.message}`);
+      else if (result.status === 'skipped') toast.info('Report Skipped', `${name}: ${result.message}`);
+      else toast.error('Report Failed', `${name}: ${result.message}`);
+      queryClient.invalidateQueries({ queryKey: ['scheduledReports'] });
+    },
+    onError: (err) => toast.error('Report Failed', err instanceof Error ? err.message : 'Unknown error'),
+  });
 
   // Handle URL params for "Create from Search" flow
   useEffect(() => {
@@ -99,9 +161,10 @@ export default function ReportsPage() {
     mutationFn: () => createScheduledReport(reportName, reportQuery, reportSchedule, reportRecipients, 'html', appScope === 'all' ? 'default' : appScope),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['scheduledReports'] });
-      setShowCreateModal(false);
-      resetForm();
+      toast.success('Report Scheduled', `"${reportName}" will run ${getScheduleLabel(reportSchedule).toLowerCase()}`);
+      closeScheduleModal();
     },
+    onError: (err) => toast.error('Schedule Failed', err instanceof Error ? err.message : 'Unknown error'),
   });
 
   const toggleMutation = useMutation({
@@ -116,8 +179,21 @@ export default function ReportsPage() {
     mutationFn: deleteScheduledReport,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['scheduledReports'] });
+      toast.success('Report Deleted', 'The schedule has been removed');
     },
+    onError: (err) => toast.error('Delete Failed', err instanceof Error ? err.message : 'Unknown error'),
   });
+
+  const handleDelete = async (report: ScheduledReport) => {
+    const ok = await confirm({
+      title: 'Delete Scheduled Report',
+      message: `Delete "${report.name}"? Recipients will stop receiving it. This cannot be undone.`,
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      variant: 'danger',
+    });
+    if (ok) deleteMutation.mutate(report.id);
+  };
 
   const resetForm = () => {
     setReportName('');
@@ -324,15 +400,43 @@ export default function ReportsPage() {
                             <span className="truncate">{report.recipients}</span>
                           </span>
                           {report.last_run && (
-                            <span className="flex items-center gap-1 hidden sm:flex">
+                            <span className="flex items-center gap-1 hidden sm:flex" title={new Date(report.last_run).toLocaleString()}>
                               <Calendar className="w-3.5 h-3.5" />
                               Last: {new Date(report.last_run).toLocaleDateString()}
+                              {typeof report.last_result_count === 'number' ? ` · ${report.last_result_count.toLocaleString()} rows` : ''}
                             </span>
                           )}
                         </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-1 flex-shrink-0">
+                      <button
+                        onClick={() => runNowMutation.mutate(report.id)}
+                        disabled={runNowMutation.isPending}
+                        className="p-1.5 sm:p-2 text-nog-400 hover:text-honey-600 hover:bg-honey-50 dark:hover:bg-honey-900/20 rounded-lg transition-colors disabled:opacity-50"
+                        title="Run now and send"
+                        aria-label={`Run report "${report.name}" now`}
+                      >
+                        {runNowMutation.isPending && runNowMutation.variables === report.id
+                          ? <Loader2 className="w-4 h-4 animate-spin" />
+                          : <Send className="w-4 h-4" />}
+                      </button>
+                      <button
+                        onClick={() => openEditModal(report)}
+                        className="p-1.5 sm:p-2 text-nog-400 hover:text-nog-700 dark:hover:text-nog-200 hover:bg-nog-100 dark:hover:bg-nog-700 rounded-lg transition-colors"
+                        title="Edit"
+                        aria-label={`Edit report "${report.name}"`}
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => openCloneModal(report)}
+                        className="p-1.5 sm:p-2 text-nog-400 hover:text-nog-700 dark:hover:text-nog-200 hover:bg-nog-100 dark:hover:bg-nog-700 rounded-lg transition-colors"
+                        title="Clone"
+                        aria-label={`Clone report "${report.name}"`}
+                      >
+                        <Copy className="w-4 h-4" />
+                      </button>
                       <button
                         onClick={() => toggleMutation.mutate({ id: report.id, enabled: !report.enabled })}
                         className={`p-1.5 sm:p-2 rounded-lg transition-colors ${
@@ -345,8 +449,10 @@ export default function ReportsPage() {
                         {report.enabled ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
                       </button>
                       <button
-                        onClick={() => deleteMutation.mutate(report.id)}
+                        onClick={() => handleDelete(report)}
                         className="p-1.5 sm:p-2 text-nog-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                        title="Delete"
+                        aria-label={`Delete report "${report.name}"`}
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -391,12 +497,12 @@ export default function ReportsPage() {
 
       {/* Create Schedule Modal */}
       {showCreateModal && (
-        <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
+        <div className="modal-overlay" onClick={closeScheduleModal}>
           <div className="modal animate-slide-up w-[calc(100%-2rem)] max-w-lg max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-nog-900 dark:text-nog-100">Schedule Report</h3>
-                <button onClick={() => setShowCreateModal(false)} className="btn-ghost p-1">
+                <h3 className="text-lg font-semibold text-nog-900 dark:text-nog-100">{editingReport ? 'Edit Scheduled Report' : 'Schedule Report'}</h3>
+                <button onClick={closeScheduleModal} className="btn-ghost p-1">
                   <X className="w-5 h-5" />
                 </button>
               </div>
@@ -455,16 +561,16 @@ export default function ReportsPage() {
             </div>
 
             <div className="modal-footer">
-              <button onClick={() => setShowCreateModal(false)} className="btn-secondary">
+              <button onClick={closeScheduleModal} className="btn-secondary">
                 Cancel
               </button>
               <button
-                onClick={() => createMutation.mutate()}
-                disabled={!reportName || !reportQuery || !reportRecipients || createMutation.isPending}
+                onClick={() => (editingReport ? updateReportMutation.mutate() : createMutation.mutate())}
+                disabled={!reportName || !reportQuery || !reportRecipients || createMutation.isPending || updateReportMutation.isPending}
                 className="btn-primary"
               >
-                {createMutation.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
-                Create Schedule
+                {(createMutation.isPending || updateReportMutation.isPending) && <Loader2 className="w-4 h-4 animate-spin" />}
+                {editingReport ? 'Save Changes' : 'Create Schedule'}
               </button>
             </div>
           </div>
