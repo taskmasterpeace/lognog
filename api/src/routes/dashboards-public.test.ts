@@ -66,4 +66,34 @@ describe('public dashboard share link', () => {
     expect(panel.position).toEqual({ x: 2, y: 1, w: 8, h: 5 });
     expect(panel.options).toEqual({ max: 500 });
   });
+
+  it('never exposes the share-password hash to API clients', async () => {
+    const list = await request(app).get('/dashboards');
+    expect(list.status).toBe(200);
+    for (const d of list.body) {
+      expect(d).not.toHaveProperty('public_password');
+      expect(typeof d.has_password).toBe('boolean');
+    }
+  });
+
+  it('honours ISO expiry timestamps as datetimes, not strings', async () => {
+    const created = await request(app).post('/dashboards').send({ name: 'Expiring board' });
+    const id = created.body.id;
+
+    const past = new Date(Date.now() - 60_000).toISOString();
+    const expired = await request(app).put(`/dashboards/${id}/share`).send({ is_public: true, public_expires_at: past });
+    expect(expired.status).toBe(200);
+    const gone = await request(app).get(`/dashboards/public/${expired.body.public_token}`).set('x-test-anonymous', '1');
+    expect(gone.status).toBe(404);
+
+    const future = new Date(Date.now() + 60_000).toISOString();
+    const live = await request(app).put(`/dashboards/${id}/share`).send({ is_public: true, public_expires_at: future });
+    const ok = await request(app).get(`/dashboards/public/${live.body.public_token}`).set('x-test-anonymous', '1');
+    expect(ok.status).toBe(200);
+
+    // "Never" clears the expiry explicitly.
+    await request(app).put(`/dashboards/${id}/share`).send({ is_public: true, public_expires_at: '' });
+    const cleared = await request(app).get(`/dashboards/public/${live.body.public_token}`).set('x-test-anonymous', '1');
+    expect(cleared.status).toBe(200);
+  });
 });

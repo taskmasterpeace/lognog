@@ -909,7 +909,13 @@ export function getDashboardByToken(token: string): Dashboard | undefined {
     SELECT * FROM dashboards
     WHERE public_token = ?
     AND is_public = 1
-    AND (public_expires_at IS NULL OR public_expires_at > datetime('now'))
+    AND (
+      public_expires_at IS NULL OR public_expires_at = ''
+      -- Stored as ISO-8601 UTC (older rows: bare local "YYYY-MM-DDTHH:MM").
+      -- Compare as datetimes, not strings, so a 'T' vs ' ' separator can't
+      -- keep a link alive until the calendar day rolls over.
+      OR datetime(replace(public_expires_at, 'Z', '')) > datetime('now')
+    )
   `).get(token) as Dashboard | undefined;
 }
 

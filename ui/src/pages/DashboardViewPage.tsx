@@ -1121,7 +1121,7 @@ export default function DashboardViewPage() {
   };
 
   const handleDrilldown = (field: string, value: string) => {
-    drilldown({ field, value, timeRange });
+    drilldown({ field, value, timeRange, timeRangeLatest });
   };
 
   const handleExport = async () => {
@@ -1765,9 +1765,12 @@ export default function DashboardViewPage() {
           settings={{
             is_public: !!dashboard.is_public,
             public_token: dashboard.public_token,
+            has_password: dashboard.has_password,
+            public_expires_at: dashboard.public_expires_at,
           }}
           onCancel={() => setShowShareModal(false)}
           onSave={async (settings) => {
+            const wasPublic = !!dashboard.is_public && !!dashboard.public_token;
             const res = await authFetch(`/dashboards/${id}/share`, {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
@@ -1778,8 +1781,10 @@ export default function DashboardViewPage() {
               toast.error('Sharing Failed', msg ? msg.slice(0, 120) : 'Could not update sharing settings');
               return;
             }
-            queryClient.invalidateQueries({ queryKey: ['dashboard', id] });
-            setShowShareModal(false);
+            await queryClient.invalidateQueries({ queryKey: ['dashboard', id] });
+            // Keep the modal open on first enable so the freshly minted link is
+            // visible (it only exists after the save round-trips).
+            if (!settings.is_public || wasPublic) setShowShareModal(false);
             toast.success(settings.is_public ? 'Sharing Enabled' : 'Sharing Disabled',
               settings.is_public ? 'Anyone with the link can view this dashboard' : 'Public link revoked');
           }}

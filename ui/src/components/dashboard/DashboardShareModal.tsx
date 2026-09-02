@@ -1,10 +1,14 @@
 import { useState } from 'react';
-import { X, Link2, Copy, Check, Eye, EyeOff, Calendar, Shield } from 'lucide-react';
+import { X, Link2, Copy, Check, Eye, EyeOff, Calendar, Shield, Trash2 } from 'lucide-react';
 
 interface ShareSettings {
   is_public: boolean;
   public_token?: string;
+  /** Set by the server; the password hash itself is never sent to the client. */
+  has_password?: boolean;
+  /** Plain-text password to set; '' clears it; undefined leaves it unchanged. */
   public_password?: string;
+  /** ISO-8601 UTC; '' clears; undefined leaves unchanged. */
   public_expires_at?: string;
 }
 
@@ -17,6 +21,21 @@ interface DashboardShareModalProps {
   saving?: boolean;
 }
 
+// <input type="datetime-local"> speaks local wall-clock time; the API stores UTC ISO.
+function isoToLocalInput(iso?: string): string {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function localInputToIso(local: string): string {
+  if (!local) return '';
+  const d = new Date(local);
+  return isNaN(d.getTime()) ? '' : d.toISOString();
+}
+
 export function DashboardShareModal({
   dashboardName,
   settings,
@@ -25,10 +44,13 @@ export function DashboardShareModal({
   saving = false,
 }: DashboardShareModalProps) {
   const [isPublic, setIsPublic] = useState(settings.is_public);
-  const [password, setPassword] = useState(settings.public_password || '');
+  const [password, setPassword] = useState('');
+  const [removePassword, setRemovePassword] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [expiresAt, setExpiresAt] = useState(settings.public_expires_at || '');
+  const [expiresAt, setExpiresAt] = useState(isoToLocalInput(settings.public_expires_at));
   const [copied, setCopied] = useState(false);
+
+  const hasStoredPassword = !!settings.has_password && !removePassword;
 
   const publicUrl = settings.public_token
     ? `${window.location.origin}/public/dashboard/${settings.public_token}`
@@ -43,10 +65,16 @@ export function DashboardShareModal({
   };
 
   const handleSubmit = () => {
+    // Password: new value sets it, "remove" clears it, otherwise keep as-is.
+    let public_password: string | undefined;
+    if (password) public_password = password;
+    else if (removePassword) public_password = '';
+
     onSave({
       is_public: isPublic,
-      public_password: password || undefined,
-      public_expires_at: expiresAt || undefined,
+      public_password,
+      // Always explicit so "Never" actually clears a previously set expiry.
+      public_expires_at: localInputToIso(expiresAt),
     });
   };
 
@@ -95,7 +123,7 @@ export function DashboardShareModal({
           {isPublic && (
             <>
               {/* Public URL */}
-              {publicUrl && (
+              {publicUrl ? (
                 <div>
                   <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">
                     Public Link
@@ -120,6 +148,10 @@ export function DashboardShareModal({
                     </button>
                   </div>
                 </div>
+              ) : (
+                <p className="text-sm text-nog-500 dark:text-nog-400">
+                  The public link is created when you save.
+                </p>
               )}
 
               {/* Password Protection */}
@@ -134,9 +166,10 @@ export function DashboardShareModal({
                   <input
                     type={showPassword ? 'text' : 'password'}
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Leave empty for no password"
+                    onChange={(e) => { setPassword(e.target.value); if (e.target.value) setRemovePassword(false); }}
+                    placeholder={hasStoredPassword ? 'Password set — type to replace' : 'Leave empty for no password'}
                     className="input flex-1"
+                    autoComplete="new-password"
                   />
                   <button
                     onClick={() => setShowPassword(!showPassword)}
@@ -149,7 +182,22 @@ export function DashboardShareModal({
                       <Eye className="w-4 h-4" />
                     )}
                   </button>
+                  {hasStoredPassword && (
+                    <button
+                      type="button"
+                      onClick={() => { setRemovePassword(true); setPassword(''); }}
+                      className="btn-secondary"
+                      title="Remove password"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
+                {removePassword && (
+                  <p className="mt-1 text-xs text-red-600 dark:text-red-400">
+                    Password will be removed when you save.
+                  </p>
+                )}
               </div>
 
               {/* Expiration */}
@@ -177,10 +225,12 @@ export function DashboardShareModal({
                         } else {
                           const date = new Date();
                           date.setDate(date.getDate() + days);
-                          setExpiresAt(date.toISOString().slice(0, 16));
+                          setExpiresAt(isoToLocalInput(date.toISOString()));
                         }
                       }}
-                      className="px-2 py-1 text-xs rounded bg-nog-100 dark:bg-nog-700 hover:bg-nog-200 dark:hover:bg-nog-600 text-nog-700 dark:text-nog-300"
+                      className={`px-2 py-1 text-xs rounded hover:bg-nog-200 dark:hover:bg-nog-600 text-nog-700 dark:text-nog-300 ${
+                        days === 0 && !expiresAt ? 'bg-honey-100 dark:bg-honey-900/40' : 'bg-nog-100 dark:bg-nog-700'
+                      }`}
                     >
                       {label}
                     </button>

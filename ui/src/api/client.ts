@@ -214,6 +214,9 @@ export interface Dashboard {
   // Sharing
   is_public?: number;
   public_token?: string;
+  /** Whether a share password is set. The hash itself is never returned. */
+  has_password?: boolean;
+  public_expires_at?: string;
 }
 
 export interface DashboardPanel {
@@ -1395,6 +1398,9 @@ export async function updateDashboardLayout(
 export interface DashboardShareSettings {
   is_public: boolean;
   public_token?: string;
+  /** Whether a share password is set. The hash itself is never returned. */
+  has_password?: boolean;
+  public_expires_at?: string;
   public_url?: string;
 }
 

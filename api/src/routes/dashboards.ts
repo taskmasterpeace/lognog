@@ -52,6 +52,14 @@ import { executeDSLQuery } from '../db/backend.js';
 
 const router = Router();
 
+// Never hand the bcrypt hash of a share password to API clients; expose only
+// whether one is set. (The share modal used to pre-fill its password field
+// with the hash and re-submit it.)
+function presentDashboard<T extends { public_password?: string | null }>(d: T): Omit<T, 'public_password'> & { has_password: boolean } {
+  const { public_password, ...rest } = d;
+  return { ...rest, has_password: !!public_password };
+}
+
 // #35 CARVE-OUT: public dashboard viewing by share token must stay reachable
 // WITHOUT a logged-in user. It is registered BEFORE router.use(authenticate) so
 // the auth guard below never applies to it. Access is gated by the unguessable
@@ -182,7 +190,7 @@ router.get('/', (req: Request, res: Response) => {
   try {
     const appScope = req.query.app_scope as string | undefined;
     const dashboards = getDashboards(appScope);
-    return res.json(dashboards);
+    return res.json(dashboards.map(presentDashboard));
   } catch (error) {
     console.error('Error fetching dashboards:', error);
     return res.status(500).json({ error: 'Failed to fetch dashboards' });
@@ -274,7 +282,7 @@ router.get('/:id', (req: Request, res: Response) => {
     const pages = getDashboardPages(req.params.id);
 
     return res.json({
-      ...dashboard,
+      ...presentDashboard(dashboard),
       panels: panels.map(p => ({
         ...p,
         options: safeJsonParse(p.options, {}),
