@@ -309,10 +309,14 @@ const agentEventSchema = z.object({
   file_permissions: z.string().nullable().optional(),
   // Metadata
   metadata: z.record(z.unknown()).optional(),
+  // Per-input target index (the agent's watch_paths[].index / windows_events.index).
+  // Still subject to the API key's index scoping below.
+  index: z.string().regex(/^[a-z0-9][a-z0-9_-]{0,63}$/).optional(),
 });
 
 const ingestRequestSchema = z.object({
   events: z.array(agentEventSchema).min(1).max(10000),
+  batch_id: z.string().max(128).optional(),
 });
 
 /**
@@ -370,8 +374,8 @@ router.post(
           raw: truncation.truncated ? truncation.rawMessage : JSON.stringify(event),
           message_truncated: truncation.truncated ? 1 : 0,
           structured_data: JSON.stringify(event.metadata || {}),
-          // Set index based on event type
-          index_name: event.type === 'fim' ? 'security' : 'agent',
+          // Set index: the agent's per-input choice, else by event type
+          index_name: event.index || (event.type === 'fim' ? 'security' : 'agent'),
         };
 
         if (event.type === 'fim') {
