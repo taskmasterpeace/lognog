@@ -3,11 +3,12 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy package.json only (not lock file to avoid platform issues)
-COPY package.json ./
-
-# Install dependencies fresh for Linux (--legacy-peer-deps for echarts/wordcloud compatibility)
-RUN npm install --legacy-peer-deps
+# Install from the lockfile so the image gets the exact versions that pass
+# locally. An unpinned `npm install` resolved a newer transitive package that
+# crashed `tsc` with SIGTRAP in the builder (2026-09-02) — with the lockfile
+# the same sources compile fine under this image.
+COPY package.json package-lock.json ./
+RUN npm ci --legacy-peer-deps
 
 # Copy source code
 COPY . .

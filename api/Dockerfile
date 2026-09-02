@@ -5,11 +5,12 @@ WORKDIR /app
 # Install build dependencies for better-sqlite3 and git for npm
 RUN apk add --no-cache python3 make g++ git
 
-# Copy package files
-COPY api/package*.json ./
+# Copy package files (lockfile included — the build must resolve the exact
+# versions that pass locally; an unpinned install is how the UI image broke)
+COPY api/package.json api/package-lock.json ./
 
-# Install dependencies
-RUN npm install
+# Install dependencies from the lockfile
+RUN npm ci
 
 # Copy source code
 COPY api/tsconfig.json ./
@@ -27,10 +28,10 @@ WORKDIR /app
 RUN apk add --no-cache python3 make g++ git sqlite
 
 # Copy package files
-COPY api/package*.json ./
+COPY api/package.json api/package-lock.json ./
 
-# Install production dependencies only
-RUN npm install --omit=dev
+# Install production dependencies only, pinned to the lockfile
+RUN npm ci --omit=dev
 
 # Copy built files
 COPY --from=builder /app/dist ./dist
