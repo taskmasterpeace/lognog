@@ -42,7 +42,8 @@ import {
   MoreVertical,
   LayoutDashboard,
 } from 'lucide-react';
-import { AreaChart, BarChart, PieChart, ScatterChart, FunnelChart, TreemapChart } from '../components/charts';
+import { AreaChart, BarChart, PieChart, ScatterChart, FunnelChart, TreemapChart, StatCard } from '../components/charts';
+import { readPanelFormat, formatPanelValue, THRESHOLD_COLORS, type PanelFormat } from '../components/dashboard/panelFormat';
 import { useTheme } from '../contexts/ThemeContext';
 import {
   getDashboard,
@@ -188,6 +189,13 @@ function PanelVisualization({
     }
   };
 
+  // Per-panel formatting (stack, axis range, legend, thresholds, unit …).
+  const format = readPanelFormat((panel as { options?: unknown }).options);
+  const thresholdLines = format.thresholds?.map((t, i) => ({
+    ...t,
+    color: t.color || THRESHOLD_COLORS[Math.min(i, THRESHOLD_COLORS.length - 1)],
+  }));
+
   switch (panel.visualization) {
     case 'bar':
       return (
@@ -201,6 +209,10 @@ function PanelVisualization({
           barColor="#C8862B"
           darkMode={isDarkMode}
           showValues={false}
+          valueMin={format.yMin}
+          valueMax={format.yMax}
+          xAxisLabel={format.yAxisLabel}
+          thresholds={thresholdLines}
           onBarClick={(category) => {
             const item = results.find((r) => String(r[labelKey]) === category);
             if (item) handleChartClick(item);
@@ -255,6 +267,13 @@ function PanelVisualization({
           xAxisKey={labelKey}
           height={200}
           darkMode={isDarkMode}
+          stacked={format.stacked}
+          yMin={format.yMin}
+          yMax={format.yMax}
+          yAxisLabel={format.yAxisLabel}
+          showLegend={format.showLegend ?? seriesKeys.length > 1}
+          legendPosition={format.legendPosition}
+          thresholds={thresholdLines}
           xAxisFormatter={(v) => {
             if (String(v).match(/\d{4}-\d{2}-\d{2}/)) {
               return new Date(v).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -266,18 +285,52 @@ function PanelVisualization({
 
     case 'single':
     case 'stat': {
+      // A time series (e.g. `timechart count`) becomes a single value with a
+      // trend: latest bucket vs the bucket before, with the whole series as a
+      // sparkline — Splunk's single-value-with-trendline.
+      const timeKey = keys.find((k) => /(^|_)(time|timestamp|bucket|date)$/i.test(k) || k === '_time');
+      const isSeries = results.length > 1 && !!timeKey && isNumericColumn(valueKey);
+      if (isSeries && format.showTrend !== false) {
+        const points = results.map((r) => Number(r[valueKey]) || 0);
+        const current = points[points.length - 1];
+        const previous = points.length > 1 ? points[points.length - 2] : undefined;
+        return (
+          <div className="h-full">
+            <StatCard
+              title=""
+              value={current}
+              previousValue={previous}
+              unit={format.unit}
+              format="custom"
+              customFormatter={(v) => formatPanelValue(v, { ...format, unit: undefined })}
+              sparklineData={points}
+              height={190}
+              darkMode={isDarkMode}
+              trendLabel="vs previous"
+              color="#C8862B"
+            />
+          </div>
+        );
+      }
+
       // Show the metric value (numeric column), not the first column — for
       // `stats count by hostname` the first column is the hostname string.
       const raw = results[0] ? results[0][valueKey] : 0;
       const num = Number(raw);
       const statValue = Number.isFinite(num) ? num : raw;
+      const thresholdHit = typeof statValue === 'number' && thresholdLines
+        ? [...thresholdLines].sort((a, b) => b.value - a.value).find((t) => statValue >= t.value)
+        : undefined;
       return (
         <div className="flex flex-col items-center justify-center h-full">
-          <p className="text-4xl font-bold text-nog-900 dark:text-nog-100">
-            {typeof statValue === 'number' ? statValue.toLocaleString() : String(statValue ?? 0)}
+          <p className="text-4xl font-bold text-nog-900 dark:text-nog-100" style={thresholdHit ? { color: thresholdHit.color } : undefined}>
+            {typeof statValue === 'number' ? formatPanelValue(statValue, format) : String(statValue ?? 0)}
           </p>
           {results.length === 1 && labelKey !== valueKey && results[0][labelKey] != null && (
             <p className="text-xs text-nog-500 mt-1 truncate max-w-full">{String(results[0][labelKey])}</p>
+          )}
+          {thresholdHit?.label && (
+            <p className="text-xs mt-1 font-medium" style={{ color: thresholdHit.color }}>{thresholdHit.label}</p>
           )}
         </div>
       );
@@ -660,6 +713,7 @@ interface PanelSaveData {
   visualization: string;
   description?: string;
   page_id?: string | null;
+  options?: Record<string, unknown>;
 }
 
 interface PanelEditorProps {
@@ -672,18 +726,45 @@ interface PanelEditorProps {
   saving: boolean;
 }
 
+const FORMATTABLE_VIZ = new Set(['area', 'line', 'bar', 'stat', 'single']);
+
 function PanelEditor({ panel, pages = [], defaultPageId = null, onSave, onCancel, saving }: PanelEditorProps) {
   const [title, setTitle] = useState(panel?.title || '');
   const [description, setDescription] = useState(panel?.description || '');
   const [query, setQuery] = useState(panel?.query || 'search * | stats count by hostname');
   const [visualization, setVisualization] = useState(panel?.visualization || 'bar');
   const [pageId, setPageId] = useState<string>(panel ? (panel.page_id || '') : (defaultPageId || ''));
+  const existingOptions = (panel as { options?: Record<string, unknown> } | undefined)?.options;
+  const [format, setFormat] = useState<PanelFormat>(() => readPanelFormat(existingOptions));
+  const [showFormat, setShowFormat] = useState(() => Object.values(readPanelFormat(existingOptions)).some((v) => v !== undefined && v !== false));
+  // Thresholds are edited as free text ("100, 250:Critical") to stay compact.
+  const [thresholdText, setThresholdText] = useState(() =>
+    (readPanelFormat(existingOptions).thresholds || []).map((t) => (t.label ? `${t.value}:${t.label}` : String(t.value))).join(', ')
+  );
+
+  const parseThresholds = (text: string): PanelFormat['thresholds'] => {
+    const parsed = text.split(',').map((s) => s.trim()).filter(Boolean).map((entry) => {
+      const [valuePart, ...labelParts] = entry.split(':');
+      const value = Number(valuePart);
+      return Number.isFinite(value) ? { value, label: labelParts.join(':').trim() || undefined } : null;
+    }).filter((t): t is { value: number; label: string | undefined } => t !== null);
+    return parsed.length > 0 ? parsed : undefined;
+  };
 
   const handleSubmit = () => {
     if (title && query) {
-      onSave({ title, query, visualization, description: description || undefined, page_id: pageId || null });
+      const cleaned: PanelFormat = { ...format, thresholds: parseThresholds(thresholdText) };
+      // Drop unset keys so the stored options stay minimal.
+      const formatOut = Object.fromEntries(
+        Object.entries(cleaned).filter(([, v]) => v !== undefined && v !== '' && v !== false)
+      );
+      const options: Record<string, unknown> = { ...(existingOptions || {}) };
+      if (Object.keys(formatOut).length > 0) options.format = formatOut; else delete options.format;
+      onSave({ title, query, visualization, description: description || undefined, page_id: pageId || null, options });
     }
   };
+
+  const numberOrUndefined = (v: string) => (v.trim() === '' ? undefined : Number(v));
 
   return (
     <div className="modal-overlay" onClick={onCancel}>
@@ -828,6 +909,89 @@ search error | timechart span=1h count"
               })}
             </div>
           </div>
+
+          {/* Format (Splunk-style chart formatting) */}
+          {FORMATTABLE_VIZ.has(visualization) && (
+            <div className="border border-nog-200 dark:border-nog-700 rounded-lg">
+              <button
+                type="button"
+                onClick={() => setShowFormat((s) => !s)}
+                className="w-full flex items-center justify-between px-3 py-2 text-sm font-medium text-nog-700 dark:text-nog-200"
+              >
+                <span>Format</span>
+                <span className="text-xs text-nog-500">{showFormat ? 'Hide' : 'Axis, legend, thresholds, units'}</span>
+              </button>
+              {showFormat && (
+                <div className="px-3 pb-3 grid grid-cols-2 gap-3 text-sm">
+                  {(visualization === 'area' || visualization === 'line') && (
+                    <label className="flex items-center gap-2 col-span-2">
+                      <input type="checkbox" checked={!!format.stacked} onChange={(e) => setFormat({ ...format, stacked: e.target.checked })} className="w-4 h-4 rounded border-nog-300" />
+                      <span className="text-nog-700 dark:text-nog-300">Stack series</span>
+                    </label>
+                  )}
+                  {visualization !== 'stat' && visualization !== 'single' && (
+                    <>
+                      <div>
+                        <label className="block text-xs text-nog-500 mb-1">Axis min</label>
+                        <input type="number" value={format.yMin ?? ''} onChange={(e) => setFormat({ ...format, yMin: numberOrUndefined(e.target.value) })} placeholder="auto" className="input" />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-nog-500 mb-1">Axis max</label>
+                        <input type="number" value={format.yMax ?? ''} onChange={(e) => setFormat({ ...format, yMax: numberOrUndefined(e.target.value) })} placeholder="auto" className="input" />
+                      </div>
+                      <div>
+                        <label className="block text-xs text-nog-500 mb-1">Axis label</label>
+                        <input type="text" value={format.yAxisLabel ?? ''} onChange={(e) => setFormat({ ...format, yAxisLabel: e.target.value || undefined })} placeholder="Requests / min" className="input" />
+                      </div>
+                    </>
+                  )}
+                  {(visualization === 'area' || visualization === 'line') && (
+                    <div>
+                      <label className="block text-xs text-nog-500 mb-1">Legend</label>
+                      <select
+                        value={format.showLegend === false ? 'hidden' : (format.legendPosition || 'top')}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          setFormat({ ...format, showLegend: v !== 'hidden', legendPosition: v === 'hidden' ? format.legendPosition : (v as PanelFormat['legendPosition']) });
+                        }}
+                        className="input"
+                      >
+                        <option value="top">Top</option>
+                        <option value="bottom">Bottom</option>
+                        <option value="right">Right</option>
+                        <option value="hidden">Hidden</option>
+                      </select>
+                    </div>
+                  )}
+                  <div>
+                    <label className="block text-xs text-nog-500 mb-1">Unit</label>
+                    <input type="text" value={format.unit ?? ''} onChange={(e) => setFormat({ ...format, unit: e.target.value || undefined })} placeholder="ms, %, req/s" className="input" />
+                  </div>
+                  <div>
+                    <label className="block text-xs text-nog-500 mb-1">Decimals</label>
+                    <input type="number" min={0} max={6} value={format.decimals ?? ''} onChange={(e) => setFormat({ ...format, decimals: numberOrUndefined(e.target.value) })} placeholder="auto" className="input" />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-xs text-nog-500 mb-1">Thresholds</label>
+                    <input
+                      type="text"
+                      value={thresholdText}
+                      onChange={(e) => setThresholdText(e.target.value)}
+                      placeholder="100:Warning, 250:Critical"
+                      className="input font-mono text-sm"
+                    />
+                    <p className="text-xs text-nog-500 mt-1">Comma-separated <code>value:label</code>. Drawn as reference lines; a single value turns colour past them.</p>
+                  </div>
+                  {(visualization === 'stat' || visualization === 'single') && (
+                    <label className="flex items-center gap-2 col-span-2">
+                      <input type="checkbox" checked={format.showTrend !== false} onChange={(e) => setFormat({ ...format, showTrend: e.target.checked })} className="w-4 h-4 rounded border-nog-300" />
+                      <span className="text-nog-700 dark:text-nog-300">Show trend + sparkline when the query is a time series (e.g. <code>timechart count</code>)</span>
+                    </label>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="modal-footer">

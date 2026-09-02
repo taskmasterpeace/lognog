@@ -21,6 +21,11 @@ export interface BarChartProps {
   onBarClick?: (category: string, value: number) => void;
   xAxisLabel?: string;
   yAxisLabel?: string;
+  /** Fixed value-axis range (auto when undefined). */
+  valueMin?: number;
+  valueMax?: number;
+  /** Reference lines on the value axis. */
+  thresholds?: { value: number; label?: string; color?: string }[];
 }
 
 export const BarChart: React.FC<BarChartProps> = ({
@@ -36,6 +41,9 @@ export const BarChart: React.FC<BarChartProps> = ({
   onBarClick,
   xAxisLabel,
   yAxisLabel,
+  valueMin,
+  valueMax,
+  thresholds,
 }) => {
   const processedData = React.useMemo(() => {
     let sorted = [...data];
@@ -87,6 +95,8 @@ export const BarChart: React.FC<BarChartProps> = ({
     const valueAxis = {
       type: 'value' as const,
       name: horizontal ? xAxisLabel : yAxisLabel,
+      min: valueMin,
+      max: valueMax,
       nameTextStyle: {
         color: theme.textMuted,
       },
@@ -160,10 +170,21 @@ export const BarChart: React.FC<BarChartProps> = ({
             },
           },
           barMaxWidth: 60,
+          markLine: thresholds && thresholds.length > 0 ? {
+            silent: true,
+            symbol: 'none',
+            lineStyle: { type: 'dashed' as const, width: 1.5 },
+            label: { color: theme.textMuted, fontSize: 11, position: horizontal ? 'insideEndTop' as const : 'insideEndTop' as const },
+            data: thresholds.map((t) => ({
+              ...(horizontal ? { xAxis: t.value } : { yAxis: t.value }),
+              lineStyle: { color: t.color || '#b91c1c' },
+              label: { formatter: t.label || String(t.value) },
+            })),
+          } : undefined,
         },
       ],
     };
-  }, [categories, values, title, darkMode, horizontal, showValues, barColor, xAxisLabel, yAxisLabel, theme]);
+  }, [categories, values, title, darkMode, horizontal, showValues, barColor, xAxisLabel, yAxisLabel, valueMin, valueMax, thresholds, theme]);
 
   const onEvents = React.useMemo(() => {
     if (!onBarClick) return undefined;

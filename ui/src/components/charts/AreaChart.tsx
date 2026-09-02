@@ -10,6 +10,12 @@ export interface AreaChartSeries {
   gradientColor?: string;
 }
 
+export interface AreaChartThreshold {
+  value: number;
+  label?: string;
+  color?: string;
+}
+
 export interface AreaChartProps {
   data: Record<string, any>[];
   series: AreaChartSeries[];
@@ -19,6 +25,14 @@ export interface AreaChartProps {
   darkMode?: boolean;
   showGrid?: boolean;
   showLegend?: boolean;
+  legendPosition?: 'top' | 'bottom' | 'right';
+  /** Stack the series on top of each other. */
+  stacked?: boolean;
+  yMin?: number;
+  yMax?: number;
+  yAxisLabel?: string;
+  /** Horizontal reference lines. */
+  thresholds?: AreaChartThreshold[];
   xAxisFormatter?: (value: any) => string;
   tooltipFormatter?: (value: any) => string;
 }
@@ -32,12 +46,30 @@ export const AreaChart: React.FC<AreaChartProps> = ({
   darkMode = false,
   showGrid = true,
   showLegend = true,
+  legendPosition = 'top',
+  stacked = false,
+  yMin,
+  yMax,
+  yAxisLabel,
+  thresholds,
   xAxisFormatter,
   tooltipFormatter,
 }) => {
   const theme = getChartTheme(darkMode);
 
   const option: EChartsOption = React.useMemo(() => {
+    const markLine = thresholds && thresholds.length > 0 ? {
+      silent: true,
+      symbol: 'none',
+      lineStyle: { type: 'dashed' as const, width: 1.5 },
+      label: { position: 'insideEndTop' as const, color: theme.textMuted, fontSize: 11 },
+      data: thresholds.map((t) => ({
+        yAxis: t.value,
+        name: t.label || String(t.value),
+        lineStyle: { color: t.color || '#b91c1c' },
+        label: { formatter: t.label || String(t.value) },
+      })),
+    } : undefined;
     const gradientDefs = series.map((s) => ({
       type: 'linear' as const,
       x: 0,
@@ -55,6 +87,7 @@ export const AreaChart: React.FC<AreaChartProps> = ({
       type: 'line' as const,
       smooth: true,
       symbol: 'none',
+      stack: stacked ? 'total' : undefined,
       data: data.map(d => d[s.dataKey]),
       itemStyle: {
         color: s.color,
@@ -64,12 +97,21 @@ export const AreaChart: React.FC<AreaChartProps> = ({
         color: s.color,
       },
       areaStyle: {
-        color: gradientDefs[idx],
+        // Stacked series need a solid fill or they read as one blob.
+        color: stacked ? s.color + '99' : gradientDefs[idx],
       },
       emphasis: {
         focus: 'series' as const,
       },
+      // Only draw the reference lines once (on the first series).
+      markLine: idx === 0 ? markLine : undefined,
     }));
+
+    const legendLayout = legendPosition === 'right'
+      ? { orient: 'vertical' as const, right: 10, top: 'middle' as const }
+      : legendPosition === 'bottom'
+        ? { bottom: 0 }
+        : { top: title ? 30 : 10 };
 
     return {
       title: title ? {
@@ -102,15 +144,15 @@ export const AreaChart: React.FC<AreaChartProps> = ({
       },
       legend: showLegend ? {
         data: series.map(s => s.name),
-        top: title ? 30 : 10,
+        ...legendLayout,
         textStyle: {
           color: theme.text,
         },
       } : undefined,
       grid: {
         left: '3%',
-        right: '4%',
-        bottom: '10%',
+        right: showLegend && legendPosition === 'right' ? 120 : '4%',
+        bottom: showLegend && legendPosition === 'bottom' ? 36 : '10%',
         top: title ? 60 : 40,
         containLabel: true,
       },
@@ -134,6 +176,10 @@ export const AreaChart: React.FC<AreaChartProps> = ({
       },
       yAxis: {
         type: 'value',
+        name: yAxisLabel,
+        nameTextStyle: { color: theme.textMuted },
+        min: yMin,
+        max: yMax,
         axisLabel: {
           color: theme.textMuted,
           fontSize: 12,
@@ -150,7 +196,7 @@ export const AreaChart: React.FC<AreaChartProps> = ({
       },
       series: seriesConfig,
     };
-  }, [data, series, xAxisKey, title, darkMode, showGrid, showLegend, xAxisFormatter, tooltipFormatter, theme]);
+  }, [data, series, xAxisKey, title, darkMode, showGrid, showLegend, legendPosition, stacked, yMin, yMax, yAxisLabel, thresholds, xAxisFormatter, tooltipFormatter, theme]);
 
   if (!data || data.length === 0) {
     return (
