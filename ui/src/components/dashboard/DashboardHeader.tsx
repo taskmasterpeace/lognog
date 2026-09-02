@@ -33,12 +33,14 @@ export function DashboardHeader({
       className="dashboard-header px-4 py-3 border-b-2 transition-colors bg-white dark:bg-nog-800"
       style={{ ...headerStyle, ...accentStyle }}
     >
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      {/* Title block must be allowed to shrink (min-w-0) or a long description
+          wraps into a tall column and squashes the toolbar beside it. */}
+      <div className="flex items-center justify-between gap-4 flex-wrap">
+        <div className="flex items-center gap-4 flex-1 min-w-[14rem] max-w-full">
           {backLink && (
             <Link
               to={backLink}
-              className="p-2 text-nog-400 hover:text-nog-600 dark:hover:text-nog-300 hover:bg-nog-100 dark:hover:bg-nog-700 rounded-lg transition-colors"
+              className="p-2 text-nog-400 hover:text-nog-600 dark:hover:text-nog-300 hover:bg-nog-100 dark:hover:bg-nog-700 rounded-lg transition-colors flex-shrink-0"
             >
               <ArrowLeft className="w-5 h-5" />
             </Link>
@@ -48,16 +50,16 @@ export function DashboardHeader({
             <img
               src={logoUrl}
               alt="Dashboard logo"
-              className="h-10 w-auto object-contain"
+              className="h-10 w-auto max-w-[6rem] object-contain flex-shrink-0"
             />
           )}
 
-          <div>
-            <h1 className="text-xl font-bold text-nog-900 dark:text-nog-100">
+          <div className="min-w-0">
+            <h1 className="text-xl font-bold text-nog-900 dark:text-nog-100 truncate" title={name}>
               {name}
             </h1>
             {description && (
-              <p className="text-sm text-nog-500 dark:text-nog-400 mt-0.5">
+              <p className="text-sm text-nog-500 dark:text-nog-400 mt-0.5 truncate" title={description}>
                 {description}
               </p>
             )}
@@ -65,7 +67,7 @@ export function DashboardHeader({
         </div>
 
         {actions && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap justify-end ml-auto">
             {actions}
           </div>
         )}

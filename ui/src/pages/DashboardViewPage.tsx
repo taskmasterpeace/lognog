@@ -123,6 +123,35 @@ interface PanelData {
   error: string | null;
 }
 
+/**
+ * Long-form split-by result (time, splitBy, value) -> wide rows keyed by
+ * time with one column per splitBy value. Returns null when the shape
+ * doesn't match (no split column, or too many distinct values to chart).
+ */
+function pivotSplitBy(
+  rows: Record<string, unknown>[],
+  timeKey: string,
+  valueKey: string,
+  keys: string[]
+): { rows: Record<string, unknown>[]; series: string[] } | null {
+  const splitKey = keys.find((k) => k !== timeKey && k !== valueKey);
+  if (!splitKey || keys.length !== 3) return null;
+  const series = Array.from(new Set(rows.map((r) => String(r[splitKey] ?? '(empty)'))));
+  if (series.length < 2 || series.length > 12) return null;
+  const byTime = new Map<string, Record<string, unknown>>();
+  for (const r of rows) {
+    const t = String(r[timeKey]);
+    const wide = byTime.get(t) ?? { [timeKey]: r[timeKey] };
+    wide[String(r[splitKey] ?? '(empty)')] = Number(r[valueKey]) || 0;
+    byTime.set(t, wide);
+  }
+  const out = Array.from(byTime.values()).map((w) => {
+    for (const s of series) if (!(s in w)) w[s] = 0;
+    return w;
+  });
+  return { rows: out, series };
+}
+
 function PanelVisualization({
   panel,
   data,
@@ -198,6 +227,17 @@ function PanelVisualization({
 
   switch (panel.visualization) {
     case 'bar':
+      // Rows came back but the aggregate is empty for every one of them
+      // (e.g. sum() over a field that isn't numeric): a chart of zero-width
+      // bars on a 0–1 axis says nothing — say what happened instead.
+      if (!results.some((item) => Number(item[valueKey]) > 0)) {
+        return (
+          <div className="flex flex-col items-center justify-center h-full px-4 text-center text-nog-400">
+            <p className="text-sm">No numeric values in <code className="font-mono text-xs">{valueKey}</code> for this range.</p>
+            <p className="text-xs mt-1">The query returned {results.length} {results.length === 1 ? 'row' : 'rows'}, all zero or empty.</p>
+          </div>
+        );
+      }
       return (
         <BarChart
           data={results.map((item) => ({
@@ -221,8 +261,9 @@ function PanelVisualization({
       );
 
     case 'pie': {
-      const pieData = results.map((item, i) => ({
-        name: String(item[labelKey] || `Item ${i + 1}`),
+      const pieData = results.map((item) => ({
+        // An empty/null label is real information ("no value"), not "Item N".
+        name: item[labelKey] === null || item[labelKey] === undefined || item[labelKey] === '' ? '(empty)' : String(item[labelKey]),
         value: Number(item[valueKey]) || 0,
       }));
       return (
@@ -255,15 +296,31 @@ function PanelVisualization({
     }
 
     case 'area':
-    case 'line':
+    case 'line': {
+      // `timechart count by severity` comes back long-form: one row per
+      // (bucket, severity) with a single value column. Splunk pivots that into
+      // one series per split-by value; without the pivot the split-by column
+      // itself was drawn as a series ("severity" line next to "count").
+      const pivot = pivotSplitBy(results, labelKey, valueKey, keys);
+      const chartData = pivot ? pivot.rows : results;
+      const chartSeries = pivot
+        ? pivot.series.map((name, i) => ({ name, dataKey: name, color: CHART_COLORS[i % CHART_COLORS.length] }))
+        : seriesKeys.map((k, i) => ({ name: k, dataKey: k, color: CHART_COLORS[i % CHART_COLORS.length] }));
+      // Axis labels: times only within a day or two, dates beyond that.
+      const xs = chartData.map((r) => new Date(String(r[labelKey]).replace(' ', 'T')).getTime()).filter((t) => !isNaN(t));
+      const spanMs = xs.length > 1 ? Math.max(...xs) - Math.min(...xs) : 0;
+      const xFmt = (v: unknown) => {
+        const s = String(v);
+        if (!/\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+        const d = new Date(s.replace(' ', 'T'));
+        if (isNaN(d.getTime())) return s.slice(0, 10);
+        if (spanMs > 2 * 86_400_000) return d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+        return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      };
       return (
         <AreaChart
-          data={results}
-          series={seriesKeys.map((k, i) => ({
-            name: k,
-            dataKey: k,
-            color: CHART_COLORS[i % CHART_COLORS.length],
-          }))}
+          data={chartData}
+          series={chartSeries}
           xAxisKey={labelKey}
           height={200}
           darkMode={isDarkMode}
@@ -271,17 +328,13 @@ function PanelVisualization({
           yMin={format.yMin}
           yMax={format.yMax}
           yAxisLabel={format.yAxisLabel}
-          showLegend={format.showLegend ?? seriesKeys.length > 1}
+          showLegend={format.showLegend ?? chartSeries.length > 1}
           legendPosition={format.legendPosition}
           thresholds={thresholdLines}
-          xAxisFormatter={(v) => {
-            if (String(v).match(/\d{4}-\d{2}-\d{2}/)) {
-              return new Date(v).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            }
-            return String(v).slice(0, 10);
-          }}
+          xAxisFormatter={xFmt}
         />
       );
+    }
 
     case 'single':
     case 'stat': {
