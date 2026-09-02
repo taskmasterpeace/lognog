@@ -107,6 +107,22 @@ const SCHEDULE_OPTIONS = [
 ];
 const CUSTOM_CRON = '__custom__';
 
+// Human reading of a 5-field cron for the alert card (raw cron stays in the tooltip).
+function describeCron(expr: string): string {
+  const preset = SCHEDULE_OPTIONS.find((s) => s.value === expr);
+  if (preset) return preset.label;
+  const parts = expr.trim().split(/\s+/);
+  if (parts.length !== 5) return expr;
+  const [min, hour, dom, , dow] = parts;
+  const days = dow === '*' ? '' : dow === '1-5' ? ' on weekdays' : dow === '0,6' || dow === '6,0' ? ' on weekends' : ` on days ${dow}`;
+  const hours = hour === '*' ? '' : /^\d+-\d+$/.test(hour) ? `, ${hour.replace('-', ':00–')}:00` : /^\d+$/.test(hour) ? ` at ${hour}:${/^\d+$/.test(min) ? min.padStart(2, '0') : '00'}` : '';
+  if (min.startsWith('*/') && hour === '*' && dom === '*') return `Every ${min.slice(2)} min${days}`;
+  if (min.startsWith('*/') && /^\d+-\d+$/.test(hour)) return `Every ${min.slice(2)} min${hours}${days}`;
+  if (hour.startsWith('*/') && dom === '*') return `Every ${hour.slice(2)} hours${days}`;
+  if (/^\d+$/.test(hour) && dom === '*') return `${dow === '*' ? 'Daily' : 'Weekly'}${hours}${days}`;
+  return expr;
+}
+
 // Client-side sanity check for a 5-field cron (the API validates for real).
 const CRON_FIELD = /^(\*|\d+)(\/\d+)?(,(\*|\d+)(\/\d+)?)*$|^(\d+-\d+)(\/\d+)?(,(\d+-\d+)(\/\d+)?)*$|^(\*|\d+|\d+-\d+)(\/\d+)?(,(\*|\d+|\d+-\d+)(\/\d+)?)*$/;
 function isValidCron(expr: string): boolean {
@@ -694,10 +710,9 @@ export default function AlertsPage() {
 
                   {/* Schedule and trigger info */}
                   <div className="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm text-nog-500 ml-8 sm:ml-0 flex-wrap">
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1" title={alert.cron_expression || '*/5 * * * *'}>
                       <Clock className="w-3 sm:w-4 h-3 sm:h-4" />
-                      <span className="hidden sm:inline">{alert.cron_expression || '*/5 * * * *'}</span>
-                      <span className="sm:hidden">{(alert.cron_expression || '').split(' ')[0] === '*' ? '1m' : (alert.cron_expression || '').split(' ')[0].replace('*/', '') + 'm'}</span>
+                      <span>{describeCron(alert.cron_expression || '*/5 * * * *')}</span>
                     </div>
                     {alert.trigger_count > 0 && (
                       <div className="px-2 py-0.5 sm:py-1 bg-honey-100 text-honey-700 rounded-full text-xs font-medium">
@@ -789,9 +804,24 @@ export default function AlertsPage() {
                       <div>
                         <div className="text-nog-500 dark:text-nog-400">Trigger Condition</div>
                         <div className="font-medium text-nog-900 dark:text-nog-100">
-                          {TRIGGER_TYPES.find(t => t.value === alert.trigger_type)?.label}{' '}
-                          {TRIGGER_CONDITIONS.find(c => c.value === alert.trigger_condition)?.label}{' '}
-                          {alert.trigger_threshold}
+                          {alert.trigger_type === 'custom_condition' ? (
+                            <code className="font-mono text-xs bg-nog-100 dark:bg-nog-700 px-1.5 py-0.5 rounded">
+                              {alert.custom_condition || 'any results'}
+                            </code>
+                          ) : alert.trigger_type === 'no_data' ? (
+                            'No results in window'
+                          ) : (
+                            <>
+                              {TRIGGER_TYPES.find(t => t.value === alert.trigger_type)?.label}{' '}
+                              {TRIGGER_CONDITIONS.find(c => c.value === alert.trigger_condition)?.label}{' '}
+                              {alert.trigger_threshold}
+                            </>
+                          )}
+                        </div>
+                        <div className="text-xs text-nog-500 dark:text-nog-400 mt-0.5">
+                          {alert.trigger_mode === 'per_result' ? 'For each result' : 'Once per run'}
+                          {alert.throttle_enabled ? ` · suppress ${Math.round((alert.throttle_window_seconds || 0) / 60)} min${alert.throttle_fields ? ` per ${alert.throttle_fields}` : ''}` : ''}
+                          {alert.max_triggers ? ` · fires ${alert.max_triggers === 1 ? 'once' : `${alert.max_triggers}×`} then disables` : ''}
                         </div>
                       </div>
                       <div>
