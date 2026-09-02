@@ -5,6 +5,7 @@ import { getSQLiteDB } from '../db/sqlite.js';
 import { executeDSLQuery } from '../db/backend.js';
 import { renderHtml } from '../services/report-renderer.js';
 import { triggerReport } from '../services/scheduler.js';
+import { listReportRuns, getReportRun } from '../db/sqlite-report-runs.js';
 import { rateLimit, authenticate, denyReadonly } from '../auth/middleware.js';
 import { requireOwnerOrAdmin, withOwnership } from '../auth/ownership.js';
 import { getReportTemplates, getTemplateById, getTemplatesByCategory, getTemplateCategories } from '../data/report-templates.js';
@@ -353,6 +354,42 @@ router.put('/:id', (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error updating report:', error);
     return res.status(500).json({ error: 'Failed to update report' });
+  }
+});
+
+// Run history for a report (newest first, no HTML payload)
+router.get('/:id/runs', (req: Request, res: Response) => {
+  try {
+    const db = getSQLiteDB();
+    const report = db.prepare('SELECT id FROM scheduled_reports WHERE id = ?').get(req.params.id);
+    if (!report) {
+      return res.status(404).json({ error: 'Report not found' });
+    }
+    const limit = Math.min(parseInt(String(req.query.limit ?? ''), 10) || 20, 100);
+    return res.json(listReportRuns(req.params.id, limit));
+  } catch (error) {
+    console.error('Error listing report runs:', error);
+    return res.status(500).json({ error: 'Failed to list report runs' });
+  }
+});
+
+// The rendered output of one run ("view results from last run")
+router.get('/:id/runs/:runId/html', (req: Request, res: Response) => {
+  try {
+    const run = getReportRun(req.params.runId);
+    if (!run || run.report_id !== req.params.id) {
+      return res.status(404).json({ error: 'Run not found' });
+    }
+    if (!run.html) {
+      return res.status(404).json({ error: 'This run produced no output' });
+    }
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    // Rendered from stored data; never let it run as a page inside the app origin.
+    res.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; img-src * data:");
+    return res.send(run.html);
+  } catch (error) {
+    console.error('Error fetching report run:', error);
+    return res.status(500).json({ error: 'Failed to fetch report run' });
   }
 });
 

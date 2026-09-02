@@ -873,6 +873,23 @@ function initializeSchema(): void {
       PRIMARY KEY (alert_id, key)
     )
   `);
+  // Scheduled-report run history (see db/sqlite-report-runs.ts).
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS report_runs (
+      id TEXT PRIMARY KEY,
+      report_id TEXT NOT NULL,
+      started_at TEXT NOT NULL,
+      finished_at TEXT NOT NULL,
+      status TEXT NOT NULL,
+      manual INTEGER NOT NULL DEFAULT 0,
+      row_count INTEGER NOT NULL DEFAULT 0,
+      recipients TEXT,
+      reason TEXT,
+      duration_ms INTEGER NOT NULL DEFAULT 0,
+      html TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_report_runs_report ON report_runs(report_id, started_at DESC);
+  `);
   // Ingest batches parked while the log store is unreachable (see
   // db/sqlite-ingest-spool.ts); replayed by the scheduler.
   database.exec(`

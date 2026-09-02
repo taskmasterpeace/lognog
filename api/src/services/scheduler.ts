@@ -2,6 +2,7 @@ import nodemailer from 'nodemailer';
 import * as cron from 'node-cron';
 import { getSQLiteDB, getAlerts, Alert, getScheduledSavedSearches, updateSavedSearchCache, updateSavedSearchError, cleanupExpiredSearchCache, SavedSearch, getSystemSetting, getProjectBySlug, pruneAlertThrottleKeys } from '../db/sqlite.js';
 import { executeDSLQuery, replayIngestSpool } from '../db/backend.js';
+import { recordReportRun } from '../db/sqlite-report-runs.js';
 import { parseAndCompile } from '../dsl/index.js';
 import { evaluateAlert } from './alerts.js';
 import { logReportGenerated } from './internal-logger.js';
@@ -339,6 +340,32 @@ export interface ReportRunResult {
  * check can't shift the cron cadence or poison an if_change comparison.
  */
 async function runReport(report: ScheduledReport, options: { manual?: boolean } = {}): Promise<ReportRunResult> {
+  const startedAt = new Date().toISOString();
+  const result = await runReportInner(report, options);
+  // Record every outcome (never let bookkeeping break a run).
+  try {
+    recordReportRun({
+      report_id: report.id,
+      started_at: startedAt,
+      status: result.status,
+      manual: !!options.manual,
+      row_count: result.row_count,
+      recipients: result.recipients,
+      reason: result.reason,
+      duration_ms: result.duration_ms,
+      html: result.html,
+    });
+  } catch (error) {
+    console.error(`Failed to record run history for report "${report.name}":`, error);
+  }
+  const { html: _html, ...publicResult } = result;
+  return publicResult;
+}
+
+async function runReportInner(
+  report: ScheduledReport,
+  options: { manual?: boolean } = {}
+): Promise<ReportRunResult & { html?: string }> {
   console.log(`Running ${options.manual ? 'manual' : 'scheduled'} report: ${report.name}`);
   const startTime = performance.now();
   const elapsed = () => Math.round(performance.now() - startTime);
@@ -435,7 +462,7 @@ async function runReport(report: ScheduledReport, options: { manual?: boolean } 
     const attachment = generateAttachment(reportData, renderOptions.attachmentFormat || 'none');
 
     // Send email
-    let outcome: ReportRunResult;
+    let outcome: ReportRunResult & { html?: string };
     if (transporter) {
       const recipients = report.recipients.split(',').map(e => e.trim());
 
@@ -469,7 +496,7 @@ async function runReport(report: ScheduledReport, options: { manual?: boolean } 
       });
 
       console.log(`Report "${report.name}" sent to ${recipients.join(', ')}`);
-      outcome = { status: 'sent', row_count: results.length, recipients, duration_ms };
+      outcome = { status: 'sent', row_count: results.length, recipients, duration_ms, html };
     } else {
       const duration_ms = Math.round(performance.now() - startTime);
       logReportGenerated({
@@ -485,6 +512,7 @@ async function runReport(report: ScheduledReport, options: { manual?: boolean } 
         row_count: results.length,
         reason: 'SMTP is not configured (SMTP_HOST/SMTP_USER); the report was rendered but not emailed',
         duration_ms,
+        html,
       };
     }
 

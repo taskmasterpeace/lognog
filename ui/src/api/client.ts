@@ -746,6 +746,34 @@ export async function triggerScheduledReport(id: string): Promise<ReportRunResul
   return request(`/reports/${id}/trigger`, { method: 'POST' });
 }
 
+export interface ReportRun {
+  id: string;
+  report_id: string;
+  started_at: string;
+  finished_at: string;
+  status: 'sent' | 'skipped' | 'generated' | 'error';
+  manual: number;
+  row_count: number;
+  recipients: string | null;
+  reason: string | null;
+  duration_ms: number;
+}
+
+export async function getReportRuns(id: string, limit = 20): Promise<ReportRun[]> {
+  return request(`/reports/${id}/runs?limit=${limit}`);
+}
+
+/** Rendered output of one run (HTML string), for "view results from last run". */
+export async function getReportRunHtml(id: string, runId: string): Promise<string> {
+  const response = await authFetch(`/reports/${id}/runs/${runId}/html`);
+  if (!response.ok) {
+    let message = `Failed to load run (${response.status})`;
+    try { message = (await response.json()).error || message; } catch { /* not JSON */ }
+    throw new Error(message);
+  }
+  return response.text();
+}
+
 export async function getScheduledReports(appScope?: string): Promise<ScheduledReport[]> {
   const params = appScope ? `?app_scope=${encodeURIComponent(appScope)}` : '';
   return request(`/reports${params}`);

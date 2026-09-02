@@ -23,6 +23,10 @@ import {
   Pencil,
   Copy,
   Send,
+  History,
+  CheckCircle2,
+  XCircle,
+  MinusCircle,
 } from 'lucide-react';
 import {
   getScheduledReports,
@@ -30,8 +34,11 @@ import {
   updateScheduledReport,
   deleteScheduledReport,
   triggerScheduledReport,
+  getReportRuns,
+  getReportRunHtml,
   generateReport,
   ScheduledReport,
+  ReportRun,
 } from '../api/client';
 import AppScopeFilter from '../components/AppScopeFilter';
 import { useToast } from '../contexts/ToastContext';
@@ -115,6 +122,47 @@ export default function ReportsPage() {
     setShowCreateModal(false);
     setEditingReport(null);
     resetForm();
+  };
+
+  // Run history ("view results from last run")
+  const [historyReport, setHistoryReport] = useState<ScheduledReport | null>(null);
+  const { data: reportRuns, isLoading: runsLoading } = useQuery({
+    queryKey: ['reportRuns', historyReport?.id],
+    queryFn: () => getReportRuns(historyReport!.id, 30),
+    enabled: !!historyReport,
+  });
+  const [loadingRunId, setLoadingRunId] = useState<string | null>(null);
+
+  const viewRun = async (run: ReportRun) => {
+    if (!historyReport) return;
+    setLoadingRunId(run.id);
+    try {
+      const html = await getReportRunHtml(historyReport.id, run.id);
+      setGenerateTitle(`${historyReport.name} — ${new Date(run.started_at).toLocaleString()}`);
+      setReportPreview(html);
+      setShowPreviewModal(true);
+    } catch (err) {
+      toast.error('Could Not Load Run', err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setLoadingRunId(null);
+    }
+  };
+
+  const runStatusBadge = (run: ReportRun) => {
+    const map = {
+      sent: { icon: CheckCircle2, cls: 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300', label: 'Sent' },
+      generated: { icon: MinusCircle, cls: 'bg-honey-100 text-honey-800 dark:bg-honey-900/40 dark:text-honey-200', label: 'Generated (not emailed)' },
+      skipped: { icon: MinusCircle, cls: 'bg-nog-100 text-nog-600 dark:bg-nog-700 dark:text-nog-300', label: 'Skipped' },
+      error: { icon: XCircle, cls: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300', label: 'Failed' },
+    } as const;
+    const s = map[run.status] ?? map.skipped;
+    const Icon = s.icon;
+    return (
+      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium ${s.cls}`}>
+        <Icon className="w-3 h-3" />
+        {s.label}
+      </span>
+    );
   };
 
   const updateReportMutation = useMutation({
@@ -439,6 +487,14 @@ export default function ReportsPage() {
                           : <Send className="w-4 h-4" />}
                       </button>
                       <button
+                        onClick={() => setHistoryReport(report)}
+                        className="p-1.5 sm:p-2 text-nog-400 hover:text-nog-700 dark:hover:text-nog-200 hover:bg-nog-100 dark:hover:bg-nog-700 rounded-lg transition-colors"
+                        title="Run history"
+                        aria-label={`Run history for "${report.name}"`}
+                      >
+                        <History className="w-4 h-4" />
+                      </button>
+                      <button
                         onClick={() => openEditModal(report)}
                         disabled={report.is_owner === false}
                         className="p-1.5 sm:p-2 text-nog-400 hover:text-nog-700 dark:hover:text-nog-200 hover:bg-nog-100 dark:hover:bg-nog-700 rounded-lg transition-colors disabled:opacity-40"
@@ -695,6 +751,77 @@ export default function ReportsPage() {
                 {generating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
                 <span className="hidden sm:inline">Download</span>
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Run History Modal */}
+      {historyReport && (
+        <div className="modal-overlay" onClick={() => setHistoryReport(null)}>
+          <div className="modal animate-slide-up w-[calc(100%-2rem)] max-w-3xl max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-nog-900 dark:text-nog-100 flex items-center gap-2">
+                    <History className="w-5 h-5" />
+                    Run History
+                  </h3>
+                  <p className="text-sm text-nog-500 dark:text-nog-400">{historyReport.name}</p>
+                </div>
+                <button onClick={() => setHistoryReport(null)} className="btn-ghost p-1">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+            <div className="modal-body flex-1 overflow-y-auto">
+              {runsLoading ? (
+                <div className="flex items-center justify-center py-10 text-nog-500"><Loader2 className="w-6 h-6 animate-spin" /></div>
+              ) : !reportRuns || reportRuns.length === 0 ? (
+                <div className="text-center py-10 text-nog-500 dark:text-nog-400">
+                  This report has not run yet. Use <Send className="inline w-3.5 h-3.5 mx-0.5" /> to run it now.
+                </div>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-xs uppercase tracking-wide text-nog-500 dark:text-nog-400 border-b border-nog-200 dark:border-nog-700">
+                      <th className="py-2 pr-3">When</th>
+                      <th className="py-2 pr-3">Outcome</th>
+                      <th className="py-2 pr-3 text-right">Rows</th>
+                      <th className="py-2 pr-3">Recipients</th>
+                      <th className="py-2 pr-3">Details</th>
+                      <th className="py-2"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {reportRuns.map((run) => (
+                      <tr key={run.id} className="border-b border-nog-100 dark:border-nog-800 align-top">
+                        <td className="py-2 pr-3 whitespace-nowrap text-nog-900 dark:text-nog-100">
+                          {new Date(run.started_at).toLocaleString()}
+                          {run.manual ? <span className="ml-1 text-[10px] uppercase text-nog-400">manual</span> : null}
+                          <div className="text-xs text-nog-400">{run.duration_ms.toLocaleString()} ms</div>
+                        </td>
+                        <td className="py-2 pr-3">{runStatusBadge(run)}</td>
+                        <td className="py-2 pr-3 text-right tabular-nums text-nog-900 dark:text-nog-100">{run.row_count.toLocaleString()}</td>
+                        <td className="py-2 pr-3 text-nog-600 dark:text-nog-300 max-w-[14rem] truncate" title={run.recipients || ''}>{run.recipients || '—'}</td>
+                        <td className="py-2 pr-3 text-xs text-nog-500 dark:text-nog-400 max-w-[18rem]">{run.reason || ''}</td>
+                        <td className="py-2 text-right">
+                          {(run.status === 'sent' || run.status === 'generated') && (
+                            <button
+                              onClick={() => viewRun(run)}
+                              disabled={loadingRunId === run.id}
+                              className="btn-secondary text-xs"
+                            >
+                              {loadingRunId === run.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Eye className="w-3.5 h-3.5" />}
+                              View
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
             </div>
           </div>
         </div>
