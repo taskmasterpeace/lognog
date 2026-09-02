@@ -185,6 +185,7 @@ export class SQLiteCompiler {
           isAggregation = true;
           aggregationSelect = this.compileStats(stage);
           groupByFields = stage.groupBy.map(f => this.mapFieldForSelect(f));
+          groupBySelectFields = stage.groupBy.map(f => this.projectGroupBy(f));
           break;
 
         case 'sort':
@@ -251,9 +252,11 @@ export class SQLiteCompiler {
         case 'top':
           // Top N values by count - transform to stats + sort + limit
           isAggregation = true;
-          const topField = this.mapField(stage.field);
+          // Custom fields need the json_extract projection; the bare mapField
+          // name failed with "no such column" (same bug as ClickHouse's top).
           aggregationSelect = [`COUNT(*) AS count`];
-          groupByFields = [topField];
+          groupByFields = [this.mapFieldForSelect(stage.field)];
+          groupBySelectFields = [this.projectGroupBy(stage.field)];
           orderByFields = ['count DESC'];
           limitCount = stage.limit;
           break;
@@ -261,9 +264,9 @@ export class SQLiteCompiler {
         case 'rare':
           // Rare values - transform to stats + sort asc + limit
           isAggregation = true;
-          const rareField = this.mapField(stage.field);
           aggregationSelect = [`COUNT(*) AS count`];
-          groupByFields = [rareField];
+          groupByFields = [this.mapFieldForSelect(stage.field)];
+          groupBySelectFields = [this.projectGroupBy(stage.field)];
           orderByFields = ['count ASC'];
           limitCount = stage.limit;
           break;
@@ -288,9 +291,8 @@ export class SQLiteCompiler {
           groupByFields = [bucketExpr];
           groupBySelectFields = [`${bucketExpr} AS time_bucket`];
           if (stage.groupBy) {
-            const splitBy = this.mapFieldForSelect(stage.groupBy);
-            groupByFields.push(splitBy);
-            groupBySelectFields.push(splitBy);
+            groupByFields.push(this.mapFieldForSelect(stage.groupBy));
+            groupBySelectFields.push(this.projectGroupBy(stage.groupBy));
           }
           orderByFields = [`${bucketExpr} ASC`];
           break;
@@ -677,6 +679,19 @@ export class SQLiteCompiler {
       return mappedField;
     }
     return this.jsonExtract(field);
+  }
+
+  /**
+   * SELECT projection for a group-by field: known columns as-is, structured_data
+   * extractions aliased back to the field name so results carry `model_id`
+   * rather than `json_extract(structured_data, '$.model_id')` — the same
+   * column names the ClickHouse compiler returns.
+   */
+  private projectGroupBy(field: string): string {
+    const expr = this.mapFieldForSelect(field);
+    if (!expr.startsWith('json_extract')) return expr;
+    const alias = /^[A-Za-z_][A-Za-z0-9_]*$/.test(field) ? field : `"${field.replace(/"/g, '""')}"`;
+    return `${expr} AS ${alias}`;
   }
 
   /**

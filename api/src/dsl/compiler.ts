@@ -188,6 +188,9 @@ export class Compiler {
     let selectFields: string[] = [...DEFAULT_FIELDS];
     let whereConditions: string[] = [];
     let groupByFields: string[] = [];
+    // SELECT-side projection of groupByFields (same expressions, aliased to
+    // the field name when they are structured_data extractions).
+    let groupBySelect: string[] = [];
     let orderByFields: string[] = [];
     let limitCount: number | null = null;
     let isAggregation = false;
@@ -214,6 +217,7 @@ export class Compiler {
           isAggregation = true;
           aggregationSelect = this.compileStats(stage);
           groupByFields = stage.groupBy.map(f => this.mapFieldForSelect(f, 'string'));
+          groupBySelect = stage.groupBy.map(f => this.projectGroupBy(f));
           // Track sortable output columns: ONLY the aggregation aliases. Group-by
           // fields are projected UNALIASED (e.g. JSONExtractString(structured_data,
           // 'user_id')), so a `sort` on one must reuse that same expression via
@@ -300,9 +304,11 @@ export class Compiler {
         case 'top':
           // Top N values by count - transform to stats + sort + limit
           isAggregation = true;
-          const topField = this.mapField(stage.field);
+          // A custom field must be extracted from structured_data here too;
+          // the bare mapField name made `top user_id` fail with "Missing columns".
           aggregationSelect = [`count() AS count`];
-          groupByFields = [topField];
+          groupByFields = [this.mapFieldForSelect(stage.field, 'string')];
+          groupBySelect = [this.projectGroupBy(stage.field)];
           orderByFields = ['count DESC'];
           limitCount = stage.limit;
           outputAliases.add('count');
@@ -311,9 +317,9 @@ export class Compiler {
         case 'rare':
           // Rare values - transform to stats + sort asc + limit
           isAggregation = true;
-          const rareField = this.mapField(stage.field);
           aggregationSelect = [`count() AS count`];
-          groupByFields = [rareField];
+          groupByFields = [this.mapFieldForSelect(stage.field, 'string')];
+          groupBySelect = [this.projectGroupBy(stage.field)];
           orderByFields = ['count ASC'];
           limitCount = stage.limit;
           outputAliases.add('count');
@@ -335,10 +341,13 @@ export class Compiler {
             groupBy: []
           });
           groupByFields = [timeBucket];
+          groupBySelect = [timeBucket];
           if (stage.groupBy) {
-            // Split-by is projected unaliased — do NOT register its bare name (see
-            // the stats case); a sort on it resolves via mapFieldForSelect.
+            // Split-by is grouped by its expression and projected under the
+            // field name; do NOT register the bare name in outputAliases (see
+            // the stats case) — a sort on it resolves via mapFieldForSelect.
             groupByFields.push(this.mapFieldForSelect(stage.groupBy, 'string'));
+            groupBySelect.push(this.projectGroupBy(stage.groupBy));
           }
           orderByFields = [`${timeBucket} ASC`];
           aggregationSelect.forEach(s => outputAliases.add(this.outputFieldName(s).toLowerCase()));
@@ -390,7 +399,10 @@ export class Compiler {
     let sql = 'SELECT ';
 
     if (isAggregation) {
-      const allFields = [...groupByFields, ...aggregationSelect];
+      // Group-by columns come back under their field names (`model_id`, not
+      // `JSONExtractString(structured_data, 'model_id')`), as Splunk returns
+      // them; GROUP BY itself still uses the raw expressions.
+      const allFields = [...groupBySelect, ...aggregationSelect];
       sql += allFields.join(', ');
     } else {
       sql += selectFields.join(', ');
@@ -719,6 +731,20 @@ export class Compiler {
     }
     // For string values, use JSONExtractString
     return `JSONExtractString(structured_data, '${sanitizeFieldName(fieldName)}')`;
+  }
+
+  /**
+   * SELECT projection for a group-by field: known columns as-is, structured_data
+   * extractions aliased back to the field name so results carry `model_id`
+   * rather than the extraction expression.
+   */
+  private projectGroupBy(field: string): string {
+    const expr = this.mapFieldForSelect(field, 'string');
+    if (!expr.startsWith('JSONExtract')) return expr;
+    sanitizeFieldName(field);
+    // `.` and `-` are legal in field names but not in bare identifiers.
+    const alias = /^[A-Za-z_][A-Za-z0-9_]*$/.test(field) ? field : `\`${field}\``;
+    return `${expr} AS ${alias}`;
   }
 
   /** True when the key exists in structured_data, whatever its JSON type. */

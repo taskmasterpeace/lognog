@@ -745,14 +745,26 @@ export class Parser {
     );
   }
 
+  /**
+   * Result count for top/rare. Splunk accepts `top 5 field`, `top limit=5 field`
+   * and plain `top field` (10 results); the count used to be mandatory here, so
+   * the most common form was a parse error.
+   */
+  private parseTopLimit(): number {
+    if (this.check(TokenType.NUMBER)) {
+      return parseInt(this.advance().value, 10);
+    }
+    if (this.match(TokenType.LIMIT)) {
+      this.consume(TokenType.EQUALS, 'Expected "=" after limit');
+      return parseInt(this.consume(TokenType.NUMBER, 'Expected number after limit=').value, 10);
+    }
+    return 10;
+  }
+
   private parseTop(): TopNode {
     this.consume(TokenType.TOP, 'Expected "top"');
 
-    // Parse limit number
-    const limit = parseInt(
-      this.consume(TokenType.NUMBER, 'Expected number').value,
-      10
-    );
+    const limit = this.parseTopLimit();
 
     // Parse field
     const field = this.consume(TokenType.IDENTIFIER, 'Expected field name').value;
@@ -771,11 +783,7 @@ export class Parser {
   private parseRare(): RareNode {
     this.consume(TokenType.RARE, 'Expected "rare"');
 
-    // Parse limit number
-    const limit = parseInt(
-      this.consume(TokenType.NUMBER, 'Expected number').value,
-      10
-    );
+    const limit = this.parseTopLimit();
 
     // Parse field
     const field = this.consume(TokenType.IDENTIFIER, 'Expected field name').value;
