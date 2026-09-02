@@ -24,7 +24,9 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 
 import { executeDSLQuery, insertLogs } from '../db/backend.js';
-import { getSQLiteDB } from '../db/sqlite.js';
+import { getSQLiteDB, createAlert, AlertAction, AlertTriggerCondition } from '../db/sqlite.js';
+import { createSilence } from '../services/silence-service.js';
+import type { SilenceLevel } from '../db/sqlite.js';
 
 // Server instance
 let server: Server;
@@ -619,69 +621,81 @@ function registerToolHandlers(): void {
         }
 
         case 'create_alert': {
-          const id = `alert_${Date.now()}`;
-
-          db.prepare(`
-            INSERT INTO alerts (id, name, query, condition_type, threshold, schedule, enabled, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, 1, datetime('now'), datetime('now'))
-          `).run(
-            id,
-            args?.name,
-            args?.query,
-            args?.condition,
-            args?.threshold,
-            args?.schedule || '*/5 * * * *'
-          );
-
-          // Add actions if provided
-          const actions = args?.actions as Array<{ type: string; config: object }>;
-          if (actions && actions.length > 0) {
-            const insertAction = db.prepare(`
-              INSERT INTO alert_actions (id, alert_id, type, config)
-              VALUES (?, ?, ?, ?)
-            `);
-            actions.forEach((action, index) => {
-              insertAction.run(
-                `action_${Date.now()}_${index}`,
-                id,
-                action.type,
-                JSON.stringify(action.config || {})
-              );
-            });
+          // Goes through the same code path as the UI/API. The previous raw
+          // INSERT targeted columns (query, condition_type, threshold,
+          // schedule) and an alert_actions table that do not exist, so the
+          // tool threw on every call.
+          const name = String(args?.name || '').trim();
+          const query = String(args?.query || '').trim();
+          if (!name || !query) {
+            throw new McpError(ErrorCode.InvalidParams, 'name and query are required');
           }
+          const conditionMap: Record<string, AlertTriggerCondition> = {
+            greater_than: 'greater_than',
+            less_than: 'less_than',
+            equals: 'equal_to',
+            equal_to: 'equal_to',
+            not_equals: 'not_equal_to',
+            not_equal_to: 'not_equal_to',
+          };
+          const condition = conditionMap[String(args?.condition || 'greater_than')];
+          if (!condition) {
+            throw new McpError(ErrorCode.InvalidParams, `Unknown condition "${String(args?.condition)}"`);
+          }
+          const rawActions = Array.isArray(args?.actions) ? (args!.actions as Array<{ type: string; config?: object }>) : [];
+          const actions: AlertAction[] = rawActions
+            .filter(a => a && typeof a.type === 'string' && a.type !== 'script') // no host command execution from MCP
+            .map(a => ({ type: a.type, config: (a.config || {}) } as AlertAction));
+
+          const alert = createAlert(name, query, {
+            trigger_type: 'number_of_results',
+            trigger_condition: condition,
+            trigger_threshold: Number(args?.threshold ?? 0),
+            schedule_type: 'cron',
+            cron_expression: String(args?.schedule || '*/5 * * * *'),
+            time_range: '-5m',
+            actions,
+            enabled: true,
+          });
 
           return {
             content: [
               {
                 type: 'text',
-                text: JSON.stringify({ success: true, alert_id: id, message: `Alert "${args?.name}" created` }),
+                text: JSON.stringify({ success: true, alert_id: alert.id, message: `Alert "${alert.name}" created` }),
               },
             ],
           };
         }
 
         case 'silence_alert': {
-          const id = `silence_${Date.now()}`;
-          const type = args?.type as string;
-          const durationMinutes = args?.duration_minutes as number;
-          const expiresAt = new Date(Date.now() + durationMinutes * 60 * 1000).toISOString();
-
-          db.prepare(`
-            INSERT INTO silences (id, type, target, reason, expires_at, created_at)
-            VALUES (?, ?, ?, ?, ?, datetime('now'))
-          `).run(
-            id,
-            type,
-            args?.target || null,
-            args?.reason || '',
-            expiresAt
-          );
+          const level = String(args?.type || '') as SilenceLevel;
+          if (!['global', 'host', 'alert'].includes(level)) {
+            throw new McpError(ErrorCode.InvalidParams, 'type must be global, host or alert');
+          }
+          const durationMinutes = Number(args?.duration_minutes);
+          if (!Number.isFinite(durationMinutes) || durationMinutes <= 0) {
+            throw new McpError(ErrorCode.InvalidParams, 'duration_minutes must be a positive number');
+          }
+          // Silences are hour-granular; round up so a 30-minute request never
+          // expires early.
+          const hours = Math.max(1, Math.ceil(durationMinutes / 60));
+          const result = createSilence({
+            level,
+            target_id: args?.target ? String(args.target) : undefined,
+            duration: `${hours}h`,
+            reason: args?.reason ? String(args.reason) : 'Silenced via MCP',
+            created_by: 'mcp',
+          });
+          if (!result.success || !result.silence) {
+            throw new McpError(ErrorCode.InvalidParams, result.error || 'Failed to create silence');
+          }
 
           return {
             content: [
               {
                 type: 'text',
-                text: JSON.stringify({ success: true, silence_id: id, expires_at: expiresAt }),
+                text: JSON.stringify({ success: true, silence_id: result.silence.id, expires_at: result.silence.ends_at, duration: `${hours}h` }),
               },
             ],
           };
