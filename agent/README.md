@@ -10,16 +10,19 @@ LogNog In is a cross-platform agent that monitors log files, ships them to your 
 
 ## Features
 
-- **Real-time log file monitoring** - Automatically detects and ships new log entries as they're written
-- **Windows Event Log collection** - Collects from Security, System, Application, and custom channels (Windows only)
+- **Real-time log file monitoring** - Tails files by byte offset (partial lines held until complete), per-path encoding, exclude globs, `start_position`, multi-line merging for stack traces, and a periodic re-scan for shares the OS watcher misses
+- **Windows Event Log collection** - Modern Event Log API: every channel (Security, System, Application, **Sysmon**, **PowerShell**, Task Scheduler, Defender …) with **named event fields**, include/exclude ID filters evaluated inside the query
 - **File Integrity Monitoring (FIM)** - SHA-256 baseline tracking with change detection for security monitoring
 - **Offline buffering** - SQLite-backed queue ensures logs are never lost when the server is unreachable
-- **System tray integration** - Visual status indicators (green/yellow/red) with right-click controls
+- **Per-input routing** - `index`, `source_type` and static `tags` per watch path / channel
+- **Agent heartbeat** - `source_type=agent_heartbeat` every 60 s with sent/buffered/dropped counters, so LogNog can alert on a dead agent
+- **System tray integration** - Brand icon with a live status dot (connected / buffering / error / paused), stats, test event, flush
+- **Windows service** - `--service install` from the EXE (LocalSystem unlocks the Security channel), auto-restart on crash, DPAPI-protected API key
 - **Cross-platform** - Runs on Windows, macOS, and Linux with native file system watchers
 - **Low resource footprint** - Under 50 MB RAM, <1% CPU during active monitoring
-- **Automatic retry** - Exponential backoff for failed shipments with configurable retry limits
-- **Batched shipping** - Efficient HTTP/2 batching with configurable size and interval
-- **Flexible configuration** - YAML config file with glob pattern matching for paths
+- **Automatic retry** - Exponential backoff with jitter; a backlog drains back-to-back
+- **Batched, compressed shipping** - gzip request bodies, TLS options (`verify_tls`, `ca_bundle`)
+- **Diagnostics** - `lognog-in doctor` checks config, buffer, channel access, service state and connectivity in one screen
 - **Headless mode** - Run as daemon/service without system tray for servers
 - **Sound alerts** - Customizable audio notifications for alert severity levels (critical, error, warning, info)
 
@@ -364,6 +367,47 @@ lognog-in status
 #   ✓ /etc/ (*)
 ```
 
+#### `lognog-in doctor`
+
+One-screen diagnostics — what a support ticket would ask for:
+
+```bash
+lognog-in doctor
+
+# LogNog In 0.2.0 doctor
+# Python 3.13.0 on win32 (frozen EXE)
+# [OK]   Server URL + API key configured: https://logs.example.com
+# [OK]   API key protection (DPAPI): available
+# [OK]   Watch path C:\inetpub\logs\LogFiles: 14 file(s) match u_ex*.log
+# [OK]   Offline buffer: 0 event(s), 0.0 KB at ...\buffer.db
+# Windows Event API: modern (EvtQuery)
+# [OK]   Channel Security: readable, newest record 987654 at 2026-09-02T15:04:30+00:00
+# [FAIL] Channel Microsoft-Windows-Sysmon/Operational: The specified channel could not be found (error 15007)
+# Windows service: running
+# [OK]   Server health check passed
+# [OK]   Authenticated as: agent-key
+```
+
+#### `lognog-in send-test` / `lognog-in flush`
+
+```bash
+lognog-in send-test            # one event, search LogNog for source_type=agent_test
+lognog-in flush --timeout 120  # ship everything in the offline buffer now
+```
+
+#### `lognog-in --service …` (Windows)
+
+```powershell
+# From an elevated prompt. Works from the EXE and from a pip install.
+LogNogIn.exe --service install    # registers LogNogIn.exe --service run, auto-start, LocalSystem
+LogNogIn.exe --service start
+LogNogIn.exe --service status
+LogNogIn.exe --service stop
+LogNogIn.exe --service uninstall
+```
+
+The service runs headless and shares `config.yaml` with the tray app (the API key is DPAPI-encrypted in machine scope so both can read it).
+
 #### `lognog-in config`
 
 Display current configuration (with redacted API key):
@@ -502,11 +546,15 @@ The agent provides a visual system tray icon with status indicators:
 
 ### Right-Click Menu
 
-- **Status**: "Connected to lognog.local" or "Buffering (offline)"
-- **View Logs**: Opens the agent log file
-- **Configure**: Opens config file in default editor
-- **Pause/Resume**: Temporarily stop watching files
-- **Exit**: Gracefully shutdown the agent
+- **Status / stats**: "Connected" · "1,204 sent · 0 buffered"
+- **Configure…**: Opens the configuration window (General, Windows Events, Sound Alerts)
+- **Open LogNog**: Opens the server in your browser
+- **View Agent Log** / **View Alerts**
+- **Send Test Event**: Ships one `source_type=agent_test` event
+- **Flush Buffer Now**: Re-scans files and drains the offline buffer
+- **Run Setup Wizard…**
+- **Pause/Resume**: Temporarily stop collecting (grey dot)
+- **Quit**: Graceful shutdown (buffer is flushed first)
 
 ---
 
@@ -670,25 +718,61 @@ fim_paths:
 
 ### 4. Windows Security Event Collection
 
-Collect critical security events from Windows Event Logs (Windows only):
+Collect security events from any Windows Event Log channel (Windows only). The
+agent uses the modern Event Log API, so Sysmon, PowerShell and other
+`Microsoft-Windows-*/Operational` channels work, and each event ships with its
+named fields (`event_data.TargetUserName`, `event_data.IpAddress`,
+`event_data.CommandLine` …):
 
 ```yaml
 windows_events:
   enabled: true
+  api: auto            # modern (EvtQuery) with legacy fallback
   channels:
     - Security
     - System
-  event_ids:
+    - Microsoft-Windows-Sysmon/Operational
+    - Microsoft-Windows-PowerShell/Operational
+  event_ids:           # include list (omit for all); evaluated inside the query
     - 4624  # Successful logon
     - 4625  # Failed logon
     - 4688  # Process creation
     - 7045  # Service installed
+    - 1     # Sysmon process create
+    - 4104  # PowerShell script block
+  exclude_event_ids: [5156, 5158]   # noisy filtering-platform events
   poll_interval: 10
+  index: windows       # optional per-input LogNog index
 ```
+
+In LogNog: `search source_type=windows_security event_id=4625 | stats count by event_data.TargetUserName, event_data.IpAddress`.
+
+The Security channel needs LocalSystem/Administrator rights — install the
+agent as a service (`--service install`) or use the **Windows Events** tab in the
+configuration window, which has presets for the common channels and buttons to
+install/start/stop the service.
 
 See [docs/WINDOWS-EVENTS.md](docs/WINDOWS-EVENTS.md) for complete documentation.
 
-### 5. Docker Container Logging
+### 5. Multi-line application logs and IIS
+
+```yaml
+watch_paths:
+  - path: D:\apps\api\logs
+    pattern: "*.log"
+    multiline_pattern: '^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}'   # stack traces stay one event
+    source_type: app_java
+  - path: C:\inetpub\logs\LogFiles
+    pattern: "u_ex*.log"
+    exclude: ["*.zip"]
+    source_type: iis
+    index: web-logs
+tags:
+  environment: production
+  role: web
+```
+
+### 6. Docker Container Logging
 
 Ship logs from Docker containers to LogNog:
 

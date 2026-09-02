@@ -2,7 +2,7 @@
 ; Creates a Windows installer with proper branding
 
 #define MyAppName "LogNog In"
-#define MyAppVersion "0.1.0"
+#define MyAppVersion "0.2.0"
 #define MyAppPublisher "Machine King Labs"
 #define MyAppURL "https://github.com/machinekinglabs/lognog"
 #define MyAppExeName "LogNogIn.exe"

@@ -13,6 +13,12 @@ Windows Service Control Manager (SCM) integration is available:
    restarts the agent automatically. Running as ``LocalSystem`` (the default
    for a service) is what unlocks the Security event channel.
 
+Frozen (PyInstaller) builds are first-class: ``LogNogIn.exe --service install``
+registers the EXE itself as the service binary (``LogNogIn.exe --service run``),
+and ``--service run`` first tries to hand the process to the SCM dispatcher; if
+the SCM isn't the parent (error 1063) it falls back to a console run with
+graceful signal handling.
+
 If pywin32's service framework is unavailable (e.g. non-Windows dev box, or
 pywin32 not installed), the module still exposes ``install_service`` /
 ``uninstall_service`` helpers that shell out to ``sc.exe`` so the service can be
@@ -35,15 +41,38 @@ SERVICE_DESCRIPTION = (
     "Ships logs, file-integrity events, and Windows Event Logs to a LogNog "
     "server. Runs as LocalSystem to access the Security event channel."
 )
+SERVICE_RUN_ARGS = "--service run"
+
+# The SCM reports this when a process that calls StartServiceCtrlDispatcher was
+# started from a console rather than by the service controller.
+ERROR_FAILED_SERVICE_CONTROLLER_CONNECT = 1063
 
 try:
     import win32serviceutil
     import win32service
     import win32event
     import servicemanager
+    import pywintypes
     HAS_SERVICE_FRAMEWORK = True
 except ImportError:
     HAS_SERVICE_FRAMEWORK = False
+
+
+def is_frozen() -> bool:
+    """True when running from a PyInstaller bundle."""
+    return bool(getattr(sys, "frozen", False))
+
+
+def service_binary() -> tuple[str, str]:
+    """(exe, args) the SCM should launch for this install."""
+    if is_frozen():
+        return sys.executable, SERVICE_RUN_ARGS
+    return sys.executable, f"-m lognog_in {SERVICE_RUN_ARGS}"
+
+
+def is_console_launch_error(err: BaseException) -> bool:
+    """True when ``StartServiceCtrlDispatcher`` failed because we're not under the SCM."""
+    return getattr(err, "winerror", None) == ERROR_FAILED_SERVICE_CONTROLLER_CONNECT
 
 
 def _configure_failure_actions() -> None:
@@ -71,6 +100,10 @@ if HAS_SERVICE_FRAMEWORK:
         _svc_name_ = SERVICE_NAME
         _svc_display_name_ = SERVICE_DISPLAY_NAME
         _svc_description_ = SERVICE_DESCRIPTION
+        # Frozen builds host the service in the EXE itself.
+        if is_frozen():
+            _exe_name_ = sys.executable
+            _exe_args_ = SERVICE_RUN_ARGS
 
         def __init__(self, args):
             super().__init__(args)
@@ -116,25 +149,41 @@ def install_service(python_exe: Optional[str] = None) -> int:
     """Install the agent as an auto-start Windows service.
 
     Uses pywin32's installer when available (registers the ServiceFramework
-    class), otherwise falls back to ``sc.exe create``. Either way, failure
-    actions are configured so the SCM auto-restarts on crash.
+    class, or the frozen EXE itself), otherwise falls back to ``sc.exe create``.
+    Either way, failure actions are configured so the SCM auto-restarts on crash.
     """
     if HAS_SERVICE_FRAMEWORK:
-        # Register via pywin32; start type = auto.
-        win32serviceutil.InstallService(
-            f"{LogNogService.__module__}.LogNogService",
-            SERVICE_NAME,
-            SERVICE_DISPLAY_NAME,
-            startType=win32service.SERVICE_AUTO_START,
-            description=SERVICE_DESCRIPTION,
-        )
+        kwargs = {}
+        if is_frozen():
+            exe, args = service_binary()
+            kwargs = {"exeName": exe, "exeArgs": args}
+        try:
+            win32serviceutil.InstallService(
+                f"{LogNogService.__module__}.LogNogService",
+                SERVICE_NAME,
+                SERVICE_DISPLAY_NAME,
+                startType=win32service.SERVICE_AUTO_START,
+                description=SERVICE_DESCRIPTION,
+                **kwargs,
+            )
+        except pywintypes.error as e:
+            if getattr(e, "winerror", None) == 5:
+                print("Access denied: run this from an elevated (Administrator) prompt.", file=sys.stderr)
+                return 1
+            if getattr(e, "winerror", None) == 1073:
+                print(f"Service '{SERVICE_NAME}' already exists. Use --service uninstall first.", file=sys.stderr)
+                return 1
+            raise
         _configure_failure_actions()
         print(f"Installed service '{SERVICE_NAME}' (auto-start, LocalSystem).")
+        print("Start it with:  lognog-in --service start   (or: sc start LogNogIn)")
         return 0
 
     # Fallback: sc.exe. Run the module in service mode.
-    exe = python_exe or sys.executable
-    bin_path = f'"{exe}" -m lognog_in --service run'
+    exe, args = service_binary()
+    if python_exe:
+        exe = python_exe
+    bin_path = f'"{exe}" {args}'
     result = subprocess.run(
         [
             "sc.exe", "create", SERVICE_NAME,
@@ -159,7 +208,16 @@ def uninstall_service() -> int:
             win32serviceutil.StopService(SERVICE_NAME)
         except Exception:
             pass
-        win32serviceutil.RemoveService(SERVICE_NAME)
+        try:
+            win32serviceutil.RemoveService(SERVICE_NAME)
+        except pywintypes.error as e:
+            if getattr(e, "winerror", None) == 1060:
+                print(f"Service '{SERVICE_NAME}' is not installed.", file=sys.stderr)
+                return 1
+            if getattr(e, "winerror", None) == 5:
+                print("Access denied: run this from an elevated (Administrator) prompt.", file=sys.stderr)
+                return 1
+            raise
         print(f"Removed service '{SERVICE_NAME}'.")
         return 0
 
@@ -170,6 +228,35 @@ def uninstall_service() -> int:
         return 1
     print(f"Removed service '{SERVICE_NAME}'.")
     return 0
+
+
+def service_status() -> str:
+    """Human-readable SCM state of the service ('not installed', 'running', ...)."""
+    if HAS_SERVICE_FRAMEWORK:
+        try:
+            state = win32serviceutil.QueryServiceStatus(SERVICE_NAME)[1]
+        except pywintypes.error as e:
+            if getattr(e, "winerror", None) == 1060:
+                return "not installed"
+            return f"unknown ({e.strerror})"
+        return {
+            win32service.SERVICE_STOPPED: "stopped",
+            win32service.SERVICE_START_PENDING: "starting",
+            win32service.SERVICE_STOP_PENDING: "stopping",
+            win32service.SERVICE_RUNNING: "running",
+            win32service.SERVICE_CONTINUE_PENDING: "resuming",
+            win32service.SERVICE_PAUSE_PENDING: "pausing",
+            win32service.SERVICE_PAUSED: "paused",
+        }.get(state, f"state {state}")
+    if sys.platform != "win32":
+        return "n/a (not Windows)"
+    result = subprocess.run(["sc.exe", "query", SERVICE_NAME], capture_output=True, text=True)
+    if result.returncode != 0:
+        return "not installed"
+    for line in result.stdout.splitlines():
+        if "STATE" in line:
+            return line.split(":", 1)[1].strip().split(" ", 1)[-1].strip().lower()
+    return "unknown"
 
 
 def run_service_console() -> int:
@@ -205,10 +292,29 @@ def run_service_console() -> int:
     return 0
 
 
+def run_service() -> int:
+    """Entry point for ``--service run``.
+
+    Hands the process to the SCM dispatcher when the SCM launched us; when run
+    from a console (error 1063) falls back to the foreground runner.
+    """
+    if HAS_SERVICE_FRAMEWORK:
+        try:
+            servicemanager.Initialize()
+            servicemanager.PrepareToHostSingle(LogNogService)
+            servicemanager.StartServiceCtrlDispatcher()
+            return 0
+        except pywintypes.error as e:
+            if not is_console_launch_error(e):
+                raise
+            logger.info("Not started by the SCM; running in the console instead")
+    return run_service_console()
+
+
 def dispatch_service_command(action: str) -> int:
     """Handle ``lognog-in --service <action>``.
 
-    Actions: install, uninstall, run, start, stop.
+    Actions: install, uninstall, run, start, stop, status.
     """
     action = (action or "").lower()
     if action == "install":
@@ -216,21 +322,29 @@ def dispatch_service_command(action: str) -> int:
     if action in ("uninstall", "remove"):
         return uninstall_service()
     if action == "run":
-        # If launched by the SCM under the ServiceFramework, hand off; otherwise
-        # run in the console with graceful shutdown.
-        if HAS_SERVICE_FRAMEWORK and len(sys.argv) == 1:
-            servicemanager.Initialize()
-            servicemanager.PrepareToHostSingle(LogNogService)
-            servicemanager.StartServiceCtrlDispatcher()
-            return 0
-        return run_service_console()
-    if action == "start" and HAS_SERVICE_FRAMEWORK:
-        win32serviceutil.StartService(SERVICE_NAME)
+        return run_service()
+    if action == "status":
+        print(f"Service '{SERVICE_NAME}': {service_status()}")
         return 0
-    if action == "stop" and HAS_SERVICE_FRAMEWORK:
-        win32serviceutil.StopService(SERVICE_NAME)
+    if action in ("start", "stop"):
+        if HAS_SERVICE_FRAMEWORK:
+            try:
+                if action == "start":
+                    win32serviceutil.StartService(SERVICE_NAME)
+                else:
+                    win32serviceutil.StopService(SERVICE_NAME)
+            except pywintypes.error as e:
+                print(f"Failed to {action} service: {e.strerror}", file=sys.stderr)
+                return 1
+            print(f"Service '{SERVICE_NAME}' {action} requested; state: {service_status()}")
+            return 0
+        result = subprocess.run(["sc.exe", action, SERVICE_NAME], capture_output=True, text=True)
+        if result.returncode != 0:
+            print(f"Failed to {action} service: {result.stdout}{result.stderr}", file=sys.stderr)
+            return 1
+        print(f"Service '{SERVICE_NAME}' {action} requested.")
         return 0
 
     print(f"Unknown or unsupported service action: {action}", file=sys.stderr)
-    print("Supported: install, uninstall, run, start, stop", file=sys.stderr)
+    print("Supported: install, uninstall, run, start, stop, status", file=sys.stderr)
     return 2

@@ -115,9 +115,12 @@ class ConfigWindow:
 
         # Create tabs
         general_tab = ttk.Frame(notebook, padding="15")
+        windows_tab = ttk.Frame(notebook, padding="15")
         sound_tab = ttk.Frame(notebook, padding="15")
 
         notebook.add(general_tab, text="General")
+        if sys.platform == "win32":
+            notebook.add(windows_tab, text="Windows Events")
         notebook.add(sound_tab, text="Sound Alerts")
 
         # Configure general tab
@@ -222,7 +225,7 @@ class ConfigWindow:
             help_frame,
             text="   Get your API key from LogNog → Settings → API Keys",
             font=("Segoe UI", 8),
-            foreground="#0066cc",
+            foreground="#8B5E2A",
             cursor="hand2",
         )
         help_label.pack(side="left", padx=(10, 0))
@@ -377,6 +380,10 @@ class ConfigWindow:
         main_frame.rowconfigure(row, weight=1)
         row += 1
 
+        # === WINDOWS EVENTS TAB ===
+        if sys.platform == "win32":
+            self._create_windows_tab(windows_tab)
+
         # === SOUND ALERTS TAB ===
         self._create_sound_tab(sound_tab)
 
@@ -398,6 +405,160 @@ class ConfigWindow:
 
         # Run the window
         self.window.mainloop()
+
+    def _create_windows_tab(self, parent: ttk.Frame) -> None:
+        """Windows Event Log collection: channels, ID filters, reader, service."""
+        parent.columnconfigure(1, weight=1)
+        we = self.config.windows_events
+        row = 0
+
+        header_frame = ttk.Frame(parent)
+        header_frame.grid(row=row, column=0, columnspan=2, sticky="ew", pady=(0, 15))
+        ttk.Label(header_frame, text="Windows Event Logs", font=("Segoe UI", 14, "bold")).pack(anchor="w")
+        ttk.Label(
+            header_frame,
+            text="Collect Security, System, Application and any modern channel (Sysmon, PowerShell…)",
+            font=("Segoe UI", 9),
+            foreground="#666666",
+        ).pack(anchor="w")
+        row += 1
+        ttk.Separator(parent, orient="horizontal").grid(row=row, column=0, columnspan=2, sticky="ew", pady=(0, 15))
+        row += 1
+
+        self.we_enabled = tk.BooleanVar(value=we.enabled)
+        enable_check = ttk.Checkbutton(parent, text="Collect Windows Event Logs", variable=self.we_enabled)
+        enable_check.grid(row=row, column=0, columnspan=2, sticky="w", pady=(0, 8))
+        ToolTip(enable_check, "Reads new events from the channels below and ships them with named fields\n(TargetUserName, IpAddress, CommandLine …) so you can search on them in LogNog.")
+        row += 1
+
+        ttk.Label(parent, text="Channels (one per line):").grid(row=row, column=0, sticky="nw", pady=2)
+        self.we_channels = tk.Text(parent, height=6, width=48, font=("Consolas", 9))
+        self.we_channels.insert("1.0", "\n".join(we.channels))
+        self.we_channels.grid(row=row, column=1, sticky="ew", pady=2)
+        ToolTip(self.we_channels, "Channel names exactly as Event Viewer shows them, e.g.\n"
+                                  "Security\nSystem\nApplication\n"
+                                  "Microsoft-Windows-Sysmon/Operational\n"
+                                  "Microsoft-Windows-PowerShell/Operational\n"
+                                  "Microsoft-Windows-TaskScheduler/Operational")
+        row += 1
+
+        presets = ttk.Frame(parent)
+        presets.grid(row=row, column=1, sticky="w", pady=(0, 8))
+        ttk.Label(presets, text="Add:", font=("Segoe UI", 8)).pack(side="left")
+        for label, channel in (
+            ("Sysmon", "Microsoft-Windows-Sysmon/Operational"),
+            ("PowerShell", "Microsoft-Windows-PowerShell/Operational"),
+            ("Task Scheduler", "Microsoft-Windows-TaskScheduler/Operational"),
+            ("Defender", "Microsoft-Windows-Windows Defender/Operational"),
+        ):
+            ttk.Button(presets, text=label, width=13, command=lambda c=channel: self._add_channel(c)).pack(side="left", padx=2)
+        row += 1
+
+        ttk.Label(parent, text="Only event IDs:").grid(row=row, column=0, sticky="w", pady=2)
+        self.we_event_ids = tk.StringVar(value=", ".join(str(i) for i in (we.event_ids or [])))
+        ids_entry = ttk.Entry(parent, textvariable=self.we_event_ids, width=50)
+        ids_entry.grid(row=row, column=1, sticky="ew", pady=2)
+        ToolTip(ids_entry, "Comma-separated event IDs to collect. Leave empty for everything.\n"
+                           "Security essentials: 4624, 4625, 4648, 4672, 4688, 4720, 4726, 4740, 7045, 1102")
+        row += 1
+
+        ttk.Label(parent, text="Exclude event IDs:").grid(row=row, column=0, sticky="w", pady=2)
+        self.we_exclude_ids = tk.StringVar(value=", ".join(str(i) for i in (we.exclude_event_ids or [])))
+        excl_entry = ttk.Entry(parent, textvariable=self.we_exclude_ids, width=50)
+        excl_entry.grid(row=row, column=1, sticky="ew", pady=2)
+        ToolTip(excl_entry, "Noisy IDs to drop, e.g. 5156, 5158 (filtering platform) or 4662 (object access).")
+        row += 1
+
+        ttk.Label(parent, text="Poll every (seconds):").grid(row=row, column=0, sticky="w", pady=2)
+        self.we_poll = tk.IntVar(value=we.poll_interval)
+        ttk.Spinbox(parent, from_=1, to=300, textvariable=self.we_poll, width=8).grid(row=row, column=1, sticky="w", pady=2)
+        row += 1
+
+        ttk.Label(parent, text="Reader API:").grid(row=row, column=0, sticky="w", pady=2)
+        self.we_api = tk.StringVar(value=we.api)
+        api_box = ttk.Combobox(parent, textvariable=self.we_api, values=("auto", "modern", "legacy"), state="readonly", width=10)
+        api_box.grid(row=row, column=1, sticky="w", pady=2)
+        ToolTip(api_box, "auto/modern: Windows Event Log API (all channels, named fields).\nlegacy: classic ReadEventLog (Application/System/Security only).")
+        row += 1
+
+        ttk.Label(parent, text="LogNog index:").grid(row=row, column=0, sticky="w", pady=2)
+        self.we_index = tk.StringVar(value=we.index or "")
+        idx_entry = ttk.Entry(parent, textvariable=self.we_index, width=24)
+        idx_entry.grid(row=row, column=1, sticky="w", pady=2)
+        ToolTip(idx_entry, "Optional. Store Windows events in this index (lowercase letters, digits, - _).\nLeave empty for the server default (agent).")
+        row += 1
+
+        ttk.Separator(parent, orient="horizontal").grid(row=row, column=0, columnspan=2, sticky="ew", pady=12)
+        row += 1
+
+        note = ttk.Label(
+            parent,
+            text=("The Security channel needs LocalSystem/Administrator rights.\n"
+                  "Install the agent as a Windows service to collect it unattended:"),
+            font=("Segoe UI", 9),
+            foreground="#666666",
+            justify="left",
+        )
+        note.grid(row=row, column=0, columnspan=2, sticky="w")
+        row += 1
+        svc_frame = ttk.Frame(parent)
+        svc_frame.grid(row=row, column=0, columnspan=2, sticky="w", pady=(4, 0))
+        self.service_status_label = ttk.Label(svc_frame, text="", font=("Segoe UI", 9, "bold"), foreground="#5A3F24")
+        self.service_status_label.pack(side="left", padx=(0, 10))
+        ttk.Button(svc_frame, text="Install Service", command=lambda: self._service_action("install")).pack(side="left", padx=2)
+        ttk.Button(svc_frame, text="Start", command=lambda: self._service_action("start")).pack(side="left", padx=2)
+        ttk.Button(svc_frame, text="Stop", command=lambda: self._service_action("stop")).pack(side="left", padx=2)
+        ttk.Button(svc_frame, text="Uninstall", command=lambda: self._service_action("uninstall")).pack(side="left", padx=2)
+        self._refresh_service_status()
+        row += 1
+
+        parent.rowconfigure(row, weight=1)
+
+    def _add_channel(self, channel: str) -> None:
+        current = [c.strip() for c in self.we_channels.get("1.0", tk.END).splitlines() if c.strip()]
+        if channel not in current:
+            current.append(channel)
+            self.we_channels.delete("1.0", tk.END)
+            self.we_channels.insert("1.0", "\n".join(current))
+
+    def _refresh_service_status(self) -> None:
+        try:
+            from .service import service_status
+            self.service_status_label.configure(text=f"Service: {service_status()}")
+        except Exception as e:
+            self.service_status_label.configure(text=f"Service: unknown ({e})")
+
+    def _service_action(self, action: str) -> None:
+        """Run a service action elevated via ShellExecute 'runas' on this EXE/module."""
+        import subprocess
+        try:
+            if getattr(sys, "frozen", False):
+                exe, params = sys.executable, f"--service {action}"
+            else:
+                exe, params = sys.executable, f"-m lognog_in --service {action}"
+            import ctypes
+            rc = ctypes.windll.shell32.ShellExecuteW(None, "runas", exe, params, None, 0)
+            if rc <= 32:
+                messagebox.showerror("Service", f"Could not launch elevated command (code {rc}).")
+                return
+            # The elevated process runs asynchronously; refresh shortly after.
+            self.window.after(3000, self._refresh_service_status)
+            messagebox.showinfo("Service", f"Requested: {action}. Approve the elevation prompt if shown.")
+        except Exception as e:
+            messagebox.showerror("Service", f"Service {action} failed: {e}")
+
+    @staticmethod
+    def _parse_id_list(text: str) -> Optional[list[int]]:
+        ids: list[int] = []
+        for part in text.replace(";", ",").replace(" ", ",").split(","):
+            part = part.strip()
+            if not part:
+                continue
+            try:
+                ids.append(int(part))
+            except ValueError:
+                continue
+        return ids or None
 
     def _create_sound_tab(self, parent: ttk.Frame) -> None:
         """Create the sound alerts configuration tab."""
@@ -495,7 +656,7 @@ class ConfigWindow:
             ("Critical", "critical", "High-priority alerts", "#d32f2f"),
             ("Error", "error", "Error-level alerts", "#f57c00"),
             ("Warning", "warning", "Warning-level alerts", "#fbc02d"),
-            ("Info", "info", "Informational alerts", "#1976d2"),
+            ("Info", "info", "Informational alerts", "#C8862B"),
         ]
 
         for label, severity, tooltip, color in severities:
@@ -701,6 +862,21 @@ class ConfigWindow:
         self.config.fim_enabled = self.fim_enabled.get()
         self.config.debug_logging = self.debug_logging.get()
         self.config.start_on_boot = self.start_on_boot.get()
+
+        # Windows Events tab
+        if hasattr(self, "we_enabled"):
+            we = self.config.windows_events
+            we.enabled = self.we_enabled.get()
+            we.channels = [c.strip() for c in self.we_channels.get("1.0", tk.END).splitlines() if c.strip()]
+            we.event_ids = self._parse_id_list(self.we_event_ids.get())
+            we.exclude_event_ids = self._parse_id_list(self.we_exclude_ids.get())
+            try:
+                we.poll_interval = max(1, int(self.we_poll.get()))
+            except (tk.TclError, ValueError):
+                we.poll_interval = 10
+            we.api = self.we_api.get() or "auto"
+            we.index = self.we_index.get().strip().lower() or None
+            we.__post_init__()
 
         # Update sound settings
         self.config.sound_alerts_enabled = self.sound_alerts_enabled.get()

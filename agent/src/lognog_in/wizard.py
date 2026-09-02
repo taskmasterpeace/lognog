@@ -284,7 +284,7 @@ class SetupWizard:
             hint_row = ttk.Frame(hint_frame)
             hint_row.pack(fill=tk.X, pady=2)
 
-            url_label = ttk.Label(hint_row, text=url, font=("Consolas", 9), foreground="#0066cc")
+            url_label = ttk.Label(hint_row, text=url, font=("Consolas", 9), foreground="#8B5E2A")
             url_label.pack(side=tk.LEFT)
             url_label.bind("<Button-1>", lambda e, u=url: self.server_var.set(u))
             url_label.bind("<Enter>", lambda e, l=url_label: l.configure(cursor="hand2"))

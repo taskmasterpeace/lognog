@@ -53,12 +53,21 @@ class MockIngestServer:
         self.accepted: list[dict] = []
         self.post_calls = 0
 
-    async def post(self, url, json=None, headers=None, **kwargs):
+    async def post(self, url, json=None, headers=None, content=None, **kwargs):
         self.post_calls += 1
         if not self.up:
             import httpx
             raise httpx.ConnectError("server down", request=None)
-        for ev in (json or {}).get("events", []):
+        payload = json
+        if content is not None:
+            # The shipper sends a serialized (optionally gzipped) body.
+            import gzip as _gzip
+            import json as _json
+            raw = content
+            if (headers or {}).get("Content-Encoding") == "gzip":
+                raw = _gzip.decompress(raw)
+            payload = _json.loads(raw)
+        for ev in (payload or {}).get("events", []):
             self.accepted.append(ev)
 
         class _Resp:

@@ -27,9 +27,15 @@ class LogEvent:
     file_path: str
     message: str
     metadata: dict
+    # Target LogNog index (None = server default). Optional so events buffered
+    # by older agent versions still deserialize.
+    index: Optional[str] = None
 
     def to_dict(self) -> dict:
-        return asdict(self)
+        data = asdict(self)
+        if data.get("index") is None:
+            data.pop("index", None)
+        return data
 
     @classmethod
     def from_dict(cls, data: dict) -> "LogEvent":
@@ -101,11 +107,24 @@ class EventBuffer:
         self.max_bytes = max_bytes if max_bytes and max_bytes > 0 else self.DEFAULT_MAX_BYTES
         self._lock = threading.Lock()
         self._dropped_count = 0
+        # Row / byte totals are tracked in memory (refreshed from the table on
+        # removals) so the capacity check on every insert is O(1) instead of a
+        # COUNT/SUM scan — that scan was the dominant cost at a few thousand
+        # events per second.
+        self._row_count = 0
+        self._byte_total = 0
         self._init_db()
 
     def _init_db(self) -> None:
         """Initialize the SQLite database."""
         with self._get_connection() as conn:
+            # WAL: readers (get_batch / count) don't block the writer thread,
+            # and commits are far cheaper than rollback-journal mode.
+            try:
+                conn.execute("PRAGMA journal_mode=WAL")
+                conn.execute("PRAGMA synchronous=NORMAL")
+            except sqlite3.DatabaseError:
+                pass
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS events (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -120,6 +139,15 @@ class EventBuffer:
                 ON events(created_at)
             """)
             conn.commit()
+            self._refresh_totals(conn)
+
+    def _refresh_totals(self, conn) -> None:
+        """Re-read the row count / byte total from the table."""
+        row = conn.execute(
+            "SELECT COUNT(*) AS c, COALESCE(SUM(LENGTH(data)), 0) AS b FROM events"
+        ).fetchone()
+        self._row_count = row["c"] if row else 0
+        self._byte_total = row["b"] if row else 0
 
     @contextmanager
     def _get_connection(self):
@@ -139,6 +167,8 @@ class EventBuffer:
             """,
             (event_type, data, _utcnow_iso()),
         )
+        self._row_count += 1
+        self._byte_total += len(data.encode("utf-8"))
         return cursor.lastrowid or 0
 
     def _enforce_capacity(self, conn) -> None:
@@ -146,13 +176,15 @@ class EventBuffer:
 
         Called while holding ``self._lock`` and inside an open connection.
         Bumps ``self._dropped_count`` for each evicted row so the overflow is
-        observable rather than silent.
+        observable rather than silent. Uses the in-memory totals; only when a
+        cap is actually exceeded does it touch the table.
         """
+        if self._row_count <= self.max_rows and self._byte_total <= self.max_bytes:
+            return
+
         # Row cap.
-        row = conn.execute("SELECT COUNT(*) AS c FROM events").fetchone()
-        count = row["c"] if row else 0
-        if count > self.max_rows:
-            to_drop = count - self.max_rows
+        if self._row_count > self.max_rows:
+            to_drop = self._row_count - self.max_rows
             dropped = conn.execute(
                 """
                 DELETE FROM events WHERE id IN (
@@ -162,26 +194,23 @@ class EventBuffer:
                 (to_drop,),
             ).rowcount
             self._dropped_count += dropped
+            self._refresh_totals(conn)
 
         # Byte cap. Drop oldest rows until total data bytes fit the cap.
-        total = conn.execute(
-            "SELECT COALESCE(SUM(LENGTH(data)), 0) AS b FROM events"
-        ).fetchone()["b"]
-        while total > self.max_bytes:
+        while self._byte_total > self.max_bytes:
             # Delete oldest 1000 rows (or fewer) at a time until within cap.
-            row = conn.execute(
+            rows = conn.execute(
                 "SELECT id, LENGTH(data) AS n FROM events ORDER BY id ASC LIMIT 1000"
             ).fetchall()
-            if not row:
+            if not rows:
                 break
-            ids = [r["id"] for r in row]
-            freed = sum(r["n"] for r in row)
+            ids = [r["id"] for r in rows]
             placeholders = ",".join("?" * len(ids))
             dropped = conn.execute(
                 f"DELETE FROM events WHERE id IN ({placeholders})", ids
             ).rowcount
             self._dropped_count += dropped
-            total -= freed
+            self._refresh_totals(conn)
 
     def add_log_event(self, event: LogEvent) -> int:
         """Add a log event to the buffer."""
@@ -191,6 +220,29 @@ class EventBuffer:
                 self._enforce_capacity(conn)
                 conn.commit()
                 return event_id
+
+    def add_log_events(self, events: list[LogEvent]) -> int:
+        """Add many log events in ONE transaction.
+
+        A busy log file can hand the tailer hundreds of lines per change
+        notification; one commit per line was the throughput ceiling.
+        Returns the number of rows inserted.
+        """
+        if not events:
+            return 0
+        with self._lock:
+            with self._get_connection() as conn:
+                payloads = [json.dumps(e.to_dict()) for e in events]
+                now = _utcnow_iso()
+                conn.executemany(
+                    "INSERT INTO events (event_type, data, created_at) VALUES (?, ?, ?)",
+                    [("log", p, now) for p in payloads],
+                )
+                self._row_count += len(payloads)
+                self._byte_total += sum(len(p.encode("utf-8")) for p in payloads)
+                self._enforce_capacity(conn)
+                conn.commit()
+                return len(events)
 
     def add_fim_event(self, event: FIMEvent) -> int:
         """Add a FIM event to the buffer."""
@@ -231,6 +283,7 @@ class EventBuffer:
                     event_ids
                 )
                 conn.commit()
+                self._refresh_totals(conn)
 
     def increment_attempts(self, event_ids: list[int]) -> None:
         """Increment the attempt counter for failed events.
@@ -265,6 +318,7 @@ class EventBuffer:
                     (max_attempts,)
                 )
                 conn.commit()
+                self._refresh_totals(conn)
                 return cursor.rowcount
 
     def count(self) -> int:
@@ -292,3 +346,5 @@ class EventBuffer:
             with self._get_connection() as conn:
                 conn.execute("DELETE FROM events")
                 conn.commit()
+                self._row_count = 0
+                self._byte_total = 0

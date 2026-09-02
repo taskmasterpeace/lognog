@@ -1,58 +1,86 @@
-# LogNog In Agent Configuration Example
+# LogNog In Agent Configuration Example (0.2.0)
+#
+# Location:
+#   Windows: %APPDATA%\MachineKingLabs\lognog-in\config.yaml
+#   Linux:   ~/.config/lognog-in/config.yaml
+#   macOS:   ~/Library/Application Support/lognog-in/config.yaml
 
-# Server connection
-server_url: "http://localhost:4000"
-api_key: "your-api-key-here"
+# ---------------------------------------------------------------- server
+server_url: "https://logs.example.com"
+api_key: "lnog_your-api-key-here"     # On Windows this is rewritten as api_key_protected (DPAPI) on save
+protect_api_key: true                 # Set false to keep the key in plaintext
 
-# Agent settings
-hostname: "my-windows-pc"  # Auto-detected if not specified
-batch_size: 100
-batch_interval_seconds: 5.0
+# TLS: self-signed / private CA?
+verify_tls: true                      # false = accept any certificate (not recommended)
+# ca_bundle: "C:\\certs\\homelab-ca.pem"
+
+# ---------------------------------------------------------------- identity & routing
+hostname: "my-windows-pc"             # Auto-detected if omitted
+tags:                                 # Stamped onto every event's fields
+  environment: production
+  role: web
+# index: ops                          # Default LogNog index for file events (server default: agent)
+
+# ---------------------------------------------------------------- shipping
+batch_size: 200
+batch_interval_seconds: 5.0           # A full batch ships immediately; this paces a trickle
+compress_payloads: true               # gzip batches > 1 KB
 retry_max_attempts: 5
 retry_backoff_seconds: 2.0
+retry_backoff_max_seconds: 60.0
+buffer_max_rows: 500000               # Offline buffer caps (oldest dropped beyond this)
+buffer_max_bytes: 536870912
 
-# Behavior
-start_on_boot: false
-send_hostname: true
-debug_logging: false
+heartbeat_interval_seconds: 60        # source_type=agent_heartbeat with counters; 0 disables
+scan_interval_seconds: 10             # Re-scan watched folders for missed changes; 0 disables
 
-# Watch paths for log files
+# ---------------------------------------------------------------- file inputs
 watch_paths:
   - path: "C:\\Logs"
     pattern: "*.log"
     recursive: true
-    enabled: true
-  - path: "C:\\inetpub\\logs"
-    pattern: "*.log"
-    recursive: true
-    enabled: true
+    exclude: ["*.gz", "*.zip", "*-old.log"]
+    encoding: utf-8                   # utf-16 for many Windows-native logs
+    start_position: end               # end = only new lines; beginning = ingest the whole file once
+    source_type: file
 
-# File Integrity Monitoring (FIM)
+  - path: "C:\\inetpub\\logs\\LogFiles"
+    pattern: "u_ex*.log"
+    recursive: true
+    source_type: iis
+    index: web-logs                   # Per-input index
+
+  - path: "D:\\apps\\api\\logs"
+    pattern: "*.log"
+    # Merge stack traces: a line that starts with a timestamp begins a new
+    # event; every other line is appended to the previous one.
+    multiline_pattern: '^\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}'
+    source_type: app_java
+
+# ---------------------------------------------------------------- File Integrity Monitoring
 fim_enabled: true
 fim_paths:
   - path: "C:\\Windows\\System32\\drivers\\etc"
     pattern: "*"
     recursive: false
-    enabled: true
   - path: "C:\\Program Files\\MyApp"
     pattern: "*.exe"
     recursive: true
-    enabled: true
 
-# Windows Event Log Collection
+# ---------------------------------------------------------------- Windows Event Logs
 windows_events:
   enabled: true
-
-  # Channels to monitor
+  api: auto                           # auto | modern (EvtQuery, all channels, named fields) | legacy
   channels:
     - Security
     - System
     - Application
-
-  # Optional: Filter for specific event IDs
-  # If not specified or null, all events are collected
-  # High-value security events are recommended
+    - Microsoft-Windows-Sysmon/Operational
+    - Microsoft-Windows-PowerShell/Operational
+    - Microsoft-Windows-TaskScheduler/Operational
+  # Only these IDs (omit for everything). Filtering happens inside the query.
   event_ids:
+    - 1102  # Audit log cleared
     - 4624  # Successful logon
     - 4625  # Failed logon
     - 4648  # Explicit credential logon
@@ -60,33 +88,28 @@ windows_events:
     - 4688  # Process creation
     - 4698  # Scheduled task created
     - 4720  # User account created
-    - 4722  # User account enabled
-    - 4725  # User account disabled
     - 4726  # User account deleted
-    - 4732  # Member added to security-enabled local group
+    - 4732  # Member added to local group
     - 4740  # User account locked out
     - 7045  # Service installed
-    - 7040  # Service start type changed
-
-  # Poll interval in seconds (how often to check for new events)
+    - 4104  # PowerShell script block
+    - 1     # Sysmon process create
+    - 3     # Sysmon network connection
+  # Noisy IDs to drop even if they match above
+  exclude_event_ids: [5156, 5158]
   poll_interval: 10
+  batch_size: 200
+  # index: windows                    # Per-input index
 
-# Example: Collect all Security events (no filtering)
-# windows_events:
-#   enabled: true
-#   channels:
-#     - Security
-#   event_ids: null  # Collect all events
-#   poll_interval: 10
+# ---------------------------------------------------------------- behaviour
+start_on_boot: false
+send_hostname: true
+debug_logging: false
 
-# Example: Collect from multiple channels without filtering
-# windows_events:
-#   enabled: true
-#   channels:
-#     - Security
-#     - System
-#     - Application
-#     - "Microsoft-Windows-PowerShell/Operational"
-#     - "Microsoft-Windows-Sysmon/Operational"
-#   event_ids: null
-#   poll_interval: 5
+# Sound alerts (tray app)
+sound_alerts_enabled: false
+sound_critical: default
+sound_error: default
+sound_warning: default
+sound_info: default
+sound_volume: 100

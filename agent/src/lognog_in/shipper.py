@@ -1,20 +1,29 @@
 """HTTP shipper module for sending events to LogNog server."""
 
 import asyncio
+import gzip
+import json
 import logging
 import random
 import threading
 import time
 import uuid
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Callable, Optional
 
 import httpx
 
+from . import __version__
 from .config import Config
 from .buffer import EventBuffer, LogEvent, FIMEvent
 
 logger = logging.getLogger(__name__)
+
+# Bodies smaller than this aren't worth compressing.
+COMPRESS_MIN_BYTES = 1024
+# The server accepts at most this many events per request.
+SERVER_MAX_BATCH = 10_000
 
 
 class ConnectionStatus(Enum):
@@ -37,16 +46,30 @@ class SendResult(Enum):
 NotificationCallback = Callable[[str, str, str], None]  # (title, message, severity)
 
 
+def encode_batch_body(payload: dict, compress: bool) -> tuple[bytes, dict]:
+    """Serialize a batch, gzipping when worthwhile.
+
+    Returns ``(body, extra_headers)``. Only bodies of at least
+    ``COMPRESS_MIN_BYTES`` are compressed; the server inflates transparently.
+    """
+    raw = json.dumps(payload, separators=(",", ":")).encode("utf-8")
+    headers = {"Content-Type": "application/json"}
+    if compress and len(raw) >= COMPRESS_MIN_BYTES:
+        return gzip.compress(raw, compresslevel=6), {**headers, "Content-Encoding": "gzip"}
+    return raw, headers
+
+
 class HTTPShipper:
     """
     Ships events to the LogNog server.
 
     Features:
-    - Batching for efficiency
-    - Automatic retry with exponential backoff
+    - Batching for efficiency, draining a backlog back-to-back
+    - Automatic retry with exponential backoff (+ jitter)
     - Offline buffering via EventBuffer
-    - Async HTTP with connection pooling
+    - Async HTTP with connection pooling, gzip, TLS options
     - Alert notification polling
+    - Periodic agent heartbeat events
     """
 
     def __init__(
@@ -55,23 +78,31 @@ class HTTPShipper:
         buffer: EventBuffer,
         on_status_change: Optional[Callable[[ConnectionStatus], None]] = None,
         on_notification: Optional[NotificationCallback] = None,
+        stats_provider: Optional[Callable[[], dict]] = None,
     ):
         self.config = config
         self.buffer = buffer
         self.on_status_change = on_status_change
         self.on_notification = on_notification
+        # Called when building a heartbeat; returns extra counters to include.
+        self.stats_provider = stats_provider
 
         self._status = ConnectionStatus.DISCONNECTED
         self._running = False
         self._thread: Optional[threading.Thread] = None
         self._stop_event = threading.Event()
+        self._started_at = time.time()
 
         # Stats
         self._events_sent = 0
         self._events_failed = 0
+        self._batches_sent = 0
+        self._bytes_sent = 0
         self._last_send_time: Optional[float] = None
         self._last_error: Optional[str] = None
         self._last_notification_check: Optional[float] = None
+        self._last_heartbeat: Optional[float] = None
+        self._heartbeats_sent = 0
 
     @property
     def status(self) -> ConnectionStatus:
@@ -84,14 +115,36 @@ class HTTPShipper:
             if self.on_status_change:
                 self.on_status_change(value)
 
+    # ------------------------------------------------------------- enqueue
+    def _enrich(self, event: LogEvent) -> LogEvent:
+        """Stamp static tags and the default index onto an event."""
+        if self.config.tags:
+            merged = dict(self.config.tags)
+            merged.update(event.metadata or {})
+            event.metadata = merged
+        if event.index is None and self.config.index:
+            event.index = self.config.index
+        return event
+
     def queue_log_event(self, event: LogEvent) -> None:
         """Queue a log event for shipping."""
-        self.buffer.add_log_event(event)
+        self.buffer.add_log_event(self._enrich(event))
+
+    def queue_log_events(self, events: list[LogEvent]) -> None:
+        """Queue many log events in one buffer transaction."""
+        if not events:
+            return
+        self.buffer.add_log_events([self._enrich(e) for e in events])
 
     def queue_fim_event(self, event: FIMEvent) -> None:
         """Queue a FIM event for shipping."""
+        if self.config.tags:
+            merged = dict(self.config.tags)
+            merged.update(event.metadata or {})
+            event.metadata = merged
         self.buffer.add_fim_event(event)
 
+    # ------------------------------------------------------------ lifecycle
     def start(self) -> None:
         """Start the shipper background thread."""
         if self._running:
@@ -99,7 +152,8 @@ class HTTPShipper:
 
         self._stop_event.clear()
         self._running = True
-        self._thread = threading.Thread(target=self._run_loop, daemon=True)
+        self._started_at = time.time()
+        self._thread = threading.Thread(target=self._run_loop, daemon=True, name="lognog-shipper")
         self._thread.start()
         logger.info("HTTP shipper started")
 
@@ -131,6 +185,14 @@ class HTTPShipper:
         self.status = ConnectionStatus.DISCONNECTED
         logger.info("HTTP shipper stopped")
 
+    def _client(self, timeout: float, max_connections: int = 10) -> httpx.AsyncClient:
+        return httpx.AsyncClient(
+            timeout=timeout,
+            verify=self.config.httpx_verify(),
+            limits=httpx.Limits(max_connections=max_connections, max_keepalive_connections=max(1, max_connections // 2)),
+            headers={"User-Agent": f"LogNog-In/{__version__}"},
+        )
+
     def flush(self, timeout: float = 15.0) -> int:
         """Best-effort synchronous drain of the buffer to the server.
 
@@ -144,10 +206,7 @@ class HTTPShipper:
     async def _flush_async(self, timeout: float) -> int:
         sent = 0
         deadline = time.monotonic() + timeout
-        async with httpx.AsyncClient(
-            timeout=10.0,
-            limits=httpx.Limits(max_connections=5, max_keepalive_connections=2),
-        ) as client:
+        async with self._client(timeout=10.0, max_connections=5) as client:
             while time.monotonic() < deadline:
                 batch = self.buffer.get_batch(self.config.batch_size)
                 if not batch:
@@ -183,6 +242,18 @@ class HTTPShipper:
             return 0.0
         return random.uniform(delay / 2.0, delay)
 
+    def _wait_after_success(self, batch_len: int) -> float:
+        """Pace after a successful send.
+
+        A full batch almost certainly means more is waiting, so drain
+        back-to-back; the old fixed sleep capped throughput at
+        ``batch_size / batch_interval`` events per second (20/s by default)
+        and a busy file fell further behind the longer it ran.
+        """
+        if batch_len >= self.config.batch_size:
+            return 0.0
+        return self.config.batch_interval_seconds
+
     async def _async_loop(self) -> None:
         """Async shipping loop.
 
@@ -191,17 +262,16 @@ class HTTPShipper:
         exponential backoff WITH jitter, capped at
         ``retry_backoff_max_seconds``. On success the backoff resets to the
         base ``retry_backoff_seconds`` and the loop paces itself at the normal
-        ``batch_interval_seconds``.
+        ``batch_interval_seconds`` — or not at all while a backlog remains.
         """
         base_delay = self.config.retry_backoff_seconds
         retry_delay = base_delay
 
-        async with httpx.AsyncClient(
-            timeout=30.0,
-            limits=httpx.Limits(max_connections=10, max_keepalive_connections=5),
-        ) as client:
+        async with self._client(timeout=30.0) as client:
             while not self._stop_event.is_set():
                 try:
+                    self._maybe_heartbeat()
+
                     # Get batch from buffer
                     batch = self.buffer.get_batch(self.config.batch_size)
 
@@ -209,9 +279,9 @@ class HTTPShipper:
                         result = await self._send_batch(client, batch)
                         succeeded = self._handle_batch_result(batch, result)
                         if succeeded:
-                            # Reset backoff and pace at the normal interval.
+                            # Reset backoff; drain immediately if more is waiting.
                             retry_delay = base_delay
-                            wait_time = self.config.batch_interval_seconds
+                            wait_time = self._wait_after_success(len(batch))
                         else:
                             # Real exponential backoff with jitter on failure.
                             wait_time = self._apply_jitter(retry_delay)
@@ -228,7 +298,8 @@ class HTTPShipper:
                         await self._check_notifications(client)
 
                     # Wait before next batch.
-                    self._stop_event.wait(timeout=wait_time)
+                    if wait_time > 0:
+                        self._stop_event.wait(timeout=wait_time)
 
                 except Exception as e:
                     logger.error(f"Shipper loop error: {e}")
@@ -237,6 +308,59 @@ class HTTPShipper:
                     self._stop_event.wait(timeout=self._apply_jitter(retry_delay))
                     retry_delay = self._next_backoff(retry_delay)
 
+    # ----------------------------------------------------------- heartbeat
+    def build_heartbeat(self) -> LogEvent:
+        """The agent's self-monitoring event (source_type ``agent_heartbeat``)."""
+        stats = self.get_stats()
+        extra = {}
+        if self.stats_provider:
+            try:
+                extra = self.stats_provider() or {}
+            except Exception as e:
+                logger.debug(f"stats_provider failed: {e}")
+        uptime = int(time.time() - self._started_at)
+        metadata = {
+            "severity": "info",
+            "agent_version": __version__,
+            "uptime_seconds": uptime,
+            "events_sent": stats["events_sent"],
+            "events_failed": stats["events_failed"],
+            "events_buffered": stats["events_buffered"],
+            "events_dropped": self.buffer.dropped_count,
+            "batches_sent": self._batches_sent,
+            "bytes_sent": self._bytes_sent,
+            "connection": stats["status"],
+            **extra,
+        }
+        return LogEvent(
+            timestamp=datetime.now(timezone.utc).isoformat(),
+            hostname=self.config.hostname,
+            source="lognog-in",
+            source_type="agent_heartbeat",
+            file_path="",
+            message=(
+                f"LogNog In {__version__} heartbeat: {stats['events_sent']} sent, "
+                f"{stats['events_buffered']} buffered, {self.buffer.dropped_count} dropped, "
+                f"up {uptime}s"
+            ),
+            metadata=metadata,
+        )
+
+    def _maybe_heartbeat(self) -> None:
+        interval = self.config.heartbeat_interval_seconds
+        if interval <= 0 or not self.config.api_key:
+            return
+        now = time.time()
+        if self._last_heartbeat is not None and now - self._last_heartbeat < interval:
+            return
+        self._last_heartbeat = now
+        try:
+            self.queue_log_event(self.build_heartbeat())
+            self._heartbeats_sent += 1
+        except Exception as e:
+            logger.debug(f"Heartbeat enqueue failed: {e}")
+
+    # ---------------------------------------------------------------- send
     def _handle_batch_result(
         self,
         batch: list[tuple[int, str, dict]],
@@ -268,6 +392,7 @@ class HTTPShipper:
         if result == SendResult.SUCCESS:
             self.buffer.remove_events(event_ids)
             self._events_sent += len(batch)
+            self._batches_sent += 1
             self.status = ConnectionStatus.CONNECTED
             return True
 
@@ -329,22 +454,27 @@ class HTTPShipper:
 
         # Format events for API
         events = []
-        for _, event_type, event_data in batch:
+        for _, event_type, event_data in batch[:SERVER_MAX_BATCH]:
             events.append({
                 "type": event_type,
                 **event_data,
             })
 
+        body, content_headers = encode_batch_body({"events": events, "batch_id": batch_id}, self.config.compress_payloads)
+
         try:
-            self.status = ConnectionStatus.CONNECTING
+            # Only flip the tray to "connecting" when we aren't already connected;
+            # flashing the icon on every batch was pure noise.
+            if self._status != ConnectionStatus.CONNECTED:
+                self.status = ConnectionStatus.CONNECTING
             response = await client.post(
                 url,
-                json={"events": events, "batch_id": batch_id},
+                content=body,
                 headers={
                     "Authorization": f"ApiKey {self.config.api_key}",
-                    "Content-Type": "application/json",
-                    "User-Agent": "LogNog-In/0.1.0",
+                    "User-Agent": f"LogNog-In/{__version__}",
                     "X-Batch-Id": batch_id,
+                    **content_headers,
                 },
             )
 
@@ -352,7 +482,8 @@ class HTTPShipper:
 
             if status == 200:
                 self._last_send_time = time.time()
-                logger.debug(f"Sent {len(events)} events successfully")
+                self._bytes_sent += len(body)
+                logger.debug(f"Sent {len(events)} events successfully ({len(body)} bytes)")
                 return SendResult.SUCCESS
             elif status == 401:
                 logger.error("Authentication failed - check API key")
@@ -478,6 +609,11 @@ class HTTPShipper:
             "events_sent": self._events_sent,
             "events_failed": self._events_failed,
             "events_buffered": self.buffer.count(),
+            "events_dropped": self.buffer.dropped_count,
+            "batches_sent": self._batches_sent,
+            "bytes_sent": self._bytes_sent,
+            "heartbeats_sent": self._heartbeats_sent,
             "last_send_time": self._last_send_time,
             "last_error": self._last_error,
+            "uptime_seconds": int(time.time() - self._started_at),
         }
