@@ -4,8 +4,16 @@ The LogNog In agent supports collecting Windows Event Logs on Windows systems us
 
 ## Features
 
+- **Modern Event Log API (0.2.0)** — `EvtQuery`/`EvtRender`, so *every* channel is readable:
+  `Microsoft-Windows-Sysmon/Operational`, `Microsoft-Windows-PowerShell/Operational`,
+  `Microsoft-Windows-TaskScheduler/Operational`, `Microsoft-Windows-Windows Defender/Operational` …
+  (the legacy `ReadEventLog` reader, still available as `api: legacy`, only opens the classic logs)
+- **Named event fields** — `event_data.TargetUserName`, `event_data.IpAddress`, `event_data.CommandLine` …
+  instead of positional inserts, plus `provider`, `level_name`, `task`, `opcode`, `keywords`,
+  `audit: success|failure`, `process_id`, `record_number`
 - Collects from any Windows Event Log channel (Security, System, Application, etc.)
-- Optional event ID filtering for targeted collection
+- Event ID **include and exclude** lists, evaluated inside the query (`*[System[(EventID=4624 or …) and EventID!=5156]]`)
+- Per-input `index`, `batch_size`; `lognog-in doctor` reports per-channel access
 - Persistent bookmarks to avoid re-reading events after restarts
 - Efficient batch reading with configurable poll intervals
 - Maps Windows event types to standard severity levels

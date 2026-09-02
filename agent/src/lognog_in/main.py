@@ -189,13 +189,18 @@ def cmd_test(args: argparse.Namespace) -> int:
             print(f"[FAIL] Server returned: {response.status_code}")
             return 1
 
-        # Test authentication
-        response = httpx.get(
-            f"{config.server_url}/api/auth/me",
-            headers={"Authorization": f"ApiKey {config.api_key}"},
-            timeout=10.0,
-            verify=verify,
-        )
+        # Test authentication. The agent always talks to the /api/... paths
+        # (the LogNog web address); the bare API container serves the same
+        # routes without the prefix, so a 404 here almost always means the
+        # server_url points at port 4000 directly.
+        headers = {"Authorization": f"ApiKey {config.api_key}"}
+        response = httpx.get(f"{config.server_url}/api/auth/me", headers=headers, timeout=10.0, verify=verify)
+        if response.status_code == 404:
+            fallback = httpx.get(f"{config.server_url}/auth/me", headers=headers, timeout=10.0, verify=verify)
+            if fallback.status_code != 404:
+                print("[FAIL] server_url points at the bare API (no /api prefix). Log shipping would 404.")
+                print("       Use the LogNog web address instead, e.g. https://logs.example.com")
+                return 1
         if response.status_code == 200:
             user = response.json()
             print(f"[OK] Authenticated as: {user.get('username', 'unknown')}")

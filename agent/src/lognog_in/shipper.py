@@ -491,6 +491,18 @@ class HTTPShipper:
                 self._last_error = "Authentication failed"
                 # Auth issue - keep events buffered and retry once configured.
                 return SendResult.TRANSIENT
+            elif status == 404:
+                # The endpoint isn't there: server_url points at the wrong place
+                # (e.g. the bare API port, which has no /api prefix — go through
+                # the LogNog web address). That's a configuration problem, not a
+                # bad batch: keep the events and say so.
+                logger.error(
+                    f"Ingest endpoint not found (404) at {url} — check server_url "
+                    "(use the LogNog web address, e.g. https://logs.example.com)"
+                )
+                self.status = ConnectionStatus.ERROR
+                self._last_error = "HTTP 404: ingest endpoint not found — check server_url"
+                return SendResult.TRANSIENT
             elif status in (408, 429) or status >= 500:
                 # Timeout / rate-limit / server error - transient, safe to retry.
                 logger.error(f"Server returned {status}: {response.text}")

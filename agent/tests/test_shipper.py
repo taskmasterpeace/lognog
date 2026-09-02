@@ -62,7 +62,7 @@ class TestSendBatchClassification:
         result = asyncio.run(shipper._send_batch(client, batch))
         assert result == SendResult.SUCCESS
 
-    @pytest.mark.parametrize("status", [400, 413, 422, 404])
+    @pytest.mark.parametrize("status", [400, 413, 422, 410])
     def test_4xx_is_permanent(self, tmp_path: Path, status: int):
         shipper, buffer = _shipper(tmp_path)
         client = FakeClient(status)
@@ -70,7 +70,7 @@ class TestSendBatchClassification:
         result = asyncio.run(shipper._send_batch(client, batch))
         assert result == SendResult.PERMANENT
 
-    @pytest.mark.parametrize("status", [408, 429, 500, 502, 503])
+    @pytest.mark.parametrize("status", [404, 408, 429, 500, 502, 503])
     def test_retryable_is_transient(self, tmp_path: Path, status: int):
         shipper, buffer = _shipper(tmp_path)
         client = FakeClient(status)

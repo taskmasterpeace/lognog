@@ -87,6 +87,20 @@ class TestSendBatchWire:
         assert shipper.get_stats()["bytes_sent"] == len(req["content"])
 
 
+class TestWrongUrl:
+    def test_404_keeps_events_and_explains(self, tmp_path: Path):
+        """A 404 is a wrong server_url, not a poison batch: never drop on it."""
+        buffer = EventBuffer(tmp_path / "b.db")
+        shipper = HTTPShipper(Config(api_key="k", server_url="http://srv:4000"), buffer)
+        buffer.add_log_event(_event(1))
+        batch = buffer.get_batch(10)
+        result = asyncio.run(shipper._send_batch(CapturingClient(404), batch))
+        assert result == SendResult.TRANSIENT
+        shipper._handle_batch_result(batch, result)
+        assert buffer.count() == 1
+        assert "server_url" in shipper.get_stats()["last_error"]
+
+
 class TestPacing:
     def test_full_batch_drains_immediately(self, tmp_path: Path):
         shipper = HTTPShipper(Config(api_key="k", batch_size=10, batch_interval_seconds=5.0), EventBuffer(tmp_path / "b.db"))
