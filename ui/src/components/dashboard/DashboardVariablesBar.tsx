@@ -100,17 +100,24 @@ function VariableDropdown({
   const [isOpen, setIsOpen] = useState(false);
   const [options, setOptions] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  // Which resolver produced the current options; a new resolver (time range
+  // changed) or a fresh open after an empty result triggers one re-fetch —
+  // never a loop on "still empty".
+  const [loadedWith, setLoadedWith] = useState<typeof getOptions | null>(null);
 
   useEffect(() => {
-    if (isOpen && options.length === 0) {
-      setLoading(true);
-      getOptions(variable.id)
-        .then(setOptions)
-        .catch(() => setOptions([]))
-        .finally(() => setLoading(false));
-    }
-  }, [isOpen, variable.id, getOptions, options.length]);
+    if (!isOpen || loading || loadedWith === getOptions) return;
+    let cancelled = false;
+    setLoading(true);
+    setLoadError(null);
+    getOptions(variable.id)
+      .then((opts) => { if (!cancelled) setOptions(opts); })
+      .catch((err) => { if (!cancelled) { setOptions([]); setLoadError(err instanceof Error ? err.message : 'Failed to load options'); } })
+      .finally(() => { if (!cancelled) { setLoading(false); setLoadedWith(() => getOptions); } });
+    return () => { cancelled = true; };
+  }, [isOpen, variable.id, getOptions, loading, loadedWith]);
 
   const handleSelect = (option: string) => {
     if (variable.multi_select) {
@@ -203,8 +210,12 @@ function VariableDropdown({
             <div className="max-h-48 overflow-y-auto">
               {loading ? (
                 <div className="p-3 text-center text-sm text-nog-500">Loading...</div>
+              ) : loadError ? (
+                <div className="p-3 text-center text-sm text-red-600 dark:text-red-400">{loadError}</div>
               ) : filteredOptions.length === 0 ? (
-                <div className="p-3 text-center text-sm text-nog-500">No options</div>
+                <div className="p-3 text-center text-sm text-nog-500">
+                  {options.length === 0 && variable.type === 'query' ? 'Query returned no values for this time range' : 'No options'}
+                </div>
               ) : (
                 <>
                   {variable.include_all && (

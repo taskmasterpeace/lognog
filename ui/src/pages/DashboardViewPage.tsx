@@ -52,6 +52,10 @@ import {
   deleteDashboardPanel,
   updateDashboardLayout,
   getDashboardVariables,
+  getDashboardVariableOptions,
+  previewDashboardVariableOptions,
+  updateDashboardVariable,
+  deleteDashboardVariable,
   exportDashboard,
   duplicateDashboard,
   createDashboardPage,
@@ -837,6 +841,7 @@ export default function DashboardViewPage() {
   const [showBrandingModal, setShowBrandingModal] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [showVariableEditor, setShowVariableEditor] = useState(false);
+  const [editingVariable, setEditingVariable] = useState<APIDashboardVariable | null>(null);
   const [variableValues, setVariableValues] = useState<Record<string, string>>({});
   const [showActionsDropdown, setShowActionsDropdown] = useState(false);
   const [selectedPageId, setSelectedPageId] = useState<string | null>(null);
@@ -881,11 +886,21 @@ export default function DashboardViewPage() {
       type: v.type as DashboardVariable['type'],
       default_value: v.default_value,
       query: v.query,
-      options: v.type === 'custom' && v.default_value ? v.default_value.split(',') : undefined,
-      multi_select: v.multi_select ?? false,
-      include_all: v.include_all ?? false,
+      options: v.type === 'custom'
+        ? Array.from(new Set((v.custom_values || v.default_value || '').split(/[\n,]/).map((s) => s.trim()).filter(Boolean)))
+        : undefined,
+      multi_select: !!v.multi_select,
+      include_all: !!v.include_all,
     }));
   }, [variables]);
+
+  // Dropdown options come from the API (query variables run their search over
+  // the dashboard's current time range). Stable identity matters: the bar
+  // re-fetches when this callback changes.
+  const getVariableOptions = useCallback(
+    (variableId: string) => getDashboardVariableOptions(id!, variableId, { earliest: timeRange, latest: timeRangeLatest }),
+    [id, timeRange, timeRangeLatest]
+  );
 
   // Initialize variable values from defaults
   useEffect(() => {
@@ -900,14 +915,34 @@ export default function DashboardViewPage() {
     }
   }, [dashboardVariables]);
 
-  // Function to substitute variables in query
+  // Substitute `$name$` tokens in a panel query.
+  //
+  // Multi-select values arrive comma-joined and "All" arrives as `*`, neither
+  // of which can be dropped into `field=$name$` verbatim (`hostname=a,b` is a
+  // parse error). When the token is the right-hand side of `field=`:
+  //   - `*` / empty      -> the clause is removed (no filter)
+  //   - several values   -> `field IN ("a", "b")`
+  //   - one value        -> `field="a"`
+  // Bare tokens elsewhere get the raw value.
   const substituteVariables = useCallback((query: string): string => {
+    const quote = (v: string) => `"${v.replace(/"/g, '\\"')}"`;
     let result = query;
-    Object.entries(variableValues).forEach(([name, value]) => {
-      result = result.replace(new RegExp(`\\$${name}\\$`, 'g'), value);
-    });
+    for (const variable of dashboardVariables) {
+      const name = variable.name;
+      const raw = variableValues[name] ?? variable.default_value ?? '';
+      const values = raw.split(',').map((s) => s.trim()).filter(Boolean);
+      const isAll = raw === '*' || values.includes('*') || values.length === 0;
+      const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+      result = result.replace(new RegExp(`(\\w+)\\s*=\\s*\\$${escaped}\\$`, 'g'), (_m, field: string) => {
+        if (isAll) return '*';
+        if (values.length > 1) return `${field} IN (${values.map(quote).join(', ')})`;
+        return `${field}=${quote(values[0])}`;
+      });
+      result = result.replace(new RegExp(`\\$${escaped}\\$`, 'g'), isAll ? '*' : values.join(','));
+    }
     return result;
-  }, [variableValues]);
+  }, [variableValues, dashboardVariables]);
 
   const createPanelMutation = useMutation({
     mutationFn: (data: { title: string; query: string; visualization: string }) =>
@@ -1536,11 +1571,19 @@ export default function DashboardViewPage() {
       />
 
       {/* Variables Bar */}
-      {dashboardVariables.length > 0 && (
+      {(dashboardVariables.length > 0 || editMode) && (
         <DashboardVariablesBar
           variables={dashboardVariables}
           values={variableValues}
           onChange={setVariableValues}
+          getOptions={getVariableOptions}
+          editMode={editMode}
+          onAddVariable={() => { setEditingVariable(null); setShowVariableEditor(true); }}
+          onEditVariable={(v) => {
+            const apiVariable = variables.find((x: APIDashboardVariable) => x.id === v.id) || null;
+            setEditingVariable(apiVariable);
+            setShowVariableEditor(true);
+          }}
         />
       )}
 
@@ -1794,15 +1837,51 @@ export default function DashboardViewPage() {
       {/* Variable Editor Modal */}
       {showVariableEditor && (
         <VariableEditorModal
-          onCancel={() => setShowVariableEditor(false)}
-          onSave={async (data) => {
-            await authFetch(`/dashboards/${id}/variables`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(data),
+          variable={editingVariable ? {
+            id: editingVariable.id,
+            name: editingVariable.name,
+            label: editingVariable.label,
+            type: editingVariable.type,
+            query: editingVariable.query,
+            custom_values: editingVariable.custom_values,
+            default_value: editingVariable.default_value,
+            multi_select: !!editingVariable.multi_select,
+            include_all: !!editingVariable.include_all,
+          } : undefined}
+          onCancel={() => { setShowVariableEditor(false); setEditingVariable(null); }}
+          onTest={(query) => previewDashboardVariableOptions(id!, query)}
+          onDelete={editingVariable ? async () => {
+            const ok = await confirm({
+              title: 'Delete Variable',
+              message: `Delete "$${editingVariable.name}$"? Panels still referencing it will run with the token unreplaced.`,
+              confirmText: 'Delete',
+              cancelText: 'Cancel',
+              variant: 'danger',
             });
+            if (!ok) return;
+            await deleteDashboardVariable(id!, editingVariable.id);
+            setVariableValues((prev) => { const next = { ...prev }; delete next[editingVariable.name]; return next; });
             queryClient.invalidateQueries({ queryKey: ['dashboard-variables', id] });
             setShowVariableEditor(false);
+            setEditingVariable(null);
+          } : undefined}
+          onSave={async (data) => {
+            try {
+              if (editingVariable) {
+                await updateDashboardVariable(id!, editingVariable.id, data);
+              } else {
+                await authFetch(`/dashboards/${id}/variables`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(data),
+                });
+              }
+              queryClient.invalidateQueries({ queryKey: ['dashboard-variables', id] });
+              setShowVariableEditor(false);
+              setEditingVariable(null);
+            } catch (err) {
+              toast.error('Variable Not Saved', err instanceof Error ? err.message : 'Unknown error');
+            }
           }}
         />
       )}

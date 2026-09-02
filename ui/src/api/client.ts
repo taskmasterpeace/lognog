@@ -1327,6 +1327,8 @@ export interface DashboardVariable {
   label?: string;
   type: 'query' | 'custom' | 'textbox' | 'interval';
   query?: string;
+  /** For `custom` variables: the value list, one per line (or comma-separated). */
+  custom_values?: string;
   default_value?: string;
   multi_select: boolean;
   include_all: boolean;
@@ -1335,6 +1337,28 @@ export interface DashboardVariable {
 
 export async function getDashboardVariables(dashboardId: string): Promise<DashboardVariable[]> {
   return request(`/dashboards/${dashboardId}/variables`);
+}
+
+/** Resolve a saved variable's dropdown options (runs its query for `query` variables). */
+export async function getDashboardVariableOptions(
+  dashboardId: string,
+  variableId: string,
+  range?: { earliest?: string; latest?: string }
+): Promise<string[]> {
+  const res = await request<{ options: string[] }>(`/dashboards/${dashboardId}/variables/${variableId}/options`, {
+    method: 'POST',
+    body: JSON.stringify(range ?? {}),
+  });
+  return res.options;
+}
+
+/** Preview the options an unsaved variable query would produce. */
+export async function previewDashboardVariableOptions(dashboardId: string, query: string): Promise<string[]> {
+  const res = await request<{ options: string[] }>(`/dashboards/${dashboardId}/variables/preview-options`, {
+    method: 'POST',
+    body: JSON.stringify({ query }),
+  });
+  return res.options;
 }
 
 export async function createDashboardVariable(

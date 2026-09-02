@@ -24,6 +24,7 @@ import {
   getDashboardByToken,
   updatePanelPositions,
   getDashboardVariables,
+  getDashboardVariable,
   createDashboardVariable,
   updateDashboardVariable,
   deleteDashboardVariable,
@@ -58,6 +59,53 @@ const router = Router();
 function presentDashboard<T extends { public_password?: string | null }>(d: T): Omit<T, 'public_password'> & { has_password: boolean } {
   const { public_password, ...rest } = d;
   return { ...rest, has_password: !!public_password };
+}
+
+// ---- Dashboard variables ----
+//
+// The `query` column doubles as the value list for `custom` variables (one
+// value per line). API clients see it as `custom_values`; the DSL query only
+// for `query` variables.
+const INTERVAL_OPTIONS = ['1m', '5m', '15m', '30m', '1h', '4h', '12h', '1d', '7d'];
+const MAX_VARIABLE_OPTIONS = 500;
+
+function splitCustomValues(raw: string | null | undefined): string[] {
+  if (!raw) return [];
+  return Array.from(new Set(raw.split(/[\n,]/).map(v => v.trim()).filter(Boolean)));
+}
+
+function variableSource(type: string | undefined, query: unknown, customValues: unknown): string | undefined {
+  if (type === 'custom') return typeof customValues === 'string' ? customValues : (typeof query === 'string' ? query : '');
+  if (type === 'query') return typeof query === 'string' ? query : '';
+  if (type === undefined) return typeof query === 'string' ? query : undefined;
+  return '';
+}
+
+function presentVariable<T extends { type: string; query?: string | null }>(v: T): T & { custom_values: string } {
+  return { ...v, custom_values: v.type === 'custom' ? (v.query || '') : '' };
+}
+
+async function resolveVariableOptions(
+  type: string,
+  source: string | null | undefined,
+  opts: { earliest: string; latest: string; allowedIndexes?: string[] }
+): Promise<string[]> {
+  if (type === 'custom') return splitCustomValues(source);
+  if (type === 'interval') return INTERVAL_OPTIONS;
+  if (type !== 'query' || !source) return [];
+
+  const { results } = await executeDSLQuery(source, opts);
+  const rows = results as Record<string, unknown>[];
+  if (rows.length === 0) return [];
+  const column = Object.keys(rows[0])[0];
+  const seen = new Set<string>();
+  for (const row of rows) {
+    const value = row[column];
+    if (value === null || value === undefined || value === '') continue;
+    seen.add(String(value));
+    if (seen.size >= MAX_VARIABLE_OPTIONS) break;
+  }
+  return Array.from(seen);
 }
 
 // #35 CARVE-OUT: public dashboard viewing by share token must stay reachable
@@ -774,10 +822,53 @@ router.get('/:id/variables', (req: Request, res: Response) => {
     }
 
     const variables = getDashboardVariables(req.params.id);
-    return res.json(variables);
+    return res.json(variables.map(presentVariable));
   } catch (error) {
     console.error('Error fetching variables:', error);
     return res.status(500).json({ error: 'Failed to fetch variables' });
+  }
+});
+
+// Resolve the dropdown options for a variable. Query variables run their
+// search and take the first column; custom variables split their stored
+// list; interval variables are a fixed set. Previously nothing populated
+// dropdowns at all (the editor's custom values were discarded and query
+// variables were never executed), so every variable was a plain textbox.
+router.post('/:id/variables/:varId/options', async (req: Request, res: Response) => {
+  try {
+    const variable = getDashboardVariable(req.params.varId);
+    if (!variable || variable.dashboard_id !== req.params.id) {
+      return res.status(404).json({ error: 'Variable not found' });
+    }
+    const { earliest = '-24h', latest = 'now' } = req.body ?? {};
+    const options = await resolveVariableOptions(variable.type, variable.query, {
+      earliest: String(earliest),
+      latest: String(latest),
+      allowedIndexes: req.allowedIndexes ?? undefined,
+    });
+    return res.json({ options });
+  } catch (error) {
+    console.error('Error resolving variable options:', error);
+    return res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to resolve options' });
+  }
+});
+
+// Preview options for a not-yet-saved query (the editor's "Test Query").
+router.post('/:id/variables/preview-options', async (req: Request, res: Response) => {
+  try {
+    const { query, earliest = '-24h', latest = 'now' } = req.body ?? {};
+    if (!query || typeof query !== 'string') {
+      return res.status(400).json({ error: 'query is required' });
+    }
+    const options = await resolveVariableOptions('query', query, {
+      earliest: String(earliest),
+      latest: String(latest),
+      allowedIndexes: req.allowedIndexes ?? undefined,
+    });
+    return res.json({ options });
+  } catch (error) {
+    console.error('Error previewing variable options:', error);
+    return res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to run query' });
   }
 });
 
@@ -789,7 +880,7 @@ router.post('/:id/variables', (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Dashboard not found' });
     }
 
-    const { name, label, type, query, default_value, multi_select, include_all, sort_order } = req.body;
+    const { name, label, type, query, custom_values, default_value, multi_select, include_all, sort_order } = req.body;
 
     if (!name) {
       return res.status(400).json({ error: 'Name is required' });
@@ -805,14 +896,14 @@ router.post('/:id/variables', (req: Request, res: Response) => {
     const variable = createDashboardVariable(req.params.id, name, {
       label,
       type,
-      query,
+      query: variableSource(type, query, custom_values),
       default_value,
       multi_select,
       include_all,
       sort_order,
     });
 
-    return res.status(201).json(variable);
+    return res.status(201).json(presentVariable(variable));
   } catch (error) {
     console.error('Error creating variable:', error);
     return res.status(500).json({ error: 'Failed to create variable' });
@@ -822,13 +913,15 @@ router.post('/:id/variables', (req: Request, res: Response) => {
 // Update dashboard variable
 router.put('/:id/variables/:varId', (req: Request, res: Response) => {
   try {
-    const { name, label, type, query, default_value, multi_select, include_all, sort_order } = req.body;
+    const { name, label, type, query, custom_values, default_value, multi_select, include_all, sort_order } = req.body;
 
     const variable = updateDashboardVariable(req.params.varId, {
       name,
       label,
       type,
-      query,
+      query: type !== undefined || query !== undefined || custom_values !== undefined
+        ? variableSource(type, query, custom_values)
+        : undefined,
       default_value,
       multi_select,
       include_all,
@@ -839,7 +932,7 @@ router.put('/:id/variables/:varId', (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Variable not found' });
     }
 
-    return res.json(variable);
+    return res.json(presentVariable(variable));
   } catch (error) {
     console.error('Error updating variable:', error);
     return res.status(500).json({ error: 'Failed to update variable' });

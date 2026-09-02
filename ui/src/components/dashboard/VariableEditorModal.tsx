@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Variable, Play, Loader2 } from 'lucide-react';
+import { X, Variable, Play, Loader2, Trash2 } from 'lucide-react';
 
 interface VariableFormData {
   name: string;
@@ -19,11 +19,13 @@ interface VariableEditorModalProps {
     label?: string;
     type: 'query' | 'custom' | 'textbox' | 'interval';
     query?: string;
+    custom_values?: string;
     default_value?: string;
     multi_select: boolean;
     include_all: boolean;
   };
   onSave: (data: VariableFormData) => void;
+  onDelete?: () => void;
   onCancel: () => void;
   onTest?: (query: string) => Promise<string[]>;
   saving?: boolean;
@@ -32,6 +34,7 @@ interface VariableEditorModalProps {
 export function VariableEditorModal({
   variable,
   onSave,
+  onDelete,
   onCancel,
   onTest,
   saving = false,
@@ -41,8 +44,12 @@ export function VariableEditorModal({
   const [type, setType] = useState<'query' | 'custom' | 'textbox' | 'interval'>(
     variable?.type || 'query'
   );
-  const [query, setQuery] = useState(variable?.query || 'search * | stats count by hostname | table hostname');
-  const [customValues, setCustomValues] = useState('');
+  const [query, setQuery] = useState(
+    variable?.type === 'query' && variable.query
+      ? variable.query
+      : 'search * | stats count by hostname | table hostname'
+  );
+  const [customValues, setCustomValues] = useState(variable?.custom_values || '');
   const [defaultValue, setDefaultValue] = useState(variable?.default_value || '');
   const [multiSelect, setMultiSelect] = useState(variable?.multi_select || false);
   const [includeAll, setIncludeAll] = useState(variable?.include_all || false);
@@ -51,6 +58,8 @@ export function VariableEditorModal({
   const [testResults, setTestResults] = useState<string[]>([]);
   const [testError, setTestError] = useState<string | null>(null);
 
+  const token = `$${name || 'name'}$`;
+
   const handleTest = async () => {
     if (!onTest) return;
     setTesting(true);
@@ -58,8 +67,9 @@ export function VariableEditorModal({
     try {
       const results = await onTest(query);
       setTestResults(results);
+      if (results.length === 0) setTestError('Query ran but returned no values in the last 24 hours.');
     } catch (err) {
-      setTestError(String(err));
+      setTestError(err instanceof Error ? err.message : String(err));
       setTestResults([]);
     } finally {
       setTesting(false);
@@ -112,7 +122,9 @@ export function VariableEditorModal({
                 placeholder="hostname"
                 className="input font-mono"
               />
-              <p className="text-xs text-nog-500 mt-1">Use in queries as ${`{${name || 'name'}}`}</p>
+              <p className="text-xs text-nog-500 mt-1">
+                Use in panel queries as <code className="font-mono">{token}</code>, e.g. <code className="font-mono">hostname={token}</code>
+              </p>
             </div>
             <div>
               <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">
@@ -169,7 +181,7 @@ export function VariableEditorModal({
                 className="input font-mono text-sm resize-none"
               />
               <p className="text-xs text-nog-500 mt-1">
-                Query should return a single column with the values for the dropdown
+                The first column of the result becomes the dropdown values (last 24 hours).
               </p>
 
               {/* Test Query Button */}
@@ -239,7 +251,7 @@ export function VariableEditorModal({
           {type === 'interval' && (
             <div className="p-3 bg-nog-50 dark:bg-nog-800 rounded-lg">
               <p className="text-sm text-nog-600 dark:text-nog-400">
-                Interval variables provide time span options: 1m, 5m, 15m, 1h, 4h, 1d
+                Interval variables offer time spans (1m … 7d), e.g. for <code className="font-mono">bin _time span={token}</code>.
               </p>
             </div>
           )}
@@ -283,6 +295,12 @@ export function VariableEditorModal({
         </div>
 
         <div className="modal-footer">
+          {variable && onDelete && (
+            <button onClick={onDelete} className="btn-secondary text-red-600 dark:text-red-400 mr-auto" title="Delete variable">
+              <Trash2 className="w-4 h-4" />
+              Delete
+            </button>
+          )}
           <button onClick={onCancel} className="btn-secondary">
             Cancel
           </button>
