@@ -52,6 +52,7 @@ import {
   deleteDashboardPanel,
   updateDashboardLayout,
   getDashboardVariables,
+  getHealth,
   getDashboardVariableOptions,
   previewDashboardVariableOptions,
   updateDashboardVariable,
@@ -877,6 +878,19 @@ export default function DashboardViewPage() {
     enabled: !!id,
   });
 
+  // Backend health, polled while the dashboard is open. When the log store is
+  // down every panel would otherwise show the same opaque error and
+  // auto-refresh would keep hammering a dead database (and the rate limit).
+  const { data: health } = useQuery({
+    queryKey: ['health'],
+    queryFn: getHealth,
+    refetchInterval: 30_000,
+    retry: false,
+  });
+  const storeDown = !!health && health.services?.clickhouse !== 'ok';
+  const storeDownRef = useRef(false);
+  storeDownRef.current = storeDown;
+
   // Convert API variables to component format
   const dashboardVariables: DashboardVariable[] = useMemo(() => {
     return variables.map((v: APIDashboardVariable) => ({
@@ -1098,8 +1112,9 @@ export default function DashboardViewPage() {
       countdownIntervalRef.current = setInterval(() => {
         setCountdownSeconds((prev) => {
           if (prev <= 1) {
-            // Time to refresh
-            setRefreshKey((k) => k + 1);
+            // Time to refresh — unless the store is down, in which case wait
+            // for the next tick rather than refiring every panel into an error.
+            if (!storeDownRef.current) setRefreshKey((k) => k + 1);
             return totalSeconds; // Reset countdown
           }
           return prev - 1;
@@ -1569,6 +1584,20 @@ export default function DashboardViewPage() {
           </div>
         }
       />
+
+      {/* Log store outage banner */}
+      {storeDown && (
+        <div className="flex items-center gap-3 px-4 py-2 bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-800 text-sm text-red-700 dark:text-red-300">
+          <AlertCircle className="w-4 h-4 flex-shrink-0" />
+          <span>
+            <span className="font-medium">The log database is unreachable.</span>{' '}
+            Panels can't load right now; auto-refresh is paused until it recovers.
+          </span>
+          <button onClick={handleRefreshAll} className="ml-auto text-xs underline hover:no-underline">
+            Retry now
+          </button>
+        </div>
+      )}
 
       {/* Variables Bar */}
       {(dashboardVariables.length > 0 || editMode) && (

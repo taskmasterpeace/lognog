@@ -82,6 +82,10 @@ export default function DashboardStudioPage() {
   const editingId = searchParams.get('dashboard');
   const [editingName, setEditingName] = useState<string>('');
   const removedExistingIds = useRef<Set<string>>(new Set());
+  // Existing DB panel currently pulled into the editor; "Add to canvas" re-stages
+  // it under the same id so saving UPDATES it (keeping options/description/
+  // position) instead of deleting and recreating it.
+  const editingExistingId = useRef<string | null>(null);
 
   useEffect(() => {
     if (!editingId) return;
@@ -143,9 +147,11 @@ export default function DashboardStudioPage() {
 
   const addPanel = useCallback(() => {
     if (!hasRun) return;
+    const existingId = editingExistingId.current ?? undefined;
+    editingExistingId.current = null;
     setStaged((prev) => [
       ...prev,
-      { id: `stg-${++panelCounter}`, title: smartTitle(), query, visualization: viz },
+      { id: `stg-${++panelCounter}`, title: smartTitle(), query, visualization: viz, existingId },
     ]);
     setPanelTitle('');
     toast.success('Panel added', 'On the canvas to the right');
@@ -180,10 +186,14 @@ export default function DashboardStudioPage() {
   };
 
   const editPanel = (p: StagedPanel) => {
-    // Pull the panel OFF the canvas into the editor (marking any existing DB
-    // panel for replacement) so "Add to canvas" re-adds it once instead of
-    // leaving the original and creating a duplicate.
-    removePanel(p);
+    // Pull the panel OFF the canvas into the editor so "Add to canvas" re-adds
+    // it once instead of leaving the original and creating a duplicate. An
+    // existing DB panel keeps its identity (see editingExistingId); if the
+    // user abandons the edit, removing it from the canvas is the only way it
+    // gets deleted on save.
+    if (editingExistingId.current) removedExistingIds.current.add(editingExistingId.current);
+    editingExistingId.current = p.existingId ?? null;
+    setStaged((prev) => prev.filter((x) => x.id !== p.id));
     setQuery(p.query);
     setViz(p.visualization);
     setPanelTitle(p.title);
@@ -236,16 +246,33 @@ export default function DashboardStudioPage() {
         dashboardId = targetDashboard;
       }
 
+      // A panel still sitting in the editor when the user saves is gone from
+      // the canvas: treat it like a removal.
+      if (editingExistingId.current) {
+        removedExistingIds.current.add(editingExistingId.current);
+        editingExistingId.current = null;
+      }
+
       // Delete panels removed from the canvas (edit mode only).
       for (const id of removedExistingIds.current) {
         await deleteDashboardPanel(dashboardId, id).catch(() => null);
       }
 
-      // Lay panels out two-per-row; update existing, create new.
+      // New panels go below whatever the target dashboard already has, two per
+      // row, instead of at (0,0) on top of existing ones.
       let x = 0;
       let y = 0;
+      const stagedExisting = new Set(staged.map((p) => p.existingId).filter(Boolean));
+      try {
+        const target = await getDashboard(dashboardId);
+        for (const p of target.panels || []) {
+          if (removedExistingIds.current.has(p.id) || stagedExisting.has(p.id)) continue;
+          y = Math.max(y, (p.position_y ?? 0) + (p.height ?? 4));
+        }
+      } catch { /* fresh dashboard or transient error: start at the top */ }
+
       for (const p of staged) {
-        if (p.existingId && forcedDashboardId) {
+        if (p.existingId) {
           await updateDashboardPanel(dashboardId, p.existingId, {
             title: p.title,
             query: p.query,
