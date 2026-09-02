@@ -75,6 +75,9 @@ services:
         required: false
     environment:
       NODE_ENV: production
+      # Pin the store: api/.env is also used for local Lite development and
+      # may carry LOGNOG_BACKEND=sqlite, which must never reach production.
+      LOGNOG_BACKEND: clickhouse
       CLICKHOUSE_HOST: clickhouse
       CLICKHOUSE_PORT: 8123
       CLICKHOUSE_USER: lognog
