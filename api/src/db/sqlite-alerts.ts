@@ -59,6 +59,8 @@ export interface Alert {
   trigger_mode?: AlertTriggerMode;  // 'once' (default) or 'per_result'
   throttle_fields?: string | null;  // Comma-separated fields whose values key per-result throttling
   custom_condition?: string | null; // Bare DSL condition over the results (trigger_type custom_condition)
+  owner_id?: string | null;         // User who created it (NULL = legacy, editable by all)
+  max_triggers?: number | null;     // Auto-disable after this many triggers (NULL = unlimited)
   created_at: string;
   updated_at: string;
 }
@@ -120,6 +122,8 @@ export function createAlert(
     trigger_mode?: AlertTriggerMode;
     throttle_fields?: string | null;
     custom_condition?: string | null;
+    owner_id?: string | null;
+    max_triggers?: number | null;
   } = {}
 ): Alert {
   const database = getSQLiteDB();
@@ -131,8 +135,9 @@ export function createAlert(
       trigger_type, trigger_condition, trigger_threshold,
       schedule_type, cron_expression, time_range,
       actions, throttle_enabled, throttle_window_seconds,
-      severity, enabled, app_scope, playbook, trigger_mode, throttle_fields, custom_condition
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      severity, enabled, app_scope, playbook, trigger_mode, throttle_fields, custom_condition,
+      owner_id, max_triggers
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
     name,
@@ -153,7 +158,9 @@ export function createAlert(
     options.playbook || null,
     options.trigger_mode === 'per_result' ? 'per_result' : 'once',
     options.throttle_fields || null,
-    options.custom_condition || null
+    options.custom_condition || null,
+    options.owner_id || null,
+    options.max_triggers && options.max_triggers > 0 ? Math.floor(options.max_triggers) : null
   );
 
   return getAlert(id)!;
@@ -187,6 +194,7 @@ export function updateAlert(
     trigger_mode?: AlertTriggerMode;
     throttle_fields?: string | null;
     custom_condition?: string | null;
+    max_triggers?: number | null;
   }
 ): Alert | undefined {
   const database = getSQLiteDB();
@@ -196,6 +204,10 @@ export function updateAlert(
   if (updates.name !== undefined) {
     fields.push('name = ?');
     values.push(updates.name);
+  }
+  if (updates.max_triggers !== undefined) {
+    fields.push('max_triggers = ?');
+    values.push(updates.max_triggers && updates.max_triggers > 0 ? Math.floor(updates.max_triggers) : null);
   }
   if (updates.custom_condition !== undefined) {
     fields.push('custom_condition = ?');

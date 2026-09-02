@@ -966,6 +966,7 @@ export async function evaluateAlert(alertId: string): Promise<{
     // (last_triggered and trigger_count were already updated atomically by
     // claimAlertTrigger above.) Mark the alert as fired so the list can show it.
     updateAlert(alertId, { last_status: 'triggered' });
+    disableIfExhausted(alertId);
 
     // Create agent notification (push to system tray) with variable substitution
     const alertMetadata = {
@@ -1060,6 +1061,18 @@ export async function evaluateAlert(alertId: string): Promise<{
 
 const PER_RESULT_MAX_ROWS = 50;
 
+// Fire-once / limited alerts: once trigger_count reaches max_triggers the
+// alert disables itself (a "Test Alert - Fire Once" in prod had been firing
+// every minute for weeks because no such concept existed).
+function disableIfExhausted(alertId: string): void {
+  const fresh = getAlert(alertId);
+  if (!fresh || !fresh.max_triggers) return;
+  if ((fresh.trigger_count || 0) >= fresh.max_triggers) {
+    updateAlert(alertId, { enabled: false });
+    console.log(`Alert "${fresh.name}" reached its trigger limit (${fresh.max_triggers}) and was disabled`);
+  }
+}
+
 // Throttle key for one result row: the values of the configured throttle
 // fields ("hostname=web-01|app_name=api"); with no fields configured, the
 // whole row identifies the result.
@@ -1125,6 +1138,7 @@ async function firePerResult(
 
   recordAlertFired(alert.id, nowIso, fired);
   updateAlert(alert.id, { last_status: 'triggered' });
+  disableIfExhausted(alert.id);
 
   createAgentNotification(
     alert.name,

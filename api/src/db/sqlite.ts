@@ -857,6 +857,14 @@ function initializeSchema(): void {
   if (!alertColumnNames.includes('custom_condition')) {
     database.exec("ALTER TABLE alerts ADD COLUMN custom_condition TEXT");
   }
+  // Ownership (edit/delete/run limited to owner or admin; NULL = legacy, open).
+  if (!alertColumnNames.includes('owner_id')) {
+    database.exec("ALTER TABLE alerts ADD COLUMN owner_id TEXT");
+  }
+  // Fire-once / limited alerts: disable after this many triggers (NULL = unlimited).
+  if (!alertColumnNames.includes('max_triggers')) {
+    database.exec("ALTER TABLE alerts ADD COLUMN max_triggers INTEGER");
+  }
   database.exec(`
     CREATE TABLE IF NOT EXISTS alert_throttle_keys (
       alert_id TEXT NOT NULL,
@@ -917,6 +925,14 @@ function initializeSchema(): void {
   // Explicit query window (e.g. '-24h', '-7d'); NULL = derive from the cron cadence.
   if (!reportColumnNames.includes('time_range')) {
     database.exec("ALTER TABLE scheduled_reports ADD COLUMN time_range TEXT");
+  }
+  if (!reportColumnNames.includes('owner_id')) {
+    database.exec("ALTER TABLE scheduled_reports ADD COLUMN owner_id TEXT");
+  }
+
+  const dashboardColumns = database.pragma('table_info(dashboards)') as Array<{ name: string }>;
+  if (!dashboardColumns.some((c) => c.name === 'owner_id')) {
+    database.exec("ALTER TABLE dashboards ADD COLUMN owner_id TEXT");
   }
 
   if (!ssColumnNames.includes('app_scope')) {

@@ -1687,27 +1687,38 @@ export default function DashboardViewPage() {
 
               {showActionsDropdown && (
                 <div className="dropdown right-0 w-48 animate-fade-in">
-                  <button
-                    onClick={() => { setEditMode(!editMode); setShowActionsDropdown(false); }}
-                    className="dropdown-item"
-                  >
-                    <Move className="w-4 h-4" />
-                    {editMode ? 'Exit Edit Mode' : 'Edit Layout'}
-                  </button>
-                  <button
-                    onClick={() => { setShowBrandingModal(true); setShowActionsDropdown(false); }}
-                    className="dropdown-item"
-                  >
-                    <Palette className="w-4 h-4" />
-                    Branding
-                  </button>
-                  <button
-                    onClick={() => { setShowShareModal(true); setShowActionsDropdown(false); }}
-                    className="dropdown-item"
-                  >
-                    <Share2 className="w-4 h-4" />
-                    Share
-                  </button>
+                  {dashboard.is_owner === false && (
+                    <div className="px-3 py-2 text-xs text-nog-500 dark:text-nog-400 border-b border-nog-100 dark:border-nog-700">
+                      Owned by another user — view only. Duplicate it to make changes.
+                    </div>
+                  )}
+                  {dashboard.is_owner !== false && (
+                    <button
+                      onClick={() => { setEditMode(!editMode); setShowActionsDropdown(false); }}
+                      className="dropdown-item"
+                    >
+                      <Move className="w-4 h-4" />
+                      {editMode ? 'Exit Edit Mode' : 'Edit Layout'}
+                    </button>
+                  )}
+                  {dashboard.is_owner !== false && (
+                    <button
+                      onClick={() => { setShowBrandingModal(true); setShowActionsDropdown(false); }}
+                      className="dropdown-item"
+                    >
+                      <Palette className="w-4 h-4" />
+                      Branding
+                    </button>
+                  )}
+                  {dashboard.is_owner !== false && (
+                    <button
+                      onClick={() => { setShowShareModal(true); setShowActionsDropdown(false); }}
+                      className="dropdown-item"
+                    >
+                      <Share2 className="w-4 h-4" />
+                      Share
+                    </button>
+                  )}
                   <button
                     onClick={() => { handleExport(); setShowActionsDropdown(false); }}
                     className="dropdown-item"

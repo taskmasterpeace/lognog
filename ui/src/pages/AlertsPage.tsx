@@ -174,6 +174,7 @@ export default function AlertsPage() {
     throttle_window_seconds: 300,
     trigger_mode: 'once' as 'once' | 'per_result',
     throttle_fields: '',
+    max_triggers: null as number | null,
     actions: [] as AlertAction[],
   });
 
@@ -381,6 +382,7 @@ export default function AlertsPage() {
       throttle_window_seconds: 300,
       trigger_mode: 'once',
       throttle_fields: '',
+      max_triggers: null,
       actions: [],
     });
     setTestResult(null);
@@ -404,6 +406,7 @@ export default function AlertsPage() {
       throttle_window_seconds: alert.throttle_window_seconds,
       trigger_mode: alert.trigger_mode === 'per_result' ? 'per_result' : 'once',
       throttle_fields: alert.throttle_fields || '',
+      max_triggers: alert.max_triggers ?? null,
       actions: alert.actions,
     });
     setShowCreateModal(true);
@@ -716,10 +719,10 @@ export default function AlertsPage() {
                   <div className="flex items-center gap-1 sm:gap-2 ml-8 sm:ml-0 overflow-x-auto scrollbar-hide">
                     <button
                       onClick={() => evaluateMutation.mutate(alert.id)}
-                      disabled={evaluateMutation.isPending}
+                      disabled={evaluateMutation.isPending || alert.is_owner === false}
                       aria-label={`Run alert "${alert.name}" now`}
-                      className="p-1.5 sm:p-2 text-nog-400 hover:text-honey-500 hover:bg-honey-50 rounded-lg flex-shrink-0"
-                      title="Run Now"
+                      className="p-1.5 sm:p-2 text-nog-400 hover:text-honey-500 hover:bg-honey-50 rounded-lg flex-shrink-0 disabled:opacity-40 disabled:hover:bg-transparent"
+                      title={alert.is_owner === false ? 'Only the owner or an admin can run this alert' : 'Run Now'}
                     >
                       <Play className="w-4 h-4" />
                     </button>
@@ -733,8 +736,9 @@ export default function AlertsPage() {
                     />
                     <button
                       onClick={() => toggleMutation.mutate(alert.id)}
+                      disabled={alert.is_owner === false}
                       aria-label={alert.enabled ? `Disable alert "${alert.name}"` : `Enable alert "${alert.name}"`}
-                      className={`p-1.5 sm:p-2 rounded-lg flex-shrink-0 ${
+                      className={`p-1.5 sm:p-2 rounded-lg flex-shrink-0 disabled:opacity-40 ${
                         alert.enabled
                           ? 'text-green-500 hover:bg-green-50'
                           : 'text-nog-400 hover:bg-nog-100'
@@ -745,9 +749,10 @@ export default function AlertsPage() {
                     </button>
                     <button
                       onClick={() => handleEdit(alert)}
+                      disabled={alert.is_owner === false}
                       aria-label={`Edit alert "${alert.name}"`}
-                      className="p-1.5 sm:p-2 text-nog-400 hover:text-nog-600 hover:bg-nog-100 rounded-lg flex-shrink-0"
-                      title="Edit"
+                      className="p-1.5 sm:p-2 text-nog-400 hover:text-nog-600 hover:bg-nog-100 rounded-lg flex-shrink-0 disabled:opacity-40 disabled:hover:bg-transparent"
+                      title={alert.is_owner === false ? 'Only the owner or an admin can edit this alert' : 'Edit'}
                     >
                       <Settings className="w-4 h-4" />
                     </button>
@@ -767,9 +772,10 @@ export default function AlertsPage() {
                           });
                         }
                       }}
+                      disabled={alert.is_owner === false}
                       aria-label={`Delete alert "${alert.name}"`}
-                      className="p-1.5 sm:p-2 text-nog-400 hover:text-red-500 hover:bg-red-50 rounded-lg flex-shrink-0"
-                      title="Delete"
+                      className="p-1.5 sm:p-2 text-nog-400 hover:text-red-500 hover:bg-red-50 rounded-lg flex-shrink-0 disabled:opacity-40 disabled:hover:bg-transparent"
+                      title={alert.is_owner === false ? 'Only the owner or an admin can delete this alert' : 'Delete'}
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -1152,6 +1158,24 @@ export default function AlertsPage() {
                     </button>
                   ))}
                 </div>
+              </div>
+
+              {/* Fire once / limited */}
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  id="fire-once"
+                  checked={formData.max_triggers === 1}
+                  onChange={(e) => setFormData({ ...formData, max_triggers: e.target.checked ? 1 : null })}
+                  className="w-4 h-4 rounded border-nog-300"
+                />
+                <label htmlFor="fire-once" className="flex items-center gap-2 font-medium text-nog-900 dark:text-nog-100">
+                  Fire once, then disable
+                  <InfoTip
+                    content="For one-off checks: after the first trigger the alert switches itself off instead of firing on every schedule tick."
+                    placement="right"
+                  />
+                </label>
               </div>
 
               {/* Throttling */}

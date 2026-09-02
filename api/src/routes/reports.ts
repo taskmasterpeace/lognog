@@ -6,6 +6,7 @@ import { executeDSLQuery } from '../db/backend.js';
 import { renderHtml } from '../services/report-renderer.js';
 import { triggerReport } from '../services/scheduler.js';
 import { rateLimit, authenticate, denyReadonly } from '../auth/middleware.js';
+import { requireOwnerOrAdmin, withOwnership } from '../auth/ownership.js';
 import { getReportTemplates, getTemplateById, getTemplatesByCategory, getTemplateCategories } from '../data/report-templates.js';
 import { getAvailableReportTokens } from '../services/template-engine.js';
 
@@ -34,8 +35,20 @@ interface ScheduledReport {
   last_run: string | null;
   last_result_count?: number;
   app_scope?: string;
+  owner_id?: string | null;
   created_at: string;
   updated_at?: string;
+}
+
+function loadOwnedReport(req: Request, res: Response): ScheduledReport | null {
+  const db = getSQLiteDB();
+  const report = db.prepare('SELECT * FROM scheduled_reports WHERE id = ?').get(req.params.id) as ScheduledReport | undefined;
+  if (!report) {
+    res.status(404).json({ error: 'Report not found' });
+    return null;
+  }
+  if (!requireOwnerOrAdmin(req, res, report, 'report')) return null;
+  return report;
 }
 
 // ==================== Validation ====================
@@ -168,8 +181,8 @@ router.post('/from-template/:templateId', (req: Request, res: Response) => {
       INSERT INTO scheduled_reports (
         id, name, description, query, schedule, recipients, format,
         attachment_format, subject_template, message_template,
-        send_condition, condition_threshold, compare_offset, app_scope
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        send_condition, condition_threshold, compare_offset, app_scope, owner_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id,
       name,
@@ -184,7 +197,8 @@ router.post('/from-template/:templateId', (req: Request, res: Response) => {
       overrides.send_condition || template.send_condition,
       overrides.condition_threshold ?? template.condition_threshold ?? null,
       overrides.compare_offset || template.compare_offset || null,
-      app_scope
+      app_scope,
+      req.user?.id ?? null
     );
 
     const report = db.prepare('SELECT * FROM scheduled_reports WHERE id = ?').get(id);
@@ -226,7 +240,7 @@ router.get('/', (req: Request, res: Response) => {
     } else {
       reports = db.prepare('SELECT * FROM scheduled_reports ORDER BY created_at DESC').all() as ScheduledReport[];
     }
-    return res.json(reports);
+    return res.json(reports.map(r => withOwnership(req, r)));
   } catch (error) {
     console.error('Error fetching reports:', error);
     return res.status(500).json({ error: 'Failed to fetch reports' });
@@ -268,13 +282,13 @@ router.post('/', (req: Request, res: Response) => {
       INSERT INTO scheduled_reports (
         id, name, description, query, schedule, recipients, format,
         attachment_format, subject_template, message_template,
-        send_condition, condition_threshold, compare_offset, app_scope, time_range
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        send_condition, condition_threshold, compare_offset, app_scope, time_range, owner_id
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `).run(
       id, name, description || null, query, schedule, recipients, format,
       attachment_format, subject_template || null, message_template || null,
       send_condition, condition_threshold ?? null, compare_offset || null, app_scope,
-      time_range || null
+      time_range || null, req.user?.id ?? null
     );
 
     const report = db.prepare('SELECT * FROM scheduled_reports WHERE id = ?').get(id);
@@ -295,6 +309,7 @@ router.put('/:id', (req: Request, res: Response) => {
       enabled, app_scope, time_range
     } = req.body;
     const db = getSQLiteDB();
+    if (!loadOwnedReport(req, res)) return;
 
     const invalid = validateReportFields({ schedule, recipients, format, attachment_format, send_condition, time_range });
     if (invalid) {
@@ -344,6 +359,7 @@ router.put('/:id', (req: Request, res: Response) => {
 // Trigger a scheduled report manually (rate limited: 10/min - CPU intensive)
 router.post('/:id/trigger', rateLimit(10, 60000), async (req: Request, res: Response) => {
   try {
+    if (!loadOwnedReport(req, res)) return;
     // Report the real outcome: previously this returned "triggered
     // successfully" even when the send condition skipped it, SMTP wasn't
     // configured, or the query threw.
@@ -365,6 +381,7 @@ router.post('/:id/trigger', rateLimit(10, 60000), async (req: Request, res: Resp
 // Delete a scheduled report
 router.delete('/:id', (req: Request, res: Response) => {
   try {
+    if (!loadOwnedReport(req, res)) return;
     const db = getSQLiteDB();
     const result = db.prepare('DELETE FROM scheduled_reports WHERE id = ?').run(req.params.id);
     if (result.changes === 0) {

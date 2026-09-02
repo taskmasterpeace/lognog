@@ -203,6 +203,7 @@ export interface Dashboard {
   app_scope?: string;
   category?: string;
   project_id?: string;
+  owner_id?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -279,13 +280,14 @@ export function createDashboard(
   description?: string,
   appScope?: string,
   category?: string,
-  projectId?: string
+  projectId?: string,
+  ownerId?: string | null
 ): Dashboard {
   const database = getSQLiteDB();
   const id = uuidv4();
   database.prepare(
-    'INSERT INTO dashboards (id, name, description, app_scope, category, project_id) VALUES (?, ?, ?, ?, ?, ?)'
-  ).run(id, name, description || null, appScope || 'default', category || 'general', projectId || null);
+    'INSERT INTO dashboards (id, name, description, app_scope, category, project_id, owner_id) VALUES (?, ?, ?, ?, ?, ?, ?)'
+  ).run(id, name, description || null, appScope || 'default', category || 'general', projectId || null, ownerId || null);
   return getDashboard(id)!;
 }
 

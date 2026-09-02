@@ -217,6 +217,8 @@ export interface Dashboard {
   /** Whether a share password is set. The hash itself is never returned. */
   has_password?: boolean;
   public_expires_at?: string;
+  owner_id?: string | null;
+  is_owner?: boolean;
 }
 
 export interface DashboardPanel {
@@ -720,6 +722,8 @@ export interface ScheduledReport {
   condition_threshold?: number;
   /** Explicit query window ('-24h'); empty/null = derived from the schedule. */
   time_range?: string | null;
+  owner_id?: string | null;
+  is_owner?: boolean;
   enabled: number;
   last_run: string | null;
   last_result_count?: number | null;
@@ -1107,6 +1111,11 @@ export interface Alert {
   throttle_fields?: string | null;
   /** Bare DSL condition over the results for trigger_type 'custom_condition'. */
   custom_condition?: string | null;
+  /** Auto-disable after this many triggers (1 = fire once). */
+  max_triggers?: number | null;
+  owner_id?: string | null;
+  /** Whether the current user may edit/delete/run this (owner, admin, or legacy unowned). */
+  is_owner?: boolean;
   trigger_count: number;
   app_scope?: string;
   created_at: string;
@@ -1459,6 +1468,8 @@ export interface DashboardShareSettings {
   /** Whether a share password is set. The hash itself is never returned. */
   has_password?: boolean;
   public_expires_at?: string;
+  owner_id?: string | null;
+  is_owner?: boolean;
   public_url?: string;
 }
 

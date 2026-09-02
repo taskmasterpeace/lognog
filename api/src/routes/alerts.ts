@@ -25,6 +25,7 @@ import {
 } from '../db/sqlite.js';
 import { evaluateAlert, testAlert, evaluateAllAlerts, normalizeTriggerType } from '../services/alerts.js';
 import { validateDslCondition } from '../db/backend.js';
+import { requireOwnerOrAdmin, withOwnership } from '../auth/ownership.js';
 import { ALERT_TEMPLATES } from '../data/alert-templates.js';
 import { authenticate, denyReadonly } from '../auth/middleware.js';
 
@@ -98,7 +99,7 @@ router.get('/', (req: Request, res: Response) => {
     const appScope = req.query.app_scope as string | undefined;
     const alerts = getAlerts(false, appScope);
     // Parse actions JSON for each alert
-    const alertsWithParsedActions = alerts.map(alert => ({
+    const alertsWithParsedActions = alerts.map(alert => withOwnership(req, {
       ...alert,
       actions: safeJsonParse<AlertAction[]>(alert.actions, []),
     }));
@@ -257,10 +258,14 @@ router.post('/', (req: Request, res: Response) => {
       trigger_mode,
       throttle_fields,
       custom_condition,
+      max_triggers,
     } = req.body;
 
     if (!name || !search_query) {
       return res.status(400).json({ error: 'Name and search_query are required' });
+    }
+    if (schedule_type !== undefined && schedule_type !== 'cron') {
+      return res.status(400).json({ error: 'Only schedule_type "cron" is supported; real-time alerts are not implemented' });
     }
 
     const badCron = invalidCron(cron_expression);
@@ -294,6 +299,8 @@ router.post('/', (req: Request, res: Response) => {
       trigger_mode,
       throttle_fields,
       custom_condition,
+      max_triggers,
+      owner_id: req.user?.id ?? null,
     });
 
     res.status(201).json({
@@ -332,6 +339,7 @@ router.put('/:id', (req: Request, res: Response) => {
     if (!existing) {
       return res.status(404).json({ error: 'Alert not found' });
     }
+    if (!requireOwnerOrAdmin(req, res, existing, 'alert')) return;
 
     const {
       name,
@@ -352,7 +360,12 @@ router.put('/:id', (req: Request, res: Response) => {
       trigger_mode,
       throttle_fields,
       custom_condition,
+      max_triggers,
     } = req.body;
+
+    if (schedule_type !== undefined && schedule_type !== 'cron') {
+      return res.status(400).json({ error: 'Only schedule_type "cron" is supported; real-time alerts are not implemented' });
+    }
 
     const badCron = invalidCron(cron_expression);
     if (badCron) {
@@ -387,6 +400,7 @@ router.put('/:id', (req: Request, res: Response) => {
       trigger_mode,
       throttle_fields,
       custom_condition,
+      max_triggers,
     });
 
     if (!alert) {
@@ -406,6 +420,11 @@ router.put('/:id', (req: Request, res: Response) => {
 // Delete alert
 router.delete('/:id', (req: Request, res: Response) => {
   try {
+    const existing = getAlert(req.params.id);
+    if (!existing) {
+      return res.status(404).json({ error: 'Alert not found' });
+    }
+    if (!requireOwnerOrAdmin(req, res, existing, 'alert')) return;
     const deleted = deleteAlert(req.params.id);
     if (!deleted) {
       return res.status(404).json({ error: 'Alert not found' });
@@ -424,6 +443,7 @@ router.post('/:id/toggle', (req: Request, res: Response) => {
     if (!existing) {
       return res.status(404).json({ error: 'Alert not found' });
     }
+    if (!requireOwnerOrAdmin(req, res, existing, 'alert')) return;
 
     const alert = updateAlert(req.params.id, {
       enabled: !existing.enabled,
@@ -447,6 +467,11 @@ router.post('/:id/toggle', (req: Request, res: Response) => {
 // Manually trigger/evaluate an alert
 router.post('/:id/evaluate', async (req: Request, res: Response) => {
   try {
+    const existing = getAlert(req.params.id);
+    if (!existing) {
+      return res.status(404).json({ error: 'Alert not found' });
+    }
+    if (!requireOwnerOrAdmin(req, res, existing, 'alert')) return;
     const result = await evaluateAlert(req.params.id);
     res.json(result);
   } catch (error) {

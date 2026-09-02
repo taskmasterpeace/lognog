@@ -63,6 +63,25 @@ describe('per-result alerts', () => {
     expect(third.message).toMatch(/throttled/i);
   });
 
+  it('disables itself after max_triggers fires (fire-once)', async () => {
+    const alert = createAlert('fire once', 'search severity<=2', {
+      trigger_type: 'number_of_results',
+      trigger_condition: 'greater_than',
+      trigger_threshold: 0,
+      max_triggers: 1,
+      actions: [{ type: 'log', config: {} }],
+    });
+    mockExecuteDSLQuery.mockResolvedValue({ sql: 'SELECT 1', results: [{ hostname: 'web-01' }] });
+
+    const first = await evaluateAlert(alert.id);
+    expect(first.triggered).toBe(true);
+    expect(getAlert(alert.id)?.enabled).toBe(0);
+
+    const second = await evaluateAlert(alert.id);
+    expect(second.triggered).toBe(false);
+    expect(second.message).toMatch(/disabled/i);
+  });
+
   it('keeps the classic once-per-alert behaviour by default', async () => {
     const alert = createAlert('errors', 'search severity<=3', {
       trigger_type: 'number_of_results',

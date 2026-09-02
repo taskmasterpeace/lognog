@@ -429,9 +429,9 @@ export default function ReportsPage() {
                     <div className="flex items-center gap-1 flex-shrink-0">
                       <button
                         onClick={() => runNowMutation.mutate(report.id)}
-                        disabled={runNowMutation.isPending}
-                        className="p-1.5 sm:p-2 text-nog-400 hover:text-honey-600 hover:bg-honey-50 dark:hover:bg-honey-900/20 rounded-lg transition-colors disabled:opacity-50"
-                        title="Run now and send"
+                        disabled={runNowMutation.isPending || report.is_owner === false}
+                        className="p-1.5 sm:p-2 text-nog-400 hover:text-honey-600 hover:bg-honey-50 dark:hover:bg-honey-900/20 rounded-lg transition-colors disabled:opacity-40"
+                        title={report.is_owner === false ? 'Only the owner or an admin can run this report' : 'Run now and send'}
                         aria-label={`Run report "${report.name}" now`}
                       >
                         {runNowMutation.isPending && runNowMutation.variables === report.id
@@ -440,8 +440,9 @@ export default function ReportsPage() {
                       </button>
                       <button
                         onClick={() => openEditModal(report)}
-                        className="p-1.5 sm:p-2 text-nog-400 hover:text-nog-700 dark:hover:text-nog-200 hover:bg-nog-100 dark:hover:bg-nog-700 rounded-lg transition-colors"
-                        title="Edit"
+                        disabled={report.is_owner === false}
+                        className="p-1.5 sm:p-2 text-nog-400 hover:text-nog-700 dark:hover:text-nog-200 hover:bg-nog-100 dark:hover:bg-nog-700 rounded-lg transition-colors disabled:opacity-40"
+                        title={report.is_owner === false ? 'Only the owner or an admin can edit this report' : 'Edit'}
                         aria-label={`Edit report "${report.name}"`}
                       >
                         <Pencil className="w-4 h-4" />
@@ -456,7 +457,8 @@ export default function ReportsPage() {
                       </button>
                       <button
                         onClick={() => toggleMutation.mutate({ id: report.id, enabled: !report.enabled })}
-                        className={`p-1.5 sm:p-2 rounded-lg transition-colors ${
+                        disabled={report.is_owner === false}
+                        className={`p-1.5 sm:p-2 rounded-lg transition-colors disabled:opacity-40 ${
                           report.enabled
                             ? 'text-honey-600 dark:text-honey-400 bg-honey-50 dark:bg-honey-900/20 hover:bg-honey-100 dark:hover:bg-honey-900/40'
                             : 'text-nog-400 dark:text-nog-500 bg-nog-100 dark:bg-nog-700 hover:bg-nog-200 dark:hover:bg-nog-600'
@@ -467,8 +469,9 @@ export default function ReportsPage() {
                       </button>
                       <button
                         onClick={() => handleDelete(report)}
-                        className="p-1.5 sm:p-2 text-nog-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-                        title="Delete"
+                        disabled={report.is_owner === false}
+                        className="p-1.5 sm:p-2 text-nog-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors disabled:opacity-40"
+                        title={report.is_owner === false ? 'Only the owner or an admin can delete this report' : 'Delete'}
                         aria-label={`Delete report "${report.name}"`}
                       >
                         <Trash2 className="w-4 h-4" />

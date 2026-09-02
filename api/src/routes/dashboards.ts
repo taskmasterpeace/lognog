@@ -49,6 +49,7 @@ import {
   getProjects,
 } from '../db/sqlite.js';
 import { authenticate, denyReadonly, rateLimit } from '../auth/middleware.js';
+import { requireOwnerOrAdmin, withOwnership } from '../auth/ownership.js';
 import { executeDSLQuery } from '../db/backend.js';
 
 const router = Router();
@@ -222,6 +223,20 @@ router.post('/public/:token/query', rateLimit(60, 60000), async (req: Request, r
 router.use(authenticate);
 router.use(denyReadonly);
 
+// Ownership: any mutation of an existing dashboard (its panels, pages,
+// variables, share settings, branding, layout, logos …) is limited to the
+// owner or an admin. Applied once here rather than in 28 handlers; reads are
+// open to every authenticated user. Legacy dashboards with no owner stay
+// editable by everyone.
+router.use('/:id', (req: Request, res: Response, next) => {
+  if (req.method === 'GET') return next();
+  // Collection-level POSTs (e.g. /from-wizard, /import) are not dashboard ids.
+  const dashboard = getDashboard(req.params.id);
+  if (!dashboard) return next();
+  if (!requireOwnerOrAdmin(req, res, dashboard, 'dashboard')) return;
+  next();
+});
+
 // Get all available app scopes
 router.get('/app-scopes', (_req: Request, res: Response) => {
   try {
@@ -238,7 +253,7 @@ router.get('/', (req: Request, res: Response) => {
   try {
     const appScope = req.query.app_scope as string | undefined;
     const dashboards = getDashboards(appScope);
-    return res.json(dashboards.map(presentDashboard));
+    return res.json(dashboards.map(d => withOwnership(req, presentDashboard(d))));
   } catch (error) {
     console.error('Error fetching dashboards:', error);
     return res.status(500).json({ error: 'Failed to fetch dashboards' });
@@ -330,7 +345,7 @@ router.get('/:id', (req: Request, res: Response) => {
     const pages = getDashboardPages(req.params.id);
 
     return res.json({
-      ...presentDashboard(dashboard),
+      ...withOwnership(req, presentDashboard(dashboard)),
       panels: panels.map(p => ({
         ...p,
         options: safeJsonParse(p.options, {}),
@@ -352,8 +367,8 @@ router.post('/', (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Name is required' });
     }
 
-    const dashboard = createDashboard(name, description, app_scope, category, project_id);
-    return res.status(201).json(dashboard);
+    const dashboard = createDashboard(name, description, app_scope, category, project_id, req.user?.id ?? null);
+    return res.status(201).json(withOwnership(req, dashboard));
   } catch (error) {
     console.error('Error creating dashboard:', error);
     return res.status(500).json({ error: 'Failed to create dashboard' });
