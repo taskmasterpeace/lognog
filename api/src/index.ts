@@ -48,7 +48,7 @@ import { apiLogger } from './middleware/api-logger.js';
 import { csrfProtection } from './middleware/csrf.js';
 import { shutdown as shutdownInternalLogger, logError } from './services/internal-logger.js';
 import { startScheduler as startSyntheticScheduler } from './services/synthetic/index.js';
-import { executeDSLQuery } from './db/backend.js';
+import { executeDSLQuery, ingestSpoolStats } from './db/backend.js';
 import { seedBuiltinTemplates } from './data/builtin-templates.js';
 import { seedDashboardTemplates, seedSavedSearches } from './data/seed-templates.js';
 import { seedBuiltinCIMModels } from './data/builtin-cim-models.js';
@@ -77,6 +77,12 @@ app.use(apiLogger);  // Log all API requests for self-monitoring
 // Health check endpoint
 app.get('/health', async (_req, res) => {
   const clickhouseOk = await clickhouseHealth();
+  let spool: { batches: number; events: number; oldest: string | null } | undefined;
+  try {
+    spool = ingestSpoolStats();
+  } catch {
+    // Metadata DB unavailable — leave spool undefined rather than fail health.
+  }
 
   res.json({
     status: clickhouseOk ? 'healthy' : 'degraded',
@@ -85,6 +91,8 @@ app.get('/health', async (_req, res) => {
       api: 'ok',
       clickhouse: clickhouseOk ? 'ok' : 'error',
     },
+    // Events accepted but not yet in the store (replayed automatically).
+    ingest_spool: spool,
   });
 });
 

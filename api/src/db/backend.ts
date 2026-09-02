@@ -17,6 +17,7 @@ import { compileDSLToSQLite } from '../dsl/compiler-sqlite.js';
 import { logQueryExecution } from '../services/internal-logger.js';
 import { applyLookup } from '../services/lookup-tables.js';
 import { recordHeartbeats } from '../services/heartbeat.js';
+import { spoolBatch, takeSpooledBatches, deleteSpooledBatch, markSpoolAttempt, spoolStats } from './sqlite-ingest-spool.js';
 import type { ASTNode, LookupNode, Condition, SimpleCondition } from '../dsl/types.js';
 import { isLogicGroup } from '../dsl/types.js';
 import { indexScopeSqlClause } from '../auth/index-scope.js';
@@ -52,13 +53,40 @@ export function isLiteMode(): boolean {
 }
 
 /**
- * Insert logs into the configured backend
+ * Write straight to the configured log store. Throws on failure.
  */
-export async function insertLogs(logs: Record<string, unknown>[]): Promise<void> {
+async function insertLogsDirect(logs: Record<string, unknown>[]): Promise<void> {
   if (isLiteMode()) {
     await sqliteLogs.insertLogs(logs);
   } else {
     await clickhouse.insertLogs(logs);
+  }
+}
+
+/**
+ * Insert logs into the configured backend.
+ *
+ * If the store is unreachable the batch is spooled to SQLite and the call
+ * still resolves: the client's POST is acknowledged and the events are
+ * replayed by replayIngestSpool() once the store is back. (During the
+ * 2026-08-31 → 09-02 ClickHouse outage every HYH/DP batch got a 500 and was
+ * lost.) Only persistent-store failures are spooled; a batch the store
+ * itself rejects as malformed would fail again on replay, so those keep
+ * throwing when the store is otherwise healthy.
+ */
+export async function insertLogs(logs: Record<string, unknown>[]): Promise<{ spooled: boolean }> {
+  let spooled = false;
+  try {
+    await insertLogsDirect(logs);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (!isLiteMode() && looksLikeStoreOutage(message)) {
+      const { spooledId, dropped } = spoolBatch(logs, message);
+      console.warn(`[Ingest] Log store unreachable (${message}); spooled batch #${spooledId} (${logs.length} events)${dropped ? `, dropped ${dropped} oldest batches at cap` : ''}`);
+      spooled = true;
+    } else {
+      throw error;
+    }
   }
 
   // Phase 3: track presence cheaply for heartbeat / no-data monitoring.
@@ -68,6 +96,59 @@ export async function insertLogs(logs: Record<string, unknown>[]): Promise<void>
   } catch (error) {
     console.warn('[Heartbeat] recordHeartbeats threw from insertLogs:', error);
   }
+  return { spooled };
+}
+
+// Connection-level failures (refused, reset, DNS, timeouts, 5xx from a
+// restarting server) — as opposed to the store rejecting the data.
+function looksLikeStoreOutage(message: string): boolean {
+  return /ECONNREFUSED|ECONNRESET|ETIMEDOUT|EAI_AGAIN|ENOTFOUND|EHOSTUNREACH|socket hang up|fetch failed|timeout|Connection refused|status code 5\d\d|Code: 210|Code: 209|NETWORK_ERROR/i.test(message);
+}
+
+const REPLAY_BATCHES_PER_PASS = 50;
+let replaying = false;
+
+/**
+ * Replay spooled batches into the store, oldest first. Stops at the first
+ * failure (the store is presumably still down) and never overlaps itself.
+ * Returns how many batches/events made it.
+ */
+export async function replayIngestSpool(): Promise<{ batches: number; events: number; remaining: number }> {
+  if (replaying) return { batches: 0, events: 0, remaining: spoolStats().batches };
+  replaying = true;
+  let batches = 0;
+  let events = 0;
+  try {
+    const pending = takeSpooledBatches(REPLAY_BATCHES_PER_PASS);
+    for (const batch of pending) {
+      let logs: Record<string, unknown>[];
+      try {
+        logs = JSON.parse(batch.payload);
+      } catch {
+        deleteSpooledBatch(batch.id); // unreadable; nothing to replay
+        continue;
+      }
+      try {
+        await insertLogsDirect(logs);
+        deleteSpooledBatch(batch.id);
+        batches += 1;
+        events += logs.length;
+      } catch (error) {
+        markSpoolAttempt(batch.id, error instanceof Error ? error.message : String(error));
+        break; // store still down — try again next pass
+      }
+    }
+    if (batches > 0) {
+      console.log(`[Ingest] Replayed ${batches} spooled batches (${events} events)`);
+    }
+  } finally {
+    replaying = false;
+  }
+  return { batches, events, remaining: spoolStats().batches };
+}
+
+export function ingestSpoolStats(): { batches: number; events: number; oldest: string | null } {
+  return spoolStats();
 }
 
 /**

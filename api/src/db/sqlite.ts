@@ -865,6 +865,18 @@ function initializeSchema(): void {
       PRIMARY KEY (alert_id, key)
     )
   `);
+  // Ingest batches parked while the log store is unreachable (see
+  // db/sqlite-ingest-spool.ts); replayed by the scheduler.
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS ingest_spool (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      payload TEXT NOT NULL,
+      count INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL,
+      attempts INTEGER NOT NULL DEFAULT 0,
+      last_error TEXT
+    )
+  `);
 
   const reportColumns = database.pragma('table_info(scheduled_reports)') as Array<{ name: string }>;
   const reportColumnNames = reportColumns.map((col) => col.name);

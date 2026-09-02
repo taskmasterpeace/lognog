@@ -1,7 +1,7 @@
 import nodemailer from 'nodemailer';
 import * as cron from 'node-cron';
 import { getSQLiteDB, getAlerts, Alert, getScheduledSavedSearches, updateSavedSearchCache, updateSavedSearchError, cleanupExpiredSearchCache, SavedSearch, getSystemSetting, getProjectBySlug, pruneAlertThrottleKeys } from '../db/sqlite.js';
-import { executeDSLQuery } from '../db/backend.js';
+import { executeDSLQuery, replayIngestSpool } from '../db/backend.js';
 import { parseAndCompile } from '../dsl/index.js';
 import { evaluateAlert } from './alerts.js';
 import { logReportGenerated } from './internal-logger.js';
@@ -803,6 +803,12 @@ export function startScheduler(): void {
     // Fire-and-forget; the re-entrancy guard inside prevents overlap.
     void runSchedulerTick();
   }, 60 * 1000); // Check every minute
+
+  // Replay ingest batches spooled during a log-store outage. Cheap when the
+  // spool is empty (one COUNT), so it runs often to keep replay latency low.
+  setInterval(() => {
+    replayIngestSpool().catch((error) => console.error('[Ingest] Spool replay error:', error));
+  }, 15 * 1000);
 }
 
 // Manual trigger for testing
