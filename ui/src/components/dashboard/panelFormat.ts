@@ -61,7 +61,8 @@ export function readPanelFormat(options: unknown): PanelFormat {
       : undefined,
     unit: typeof f.unit === 'string' ? f.unit : undefined,
     decimals: num(f.decimals),
-    showTrend: f.showTrend === true,
+    // Tri-state: undefined = default (show trend when the data is a series).
+    showTrend: typeof f.showTrend === 'boolean' ? f.showTrend : undefined,
   };
 }
 

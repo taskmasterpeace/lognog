@@ -292,8 +292,16 @@ function PanelVisualization({
       const isSeries = results.length > 1 && !!timeKey && isNumericColumn(valueKey);
       if (isSeries && format.showTrend !== false) {
         const points = results.map((r) => Number(r[valueKey]) || 0);
-        const current = points[points.length - 1];
-        const previous = points.length > 1 ? points[points.length - 2] : undefined;
+        // The newest bucket is usually still filling (the current hour/day), so
+        // comparing it against a complete one reads as a phantom collapse.
+        // Compare the last two COMPLETE buckets instead when the newest bucket
+        // started less than one span ago.
+        const times = results.map((r) => new Date(String(r[timeKey!]).replace(' ', 'T')).getTime());
+        const span = times.length > 1 ? times[times.length - 1] - times[times.length - 2] : 0;
+        const lastIsPartial = span > 0 && Date.now() - times[times.length - 1] < span;
+        const endIdx = lastIsPartial && points.length > 2 ? points.length - 2 : points.length - 1;
+        const current = points[endIdx];
+        const previous = endIdx > 0 ? points[endIdx - 1] : undefined;
         return (
           <div className="h-full">
             <StatCard
@@ -306,7 +314,7 @@ function PanelVisualization({
               sparklineData={points}
               height={190}
               darkMode={isDarkMode}
-              trendLabel="vs previous"
+              trendLabel={lastIsPartial ? 'vs previous (last complete bucket)' : 'vs previous'}
               color="#C8862B"
             />
           </div>
@@ -1070,7 +1078,7 @@ export default function DashboardViewPage() {
     enabled: !!id,
   });
 
-  const { data: variables = [] } = useQuery({
+  const { data: variables = [], isFetched: variablesFetched } = useQuery({
     queryKey: ['dashboard-variables', id],
     queryFn: () => getDashboardVariables(id!),
     enabled: !!id,
@@ -1085,7 +1093,8 @@ export default function DashboardViewPage() {
     refetchInterval: 30_000,
     retry: false,
   });
-  const storeDown = !!health && health.services?.clickhouse !== 'ok';
+  // `store` is the configured log store (ClickHouse or SQLite); older APIs only report `clickhouse`.
+  const storeDown = !!health && (health.services?.store ?? health.services?.clickhouse) !== 'ok';
   const storeDownRef = useRef(false);
   storeDownRef.current = storeDown;
 
@@ -1153,6 +1162,9 @@ export default function DashboardViewPage() {
       });
       result = result.replace(new RegExp(`\\$${escaped}\\$`, 'g'), isAll ? '*' : values.join(','));
     }
+    // A token with no matching variable (deleted, or typo'd in the query)
+    // must never reach the parser as a literal `$`: treat it as "All".
+    result = result.replace(/(\w+)\s*=\s*\$[A-Za-z0-9_]+\$/g, '*').replace(/\$[A-Za-z0-9_]+\$/g, '*');
     return result;
   }, [variableValues, dashboardVariables]);
 
@@ -1282,13 +1294,16 @@ export default function DashboardViewPage() {
     ?.map((p) => `${p.id}:${p.query}`)
     .join('|');
   useEffect(() => {
-    if (dashboard?.panels) {
+    // Wait for the variable definitions: fetching before they arrive sent
+    // panel queries with literal `$host$` tokens (a 400 per panel, then a
+    // second, correct fetch once variables loaded).
+    if (dashboard?.panels && variablesFetched) {
       dashboard.panels.forEach((panel) => {
         fetchPanelData(panel);
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [panelQuerySignature, timeRange, timeRangeLatest, refreshKey, fetchPanelData, variableValues]);
+  }, [panelQuerySignature, timeRange, timeRangeLatest, refreshKey, fetchPanelData, variableValues, variablesFetched]);
 
   const handleRefreshAll = () => {
     setRefreshKey((k) => k + 1);

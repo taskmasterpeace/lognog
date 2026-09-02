@@ -860,7 +860,14 @@ export async function getAISuggestions(): Promise<{ suggestions: AISuggestion[] 
 }
 
 // Health API
-export async function getHealth(): Promise<{ status: string; services: Record<string, string> }> {
+export async function getHealth(): Promise<{
+  status: string;
+  /** Configured log store. */
+  backend?: 'clickhouse' | 'sqlite';
+  services: Record<string, string>;
+  ingest_spool?: { batches: number; events: number; oldest: string | null };
+  smtp?: 'configured' | 'missing';
+}> {
   return request('/health');
 }
 

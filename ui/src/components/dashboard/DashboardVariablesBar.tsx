@@ -57,7 +57,9 @@ export function DashboardVariablesBar({
   }
 
   return (
-    <div className="flex items-center gap-3 px-4 py-2 bg-nog-50 dark:bg-nog-800/50 border-b border-nog-200 dark:border-nog-700 overflow-x-auto">
+    // overflow must stay visible: the option popovers are absolutely positioned
+    // inside this bar and were clipped to a bare search box by overflow-x-auto.
+    <div className="flex flex-wrap items-center gap-3 px-4 py-2 bg-nog-50 dark:bg-nog-800/50 border-b border-nog-200 dark:border-nog-700 overflow-visible relative z-20">
       {variables.map((variable) => (
         <VariableDropdown
           key={variable.id}

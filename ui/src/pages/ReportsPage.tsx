@@ -36,6 +36,7 @@ import {
   triggerScheduledReport,
   getReportRuns,
   getReportRunHtml,
+  getHealth,
   generateReport,
   ScheduledReport,
   ReportRun,
@@ -219,6 +220,13 @@ export default function ReportsPage() {
   const { data: reports, isLoading, error } = useQuery({
     queryKey: ['scheduledReports', appScope],
     queryFn: () => getScheduledReports(appScope === 'all' ? undefined : appScope),
+  });
+
+  const { data: health } = useQuery({
+    queryKey: ['health'],
+    queryFn: getHealth,
+    staleTime: 60_000,
+    retry: false,
   });
 
   const createMutation = useMutation({
@@ -554,21 +562,23 @@ export default function ReportsPage() {
           )}
         </section>
 
-        {/* Info Section */}
-        <section className="card p-4 sm:p-6 bg-honey-50 border-honey-100 dark:bg-honey-900/20 dark:text-honey-200 dark:border-honey-800">
-          <div className="flex items-start gap-2 sm:gap-3">
-            <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-honey-600 dark:text-honey-400 mt-0.5 flex-shrink-0" />
-            <div>
-              <h3 className="font-semibold text-honey-900 dark:text-honey-200 mb-1 text-sm sm:text-base">Email Delivery</h3>
-              <p className="text-xs sm:text-sm text-honey-800 dark:text-honey-300">
-                Scheduled reports require SMTP configuration. Set these environment variables:
-              </p>
-              <code className="block mt-2 text-[10px] sm:text-xs bg-honey-100 dark:bg-honey-900/40 text-honey-900 dark:text-honey-200 p-2 rounded font-mono overflow-x-auto">
-                SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM
-              </code>
+        {/* Email delivery status (driven by the server, not assumed) */}
+        {health?.smtp === 'missing' && (
+          <section className="card p-4 sm:p-6 bg-honey-50 border-honey-100 dark:bg-honey-900/20 dark:text-honey-200 dark:border-honey-800">
+            <div className="flex items-start gap-2 sm:gap-3">
+              <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 text-honey-600 dark:text-honey-400 mt-0.5 flex-shrink-0" />
+              <div>
+                <h3 className="font-semibold text-honey-900 dark:text-honey-200 mb-1 text-sm sm:text-base">Email delivery is not configured</h3>
+                <p className="text-xs sm:text-sm text-honey-800 dark:text-honey-300">
+                  Scheduled reports will be generated (see Run history) but not emailed until the API has SMTP settings:
+                </p>
+                <code className="block mt-2 text-[10px] sm:text-xs bg-honey-100 dark:bg-honey-900/40 text-honey-900 dark:text-honey-200 p-2 rounded font-mono overflow-x-auto">
+                  SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM
+                </code>
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
       </div>
 
       {/* Create Schedule Modal */}

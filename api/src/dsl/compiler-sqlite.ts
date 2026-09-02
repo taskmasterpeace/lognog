@@ -160,6 +160,9 @@ export class SQLiteCompiler {
     let selectFields: string[] = [...DEFAULT_FIELDS];
     let whereConditions: string[] = [];
     let groupByFields: string[] = [];
+    // SELECT-side form of the group-by columns when it differs from the
+    // GROUP BY form (timechart needs `expr AS time_bucket` in SELECT only).
+    let groupBySelectFields: string[] | null = null;
     let orderByFields: string[] = [];
     let limitCount: number | null = null;
     let isAggregation = false;
@@ -271,21 +274,27 @@ export class SQLiteCompiler {
           selectFields.push(binField);
           break;
 
-        case 'timechart':
-          // Timechart is aggregation over time buckets
+        case 'timechart': {
+          // Timechart is aggregation over time buckets. The alias belongs in
+          // SELECT only — SQLite rejects `GROUP BY expr AS alias` (every Lite
+          // time-series panel/alert used to 500 with "near AS: syntax error").
           isAggregation = true;
-          const timeBucket = this.compileTimeBucket(stage.span);
+          const bucketExpr = this.timeBucketExpr(stage.span);
           aggregationSelect = this.compileStats({
             type: 'stats',
             aggregations: stage.aggregations,
             groupBy: []
           });
-          groupByFields = [timeBucket];
+          groupByFields = [bucketExpr];
+          groupBySelectFields = [`${bucketExpr} AS time_bucket`];
           if (stage.groupBy) {
-            groupByFields.push(this.mapFieldForSelect(stage.groupBy));
+            const splitBy = this.mapFieldForSelect(stage.groupBy);
+            groupByFields.push(splitBy);
+            groupBySelectFields.push(splitBy);
           }
-          orderByFields = [`${timeBucket} ASC`];
+          orderByFields = [`${bucketExpr} ASC`];
           break;
+        }
 
         case 'rex':
           // Rex extracts fields using regex - add to select
@@ -325,7 +334,7 @@ export class SQLiteCompiler {
     let sql = 'SELECT ';
 
     if (isAggregation) {
-      const allFields = [...groupByFields, ...aggregationSelect];
+      const allFields = [...(groupBySelectFields ?? groupByFields), ...aggregationSelect];
       sql += allFields.join(', ');
     } else {
       sql += selectFields.join(', ');
@@ -731,12 +740,18 @@ export class SQLiteCompiler {
     return this.compileTimeBucket(span.toString());
   }
 
+  /** Bucket expression WITH its SELECT alias (for `bin`/select lists). */
   private compileTimeBucket(span: string): string {
+    return `${this.timeBucketExpr(span)} AS time_bucket`;
+  }
+
+  /** Bare time-bucket expression, usable in SELECT, GROUP BY and ORDER BY. */
+  private timeBucketExpr(span: string): string {
     // Parse span like "1h", "5m", "1d"
     const match = span.match(/^(\d+)([smhd])$/i);
     if (!match) {
       // Default to 1 hour if invalid
-      return `strftime('%Y-%m-%d %H:00:00', timestamp) AS time_bucket`;
+      return `strftime('%Y-%m-%d %H:00:00', timestamp)`;
     }
 
     const value = parseInt(match[1], 10);
@@ -744,26 +759,26 @@ export class SQLiteCompiler {
 
     switch (unit) {
       case 's':
-        if (value === 1) return `strftime('%Y-%m-%d %H:%M:%S', timestamp) AS time_bucket`;
+        if (value === 1) return `strftime('%Y-%m-%d %H:%M:%S', timestamp)`;
         // Round to N seconds
-        return `datetime((unixepoch(timestamp) / ${value}) * ${value}, 'unixepoch') AS time_bucket`;
+        return `datetime((unixepoch(timestamp) / ${value}) * ${value}, 'unixepoch')`;
       case 'm':
-        if (value === 1) return `strftime('%Y-%m-%d %H:%M:00', timestamp) AS time_bucket`;
-        if (value === 5) return `strftime('%Y-%m-%d %H:' || (CAST(strftime('%M', timestamp) AS INTEGER) / 5) * 5 || ':00', timestamp) AS time_bucket`;
-        if (value === 10) return `strftime('%Y-%m-%d %H:' || (CAST(strftime('%M', timestamp) AS INTEGER) / 10) * 10 || ':00', timestamp) AS time_bucket`;
-        if (value === 15) return `strftime('%Y-%m-%d %H:' || (CAST(strftime('%M', timestamp) AS INTEGER) / 15) * 15 || ':00', timestamp) AS time_bucket`;
+        if (value === 1) return `strftime('%Y-%m-%d %H:%M:00', timestamp)`;
+        if (value === 5) return `strftime('%Y-%m-%d %H:' || (CAST(strftime('%M', timestamp) AS INTEGER) / 5) * 5 || ':00', timestamp)`;
+        if (value === 10) return `strftime('%Y-%m-%d %H:' || (CAST(strftime('%M', timestamp) AS INTEGER) / 10) * 10 || ':00', timestamp)`;
+        if (value === 15) return `strftime('%Y-%m-%d %H:' || (CAST(strftime('%M', timestamp) AS INTEGER) / 15) * 15 || ':00', timestamp)`;
         // Round to N minutes
-        return `datetime((unixepoch(timestamp) / ${value * 60}) * ${value * 60}, 'unixepoch') AS time_bucket`;
+        return `datetime((unixepoch(timestamp) / ${value * 60}) * ${value * 60}, 'unixepoch')`;
       case 'h':
-        if (value === 1) return `strftime('%Y-%m-%d %H:00:00', timestamp) AS time_bucket`;
+        if (value === 1) return `strftime('%Y-%m-%d %H:00:00', timestamp)`;
         // Round to N hours
-        return `datetime((unixepoch(timestamp) / ${value * 3600}) * ${value * 3600}, 'unixepoch') AS time_bucket`;
+        return `datetime((unixepoch(timestamp) / ${value * 3600}) * ${value * 3600}, 'unixepoch')`;
       case 'd':
-        if (value === 1) return `date(timestamp) AS time_bucket`;
+        if (value === 1) return `date(timestamp)`;
         // Round to N days
-        return `date(julianday(timestamp) / ${value} * ${value}) AS time_bucket`;
+        return `date(julianday(timestamp) / ${value} * ${value})`;
       default:
-        return `strftime('%Y-%m-%d %H:00:00', timestamp) AS time_bucket`;
+        return `strftime('%Y-%m-%d %H:00:00', timestamp)`;
     }
   }
 

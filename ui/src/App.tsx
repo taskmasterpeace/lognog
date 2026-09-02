@@ -26,7 +26,45 @@ import {
   Sparkles,
   Bookmark,
 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
+import { getHealth } from './api/client';
 import { ThemeProvider } from './contexts/ThemeContext';
+
+/**
+ * Sidebar card: which log store this instance runs on and whether it is
+ * reachable (was a hardcoded "Backend: ClickHouse", wrong on Lite installs).
+ */
+function BackendStatus() {
+  const { data: health } = useQuery({
+    queryKey: ['health'],
+    queryFn: getHealth,
+    refetchInterval: 30_000,
+    retry: false,
+  });
+  const backend = health?.backend === 'sqlite' ? 'SQLite (Lite)' : health?.backend === 'clickhouse' ? 'ClickHouse' : '…';
+  const storeStatus = health ? (health.services?.store ?? health.services?.clickhouse) : undefined;
+  const queued = health?.ingest_spool?.events ?? 0;
+  const dot = !health ? 'bg-nog-300' : storeStatus === 'ok' ? 'bg-green-500' : 'bg-red-500';
+  return (
+    <div className="flex-1 min-w-0">
+      <div className="flex items-center gap-2 text-xs text-nog-500 dark:text-nog-400">
+        <Database className="w-4 h-4 text-honey-500 dark:text-honey-400 flex-shrink-0" />
+        <span className="truncate">Backend: {backend}</span>
+        <span
+          className={`ml-auto w-2 h-2 rounded-full flex-shrink-0 ${dot}`}
+          title={!health ? 'Checking…' : storeStatus === 'ok' ? 'Log store reachable' : 'Log store unreachable'}
+        />
+      </div>
+      <p className="text-xs text-nog-400 dark:text-nog-500 mt-1 truncate">
+        {queued > 0
+          ? `${queued.toLocaleString()} events queued for replay`
+          : storeStatus && storeStatus !== 'ok'
+            ? 'Log store unreachable'
+            : 'Syslog ingest on port 514'}
+      </p>
+    </div>
+  );
+}
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { DateFormatProvider } from './contexts/DateFormatContext';
 import { MuteProvider } from './contexts/MuteContext';
@@ -291,15 +329,7 @@ function Layout({ children }: { children: React.ReactNode }) {
         {/* Backend info + theme toggle - hide on small screens to save space */}
         <div className="hidden sm:block p-4 border-t border-nog-100 dark:border-nog-700">
           <div className="p-3 bg-nog-50 dark:bg-nog-900 rounded-lg flex items-center gap-3">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 text-xs text-nog-500 dark:text-nog-400">
-                <Database className="w-4 h-4 text-honey-500 dark:text-honey-400 flex-shrink-0" />
-                <span className="truncate">Backend: ClickHouse</span>
-              </div>
-              <p className="text-xs text-nog-400 dark:text-nog-500 mt-1 truncate">
-                Syslog ingest on port 514
-              </p>
-            </div>
+            <BackendStatus />
             <div className="hidden lg:block flex-shrink-0">
               <ThemeToggle />
             </div>

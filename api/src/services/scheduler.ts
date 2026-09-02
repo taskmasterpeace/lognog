@@ -369,6 +369,8 @@ async function runReportInner(
   console.log(`Running ${options.manual ? 'manual' : 'scheduled'} report: ${report.name}`);
   const startTime = performance.now();
   const elapsed = () => Math.round(performance.now() - startTime);
+  // Rows fetched so far — a send-time failure still knows what the query returned.
+  let fetchedRows = 0;
 
   try {
     // Query window: the report's explicit time_range when set, otherwise
@@ -388,6 +390,7 @@ async function runReportInner(
       earliest: window,
       latest: 'now',
     });
+    fetchedRows = results.length;
     const executionTimeMs = Math.round(performance.now() - startTime);
 
     // Check send condition (Phase 5: Smart Reports)
@@ -550,8 +553,13 @@ async function runReportInner(
         console.error(`Failed to record last_run for report "${report.name}":`, updateError);
       }
     }
-    return { status: 'error', row_count: 0, reason: errorMessage, duration_ms };
+    return { status: 'error', row_count: fetchedRows, reason: errorMessage, duration_ms };
   }
+}
+
+/** Whether outbound email is configured (SMTP host + user). Used by /health and the UI. */
+export function isSmtpConfigured(): boolean {
+  return !!(process.env.SMTP_HOST && process.env.SMTP_USER);
 }
 
 // Check alerts that need to run

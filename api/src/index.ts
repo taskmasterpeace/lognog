@@ -48,7 +48,8 @@ import { apiLogger } from './middleware/api-logger.js';
 import { csrfProtection } from './middleware/csrf.js';
 import { shutdown as shutdownInternalLogger, logError } from './services/internal-logger.js';
 import { startScheduler as startSyntheticScheduler } from './services/synthetic/index.js';
-import { executeDSLQuery, ingestSpoolStats } from './db/backend.js';
+import { executeDSLQuery, ingestSpoolStats, healthCheck as backendHealth, getBackend } from './db/backend.js';
+import { isSmtpConfigured } from './services/scheduler.js';
 import { seedBuiltinTemplates } from './data/builtin-templates.js';
 import { seedDashboardTemplates, seedSavedSearches } from './data/seed-templates.js';
 import { seedBuiltinCIMModels } from './data/builtin-cim-models.js';
@@ -76,7 +77,10 @@ app.use(apiLogger);  // Log all API requests for self-monitoring
 
 // Health check endpoint
 app.get('/health', async (_req, res) => {
-  const clickhouseOk = await clickhouseHealth();
+  // Backend-aware: in Lite mode the store is SQLite, and pinging ClickHouse
+  // reported "error" forever (the UI then showed a permanent outage banner).
+  const storeOk = await backendHealth();
+  const clickhouseOk = storeOk;
   let spool: { batches: number; events: number; oldest: string | null } | undefined;
   try {
     spool = ingestSpoolStats();
@@ -87,12 +91,18 @@ app.get('/health', async (_req, res) => {
   res.json({
     status: clickhouseOk ? 'healthy' : 'degraded',
     timestamp: new Date().toISOString(),
+    backend: getBackend(),
     services: {
       api: 'ok',
+      // `store` is the configured log store (clickhouse or sqlite);
+      // `clickhouse` is kept for older clients that read it.
+      store: storeOk ? 'ok' : 'error',
       clickhouse: clickhouseOk ? 'ok' : 'error',
     },
     // Events accepted but not yet in the store (replayed automatically).
     ingest_spool: spool,
+    // Lets the Reports page show the right guidance instead of assuming.
+    smtp: isSmtpConfigured() ? 'configured' : 'missing',
   });
 });
 
