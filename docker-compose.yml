@@ -67,6 +67,12 @@ services:
     container_name: lognog-api
     ports:
       - "4000:4000"
+    # Secrets that must not live in this file (SMTP for reports/alerts,
+    # OpenRouter key, …). api/.env is gitignored; values in `environment`
+    # below take precedence over it.
+    env_file:
+      - path: ./api/.env
+        required: false
     environment:
       NODE_ENV: production
       CLICKHOUSE_HOST: clickhouse
