@@ -9,6 +9,7 @@
  */
 
 import { Router, Request, Response } from 'express';
+import * as cron from 'node-cron';
 import {
   getAlerts,
   getAlert,
@@ -51,6 +52,16 @@ function scriptActionForbidden(req: Request, actions: unknown): string | null {
   const hasScript = actions.some(a => a && typeof a === 'object' && (a as AlertAction).type === 'script');
   if (hasScript && req.user?.role !== 'admin') {
     return 'Only administrators can attach script actions to alerts';
+  }
+  return null;
+}
+
+// An invalid cron silently never fires (the scheduler's matcher returns
+// false forever), so reject it up front with a usable message.
+function invalidCron(cronExpression: unknown): string | null {
+  if (cronExpression === undefined || cronExpression === null || cronExpression === '') return null;
+  if (typeof cronExpression !== 'string' || !cron.validate(cronExpression)) {
+    return `Invalid schedule "${String(cronExpression)}": use a 5-field cron expression such as "*/5 * * * *"`;
   }
   return null;
 }
@@ -229,6 +240,11 @@ router.post('/', (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Name and search_query are required' });
     }
 
+    const badCron = invalidCron(cron_expression);
+    if (badCron) {
+      return res.status(400).json({ error: badCron });
+    }
+
     const forbidden = scriptActionForbidden(req, actions);
     if (forbidden) {
       return res.status(403).json({ error: forbidden });
@@ -304,6 +320,11 @@ router.put('/:id', (req: Request, res: Response) => {
       enabled,
       app_scope,
     } = req.body;
+
+    const badCron = invalidCron(cron_expression);
+    if (badCron) {
+      return res.status(400).json({ error: badCron });
+    }
 
     const forbidden = scriptActionForbidden(req, actions);
     if (forbidden) {

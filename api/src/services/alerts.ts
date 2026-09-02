@@ -124,8 +124,10 @@ function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
   return current;
 }
 
-// Check if trigger condition is met
-function checkTriggerCondition(
+// Check if trigger condition is met. `previousValue` is the value compared at
+// the previous evaluation (alerts.last_value); drops_by / rises_by cannot fire
+// without it — the first run only records a baseline.
+export function checkTriggerCondition(
   condition: string,
   value: number,
   threshold: number,
@@ -206,6 +208,70 @@ function getComparisonValue(
   return resultCount;
 }
 
+function escapeHtml(value: unknown): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+const SEVERITY_COLORS: Record<string, string> = {
+  critical: '#b91c1c',
+  high: '#c2410c',
+  medium: '#b45309',
+  low: '#4d7c0f',
+  info: '#5A3F24',
+};
+
+/**
+ * Branded HTML alert email with the triggering results as a table. Exported
+ * for tests.
+ */
+export function renderAlertEmailHtml(
+  alert: Pick<Alert, 'name' | 'severity' | 'search_query' | 'description'>,
+  resultCount: number,
+  sampleResults: Record<string, unknown>[]
+): string {
+  const accent = SEVERITY_COLORS[alert.severity.toLowerCase()] || SEVERITY_COLORS.info;
+  const columns = sampleResults.length > 0 ? Object.keys(sampleResults[0]).slice(0, 8) : [];
+  const rows = sampleResults.slice(0, 10);
+  const baseUrl = process.env.BASE_URL || '';
+  const searchLink = baseUrl
+    ? `${baseUrl.replace(/\/$/, '')}/search?q=${encodeURIComponent(alert.search_query)}`
+    : '';
+
+  const table = columns.length === 0
+    ? '<p style="color:#6b7280;font-size:14px">No matching events in the window.</p>'
+    : `<table style="border-collapse:collapse;width:100%;font-size:13px">
+  <thead><tr>${columns.map(c => `<th style="text-align:left;padding:8px 10px;background:#F5F0E8;border-bottom:2px solid #e5ded3;color:#5A3F24;font-weight:600">${escapeHtml(c)}</th>`).join('')}</tr></thead>
+  <tbody>${rows.map(r => `<tr>${columns.map(c => `<td style="padding:8px 10px;border-bottom:1px solid #eee7dc;vertical-align:top;font-family:ui-monospace,Menlo,monospace;word-break:break-word">${escapeHtml(typeof r[c] === 'object' ? JSON.stringify(r[c]) : r[c])}</td>`).join('')}</tr>`).join('')}</tbody>
+</table>${resultCount > rows.length ? `<p style="color:#6b7280;font-size:12px;margin-top:8px">Showing ${rows.length} of ${resultCount.toLocaleString()} results.</p>` : ''}`;
+
+  return `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>${escapeHtml(alert.name)}</title></head>
+<body style="margin:0;padding:24px;background:#FAF8F5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;color:#1f2937">
+  <div style="max-width:800px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5ded3">
+    <div style="background:${accent};color:#ffffff;padding:20px 24px">
+      <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;opacity:.85">${escapeHtml(alert.severity)} alert</div>
+      <h1 style="margin:4px 0 0;font-size:20px;font-weight:700">${escapeHtml(alert.name)}</h1>
+    </div>
+    <div style="padding:20px 24px">
+      ${alert.description ? `<p style="margin:0 0 12px;font-size:14px">${escapeHtml(alert.description)}</p>` : ''}
+      <table style="font-size:13px;margin-bottom:16px"><tbody>
+        <tr><td style="color:#6b7280;padding:2px 12px 2px 0">Triggered</td><td>${escapeHtml(new Date().toUTCString())}</td></tr>
+        <tr><td style="color:#6b7280;padding:2px 12px 2px 0">Results</td><td>${resultCount.toLocaleString()}</td></tr>
+        <tr><td style="color:#6b7280;padding:2px 12px 2px 0">Search</td><td><code style="font-family:ui-monospace,Menlo,monospace;background:#F5F0E8;padding:2px 6px;border-radius:4px">${escapeHtml(alert.search_query)}</code></td></tr>
+      </tbody></table>
+      ${table}
+      ${searchLink ? `<p style="margin-top:20px"><a href="${escapeHtml(searchLink)}" style="display:inline-block;background:#5A3F24;color:#ffffff;text-decoration:none;padding:10px 16px;border-radius:8px;font-size:14px;font-weight:600">Open in LogNog</a></p>` : ''}
+    </div>
+    <div style="padding:12px 24px;background:#F5F0E8;color:#8a7b6b;font-size:12px">Sent by LogNog alerting</div>
+  </div>
+</body></html>`;
+}
+
 // Execute email action
 async function executeEmailAction(
   alert: Alert,
@@ -219,10 +285,11 @@ async function executeEmailAction(
       return { success: false, message: 'No recipient specified' };
     }
 
-    // Create transporter (uses SMTP settings from environment)
+    // Create transporter (uses SMTP settings from environment; same defaults
+    // as scheduled reports so one SMTP config serves both)
     const transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST || 'localhost',
-      port: parseInt(process.env.SMTP_PORT || '25', 10),
+      port: parseInt(process.env.SMTP_PORT || '587', 10),
       secure: process.env.SMTP_SECURE === 'true',
       auth: process.env.SMTP_USER ? {
         user: process.env.SMTP_USER,
@@ -271,6 +338,10 @@ This alert was generated by LogNog.
       to: config.to,
       subject,
       text: body,
+      // Custom bodies are the author's own text; the default gets a branded
+      // HTML rendering with the results inline (Splunk-style) instead of a
+      // JSON dump.
+      html: config.body ? undefined : renderAlertEmailHtml(alert, resultCount, sampleResults),
     });
 
     return { success: true, message: `Email sent to ${config.to}` };
@@ -740,12 +811,15 @@ export async function evaluateAlert(alertId: string): Promise<{
       resultCount
     );
 
+    const previousValue = typeof alert.last_value === 'number' ? alert.last_value : undefined;
+
     switch (triggerType) {
       case 'number_of_results':
         triggered = checkTriggerCondition(
           alert.trigger_condition,
           comparisonValue,
-          alert.trigger_threshold
+          alert.trigger_threshold,
+          previousValue
         );
         break;
 
@@ -760,7 +834,8 @@ export async function evaluateAlert(alertId: string): Promise<{
         triggered = checkTriggerCondition(
           alert.trigger_condition,
           uniqueHostCount,
-          alert.trigger_threshold
+          alert.trigger_threshold,
+          previousValue
         );
         break;
 
@@ -774,6 +849,10 @@ export async function evaluateAlert(alertId: string): Promise<{
         triggered = resultCount === 0;
         break;
     }
+
+    // Baseline for the next drops_by / rises_by comparison.
+    const observedValue = triggerType === 'number_of_hosts' ? uniqueHostCount : comparisonValue;
+    updateAlert(alertId, { last_value: observedValue });
 
     if (!triggered) {
       const duration_ms = Math.round(performance.now() - startTime);

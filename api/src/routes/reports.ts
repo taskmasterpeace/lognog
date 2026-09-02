@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
+import * as cron from 'node-cron';
 import { getSQLiteDB } from '../db/sqlite.js';
 import { executeDSLQuery } from '../db/backend.js';
 import { renderHtml } from '../services/report-renderer.js';
@@ -35,6 +36,51 @@ interface ScheduledReport {
   app_scope?: string;
   created_at: string;
   updated_at?: string;
+}
+
+// ==================== Validation ====================
+
+const REPORT_FORMATS = new Set(['html', 'csv', 'json']);
+const ATTACHMENT_FORMATS = new Set(['none', 'html', 'csv', 'json']);
+const SEND_CONDITIONS = new Set(['always', 'if_results', 'if_change', 'threshold']);
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/**
+ * Reject definitions that would silently never run or never deliver. The
+ * scheduler's parseCron() returns null for an invalid expression and the
+ * report then just sits there enabled with no error surfaced anywhere.
+ * Returns an error message, or null when everything supplied is valid.
+ */
+function validateReportFields(fields: {
+  schedule?: unknown;
+  recipients?: unknown;
+  format?: unknown;
+  attachment_format?: unknown;
+  send_condition?: unknown;
+}): string | null {
+  const { schedule, recipients, format, attachment_format, send_condition } = fields;
+
+  if (schedule !== undefined) {
+    if (typeof schedule !== 'string' || !cron.validate(schedule)) {
+      return `Invalid schedule "${String(schedule)}": use a 5-field cron expression such as "0 8 * * 1-5"`;
+    }
+  }
+  if (recipients !== undefined) {
+    const list = String(recipients).split(/[,;\s]+/).map(r => r.trim()).filter(Boolean);
+    if (list.length === 0) return 'At least one recipient email address is required';
+    const bad = list.find(r => !EMAIL_RE.test(r));
+    if (bad) return `Invalid recipient email address: "${bad}"`;
+  }
+  if (format !== undefined && !REPORT_FORMATS.has(String(format))) {
+    return `Invalid format "${String(format)}": expected html, csv or json`;
+  }
+  if (attachment_format !== undefined && !ATTACHMENT_FORMATS.has(String(attachment_format))) {
+    return `Invalid attachment_format "${String(attachment_format)}": expected none, html, csv or json`;
+  }
+  if (send_condition !== undefined && !SEND_CONDITIONS.has(String(send_condition))) {
+    return `Invalid send_condition "${String(send_condition)}": expected always, if_results, if_change or threshold`;
+  }
+  return null;
 }
 
 // ==================== Report Templates ====================
@@ -203,6 +249,11 @@ router.post('/', (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Name, query, schedule, and recipients are required' });
     }
 
+    const invalid = validateReportFields({ schedule, recipients, format, attachment_format, send_condition });
+    if (invalid) {
+      return res.status(400).json({ error: invalid });
+    }
+
     const db = getSQLiteDB();
     const id = uuidv4();
     db.prepare(`
@@ -235,6 +286,11 @@ router.put('/:id', (req: Request, res: Response) => {
       enabled, app_scope
     } = req.body;
     const db = getSQLiteDB();
+
+    const invalid = validateReportFields({ schedule, recipients, format, attachment_format, send_condition });
+    if (invalid) {
+      return res.status(400).json({ error: invalid });
+    }
 
     const fields: string[] = [];
     const values: unknown[] = [];

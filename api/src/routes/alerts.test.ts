@@ -93,6 +93,28 @@ describe('alert routes', () => {
     });
   });
 
+  describe('schedule validation', () => {
+    it('rejects an invalid cron expression on create and update', async () => {
+      const bad = await request(app)
+        .post('/alerts')
+        .send({ name: 'bad cron', search_query: 'search *', cron_expression: 'every 5 minutes' });
+      expect(bad.status).toBe(400);
+      expect(bad.body.error).toMatch(/schedule/i);
+
+      const alert = createAlert('cron update', 'search *', {});
+      const upd = await request(app).put(`/alerts/${alert.id}`).send({ cron_expression: '* * *' });
+      expect(upd.status).toBe(400);
+    });
+
+    it('accepts a custom 5-field cron', async () => {
+      const res = await request(app)
+        .post('/alerts')
+        .send({ name: 'biz hours', search_query: 'search *', cron_expression: '*/10 8-18 * * 1-5' });
+      expect(res.status).toBe(201);
+      expect(res.body.cron_expression).toBe('*/10 8-18 * * 1-5');
+    });
+  });
+
   describe('script actions are admin-only', () => {
     const scriptAlert = {
       name: 'script alert',

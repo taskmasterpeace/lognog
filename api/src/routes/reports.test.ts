@@ -40,6 +40,33 @@ beforeEach(async () => {
   app.use('/reports', reportsRouter);
 });
 
+describe('scheduled report validation', () => {
+  const valid = { name: 'Nightly', query: 'search *', schedule: '0 2 * * *', recipients: 'ops@example.com' };
+
+  it('creates a report with a valid cron and recipients', async () => {
+    const res = await request(app).post('/reports').send(valid);
+    expect(res.status).toBe(201);
+  });
+
+  it('rejects an invalid cron expression instead of saving a report that never runs', async () => {
+    const res = await request(app).post('/reports').send({ ...valid, schedule: 'every day at 2' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/schedule/i);
+  });
+
+  it('rejects malformed recipient addresses', async () => {
+    const res = await request(app).post('/reports').send({ ...valid, recipients: 'ops@example.com, not-an-email' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/not-an-email/);
+  });
+
+  it('validates on update too', async () => {
+    const created = await request(app).post('/reports').send(valid);
+    const res = await request(app).put(`/reports/${created.body.report?.id ?? created.body.id}`).send({ schedule: '* * *' });
+    expect(res.status).toBe(400);
+  });
+});
+
 describe('POST /reports/generate', () => {
   it('passes the relative time range to the DSL executor unchanged', async () => {
     const res = await request(app)

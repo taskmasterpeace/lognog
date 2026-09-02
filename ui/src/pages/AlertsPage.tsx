@@ -105,6 +105,14 @@ const SCHEDULE_OPTIONS = [
   { label: 'Every 6 hours', value: '0 */6 * * *' },
   { label: 'Daily at midnight', value: '0 0 * * *' },
 ];
+const CUSTOM_CRON = '__custom__';
+
+// Client-side sanity check for a 5-field cron (the API validates for real).
+const CRON_FIELD = /^(\*|\d+)(\/\d+)?(,(\*|\d+)(\/\d+)?)*$|^(\d+-\d+)(\/\d+)?(,(\d+-\d+)(\/\d+)?)*$|^(\*|\d+|\d+-\d+)(\/\d+)?(,(\*|\d+|\d+-\d+)(\/\d+)?)*$/;
+function isValidCron(expr: string): boolean {
+  const parts = expr.trim().split(/\s+/);
+  return parts.length === 5 && parts.every((p) => CRON_FIELD.test(p));
+}
 
 // Email validation helper
 const isValidEmail = (email: string): boolean => {
@@ -1001,14 +1009,37 @@ export default function AlertsPage() {
                       />
                     </label>
                     <select
-                      value={formData.cron_expression}
-                      onChange={(e) => setFormData({ ...formData, cron_expression: e.target.value })}
+                      value={SCHEDULE_OPTIONS.some((s) => s.value === formData.cron_expression) ? formData.cron_expression : CUSTOM_CRON}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setFormData({ ...formData, cron_expression: v === CUSTOM_CRON ? '' : v });
+                      }}
                       className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-700 text-nog-900 dark:text-nog-100"
                     >
                       {SCHEDULE_OPTIONS.map((s) => (
                         <option key={s.value} value={s.value}>{s.label}</option>
                       ))}
+                      <option value={CUSTOM_CRON}>Custom cron…</option>
                     </select>
+                    {!SCHEDULE_OPTIONS.some((s) => s.value === formData.cron_expression) && (
+                      <div className="mt-2">
+                        <input
+                          type="text"
+                          value={formData.cron_expression}
+                          onChange={(e) => setFormData({ ...formData, cron_expression: e.target.value })}
+                          placeholder="*/10 8-18 * * 1-5"
+                          className={`w-full px-3 py-2 font-mono text-sm border rounded-lg bg-white dark:bg-nog-700 text-nog-900 dark:text-nog-100 ${
+                            formData.cron_expression && !isValidCron(formData.cron_expression)
+                              ? 'border-red-400 dark:border-red-600'
+                              : 'border-nog-300 dark:border-nog-600'
+                          }`}
+                          aria-label="Custom cron expression"
+                        />
+                        <p className="mt-1 text-xs text-nog-500 dark:text-nog-400">
+                          5 fields: minute hour day-of-month month day-of-week — e.g. <code className="font-mono">*/10 8-18 * * 1-5</code> is every 10 min, business hours, weekdays.
+                        </p>
+                      </div>
+                    )}
                   </div>
                   <div>
                     <label className="flex items-center gap-2 text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">

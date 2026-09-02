@@ -839,6 +839,11 @@ function initializeSchema(): void {
   if (!alertColumnNames.includes('last_status')) {
     database.exec("ALTER TABLE alerts ADD COLUMN last_status TEXT");
   }
+  // Value the condition was judged on at the last evaluation; what the
+  // drops_by / rises_by conditions compare the next run against.
+  if (!alertColumnNames.includes('last_value')) {
+    database.exec("ALTER TABLE alerts ADD COLUMN last_value REAL");
+  }
 
   const reportColumns = database.pragma('table_info(scheduled_reports)') as Array<{ name: string }>;
   const reportColumnNames = reportColumns.map((col) => col.name);
