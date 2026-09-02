@@ -74,7 +74,9 @@ export const BarChart: React.FC<BarChartProps> = ({
   const option: EChartsOption = React.useMemo(() => {
     const categoryAxis = {
       type: 'category' as const,
-      data: categories,
+      // An empty category (rows where the group-by field is missing) still
+      // gets a bar; label it so the bar doesn't look shifted off its row.
+      data: categories.map((c) => (c === '' ? '(empty)' : c)),
       name: horizontal ? yAxisLabel : xAxisLabel,
       nameTextStyle: {
         color: theme.textMuted,

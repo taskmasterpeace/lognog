@@ -51,8 +51,8 @@ describe('Compiler', () => {
 
     expect(result.sql).toContain('count()');
     // bytes and latency are custom fields, so they use JSONExtract
-    expect(result.sql).toContain("sum(JSONExtractFloat(structured_data, 'bytes'))");
-    expect(result.sql).toContain("avg(JSONExtractFloat(structured_data, 'latency'))");
+    expect(result.sql).toContain("sum(toFloat64OrNull(if(JSONType(structured_data, 'bytes') = 'String', JSONExtractString(structured_data, 'bytes'), JSONExtractRaw(structured_data, 'bytes'))))");
+    expect(result.sql).toContain("avg(toFloat64OrNull(if(JSONType(structured_data, 'latency') = 'String', JSONExtractString(structured_data, 'latency'), JSONExtractRaw(structured_data, 'latency'))))");
     expect(result.sql).toContain('GROUP BY hostname');
   });
 
@@ -218,7 +218,7 @@ describe('Compiler', () => {
   it('compiles median aggregation', () => {
     const result = parseAndCompile('search * | stats median(latency)');
 
-    expect(result.sql).toContain("median(JSONExtractFloat(structured_data, 'latency'))");
+    expect(result.sql).toContain("median(toFloat64OrNull(if(JSONType(structured_data, 'latency') = 'String', JSONExtractString(structured_data, 'latency'), JSONExtractRaw(structured_data, 'latency'))))");
   });
 
   it('compiles mode aggregation', () => {
@@ -230,28 +230,28 @@ describe('Compiler', () => {
   it('compiles stddev aggregation', () => {
     const result = parseAndCompile('search * | stats stddev(response_time)');
 
-    expect(result.sql).toContain("stddevPop(JSONExtractFloat(structured_data, 'response_time'))");
+    expect(result.sql).toContain("stddevPop(toFloat64OrNull(if(JSONType(structured_data, 'response_time') = 'String', JSONExtractString(structured_data, 'response_time'), JSONExtractRaw(structured_data, 'response_time'))))");
   });
 
   it('compiles variance aggregation', () => {
     const result = parseAndCompile('search * | stats variance(bytes)');
 
-    expect(result.sql).toContain("varPop(JSONExtractFloat(structured_data, 'bytes'))");
+    expect(result.sql).toContain("varPop(toFloat64OrNull(if(JSONType(structured_data, 'bytes') = 'String', JSONExtractString(structured_data, 'bytes'), JSONExtractRaw(structured_data, 'bytes'))))");
   });
 
   it('compiles range aggregation', () => {
     const result = parseAndCompile('search * | stats range(temperature)');
 
-    expect(result.sql).toContain("max(JSONExtractFloat(structured_data, 'temperature')) - min(JSONExtractFloat(structured_data, 'temperature'))");
+    expect(result.sql).toContain("max(toFloat64OrNull(if(JSONType(structured_data, 'temperature') = 'String', JSONExtractString(structured_data, 'temperature'), JSONExtractRaw(structured_data, 'temperature')))) - min(toFloat64OrNull(if(JSONType(structured_data, 'temperature') = 'String', JSONExtractString(structured_data, 'temperature'), JSONExtractRaw(structured_data, 'temperature'))))");
   });
 
   it('compiles percentile aggregations', () => {
     const result = parseAndCompile('search * | stats p50(latency) p90(latency) p95(latency) p99(latency)');
 
-    expect(result.sql).toContain("quantile(0.5)(JSONExtractFloat(structured_data, 'latency'))");
-    expect(result.sql).toContain("quantile(0.9)(JSONExtractFloat(structured_data, 'latency'))");
-    expect(result.sql).toContain("quantile(0.95)(JSONExtractFloat(structured_data, 'latency'))");
-    expect(result.sql).toContain("quantile(0.99)(JSONExtractFloat(structured_data, 'latency'))");
+    expect(result.sql).toContain("quantile(0.5)(toFloat64OrNull(if(JSONType(structured_data, 'latency') = 'String', JSONExtractString(structured_data, 'latency'), JSONExtractRaw(structured_data, 'latency'))))");
+    expect(result.sql).toContain("quantile(0.9)(toFloat64OrNull(if(JSONType(structured_data, 'latency') = 'String', JSONExtractString(structured_data, 'latency'), JSONExtractRaw(structured_data, 'latency'))))");
+    expect(result.sql).toContain("quantile(0.95)(toFloat64OrNull(if(JSONType(structured_data, 'latency') = 'String', JSONExtractString(structured_data, 'latency'), JSONExtractRaw(structured_data, 'latency'))))");
+    expect(result.sql).toContain("quantile(0.99)(toFloat64OrNull(if(JSONType(structured_data, 'latency') = 'String', JSONExtractString(structured_data, 'latency'), JSONExtractRaw(structured_data, 'latency'))))");
   });
 
   it('compiles first aggregation', () => {
@@ -277,17 +277,17 @@ describe('Compiler', () => {
   it('compiles multiple new aggregations together', () => {
     const result = parseAndCompile('search * | stats median(latency) stddev(latency) p95(latency) by hostname');
 
-    expect(result.sql).toContain("median(JSONExtractFloat(structured_data, 'latency'))");
-    expect(result.sql).toContain("stddevPop(JSONExtractFloat(structured_data, 'latency'))");
-    expect(result.sql).toContain("quantile(0.95)(JSONExtractFloat(structured_data, 'latency'))");
+    expect(result.sql).toContain("median(toFloat64OrNull(if(JSONType(structured_data, 'latency') = 'String', JSONExtractString(structured_data, 'latency'), JSONExtractRaw(structured_data, 'latency'))))");
+    expect(result.sql).toContain("stddevPop(toFloat64OrNull(if(JSONType(structured_data, 'latency') = 'String', JSONExtractString(structured_data, 'latency'), JSONExtractRaw(structured_data, 'latency'))))");
+    expect(result.sql).toContain("quantile(0.95)(toFloat64OrNull(if(JSONType(structured_data, 'latency') = 'String', JSONExtractString(structured_data, 'latency'), JSONExtractRaw(structured_data, 'latency'))))");
     expect(result.sql).toContain('GROUP BY hostname');
   });
 
   it('compiles aggregations with custom aliases', () => {
     const result = parseAndCompile('search * | stats median(latency) as med_latency, p99(latency) as p99_latency');
 
-    expect(result.sql).toContain("median(JSONExtractFloat(structured_data, 'latency')) AS med_latency");
-    expect(result.sql).toContain("quantile(0.99)(JSONExtractFloat(structured_data, 'latency')) AS p99_latency");
+    expect(result.sql).toContain("median(toFloat64OrNull(if(JSONType(structured_data, 'latency') = 'String', JSONExtractString(structured_data, 'latency'), JSONExtractRaw(structured_data, 'latency')))) AS med_latency");
+    expect(result.sql).toContain("quantile(0.99)(toFloat64OrNull(if(JSONType(structured_data, 'latency') = 'String', JSONExtractString(structured_data, 'latency'), JSONExtractRaw(structured_data, 'latency')))) AS p99_latency");
   });
 
   // New command tests
@@ -356,8 +356,8 @@ describe('Compiler', () => {
     expect(result.sql).toContain('toStartOfFiveMinutes(timestamp)');
     expect(result.sql).toContain('count()');
     // latency is a custom field, uses JSONExtract
-    expect(result.sql).toContain("avg(JSONExtractFloat(structured_data, 'latency'))");
-    expect(result.sql).toContain("max(JSONExtractFloat(structured_data, 'latency'))");
+    expect(result.sql).toContain("avg(toFloat64OrNull(if(JSONType(structured_data, 'latency') = 'String', JSONExtractString(structured_data, 'latency'), JSONExtractRaw(structured_data, 'latency'))))");
+    expect(result.sql).toContain("max(toFloat64OrNull(if(JSONType(structured_data, 'latency') = 'String', JSONExtractString(structured_data, 'latency'), JSONExtractRaw(structured_data, 'latency'))))");
   });
 
   it('compiles rex command with named groups', () => {

@@ -493,7 +493,12 @@ export class Compiler {
     switch (cond.operator) {
       case '=':
         if (cond.value === '*') {
-          expr = isKnownColumn ? `${field} != ''` : `${field} IS NOT NULL`;
+          // Existence test. JSONExtractString is never NULL in ClickHouse (an
+          // absent key yields ''), so `field=*` used to match every row and
+          // a "Recent Generations" table filtered on model_id=* showed cron
+          // noise. JSONHas is the real presence check — and it also sees keys
+          // whose value isn't a string (credits_cost=* on a number).
+          expr = isKnownColumn ? `${field} != ''` : this.jsonHas(cond.field);
         } else if (mappedField === 'severity') {
           // Severity is numeric - convert string levels to numbers
           expr = `${field} = ${this.severityToNumber(cond.value)}`;
@@ -505,7 +510,10 @@ export class Compiler {
         break;
 
       case '!=':
-        if (mappedField === 'severity') {
+        if (cond.value === '*') {
+          // Splunk `field!=*`: rows where the field is absent/empty.
+          expr = isKnownColumn ? `${field} = ''` : `NOT ${this.jsonHas(cond.field)}`;
+        } else if (mappedField === 'severity') {
           // Severity is numeric - convert string levels to numbers
           expr = `${field} != ${this.severityToNumber(cond.value)}`;
         } else if (typeof cond.value === 'string') {
@@ -695,24 +703,43 @@ export class Compiler {
       return mappedField;
     }
     // Unknown field - extract from structured_data JSON
-    const safeField = sanitizeFieldName(field);
     return type === 'number'
-      ? `JSONExtractFloat(structured_data, '${safeField}')`
-      : `JSONExtractString(structured_data, '${safeField}')`;
+      ? this.jsonNumber(field)
+      : `JSONExtractString(structured_data, '${sanitizeFieldName(field)}')`;
   }
 
   /**
    * Generate ClickHouse JSONExtract expression for custom fields stored in structured_data
-   * Example: JSONExtractFloat(structured_data, 'credits_deducted') or JSONExtractString(...)
+   * Example: jsonNumber('credits_deducted') for numeric operands, JSONExtractString(...) otherwise
    */
   private jsonExtract(fieldName: string, value: string | number | null): string {
-    const safeField = sanitizeFieldName(fieldName);
     // Determine appropriate ClickHouse JSON function based on value type
     if (typeof value === 'number') {
-      return `JSONExtractFloat(structured_data, '${safeField}')`;
+      return this.jsonNumber(fieldName);
     }
     // For string values, use JSONExtractString
-    return `JSONExtractString(structured_data, '${safeField}')`;
+    return `JSONExtractString(structured_data, '${sanitizeFieldName(fieldName)}')`;
+  }
+
+  /** True when the key exists in structured_data, whatever its JSON type. */
+  private jsonHas(fieldName: string): string {
+    return `JSONHas(structured_data, '${sanitizeFieldName(fieldName)}')`;
+  }
+
+  /**
+   * Numeric view of a structured_data field for aggregations and comparisons.
+   *
+   * JSONExtractFloat returned 0 both for an absent key and for a number that
+   * was shipped as a JSON string ("13"), so `avg(duration_ms)` was dragged
+   * down by every row without the field and `sum(credits_cost)` was 0 for
+   * string-typed clients. Read the raw token (unquoting strings) and parse it;
+   * anything unparsable becomes NULL, which ClickHouse aggregates skip — the
+   * same way Splunk's stats ignore events that lack the field.
+   */
+  private jsonNumber(fieldName: string): string {
+    const safeField = sanitizeFieldName(fieldName);
+    return `toFloat64OrNull(if(JSONType(structured_data, '${safeField}') = 'String', ` +
+      `JSONExtractString(structured_data, '${safeField}'), JSONExtractRaw(structured_data, '${safeField}')))`;
   }
 
   private escape(value: string): string {

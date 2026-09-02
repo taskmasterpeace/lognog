@@ -301,7 +301,7 @@ describe('Eval - Complex Queries', () => {
     // because the compiler doesn't use CTEs/subqueries to make eval fields available.
     // The eval expression gets added to select but stats overwrites it.
     // TODO: Implement CTE-based pipeline to properly support eval+stats combination.
-    expect(result.sql).toContain("avg(JSONExtractFloat(structured_data, 'latency_rounded'))");
+    expect(result.sql).toContain("avg(toFloat64OrNull(if(JSONType(structured_data, 'latency_rounded') = 'String', JSONExtractString(structured_data, 'latency_rounded'), JSONExtractRaw(structured_data, 'latency_rounded'))))");
     expect(result.sql).toContain('hostname');
   });
 
