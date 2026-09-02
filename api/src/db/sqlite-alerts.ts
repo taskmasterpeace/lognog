@@ -56,9 +56,13 @@ export interface Alert {
   last_error?: string | null;   // Error message from the most recent evaluation, or null if healthy
   last_status?: string | null;  // 'ok' | 'error' | 'triggered' — outcome of the most recent evaluation
   last_value?: number | null;   // Compared value at the last evaluation (drops_by / rises_by baseline)
+  trigger_mode?: AlertTriggerMode;  // 'once' (default) or 'per_result'
+  throttle_fields?: string | null;  // Comma-separated fields whose values key per-result throttling
   created_at: string;
   updated_at: string;
 }
+
+export type AlertTriggerMode = 'once' | 'per_result';
 
 export interface AlertHistory {
   id: string;
@@ -112,6 +116,8 @@ export function createAlert(
     enabled?: boolean;
     app_scope?: string;
     playbook?: string;
+    trigger_mode?: AlertTriggerMode;
+    throttle_fields?: string | null;
   } = {}
 ): Alert {
   const database = getSQLiteDB();
@@ -123,8 +129,8 @@ export function createAlert(
       trigger_type, trigger_condition, trigger_threshold,
       schedule_type, cron_expression, time_range,
       actions, throttle_enabled, throttle_window_seconds,
-      severity, enabled, app_scope, playbook
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      severity, enabled, app_scope, playbook, trigger_mode, throttle_fields
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
     name,
@@ -142,7 +148,9 @@ export function createAlert(
     options.severity || 'medium',
     options.enabled !== false ? 1 : 0,
     options.app_scope || 'default',
-    options.playbook || null
+    options.playbook || null,
+    options.trigger_mode === 'per_result' ? 'per_result' : 'once',
+    options.throttle_fields || null
   );
 
   return getAlert(id)!;
@@ -173,6 +181,8 @@ export function updateAlert(
     last_error?: string | null;
     last_status?: string | null;
     last_value?: number | null;
+    trigger_mode?: AlertTriggerMode;
+    throttle_fields?: string | null;
   }
 ): Alert | undefined {
   const database = getSQLiteDB();
@@ -182,6 +192,14 @@ export function updateAlert(
   if (updates.name !== undefined) {
     fields.push('name = ?');
     values.push(updates.name);
+  }
+  if (updates.trigger_mode !== undefined) {
+    fields.push('trigger_mode = ?');
+    values.push(updates.trigger_mode === 'per_result' ? 'per_result' : 'once');
+  }
+  if (updates.throttle_fields !== undefined) {
+    fields.push('throttle_fields = ?');
+    values.push(updates.throttle_fields || null);
   }
   if (updates.description !== undefined) {
     fields.push('description = ?');
@@ -306,8 +324,42 @@ export function claimAlertTrigger(id: string, nowIso: string, windowStartIso: st
   return result.changes === 1;
 }
 
+/**
+ * Per-result throttling: atomically claim the trigger slot for one throttle
+ * key (e.g. "hostname=web-01") of an alert. Same semantics as
+ * claimAlertTrigger, keyed per field value, so a per_result alert fires for
+ * a new host while a still-broken one stays suppressed for the window.
+ */
+export function claimAlertTriggerKey(alertId: string, key: string, nowIso: string, windowStartIso: string): boolean {
+  const database = getSQLiteDB();
+  const result = database.prepare(`
+    INSERT INTO alert_throttle_keys (alert_id, key, last_triggered)
+    VALUES (?, ?, ?)
+    ON CONFLICT(alert_id, key) DO UPDATE SET last_triggered = excluded.last_triggered
+      WHERE alert_throttle_keys.last_triggered < ?
+  `).run(alertId, key, nowIso, windowStartIso);
+  return result.changes === 1;
+}
+
+/** Bookkeeping after a per_result evaluation fired `count` rows. */
+export function recordAlertFired(alertId: string, nowIso: string, count: number): void {
+  const database = getSQLiteDB();
+  database.prepare(`
+    UPDATE alerts
+    SET last_triggered = ?, trigger_count = trigger_count + ?, updated_at = datetime('now')
+    WHERE id = ?
+  `).run(nowIso, count, alertId);
+}
+
+/** Drop throttle keys not touched since `olderThanIso` (they can't suppress anything anymore). */
+export function pruneAlertThrottleKeys(olderThanIso: string): number {
+  const database = getSQLiteDB();
+  return database.prepare('DELETE FROM alert_throttle_keys WHERE last_triggered < ?').run(olderThanIso).changes;
+}
+
 export function deleteAlert(id: string): boolean {
   const database = getSQLiteDB();
+  database.prepare('DELETE FROM alert_throttle_keys WHERE alert_id = ?').run(id);
   const result = database.prepare('DELETE FROM alerts WHERE id = ?').run(id);
   return result.changes > 0;
 }

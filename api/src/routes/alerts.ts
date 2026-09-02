@@ -234,6 +234,8 @@ router.post('/', (req: Request, res: Response) => {
       severity,
       enabled,
       app_scope,
+      trigger_mode,
+      throttle_fields,
     } = req.body;
 
     if (!name || !search_query) {
@@ -264,6 +266,8 @@ router.post('/', (req: Request, res: Response) => {
       severity: severity as AlertSeverity,
       enabled,
       app_scope,
+      trigger_mode,
+      throttle_fields,
     });
 
     res.status(201).json({
@@ -319,6 +323,8 @@ router.put('/:id', (req: Request, res: Response) => {
       severity,
       enabled,
       app_scope,
+      trigger_mode,
+      throttle_fields,
     } = req.body;
 
     const badCron = invalidCron(cron_expression);
@@ -347,6 +353,8 @@ router.put('/:id', (req: Request, res: Response) => {
       severity: severity as AlertSeverity,
       enabled,
       app_scope,
+      trigger_mode,
+      throttle_fields,
     });
 
     if (!alert) {

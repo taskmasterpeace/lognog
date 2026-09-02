@@ -1101,6 +1101,10 @@ export interface Alert {
   /** Outcome of the most recent evaluation; `error` carries `last_error`. */
   last_status?: 'ok' | 'error' | 'triggered' | null;
   last_error?: string | null;
+  /** 'once' (default) or 'per_result' (Splunk "trigger for each result"). */
+  trigger_mode?: 'once' | 'per_result';
+  /** Comma-separated fields whose values key per-result throttling. */
+  throttle_fields?: string | null;
   trigger_count: number;
   app_scope?: string;
   created_at: string;

@@ -844,6 +844,22 @@ function initializeSchema(): void {
   if (!alertColumnNames.includes('last_value')) {
     database.exec("ALTER TABLE alerts ADD COLUMN last_value REAL");
   }
+  // Splunk-style trigger mode: 'once' (one notification per evaluation) or
+  // 'per_result' (one per result row, throttled per throttle_fields value).
+  if (!alertColumnNames.includes('trigger_mode')) {
+    database.exec("ALTER TABLE alerts ADD COLUMN trigger_mode TEXT DEFAULT 'once'");
+  }
+  if (!alertColumnNames.includes('throttle_fields')) {
+    database.exec("ALTER TABLE alerts ADD COLUMN throttle_fields TEXT");
+  }
+  database.exec(`
+    CREATE TABLE IF NOT EXISTS alert_throttle_keys (
+      alert_id TEXT NOT NULL,
+      key TEXT NOT NULL,
+      last_triggered TEXT NOT NULL,
+      PRIMARY KEY (alert_id, key)
+    )
+  `);
 
   const reportColumns = database.pragma('table_info(scheduled_reports)') as Array<{ name: string }>;
   const reportColumnNames = reportColumns.map((col) => col.name);

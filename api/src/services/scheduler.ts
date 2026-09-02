@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer';
 import * as cron from 'node-cron';
-import { getSQLiteDB, getAlerts, Alert, getScheduledSavedSearches, updateSavedSearchCache, updateSavedSearchError, cleanupExpiredSearchCache, SavedSearch, getSystemSetting, getProjectBySlug } from '../db/sqlite.js';
+import { getSQLiteDB, getAlerts, Alert, getScheduledSavedSearches, updateSavedSearchCache, updateSavedSearchError, cleanupExpiredSearchCache, SavedSearch, getSystemSetting, getProjectBySlug, pruneAlertThrottleKeys } from '../db/sqlite.js';
 import { executeDSLQuery } from '../db/backend.js';
 import { parseAndCompile } from '../dsl/index.js';
 import { evaluateAlert } from './alerts.js';
@@ -725,6 +725,13 @@ async function runCacheCleanup(): Promise<void> {
     }
   } catch (error) {
     console.error('Error pruning alert history:', error);
+  }
+  try {
+    // Per-result throttle keys older than any plausible window are dead weight.
+    const removed = pruneAlertThrottleKeys(new Date(Date.now() - 7 * 86_400_000).toISOString());
+    if (removed > 0) console.log(`Pruned ${removed} stale alert throttle keys`);
+  } catch (error) {
+    console.error('Error pruning alert throttle keys:', error);
   }
 }
 

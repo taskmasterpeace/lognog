@@ -19,6 +19,8 @@ import {
   createLoginNotification,
   isAlertSilenced,
   resolveNotificationChannel,
+  claimAlertTriggerKey,
+  recordAlertFired,
 } from '../db/sqlite.js';
 import { executeDSLQuery, getBackend } from '../db/backend.js';
 import { processTemplate, generateAISummary, TemplateContext } from './template-engine.js';
@@ -908,6 +910,12 @@ export async function evaluateAlert(alertId: string): Promise<{
     // imposes no cross-time throttle.
     const windowStartIso = new Date(Date.now() - windowSeconds * 1000).toISOString();
 
+    // Splunk "trigger for each result": one notification + history entry per
+    // row, suppressed per throttle-field value within the window.
+    if (alert.trigger_mode === 'per_result' && triggerType !== 'no_data' && results.length > 0) {
+      return await firePerResult(alert, results as Record<string, unknown>[], nowIso, windowStartIso, startTime);
+    }
+
     const claimed = claimAlertTrigger(alertId, nowIso, windowStartIso);
     if (!claimed) {
       const duration_ms = Math.round(performance.now() - startTime);
@@ -1042,6 +1050,101 @@ export async function evaluateAlert(alertId: string): Promise<{
 
     return { triggered: false, resultCount: 0, message: `Error: ${errorMessage}` };
   }
+}
+
+const PER_RESULT_MAX_ROWS = 50;
+
+// Throttle key for one result row: the values of the configured throttle
+// fields ("hostname=web-01|app_name=api"); with no fields configured, the
+// whole row identifies the result.
+export function throttleKeyForRow(row: Record<string, unknown>, throttleFields: string | null | undefined): string {
+  const fields = (throttleFields || '').split(',').map(f => f.trim()).filter(Boolean);
+  if (fields.length === 0) return JSON.stringify(row);
+  return fields.map(f => `${f}=${row[f] === undefined || row[f] === null ? '' : String(row[f])}`).join('|');
+}
+
+async function firePerResult(
+  alert: Alert,
+  results: Record<string, unknown>[],
+  nowIso: string,
+  windowStartIso: string,
+  startTime: number
+): Promise<{ triggered: boolean; resultCount: number; message: string }> {
+  const rows = results.slice(0, PER_RESULT_MAX_ROWS);
+  let fired = 0;
+  let succeededActions = 0;
+  let totalActions = 0;
+
+  for (const row of rows) {
+    const key = throttleKeyForRow(row, alert.throttle_fields);
+    if (!claimAlertTriggerKey(alert.id, key, nowIso, windowStartIso)) continue;
+    fired += 1;
+
+    const actionResults = await executeActions(alert, 1, [row]);
+    totalActions += actionResults.length;
+    succeededActions += actionResults.filter(r => r.success).length;
+
+    createAlertHistoryEntry(alert.id, 1, alert.severity as AlertSeverity, {
+      trigger_value: key,
+      actions_executed: actionResults,
+      sample_results: [row],
+    });
+    for (const result of actionResults) {
+      logAlertAction({
+        alert_id: alert.id,
+        alert_name: alert.name,
+        action_type: result.type,
+        success: result.success,
+        message: result.message,
+      });
+    }
+  }
+
+  const duration_ms = Math.round(performance.now() - startTime);
+  if (fired === 0) {
+    logAlertEvaluated({
+      alert_id: alert.id,
+      alert_name: alert.name,
+      duration_ms,
+      result_count: results.length,
+      triggered: true,
+      throttled: true,
+    });
+    return {
+      triggered: false,
+      resultCount: results.length,
+      message: 'Throttled - every result already triggered within the throttle window',
+    };
+  }
+
+  recordAlertFired(alert.id, nowIso, fired);
+  updateAlert(alert.id, { last_status: 'triggered' });
+
+  createAgentNotification(
+    alert.name,
+    `Alert: ${alert.name}`,
+    `${alert.severity.toUpperCase()} - ${fired} of ${results.length} results fired: ${alert.search_query.substring(0, 100)}`,
+    {
+      alert_id: alert.id,
+      severity: alert.severity as AlertSeverity,
+      expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+    }
+  );
+
+  console.log(`Alert triggered: ${alert.name} (${fired}/${results.length} results)`);
+  logAlertEvaluated({
+    alert_id: alert.id,
+    alert_name: alert.name,
+    duration_ms,
+    result_count: results.length,
+    triggered: true,
+  });
+
+  return {
+    triggered: true,
+    resultCount: results.length,
+    message: `Alert triggered - ${fired} of ${results.length} results fired, ${succeededActions}/${totalActions} actions succeeded`,
+  };
 }
 
 // Evaluate all enabled alerts

@@ -171,6 +171,8 @@ export default function AlertsPage() {
     severity: 'medium',
     throttle_enabled: false,
     throttle_window_seconds: 300,
+    trigger_mode: 'once' as 'once' | 'per_result',
+    throttle_fields: '',
     actions: [] as AlertAction[],
   });
 
@@ -375,6 +377,8 @@ export default function AlertsPage() {
       severity: 'medium',
       throttle_enabled: false,
       throttle_window_seconds: 300,
+      trigger_mode: 'once',
+      throttle_fields: '',
       actions: [],
     });
     setTestResult(null);
@@ -395,6 +399,8 @@ export default function AlertsPage() {
       severity: alert.severity,
       throttle_enabled: Boolean(alert.throttle_enabled),
       throttle_window_seconds: alert.throttle_window_seconds,
+      trigger_mode: alert.trigger_mode === 'per_result' ? 'per_result' : 'once',
+      throttle_fields: alert.throttle_fields || '',
       actions: alert.actions,
     });
     setShowCreateModal(true);
@@ -1087,6 +1093,37 @@ export default function AlertsPage() {
                 </div>
               </div>
 
+              {/* Trigger mode */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 font-medium text-nog-900 dark:text-nog-100">
+                  Trigger
+                  <InfoTip
+                    content="Once: one notification per evaluation with the first rows attached. For each result: a separate notification (and history entry) per result row — e.g. one per host over the disk threshold."
+                    placement="right"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  {([
+                    { value: 'once', label: 'Once', hint: 'One notification per run' },
+                    { value: 'per_result', label: 'For each result', hint: 'One per result row' },
+                  ] as const).map((mode) => (
+                    <button
+                      key={mode.value}
+                      type="button"
+                      onClick={() => setFormData({ ...formData, trigger_mode: mode.value })}
+                      className={`text-left px-3 py-2 rounded-lg border-2 transition-colors ${
+                        formData.trigger_mode === mode.value
+                          ? 'border-honey-500 bg-honey-50 dark:bg-honey-900/20'
+                          : 'border-nog-200 dark:border-nog-600 hover:border-nog-300'
+                      }`}
+                    >
+                      <div className="text-sm font-medium text-nog-900 dark:text-nog-100">{mode.label}</div>
+                      <div className="text-xs text-nog-500 dark:text-nog-400">{mode.hint}</div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               {/* Throttling */}
               <div className="space-y-4">
                 <div className="flex items-center gap-3">
@@ -1100,22 +1137,39 @@ export default function AlertsPage() {
                   <label htmlFor="throttle" className="flex items-center gap-2 font-medium text-nog-900 dark:text-nog-100">
                     Enable Throttling
                     <InfoTip
-                      content="Prevent alert fatigue by suppressing notifications after the first trigger. The alert won't fire again until the throttle window expires."
+                      content="Prevent alert fatigue by suppressing repeat notifications until the throttle window expires. With 'For each result', suppression is per field value — a new host still fires while a known one stays quiet."
                       placement="right"
                     />
                   </label>
                 </div>
                 {formData.throttle_enabled && (
-                  <div>
-                    <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
-                      Suppress for (seconds)
-                    </label>
-                    <input
-                      type="number"
-                      value={formData.throttle_window_seconds}
-                      onChange={(e) => setFormData({ ...formData, throttle_window_seconds: parseInt(e.target.value) || 300 })}
-                      className="w-32 px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-700 text-nog-900 dark:text-nog-100"
-                    />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
+                        Suppress for (seconds)
+                      </label>
+                      <input
+                        type="number"
+                        value={formData.throttle_window_seconds}
+                        onChange={(e) => setFormData({ ...formData, throttle_window_seconds: parseInt(e.target.value) || 300 })}
+                        className="w-32 px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-700 text-nog-900 dark:text-nog-100"
+                      />
+                    </div>
+                    {formData.trigger_mode === 'per_result' && (
+                      <div>
+                        <label className="block text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
+                          Suppress results containing field(s)
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.throttle_fields}
+                          onChange={(e) => setFormData({ ...formData, throttle_fields: e.target.value })}
+                          placeholder="hostname, app_name"
+                          className="w-full px-3 py-2 font-mono text-sm border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-700 text-nog-900 dark:text-nog-100"
+                        />
+                        <p className="mt-1 text-xs text-nog-500 dark:text-nog-400">Comma-separated. Empty = the whole result row.</p>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
