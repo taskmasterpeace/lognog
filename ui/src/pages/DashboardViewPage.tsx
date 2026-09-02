@@ -654,22 +654,34 @@ function PageEditorModal({
   );
 }
 
+interface PanelSaveData {
+  title: string;
+  query: string;
+  visualization: string;
+  description?: string;
+  page_id?: string | null;
+}
+
 interface PanelEditorProps {
   panel?: DashboardPanel;
-  onSave: (data: { title: string; query: string; visualization: string; description?: string }) => void;
+  pages?: DashboardPage[];
+  /** Page pre-selected for a new panel (the tab the user is looking at). */
+  defaultPageId?: string | null;
+  onSave: (data: PanelSaveData) => void;
   onCancel: () => void;
   saving: boolean;
 }
 
-function PanelEditor({ panel, onSave, onCancel, saving }: PanelEditorProps) {
+function PanelEditor({ panel, pages = [], defaultPageId = null, onSave, onCancel, saving }: PanelEditorProps) {
   const [title, setTitle] = useState(panel?.title || '');
   const [description, setDescription] = useState(panel?.description || '');
   const [query, setQuery] = useState(panel?.query || 'search * | stats count by hostname');
   const [visualization, setVisualization] = useState(panel?.visualization || 'bar');
+  const [pageId, setPageId] = useState<string>(panel ? (panel.page_id || '') : (defaultPageId || ''));
 
   const handleSubmit = () => {
     if (title && query) {
-      onSave({ title, query, visualization, description: description || undefined });
+      onSave({ title, query, visualization, description: description || undefined, page_id: pageId || null });
     }
   };
 
@@ -722,6 +734,28 @@ function PanelEditor({ panel, onSave, onCancel, saving }: PanelEditorProps) {
               className="input"
             />
           </div>
+
+          {pages.length > 0 && (
+            <div>
+              <label className="flex items-center gap-2 text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">
+                Page
+                <InfoTip
+                  content="Which tab this panel appears on. 'All pages' panels show on every tab."
+                  placement="right"
+                />
+              </label>
+              <select
+                value={pageId}
+                onChange={(e) => setPageId(e.target.value)}
+                className="input"
+              >
+                <option value="">All pages</option>
+                {pages.map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div>
             <label className="flex items-center gap-2 text-sm font-medium text-nog-700 dark:text-nog-300 mb-1.5">
@@ -959,22 +993,23 @@ export default function DashboardViewPage() {
   }, [variableValues, dashboardVariables]);
 
   const createPanelMutation = useMutation({
-    mutationFn: (data: { title: string; query: string; visualization: string }) =>
-      createDashboardPanel(id!, data),
+    mutationFn: (data: PanelSaveData) => createDashboardPanel(id!, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dashboard', id] });
       setShowPanelEditor(false);
     },
+    onError: (err) => toast.error('Panel Not Saved', err instanceof Error ? err.message : 'Unknown error'),
   });
 
   const updatePanelMutation = useMutation({
-    mutationFn: ({ panelId, data }: { panelId: string; data: { title: string; query: string; visualization: string; description?: string } }) =>
-      updateDashboardPanel(id!, panelId, data),
+    mutationFn: ({ panelId, data }: { panelId: string; data: PanelSaveData }) =>
+      updateDashboardPanel(id!, panelId, data as Partial<DashboardPanel>),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['dashboard', id] });
       setShowPanelEditor(false);
       setEditingPanel(undefined);
     },
+    onError: (err) => toast.error('Panel Not Saved', err instanceof Error ? err.message : 'Unknown error'),
   });
 
   const deletePanelMutation = useMutation({
@@ -1148,7 +1183,7 @@ export default function DashboardViewPage() {
     setShowPanelEditor(true);
   };
 
-  const handleSavePanel = (data: { title: string; query: string; visualization: string }) => {
+  const handleSavePanel = (data: PanelSaveData) => {
     if (editingPanel) {
       updatePanelMutation.mutate({ panelId: editingPanel.id, data });
     } else {
@@ -1798,6 +1833,8 @@ export default function DashboardViewPage() {
       {showPanelEditor && (
         <PanelEditor
           panel={editingPanel}
+          pages={dashboard.pages || []}
+          defaultPageId={selectedPageId}
           onSave={handleSavePanel}
           onCancel={() => {
             setShowPanelEditor(false);

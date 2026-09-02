@@ -67,6 +67,28 @@ describe('public dashboard share link', () => {
     expect(panel.options).toEqual({ max: 500 });
   });
 
+  it('assigns panels to pages on create and update', async () => {
+    const created = await request(app).post('/dashboards').send({ name: 'Paged board' });
+    const id = created.body.id;
+    const page = await request(app).post(`/dashboards/${id}/pages`).send({ name: 'Ops' });
+    expect(page.status).toBe(201);
+
+    const onPage = await request(app).post(`/dashboards/${id}/panels`).send({
+      title: 'On the Ops tab', query: 'search *', visualization: 'table', page_id: page.body.id,
+    });
+    expect(onPage.status).toBe(201);
+    expect(onPage.body.page_id).toBe(page.body.id);
+
+    const moved = await request(app).put(`/dashboards/${id}/panels/${onPage.body.id}`).send({ page_id: null });
+    expect(moved.status).toBe(200);
+    expect(moved.body.page_id).toBeNull();
+
+    const foreign = await request(app).post(`/dashboards/${id}/panels`).send({
+      title: 'Bad page', query: 'search *', visualization: 'table', page_id: 'not-a-page',
+    });
+    expect(foreign.status).toBe(400);
+  });
+
   it('never exposes the share-password hash to API clients', async () => {
     const list = await request(app).get('/dashboards');
     expect(list.status).toBe(200);

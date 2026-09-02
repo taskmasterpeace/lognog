@@ -296,13 +296,14 @@ export function createDashboardPanel(
   visualization: string = 'table',
   options: Record<string, unknown> = {},
   position: { x: number; y: number; width: number; height: number } = { x: 0, y: 0, width: 6, height: 4 },
-  description?: string
+  description?: string,
+  pageId?: string | null
 ): DashboardPanel {
   const database = getSQLiteDB();
   const id = uuidv4();
   database.prepare(
-    'INSERT INTO dashboard_panels (id, dashboard_id, title, description, query, visualization, options, position_x, position_y, width, height) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
-  ).run(id, dashboardId, title, description || null, query, visualization, JSON.stringify(options), position.x, position.y, position.width, position.height);
+    'INSERT INTO dashboard_panels (id, dashboard_id, title, description, query, visualization, options, position_x, position_y, width, height, page_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+  ).run(id, dashboardId, title, description || null, query, visualization, JSON.stringify(options), position.x, position.y, position.width, position.height, pageId || null);
   return database.prepare('SELECT * FROM dashboard_panels WHERE id = ?').get(id) as DashboardPanel;
 }
 
@@ -318,6 +319,7 @@ export function updateDashboardPanel(
     position_y?: number;
     width?: number;
     height?: number;
+    page_id?: string | null;
   }
 ): DashboardPanel | undefined {
   const database = getSQLiteDB();
@@ -327,6 +329,10 @@ export function updateDashboardPanel(
   if (updates.title !== undefined) {
     fields.push('title = ?');
     values.push(updates.title);
+  }
+  if (updates.page_id !== undefined) {
+    fields.push('page_id = ?');
+    values.push(updates.page_id || null);
   }
   if (updates.description !== undefined) {
     fields.push('description = ?');

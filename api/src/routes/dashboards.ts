@@ -471,10 +471,14 @@ router.post('/:id/panels', (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Dashboard not found' });
     }
 
-    const { title, description, query, visualization, options, position } = req.body;
+    const { title, description, query, visualization, options, position, page_id } = req.body;
 
     if (!title || !query) {
       return res.status(400).json({ error: 'Title and query are required' });
+    }
+
+    if (page_id && !getDashboardPages(req.params.id).some(p => p.id === page_id)) {
+      return res.status(400).json({ error: 'page_id does not belong to this dashboard' });
     }
 
     const panel = createDashboardPanel(
@@ -484,7 +488,8 @@ router.post('/:id/panels', (req: Request, res: Response) => {
       visualization,
       options,
       position,
-      description
+      description,
+      page_id || null
     );
 
     return res.status(201).json({
@@ -505,7 +510,11 @@ router.put('/:id/panels/:panelId', (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Dashboard not found' });
     }
 
-    const { title, description, query, visualization, options, position_x, position_y, width, height } = req.body;
+    const { title, description, query, visualization, options, position_x, position_y, width, height, page_id } = req.body;
+
+    if (page_id && !getDashboardPages(req.params.id).some(p => p.id === page_id)) {
+      return res.status(400).json({ error: 'page_id does not belong to this dashboard' });
+    }
 
     const panel = updateDashboardPanel(req.params.panelId, {
       title,
@@ -517,6 +526,7 @@ router.put('/:id/panels/:panelId', (req: Request, res: Response) => {
       position_y,
       width,
       height,
+      page_id,
     });
 
     if (!panel) {

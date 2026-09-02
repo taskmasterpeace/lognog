@@ -638,6 +638,8 @@ export async function createDashboardPanel(
     title: string;
     query: string;
     visualization: string;
+    description?: string;
+    page_id?: string | null;
     options?: Record<string, unknown>;
     position?: { x: number; y: number; width: number; height: number };
   }
