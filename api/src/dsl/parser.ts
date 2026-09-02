@@ -233,9 +233,25 @@ export class Parser {
 
   private isConditionStart(): boolean {
     return this.check(TokenType.NOT) ||
-           this.check(TokenType.IDENTIFIER) ||
+           this.checkFieldName() ||
            this.check(TokenType.STRING) ||
            this.check(TokenType.LPAREN);
+  }
+
+  // Aggregation-function names double as the column names `stats` produces
+  // (`stats count by host` -> a `count` column), so a condition like
+  // `where count > 100` must accept them as field names even though the
+  // lexer classifies them as keywords.
+  private static readonly FIELD_KEYWORDS = new Set<TokenType>([
+    TokenType.COUNT, TokenType.SUM, TokenType.AVG, TokenType.MIN, TokenType.MAX,
+    TokenType.DC, TokenType.VALUES, TokenType.EARLIEST, TokenType.LATEST,
+    TokenType.MEDIAN, TokenType.MODE, TokenType.STDDEV, TokenType.VARIANCE,
+    TokenType.RANGE, TokenType.P50, TokenType.P90, TokenType.P95, TokenType.P99,
+    TokenType.FIRST, TokenType.LAST, TokenType.LIST, TokenType.FIELD, TokenType.OUTPUT,
+  ]);
+
+  private checkFieldName(): boolean {
+    return this.check(TokenType.IDENTIFIER) || Parser.FIELD_KEYWORDS.has(this.peek().type);
   }
 
   private parsePrimaryCondition(): Condition | null {
@@ -254,7 +270,7 @@ export class Parser {
 
     const negate = this.match(TokenType.NOT);
 
-    if (this.check(TokenType.IDENTIFIER) || this.check(TokenType.STRING)) {
+    if (this.checkFieldName() || this.check(TokenType.STRING)) {
       return this.parseCondition(negate);
     }
 
@@ -270,10 +286,10 @@ export class Parser {
       return { field: '_raw', operator: '~', value: phrase, negate };
     }
 
-    const field = this.consume(
-      TokenType.IDENTIFIER,
-      'Expected field name'
-    ).value;
+    if (!this.checkFieldName()) {
+      throw new ParseError('Expected field name', this.peek().line, this.peek().column);
+    }
+    const field = this.advance().value;
 
     // Check for operator
     let operator: ComparisonOperator = '=';

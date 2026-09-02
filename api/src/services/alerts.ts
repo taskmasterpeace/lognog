@@ -22,7 +22,7 @@ import {
   claimAlertTriggerKey,
   recordAlertFired,
 } from '../db/sqlite.js';
-import { executeDSLQuery, getBackend } from '../db/backend.js';
+import { executeDSLQuery, getBackend, filterRowsByDslCondition } from '../db/backend.js';
 import { processTemplate, generateAISummary, TemplateContext } from './template-engine.js';
 import { logAlertEvaluated, logAlertAction } from './internal-logger.js';
 
@@ -791,8 +791,8 @@ export async function evaluateAlert(alertId: string): Promise<{
     const latest = new Date().toISOString();
 
     // Execute the search query
-    const { results } = await executeDSLQuery(alert.search_query, { earliest, latest });
-    const resultCount = results.length;
+    let results = (await executeDSLQuery(alert.search_query, { earliest, latest })).results as Record<string, unknown>[];
+    let resultCount = results.length;
 
     // Update last_run timestamp (scheduling bookkeeping only — the scheduler's
     // cron matcher uses this to know the alert was evaluated this cycle). The
@@ -842,7 +842,13 @@ export async function evaluateAlert(alertId: string): Promise<{
         break;
 
       case 'custom_condition':
-        // For custom conditions, just check if any results
+        // Secondary search over the results: keep only rows satisfying the
+        // DSL condition and fire if any remain. Without a condition (legacy
+        // alerts) this degrades to "any results".
+        if (alert.custom_condition) {
+          results = filterRowsByDslCondition(results, alert.custom_condition);
+          resultCount = results.length;
+        }
         triggered = resultCount > 0;
         break;
 
@@ -1178,7 +1184,8 @@ export async function testAlert(
   triggerType: string,
   triggerCondition: string,
   triggerThreshold: number,
-  timeRange: string
+  timeRange: string,
+  customCondition?: string
 ): Promise<{
   wouldTrigger: boolean;
   resultCount: number;
@@ -1192,7 +1199,10 @@ export async function testAlert(
     const latest = new Date().toISOString();
 
     // Execute the search query
-    const { results } = await executeDSLQuery(searchQuery, { earliest, latest });
+    let results = (await executeDSLQuery(searchQuery, { earliest, latest })).results as Record<string, unknown>[];
+    if (normalizeTriggerType(triggerType) === 'custom_condition' && customCondition) {
+      results = filterRowsByDslCondition(results, customCondition);
+    }
     const resultCount = results.length;
 
     // Check trigger condition (mirror evaluateAlert: normalize legacy types and

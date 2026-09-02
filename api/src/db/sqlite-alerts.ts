@@ -58,6 +58,7 @@ export interface Alert {
   last_value?: number | null;   // Compared value at the last evaluation (drops_by / rises_by baseline)
   trigger_mode?: AlertTriggerMode;  // 'once' (default) or 'per_result'
   throttle_fields?: string | null;  // Comma-separated fields whose values key per-result throttling
+  custom_condition?: string | null; // Bare DSL condition over the results (trigger_type custom_condition)
   created_at: string;
   updated_at: string;
 }
@@ -118,6 +119,7 @@ export function createAlert(
     playbook?: string;
     trigger_mode?: AlertTriggerMode;
     throttle_fields?: string | null;
+    custom_condition?: string | null;
   } = {}
 ): Alert {
   const database = getSQLiteDB();
@@ -129,8 +131,8 @@ export function createAlert(
       trigger_type, trigger_condition, trigger_threshold,
       schedule_type, cron_expression, time_range,
       actions, throttle_enabled, throttle_window_seconds,
-      severity, enabled, app_scope, playbook, trigger_mode, throttle_fields
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      severity, enabled, app_scope, playbook, trigger_mode, throttle_fields, custom_condition
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id,
     name,
@@ -150,7 +152,8 @@ export function createAlert(
     options.app_scope || 'default',
     options.playbook || null,
     options.trigger_mode === 'per_result' ? 'per_result' : 'once',
-    options.throttle_fields || null
+    options.throttle_fields || null,
+    options.custom_condition || null
   );
 
   return getAlert(id)!;
@@ -183,6 +186,7 @@ export function updateAlert(
     last_value?: number | null;
     trigger_mode?: AlertTriggerMode;
     throttle_fields?: string | null;
+    custom_condition?: string | null;
   }
 ): Alert | undefined {
   const database = getSQLiteDB();
@@ -192,6 +196,10 @@ export function updateAlert(
   if (updates.name !== undefined) {
     fields.push('name = ?');
     values.push(updates.name);
+  }
+  if (updates.custom_condition !== undefined) {
+    fields.push('custom_condition = ?');
+    values.push(updates.custom_condition || null);
   }
   if (updates.trigger_mode !== undefined) {
     fields.push('trigger_mode = ?');

@@ -24,6 +24,7 @@ import {
   AlertScheduleType,
 } from '../db/sqlite.js';
 import { evaluateAlert, testAlert, evaluateAllAlerts, normalizeTriggerType } from '../services/alerts.js';
+import { validateDslCondition } from '../db/backend.js';
 import { ALERT_TEMPLATES } from '../data/alert-templates.js';
 import { authenticate, denyReadonly } from '../auth/middleware.js';
 
@@ -64,6 +65,19 @@ function invalidCron(cronExpression: unknown): string | null {
     return `Invalid schedule "${String(cronExpression)}": use a 5-field cron expression such as "*/5 * * * *"`;
   }
   return null;
+}
+
+// A custom-condition alert needs a parseable DSL condition, otherwise it would
+// silently fall back to "any results".
+function invalidCustomCondition(triggerType: unknown, condition: unknown): string | null {
+  if (condition === undefined || condition === null || condition === '') {
+    return normalizeTriggerType(String(triggerType ?? '')) === 'custom_condition' && triggerType !== undefined
+      ? 'A custom condition is required for the "custom condition" trigger, e.g. count > 100'
+      : null;
+  }
+  if (typeof condition !== 'string') return 'custom_condition must be a string';
+  const error = validateDslCondition(condition);
+  return error ? `Invalid custom condition: ${error}` : null;
 }
 
 function parseHistoryLimit(raw: unknown): number {
@@ -147,10 +161,15 @@ router.post('/test', async (req: Request, res: Response) => {
       trigger_condition,
       trigger_threshold,
       time_range,
+      custom_condition,
     } = req.body;
 
     if (!search_query) {
       return res.status(400).json({ error: 'search_query is required' });
+    }
+    const badCondition = invalidCustomCondition(trigger_type, custom_condition);
+    if (badCondition) {
+      return res.status(400).json({ error: badCondition });
     }
 
     const result = await testAlert(
@@ -158,7 +177,8 @@ router.post('/test', async (req: Request, res: Response) => {
       normalizeTriggerType(trigger_type),
       trigger_condition || 'greater_than',
       trigger_threshold ?? 0,
-      time_range || '-5m'
+      time_range || '-5m',
+      typeof custom_condition === 'string' ? custom_condition : undefined
     );
 
     res.json(result);
@@ -236,6 +256,7 @@ router.post('/', (req: Request, res: Response) => {
       app_scope,
       trigger_mode,
       throttle_fields,
+      custom_condition,
     } = req.body;
 
     if (!name || !search_query) {
@@ -245,6 +266,10 @@ router.post('/', (req: Request, res: Response) => {
     const badCron = invalidCron(cron_expression);
     if (badCron) {
       return res.status(400).json({ error: badCron });
+    }
+    const badCondition = invalidCustomCondition(trigger_type, custom_condition);
+    if (badCondition) {
+      return res.status(400).json({ error: badCondition });
     }
 
     const forbidden = scriptActionForbidden(req, actions);
@@ -268,6 +293,7 @@ router.post('/', (req: Request, res: Response) => {
       app_scope,
       trigger_mode,
       throttle_fields,
+      custom_condition,
     });
 
     res.status(201).json({
@@ -325,11 +351,16 @@ router.put('/:id', (req: Request, res: Response) => {
       app_scope,
       trigger_mode,
       throttle_fields,
+      custom_condition,
     } = req.body;
 
     const badCron = invalidCron(cron_expression);
     if (badCron) {
       return res.status(400).json({ error: badCron });
+    }
+    const badCondition = invalidCustomCondition(trigger_type ?? existing.trigger_type, custom_condition);
+    if (badCondition) {
+      return res.status(400).json({ error: badCondition });
     }
 
     const forbidden = scriptActionForbidden(req, actions);
@@ -355,6 +386,7 @@ router.put('/:id', (req: Request, res: Response) => {
       app_scope,
       trigger_mode,
       throttle_fields,
+      custom_condition,
     });
 
     if (!alert) {

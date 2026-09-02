@@ -852,6 +852,11 @@ function initializeSchema(): void {
   if (!alertColumnNames.includes('throttle_fields')) {
     database.exec("ALTER TABLE alerts ADD COLUMN throttle_fields TEXT");
   }
+  // Bare DSL condition evaluated over the search results for trigger_type
+  // 'custom_condition' (e.g. "count > 100 AND hostname=web-01").
+  if (!alertColumnNames.includes('custom_condition')) {
+    database.exec("ALTER TABLE alerts ADD COLUMN custom_condition TEXT");
+  }
   database.exec(`
     CREATE TABLE IF NOT EXISTS alert_throttle_keys (
       alert_id TEXT NOT NULL,

@@ -1105,6 +1105,8 @@ export interface Alert {
   trigger_mode?: 'once' | 'per_result';
   /** Comma-separated fields whose values key per-result throttling. */
   throttle_fields?: string | null;
+  /** Bare DSL condition over the results for trigger_type 'custom_condition'. */
+  custom_condition?: string | null;
   trigger_count: number;
   app_scope?: string;
   created_at: string;
@@ -1189,6 +1191,7 @@ export async function testAlert(config: {
   trigger_condition: string;
   trigger_threshold: number;
   time_range: string;
+  custom_condition?: string;
 }): Promise<{ wouldTrigger: boolean; resultCount: number; message: string; sampleResults?: Record<string, unknown>[] }> {
   return request('/alerts/test', {
     method: 'POST',

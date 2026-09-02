@@ -76,7 +76,7 @@ interface LocalAlertHistory {
 const TRIGGER_TYPES = [
   { value: 'number_of_results', label: 'Number of Results' },
   { value: 'number_of_hosts', label: 'Number of Hosts' },
-  { value: 'custom_condition', label: 'Custom (any results)' },
+  { value: 'custom_condition', label: 'Custom condition' },
   { value: 'no_data', label: 'No Data (silence)' },
 ];
 
@@ -165,6 +165,7 @@ export default function AlertsPage() {
     trigger_type: 'number_of_results',
     trigger_condition: 'greater_than',
     trigger_threshold: 0,
+    custom_condition: '',
     schedule_type: 'cron',
     cron_expression: '*/5 * * * *',
     time_range: '-5m',
@@ -371,6 +372,7 @@ export default function AlertsPage() {
       trigger_type: 'number_of_results',
       trigger_condition: 'greater_than',
       trigger_threshold: 0,
+      custom_condition: '',
       schedule_type: 'cron',
       cron_expression: '*/5 * * * *',
       time_range: '-5m',
@@ -393,6 +395,7 @@ export default function AlertsPage() {
       trigger_type: alert.trigger_type,
       trigger_condition: alert.trigger_condition,
       trigger_threshold: alert.trigger_threshold,
+      custom_condition: alert.custom_condition || '',
       schedule_type: alert.schedule_type,
       cron_expression: alert.cron_expression || '*/5 * * * *',
       time_range: alert.time_range,
@@ -415,6 +418,7 @@ export default function AlertsPage() {
         trigger_condition: formData.trigger_condition,
         trigger_threshold: formData.trigger_threshold,
         time_range: formData.time_range,
+        custom_condition: formData.trigger_type === 'custom_condition' ? formData.custom_condition : undefined,
       });
       setTestResult(result);
     } catch (err) {
@@ -944,7 +948,7 @@ export default function AlertsPage() {
                           <div className="space-y-1">
                             <p><strong>Number of Results:</strong> Trigger based on total log count</p>
                             <p><strong>Number of Hosts:</strong> Trigger based on unique hosts count</p>
-                            <p><strong>Custom:</strong> Trigger if any results match</p>
+                            <p><strong>Custom condition:</strong> Trigger when any result row satisfies a DSL condition, e.g. <code>count &gt; 100 AND hostname=web-01</code></p>
                           </div>
                         }
                         placement="top"
@@ -960,39 +964,65 @@ export default function AlertsPage() {
                       ))}
                     </select>
                   </div>
-                  <div>
-                    <label className="flex items-center gap-2 text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
-                      Condition
-                      <InfoTip
-                        content="Compare the result count/value against the threshold. Use 'drops by' or 'rises by' to detect sudden changes."
-                        placement="top"
+                  {formData.trigger_type === 'custom_condition' ? (
+                    <div className="col-span-2">
+                      <label className="flex items-center gap-2 text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
+                        Condition (DSL)
+                        <InfoTip
+                          content={
+                            <div className="space-y-1">
+                              <p>Evaluated against each result row after the search runs; the alert fires when any row matches and only matching rows are passed to actions.</p>
+                              <p className="text-xs opacity-80">Operators: = != &gt; &lt; &gt;= &lt;= ~ (regex) IN (...), combined with AND / OR.</p>
+                            </div>
+                          }
+                          placement="top"
+                        />
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.custom_condition}
+                        onChange={(e) => setFormData({ ...formData, custom_condition: e.target.value })}
+                        placeholder='count > 100 AND hostname!="canary"'
+                        className="w-full px-3 py-2 font-mono text-sm border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-700 text-nog-900 dark:text-nog-100"
                       />
-                    </label>
-                    <select
-                      value={formData.trigger_condition}
-                      onChange={(e) => setFormData({ ...formData, trigger_condition: e.target.value })}
-                      className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-700 text-nog-900 dark:text-nog-100"
-                    >
-                      {TRIGGER_CONDITIONS.map((c) => (
-                        <option key={c.value} value={c.value}>{c.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="flex items-center gap-2 text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
-                      Threshold
-                      <InfoTip
-                        content="The numeric value to compare against. For example, set to 10 to trigger when results exceed 10."
-                        placement="top"
-                      />
-                    </label>
-                    <input
-                      type="number"
-                      value={formData.trigger_threshold}
-                      onChange={(e) => setFormData({ ...formData, trigger_threshold: parseInt(e.target.value) || 0 })}
-                      className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-700 text-nog-900 dark:text-nog-100"
-                    />
-                  </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div>
+                        <label className="flex items-center gap-2 text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
+                          Condition
+                          <InfoTip
+                            content="Compare the result count/value against the threshold. Use 'drops by' or 'rises by' to detect sudden changes."
+                            placement="top"
+                          />
+                        </label>
+                        <select
+                          value={formData.trigger_condition}
+                          onChange={(e) => setFormData({ ...formData, trigger_condition: e.target.value })}
+                          className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-700 text-nog-900 dark:text-nog-100"
+                        >
+                          {TRIGGER_CONDITIONS.map((c) => (
+                            <option key={c.value} value={c.value}>{c.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="flex items-center gap-2 text-sm font-medium text-nog-700 dark:text-nog-300 mb-1">
+                          Threshold
+                          <InfoTip
+                            content="The numeric value to compare against. For example, set to 10 to trigger when results exceed 10."
+                            placement="top"
+                          />
+                        </label>
+                        <input
+                          type="number"
+                          value={formData.trigger_threshold}
+                          onChange={(e) => setFormData({ ...formData, trigger_threshold: parseInt(e.target.value) || 0 })}
+                          className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-700 text-nog-900 dark:text-nog-100"
+                        />
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
 

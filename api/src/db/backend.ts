@@ -289,6 +289,44 @@ function evaluateCondition(row: Record<string, unknown>, cond: Condition): boole
 }
 
 /**
+ * Parse a bare DSL condition ("count > 100 AND hostname=web-01") the way a
+ * `where` stage would. Returns the condition list or throws with a
+ * user-facing message.
+ */
+function parseDslCondition(conditionText: string): Condition[] {
+  const text = conditionText.trim();
+  if (!text) throw new Error('Condition is empty');
+  const ast = parseToAST(`search * | where ${text}`);
+  const stage = ast.stages[ast.stages.length - 1] as unknown as { type: string; conditions?: Condition[] };
+  if (!stage || (stage.type !== 'where' && stage.type !== 'filter') || !stage.conditions) {
+    throw new Error('Condition could not be parsed as a where clause');
+  }
+  return stage.conditions;
+}
+
+/** Validate a bare DSL condition; returns an error message or null. */
+export function validateDslCondition(conditionText: string): string | null {
+  try {
+    parseDslCondition(conditionText);
+    return null;
+  } catch (err) {
+    return err instanceof Error ? err.message : String(err);
+  }
+}
+
+/**
+ * Filter result rows in memory with a bare DSL condition — the engine behind
+ * alert "custom conditions" (Splunk's secondary search over the results).
+ */
+export function filterRowsByDslCondition(
+  rows: Record<string, unknown>[],
+  conditionText: string
+): Record<string, unknown>[] {
+  const conditions = parseDslCondition(conditionText);
+  return rows.filter(row => evaluateConditions(row, conditions));
+}
+
+/**
  * Health check for the configured backend
  */
 export async function healthCheck(): Promise<boolean> {
