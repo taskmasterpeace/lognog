@@ -1,0 +1,138 @@
+# docker-compose.coolify.yml — LogNog on Coolify (mkl-dev), ADDITIVE file.
+# The PC production (docker-compose.yml + its cloudflared tunnel at
+# logs.machinekinglabs.com) is untouched; this variant serves
+# lognog.machinekinglabs.com through Coolify's traefik proxy.
+#
+# Differences from docker-compose.yml, on purpose:
+#   • no host port 80/8123/4000 — traefik routes to nginx over the coolify network
+#   • ./data and ./backups become NAMED volumes (repo re-clones every deploy;
+#     bind mounts into the checkout would wipe state)
+#   • dropped: cloudflared (traefik replaces it), ollama (no GPU on a CX33 —
+#     AI features off in v1), log-generator (demo), apprise (v1)
+#   • syslog ingest stays on host 514/udp+tcp; vector reads the host docker.sock
+#     so mkl-dev's own containers' logs can be collected
+services:
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.8
+    volumes:
+      - clickhouse-data:/var/lib/clickhouse
+      - ./clickhouse/init:/docker-entrypoint-initdb.d
+      - ./clickhouse/config.d/lognog.xml:/etc/clickhouse-server/config.d/lognog.xml:ro
+      - ./clickhouse/users.d/lognog.xml:/etc/clickhouse-server/users.d/lognog.xml:ro
+    environment:
+      CLICKHOUSE_DB: lognog
+      CLICKHOUSE_USER: lognog
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:?set in Coolify}
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    # keep ClickHouse polite on a shared 8GB box
+    mem_limit: 3g
+    healthcheck:
+      test: ["CMD", "clickhouse-client", "--query", "SELECT 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  vector:
+    image: timberio/vector:0.35.0-alpine
+    command: ["--config", "/etc/vector/vector.toml"]
+    ports:
+      - "514:514/udp"
+      - "514:514/tcp"
+    volumes:
+      - ./vector/vector.toml:/etc/vector/vector.toml:ro
+      - vector-data:/var/lib/vector
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:8686/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: api/Dockerfile
+    environment:
+      NODE_ENV: production
+      LOGNOG_BACKEND: clickhouse
+      CLICKHOUSE_HOST: clickhouse
+      CLICKHOUSE_PORT: 8123
+      CLICKHOUSE_USER: lognog
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:?set in Coolify}
+      CLICKHOUSE_DATABASE: lognog
+      BASE_URL: ${BASE_URL:-https://lognog.machinekinglabs.com}
+      JWT_SECRET: ${JWT_SECRET:?set in Coolify}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?set in Coolify}
+      OTLP_REQUIRE_AUTH: ${OTLP_REQUIRE_AUTH:-true}
+      GEOIP_DATA_PATH: /data/geoip
+      # v1: no ollama service on this box; AI endpoints fail fast and the rest
+      # of LogNog works. Point OLLAMA_URL at a real endpoint later to enable.
+      OLLAMA_URL: ${OLLAMA_URL:-http://ollama-disabled:11434}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      LLAMAINDEX_PERSIST_DIR: /data/llamaindex
+    volumes:
+      - lognog-data:/data
+      - lognog-backups:/backups
+    depends_on:
+      clickhouse:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:4000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  ui:
+    build:
+      context: ./ui
+      dockerfile: Dockerfile
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:alpine
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - api
+      - ui
+    restart: unless-stopped
+    expose:
+      - "80"
+    networks:
+      - default
+      - coolify
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=coolify
+      - "traefik.http.routers.lognog.rule=Host(`lognog.machinekinglabs.com`)"
+      - traefik.http.routers.lognog.entryPoints=https
+      - traefik.http.routers.lognog.tls=true
+      - traefik.http.routers.lognog.tls.certresolver=letsencrypt
+      - traefik.http.services.lognog.loadbalancer.server.port=80
+      - "traefik.http.routers.lognog-http.rule=Host(`lognog.machinekinglabs.com`)"
+      - traefik.http.routers.lognog-http.entryPoints=http
+      - traefik.http.routers.lognog-http.middlewares=lognog-redirect
+      - traefik.http.middlewares.lognog-redirect.redirectscheme.scheme=https
+
+networks:
+  default:
+  coolify:
+    external: true
+
+volumes:
+  clickhouse-data:
+  vector-data:
+  lognog-data:
+  lognog-backups:
