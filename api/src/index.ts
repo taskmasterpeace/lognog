@@ -60,7 +60,35 @@ const PORT = process.env.PORT || 4000;
 const { app } = expressWs(express());
 
 // Middleware
-app.use(cors());
+// CORS: the UI is served same-origin via nginx and ingest is server-to-server,
+// so restrict cross-origin BROWSER access to a known allowlist — the instance is
+// now internet-facing without the Cloudflare Access wall, and `cors()` with no
+// options reflected any origin. Requests with no Origin header (same-origin, curl,
+// server-to-server ingest) are always allowed, so this does not affect log shipping.
+const corsAllowlist = (
+  process.env.CORS_ALLOWED_ORIGINS ||
+  [
+    process.env.BASE_URL,
+    'https://logs.machinekinglabs.com',
+    'https://lognog.machinekinglabs.com',
+    'http://localhost:3000',
+    'http://localhost:5173',
+  ]
+    .filter(Boolean)
+    .join(',')
+)
+  .split(',')
+  .map((o) => o.trim())
+  .filter(Boolean);
+app.use(
+  cors({
+    origin(origin, cb) {
+      if (!origin || corsAllowlist.includes(origin)) return cb(null, true);
+      cb(null, false); // unknown browser origin: no CORS headers, browser blocks it (not a server error)
+    },
+    credentials: true,
+  }),
+);
 app.use(cookieParser());
 app.use(express.json({ limit: '10mb' }));  // Explicit size limit
 

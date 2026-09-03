@@ -24,7 +24,7 @@ import {
   dismissLoginNotification,
   dismissAllLoginNotifications,
 } from '../db/sqlite.js';
-import { authenticate, requireAdmin, requireRole, rateLimit } from '../auth/middleware.js';
+import { authenticate, requireAdmin, requireRole, rateLimit, accountLockoutRemaining, recordLoginFailure, clearLoginFailures } from '../auth/middleware.js';
 import { logAuthLogin, logAuthLoginFailed, logAuthLogout, logAuthSetup } from '../services/internal-logger.js';
 
 const router = Router();
@@ -97,9 +97,22 @@ router.post('/setup', rateLimit(5, 60000), async (req, res) => {
 router.post('/login', rateLimit(10, 60000), async (req, res) => {
   try {
     const data = loginSchema.parse(req.body);
+
+    // Per-account lockout (on top of the per-IP rateLimit above): stops
+    // distributed credential-stuffing on a single account. Response is the same
+    // for locked existing and non-existing usernames — no enumeration.
+    const lockedFor = accountLockoutRemaining(data.username);
+    if (lockedFor > 0) {
+      logAuthEvent(null, 'login_locked', req.ip, req.get('user-agent'), { username: data.username });
+      res.set('Retry-After', String(lockedFor));
+      res.status(429).json({ error: 'Too many failed attempts. Try again later.', retryAfter: lockedFor });
+      return;
+    }
+
     const result = await authenticateUser(data.username, data.password);
 
     if (!result) {
+      recordLoginFailure(data.username);
       logAuthEvent(null, 'login_failed', req.ip, req.get('user-agent'), {
         username: data.username,
       });
@@ -113,6 +126,7 @@ router.post('/login', rateLimit(10, 60000), async (req, res) => {
       return;
     }
 
+    clearLoginFailures(data.username);
     logAuthEvent(result.user.id, 'login_success', req.ip, req.get('user-agent'));
     logAuthLogin({
       user_id: result.user.id,

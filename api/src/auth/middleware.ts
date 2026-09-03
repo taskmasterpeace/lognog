@@ -372,6 +372,61 @@ setInterval(() => {
 }, 60000);
 
 /**
+ * Per-account login lockout — defense-in-depth on top of the per-IP rateLimit.
+ *
+ * Since the cloud instance is internet-facing (no Cloudflare Access wall in
+ * front), a per-IP throttle alone doesn't stop distributed credential-stuffing
+ * that spreads guesses for ONE account across many IPs. This locks a *username*
+ * after too many failures, regardless of source IP.
+ *
+ * Tracking is keyed on the SUBMITTED username string (existing or not) and the
+ * response is identical either way, so it never reveals which usernames exist.
+ * In-memory is sufficient: the deployment runs a single API container.
+ */
+const loginFailures = new Map<string, { count: number; first: number; lockedUntil: number }>();
+const LOCKOUT_THRESHOLD = 5;               // failed attempts...
+const LOCKOUT_WINDOW_MS = 15 * 60_000;     // ...within this window...
+const LOCKOUT_DURATION_MS = 15 * 60_000;   // ...locks the account this long.
+
+/** Seconds remaining on a lockout for this username, or 0 if not locked. */
+export function accountLockoutRemaining(username: string): number {
+  const rec = loginFailures.get(username.toLowerCase());
+  if (!rec) return 0;
+  const remaining = rec.lockedUntil - Date.now();
+  return remaining > 0 ? Math.ceil(remaining / 1000) : 0;
+}
+
+/** Record a failed login; trips the lock at LOCKOUT_THRESHOLD within the window. */
+export function recordLoginFailure(username: string): void {
+  const key = username.toLowerCase();
+  const now = Date.now();
+  const rec = loginFailures.get(key);
+  if (!rec || now - rec.first > LOCKOUT_WINDOW_MS) {
+    loginFailures.set(key, { count: 1, first: now, lockedUntil: 0 });
+    return;
+  }
+  rec.count++;
+  if (rec.count >= LOCKOUT_THRESHOLD) {
+    rec.lockedUntil = now + LOCKOUT_DURATION_MS;
+  }
+}
+
+/** Clear a username's failure record on successful login. */
+export function clearLoginFailures(username: string): void {
+  loginFailures.delete(username.toLowerCase());
+}
+
+// Evict stale failure records so the map can't grow unbounded.
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, rec] of loginFailures) {
+    if (rec.lockedUntil < now && now - rec.first > LOCKOUT_WINDOW_MS) {
+      loginFailures.delete(key);
+    }
+  }
+}, 60_000);
+
+/**
  * Optional API key authentication for ingestion endpoints
  * Checks for API key in Authorization header (Bearer or ApiKey) or X-API-Key header
  * If OTLP_REQUIRE_AUTH=false, authentication is optional
