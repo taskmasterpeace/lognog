@@ -120,12 +120,12 @@ services:
     labels:
       - traefik.enable=true
       - traefik.docker.network=coolify
-      - "traefik.http.routers.lognog.rule=Host(`lognog.machinekinglabs.com`)"
+      - "traefik.http.routers.lognog.rule=Host(`logs.machinekinglabs.com`) || Host(`lognog.machinekinglabs.com`)"
       - traefik.http.routers.lognog.entryPoints=https
       - traefik.http.routers.lognog.tls=true
       - traefik.http.routers.lognog.tls.certresolver=letsencrypt
       - traefik.http.services.lognog.loadbalancer.server.port=80
-      - "traefik.http.routers.lognog-http.rule=Host(`lognog.machinekinglabs.com`)"
+      - "traefik.http.routers.lognog-http.rule=Host(`logs.machinekinglabs.com`) || Host(`lognog.machinekinglabs.com`)"
       - traefik.http.routers.lognog-http.entryPoints=http
       - traefik.http.routers.lognog-http.middlewares=lognog-redirect
       - traefik.http.middlewares.lognog-redirect.redirectscheme.scheme=https
