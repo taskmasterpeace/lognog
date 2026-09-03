@@ -106,3 +106,6 @@ ui/e2e/screenshots/
 ui/playwright-report/
 ui/e2e/debug-*.spec.ts
 .playwright-mcp/
+
+# migration data bundle (binary, transferred out-of-band)
+migration-bundle/
