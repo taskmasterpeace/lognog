@@ -68,6 +68,10 @@ services:
       CLICKHOUSE_USER: lognog
       CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-}
       CLICKHOUSE_DATABASE: lognog
+      # Persisted metadata DB (users, dashboards, alerts, API keys). WITHOUT this
+      # the API defaults to ./lognog.db = /app/lognog.db, which is EPHEMERAL and was
+      # silently reset on every redeploy. /data is the lognog-data named volume.
+      SQLITE_PATH: /data/lognog.db
       BASE_URL: ${BASE_URL:-https://lognog.machinekinglabs.com}
       JWT_SECRET: ${JWT_SECRET:-}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-}
