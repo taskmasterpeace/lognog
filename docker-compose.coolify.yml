@@ -81,6 +81,12 @@ services:
       # of LogNog works. Point OLLAMA_URL at a real endpoint later to enable.
       OLLAMA_URL: ${OLLAMA_URL:-http://ollama-disabled:11434}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-}
+      SMTP_SECURE: ${SMTP_SECURE:-}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
       LLAMAINDEX_PERSIST_DIR: /data/llamaindex
     volumes:
       - lognog-data:/data
