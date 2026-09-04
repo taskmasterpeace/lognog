@@ -376,9 +376,9 @@ describe('OTLP Authentication', () => {
 describe('ingest index scoping', () => {
   it('helper rejects a disallowed index (guards the 403 path)', () => {
     // Mirrors the runtime check in the HTTP ingest handler.
-    expect(isIndexAllowed(['hey-youre-hired'], 'directors-palette')).toBe(false);
-    expect(isIndexAllowed(['hey-youre-hired'], 'hey-youre-hired')).toBe(true);
-    expect(isIndexAllowed(null, 'directors-palette')).toBe(true);
+    expect(isIndexAllowed(['web-app'], 'api-service')).toBe(false);
+    expect(isIndexAllowed(['web-app'], 'web-app')).toBe(true);
+    expect(isIndexAllowed(null, 'api-service')).toBe(true);
   });
 
   // Mount the REAL ingest router (default export from ./ingest.ts) so the actual
@@ -411,38 +411,38 @@ describe('ingest index scoping', () => {
     vi.mocked(auth.validateApiKey).mockResolvedValue({
       userId: 'scoped-user-id',
       permissions: ['write'],
-      allowedIndexes: ['hey-youre-hired'],
+      allowedIndexes: ['web-app'],
     });
 
     const app = createScopedIngestApp();
     const response = await request(app)
       .post('/api/ingest/http')
       .set('X-API-Key', 'scoped-key')
-      .set('X-Index', 'directors-palette')
+      .set('X-Index', 'api-service')
       .send([{ message: 'should be blocked' }]);
 
     expect(response.status).toBe(403);
     expect(response.body.error).toBe('API key not authorized for this index');
-    expect(response.body.attempted_index).toBe('directors-palette');
+    expect(response.body.attempted_index).toBe('api-service');
   });
 
   it('allows ingest to an in-scope index', async () => {
     vi.mocked(auth.validateApiKey).mockResolvedValue({
       userId: 'scoped-user-id',
       permissions: ['write'],
-      allowedIndexes: ['hey-youre-hired'],
+      allowedIndexes: ['web-app'],
     });
 
     const app = createScopedIngestApp();
     const response = await request(app)
       .post('/api/ingest/http')
       .set('X-API-Key', 'scoped-key')
-      .set('X-Index', 'hey-youre-hired')
+      .set('X-Index', 'web-app')
       .send([{ message: 'ok' }]);
 
     expect(response.status).toBe(200);
     expect(response.body.accepted).toBe(1);
-    expect(response.body.index).toBe('hey-youre-hired');
+    expect(response.body.index).toBe('web-app');
   });
 
   it('allows any index for an unscoped key (backward compatible)', async () => {
@@ -456,7 +456,7 @@ describe('ingest index scoping', () => {
     const response = await request(app)
       .post('/api/ingest/http')
       .set('X-API-Key', 'unscoped-key')
-      .set('X-Index', 'directors-palette')
+      .set('X-Index', 'api-service')
       .send([{ message: 'ok' }]);
 
     expect(response.status).toBe(200);
@@ -467,25 +467,25 @@ describe('ingest index scoping', () => {
     vi.mocked(auth.validateApiKey).mockResolvedValue({
       userId: 'scoped-user-id',
       permissions: ['write'],
-      allowedIndexes: ['hey-youre-hired'],
+      allowedIndexes: ['web-app'],
     });
 
     // Simulate an admin routing rule overriding the index to a disallowed one
     // AFTER the initial (in-scope) scope check passed.
     vi.mocked(sourceProcessor.processLogs).mockImplementation((logs) =>
-      logs.map((l) => ({ ...l, index_name: 'directors-palette' })),
+      logs.map((l) => ({ ...l, index_name: 'api-service' })),
     );
 
     const app = createScopedIngestApp();
     const response = await request(app)
       .post('/api/ingest/http')
       .set('X-API-Key', 'scoped-key')
-      .set('X-Index', 'hey-youre-hired') // in-scope at the pre-process check
+      .set('X-Index', 'web-app') // in-scope at the pre-process check
       .send([{ message: 'should be blocked after re-routing' }]);
 
     expect(response.status).toBe(403);
     expect(response.body.error).toBe('API key not authorized for this index');
-    expect(response.body.attempted_index).toBe('directors-palette');
+    expect(response.body.attempted_index).toBe('api-service');
   });
 
   // --- Phase 1b: scoping enforced across the OTHER ingest endpoints too ---
@@ -494,7 +494,7 @@ describe('ingest index scoping', () => {
     vi.mocked(auth.validateApiKey).mockResolvedValue({
       userId: 'scoped-user-id',
       permissions: ['write'],
-      allowedIndexes: ['hey-youre-hired'],
+      allowedIndexes: ['web-app'],
     });
 
     const app = createScopedIngestApp();
@@ -529,7 +529,7 @@ describe('ingest index scoping', () => {
     vi.mocked(auth.validateApiKey).mockResolvedValue({
       userId: 'scoped-user-id',
       permissions: ['write'],
-      allowedIndexes: ['hey-youre-hired'],
+      allowedIndexes: ['web-app'],
     });
 
     const app = createScopedIngestApp();
@@ -588,7 +588,7 @@ describe('ingest index scoping', () => {
     vi.mocked(auth.validateApiKey).mockResolvedValue({
       userId: 'scoped-user-id',
       permissions: ['write'],
-      allowedIndexes: ['hey-youre-hired'],
+      allowedIndexes: ['web-app'],
     });
 
     const app = createScopedIngestApp();

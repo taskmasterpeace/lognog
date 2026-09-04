@@ -2,7 +2,7 @@
 
 **You are an AI coding agent (e.g. Claude Code). Your job: instrument this project to send its logs to LogNog correctly.** This guide is self-contained — everything you need to configure logging is below. Follow it top to bottom.
 
-LogNog is a self-hosted log platform (a friendlier Splunk). It ingests structured JSON log events over HTTP, stores them in ClickHouse, and lets a human search them with a Splunk-like query language, build dashboards, and get alerts. "The right logs" means **structured, severity-tagged events with useful fields** — not `console.log` spam. This guide tells you exactly what to send.
+LogNog is a self-hosted log platform. It ingests structured JSON log events over HTTP, stores them in ClickHouse, and lets a human search them with a pipe-based query language, build dashboards, and get alerts. "The right logs" means **structured, severity-tagged events with useful fields** — not `console.log` spam. This guide tells you exactly what to send.
 
 - **Fetch the latest version of this guide:** `GET https://logs.machinekinglabs.com/api/ingest/guide` (returns this markdown).
 - **Fetch the machine-readable contract:** `GET https://logs.machinekinglabs.com/api/ingest/schema` (returns JSON).
@@ -283,7 +283,7 @@ If nothing shows: check `LOGNOG_URL` has no trailing `/api/...` path, the key is
 
 ## Query language (DSL) cheat-sheet
 
-You'll need this to search (below, and via the ingest verify step). It's Splunk-like and piped: start with `search <filters>`, then `| <command>`.
+You'll need this to search (below, and via the ingest verify step). It's pipe-based: start with `search <filters>`, then `| <command>`.
 
 **Filters:** `field=value` · `field!=value` · `severity<=3` · `message="some text"` · `AND` / `OR` / `NOT` · `index=<name>` · `app_name=<name>`. Severity: `0`=emergency … `3`=error … `7`=debug, so **`severity<=3` = errors and worse**.
 
@@ -359,9 +359,9 @@ curl -H "X-API-Key: $KEY" "$LOGNOG_URL/api/agent/summary"
 **Create-alert body** (only `name` + `search_query` are required):
 ```json
 {
-  "name": "HYH error spike",
+  "name": "MyApp error spike",
   "description": "created by an agent",
-  "search_query": "search app_name=hey-youre-hired severity<=3 | stats count",
+  "search_query": "search app_name=my-app severity<=3 | stats count",
   "trigger_type": "number_of_results",
   "trigger_condition": "greater_than",
   "trigger_threshold": 50,

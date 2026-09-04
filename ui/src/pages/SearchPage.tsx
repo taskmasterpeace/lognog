@@ -706,7 +706,7 @@ export default function SearchPage() {
   }, [query, timeRange, timeRangeLatest, syncUrl, searchMutation]);
 
   // Show surrounding events: scope the search to this log's host and set a
-  // custom ±5 min time window around its timestamp, then run. Splunk's
+  // custom ±5 min time window around its timestamp, then run. the classic
   // beloved "Nearby Events" in one click.
   const handleShowContext = useCallback((log: LogEntry) => {
     const host = log.hostname || log.host || log.source;

@@ -355,8 +355,8 @@ describe('Parser', () => {
     expect(ast.stages[2].type).toBe('top');
   });
 
-  // Splunk-style sort syntax tests
-  it('parses Splunk-style sort -field for descending', () => {
+  // dash/plus sort syntax tests
+  it('parses dash/plus sort -field for descending', () => {
     const ast = parse('search * | sort -count');
 
     expect(ast.stages[1].type).toBe('sort');
@@ -367,7 +367,7 @@ describe('Parser', () => {
     expect(sort.fields[0].direction).toBe('desc');
   });
 
-  it('parses Splunk-style sort +field for ascending', () => {
+  it('parses dash/plus sort +field for ascending', () => {
     const ast = parse('search * | sort +timestamp');
 
     expect(ast.stages[1].type).toBe('sort');
@@ -378,7 +378,7 @@ describe('Parser', () => {
     expect(sort.fields[0].direction).toBe('asc');
   });
 
-  it('parses Splunk-style sort with multiple fields', () => {
+  it('parses dash/plus sort with multiple fields', () => {
     const ast = parse('search * | sort -count +hostname');
 
     expect(ast.stages[1].type).toBe('sort');

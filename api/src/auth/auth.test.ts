@@ -21,11 +21,11 @@ describe('API key index scoping (round trip)', () => {
 
   it('stores and returns allowed_indexes for a scoped key', async () => {
     const { apiKey } = await createApiKey(userId, 'scoped-key', ['write'], undefined, [
-      'hey-youre-hired',
+      'web-app',
     ]);
     const result = await validateApiKey(apiKey);
     expect(result).not.toBeNull();
-    expect(result!.allowedIndexes).toEqual(['hey-youre-hired']);
+    expect(result!.allowedIndexes).toEqual(['web-app']);
   });
 
   it('returns null allowedIndexes for an unscoped key', async () => {

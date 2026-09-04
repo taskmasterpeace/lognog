@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 
 const features = [
-  { icon: Search, title: 'A query language you already know', description: 'search, stats, filter, dedup, table, sort — Splunk-style piping that compiles straight to fast SQL.' },
+  { icon: Search, title: 'A query language you already know', description: 'search, stats, filter, dedup, table, sort — shorthand piping that compiles straight to fast SQL.' },
   { icon: LayoutDashboard, title: 'Dashboards that tell the story', description: 'Tables, bar, pie, line, area, heatmaps, gauges, single-stats — drag, drop, drill down.' },
   { icon: Bell, title: 'Alerts that actually reach you', description: 'Threshold and no-data alerts to Slack, Discord, email, webhooks — with silencing and throttling.' },
   { icon: Activity, title: 'Live tail, in real time', description: 'Watch logs stream in as they happen over SSE — pause, resume, filter on the fly.' },
@@ -44,7 +44,7 @@ const shots = [
 const comparison = [
   { feature: 'Where your logs live', lognog: 'Your servers, full stop', them: 'Their cloud, their terms' },
   { feature: 'Monthly bill', lognog: '$0 — free forever', them: 'Per-GB, climbing' },
-  { feature: 'Query language', lognog: 'Splunk-style, familiar', them: 'Proprietary, re-learn it' },
+  { feature: 'Query language', lognog: 'shorthand, familiar', them: 'Proprietary, re-learn it' },
   { feature: 'Setup', lognog: 'One Docker command', them: 'Onboarding calls' },
   { feature: 'Data retention', lognog: 'However long you want', them: 'Capped by your plan' },
 ];

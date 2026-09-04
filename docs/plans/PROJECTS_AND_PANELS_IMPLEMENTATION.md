@@ -379,6 +379,6 @@ Before deploying to production:
 ## Support
 
 For questions or issues, refer to:
-- Backend API: `D:\git\lognog\server\` (endpoints already implemented)
-- UI Components: `D:\git\lognog\ui\src\components\`
-- This document: `D:\git\lognog\PROJECTS_AND_PANELS_IMPLEMENTATION.md`
+- Backend API: `server/` (endpoints already implemented)
+- UI Components: `ui/src/components/`
+- This document: `PROJECTS_AND_PANELS_IMPLEMENTATION.md`

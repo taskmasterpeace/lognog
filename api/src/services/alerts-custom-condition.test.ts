@@ -1,6 +1,6 @@
 /**
  * Custom trigger conditions: a bare DSL condition evaluated over the search
- * results (Splunk's "custom" trigger / secondary search). Previously
+ * results (a "custom" trigger / secondary search). Previously
  * `custom_condition` just meant "any results".
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';

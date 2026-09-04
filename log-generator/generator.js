@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Spunk Log Generator
+ * LogNog Log Generator
  * Generates realistic syslog messages for testing
  */
 
@@ -39,7 +39,7 @@ const parseArgs = () => {
       parsed.verbose = true;
     } else if (args[i] === '--help' || args[i] === '-h') {
       console.log(`
-Spunk Log Generator - Generate realistic syslog messages for testing
+LogNog Log Generator - Generate realistic syslog messages for testing
 
 Usage: node generator.js [options]
 
@@ -1123,7 +1123,7 @@ class LogGenerator {
 }
 
 // Run
-console.log('Spunk Log Generator');
+console.log('LogNog Log Generator');
 console.log('===================');
 console.log(`Host:       ${CONFIG.host}:${CONFIG.port} (${CONFIG.protocol.toUpperCase()})`);
 console.log(`Rate:       ${CONFIG.rate} logs/second`);

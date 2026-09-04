@@ -6,7 +6,7 @@
 
 ## The Elevator Pitch
 
-**LogNog is a self-hosted Splunk alternative that actually respects homelabbers.**
+**LogNog is a self-hosted log management platform that actually respects homelabbers.**
 
 No cloud lock-in. No surprise bills. No "contact sales" buttons. Just powerful log management that runs on your hardware and stays there.
 
@@ -16,23 +16,23 @@ No cloud lock-in. No surprise bills. No "contact sales" buttons. Just powerful l
 
 ### Primary
 - **"Your Logs, Your Control"** - The main tagline
-- **"Splunk Without the Sticker Shock"**
+- **"Enterprise Logging Without the Sticker Shock"**
 - **"Self-Hosted Log Management for the Rest of Us"**
 
 ### Technical
 - **"One Docker Command. Zero Cloud Dependencies."**
 - **"From Syslog to Search in 10 Minutes"**
-- **"Query Your Logs Like You Know Splunk"**
+- **"Query Your Logs the Way You Already Think"**
 
 ### Homelab-Focused
-- **"Finally, a Splunk Alternative That Doesn't Hate Homelabs"**
+- **"Finally, Enterprise Logging That Doesn't Hate Homelabs"**
 - **"Enterprise Logging on a Homelab Budget"**
 - **"Your Router's Logs Deserve Better Than grep"**
 
 ### Punchy One-Liners
 - **"grep is not a SIEM"**
 - **"Your NAS has logs. Do you know what they say?"**
-- **"Splunk pricing made us build this."**
+- **"Sky-high logging bills made us build this."**
 - **"Log management that doesn't phone home."**
 - **"Open source. Locally hosted. Actually usable."**
 
@@ -128,23 +128,6 @@ POST /api/ingest/otlp/v1/logs
 
 ## Competitor Comparison
 
-### LogNog vs Splunk
-
-| Aspect | LogNog | Splunk |
-|--------|--------|--------|
-| **Price** | Free (MIT) | $1,800+/year (500MB/day) |
-| **Dev License** | Unlimited | 500MB/day, expires |
-| **Cloud Required** | Never | Splunk Cloud default |
-| **Setup Time** | 10 minutes | Hours to days |
-| **Query Language** | Splunk-like DSL | SPL |
-| **Self-Hosted** | Always | Enterprise only |
-| **Alerting** | Built-in | Built-in |
-| **Dashboards** | Built-in | Built-in |
-| **Windows Agent** | Yes, GUI | Yes |
-| **Source Code** | Open (MIT) | Proprietary |
-
-**Splunk's Problem:** Great product, terrible pricing for anyone who isn't enterprise. The dev license is a joke - 500MB/day that expires? One busy game server generates that in an hour.
-
 ### LogNog vs ELK Stack (Elasticsearch + Logstash + Kibana)
 
 | Aspect | LogNog | ELK Stack |
@@ -152,8 +135,8 @@ POST /api/ingest/otlp/v1/logs
 | **Components** | 1-3 | 3+ minimum |
 | **Memory Usage** | ~500MB | 4GB+ (Java) |
 | **Setup Complexity** | docker-compose up | Significant |
-| **Query Language** | Splunk-like | Lucene/KQL |
-| **Learning Curve** | Low (Splunk users) | Medium |
+| **Query Language** | Pipe-based | Lucene/KQL |
+| **Learning Curve** | Low | Medium |
 | **Windows Native** | Yes | Painful |
 | **Single Binary** | Yes (Lite) | No |
 | **Built-in Alerts** | Yes | Via Elastalert |
@@ -165,7 +148,7 @@ POST /api/ingest/otlp/v1/logs
 | Aspect | LogNog | Grafana Loki |
 |--------|--------|--------------|
 | **Primary Focus** | Logs | Metrics (logs secondary) |
-| **Query Language** | Splunk-like | LogQL |
+| **Query Language** | Pipe-based | LogQL |
 | **Visualization** | Built-in | Requires Grafana |
 | **Windows Agent** | Yes | No native |
 | **Storage** | ClickHouse/SQLite | Object storage |
@@ -180,7 +163,7 @@ POST /api/ingest/otlp/v1/logs
 |--------|--------|---------|
 | **License** | MIT | SSPL (restrictive) |
 | **Backend** | ClickHouse/SQLite | Elasticsearch + MongoDB |
-| **Query Language** | Splunk-like | Lucene |
+| **Query Language** | Pipe-based | Lucene |
 | **Resource Usage** | Low | High |
 | **Setup** | Simple | Complex |
 | **Windows Native** | Yes | No |
@@ -193,7 +176,7 @@ POST /api/ingest/otlp/v1/logs
 |--------|--------|------------------|
 | **Price** | Free (MIT) | Enterprise pricing (contact sales) |
 | **Deployment** | Anywhere | Google Cloud only |
-| **Query Language** | Splunk-like | YARA-L, UDM |
+| **Query Language** | Pipe-based | YARA-L, UDM |
 | **Data Sovereignty** | Your servers | Google's cloud |
 | **Setup** | 10 minutes | Weeks (enterprise onboarding) |
 | **Target User** | SMBs, homelabs, startups | Large enterprises |
@@ -202,7 +185,7 @@ POST /api/ingest/otlp/v1/logs
 | **Multi-Cloud** | Yes | GCP-centric |
 | **Customization** | Full control | Limited |
 
-**Chronicle's Problem:** Google's answer to Splunk, but with Google-sized requirements. You need to be on Google Cloud, go through enterprise sales, and learn yet another query language (YARA-L). Great if you're a Fortune 500 already on GCP. Overkill and inaccessible for everyone else. Also: your logs live on Google's infrastructure - not everyone wants that.
+**Chronicle's Problem:** Powerful, but with Google-sized requirements. You need to be on Google Cloud, go through enterprise sales, and learn yet another query language (YARA-L). Great if you're a Fortune 500 already on GCP. Overkill and inaccessible for everyone else. Also: your logs live on Google's infrastructure - not everyone wants that.
 
 **Chronicle's Strengths:** Unlimited storage on Google infrastructure, VirusTotal integration for threat intelligence, automatic log normalization via UDM (Unified Data Model). If you're already enterprise GCP and need SIEM, it's solid.
 
@@ -234,10 +217,10 @@ POST /api/ingest/otlp/v1/logs
 > "I was paying $75/month for Papertrail. Now I run LogNog on a $5/month VPS and it handles 10x the volume."
 > — **Indie developer**
 
-> "The Splunk query syntax sold me. I don't want to learn LogQL or Lucene. I already know how to search my logs."
-> — **Former Splunk admin**
+> "The familiar pipe-based query syntax sold me. I don't want to learn LogQL or Lucene. I already know how to search my logs."
+> — **Former enterprise SIEM admin**
 
-> "My Minecraft server generates 50GB of logs a month. Splunk wanted $2000/year for that. LogNog? Free."
+> "My Minecraft server generates 50GB of logs a month. Enterprise tools wanted $2000/year for that. LogNog? Free."
 > — **Game server operator**
 
 > "Windows native support without Docker. That's huge for us Windows admins who don't want WSL2 just for logging."
@@ -320,7 +303,7 @@ Self-hosted log management that doesn't require a finance department approval.
 ```
 ## The Problem with Log Management
 
-Splunk costs more than your entire homelab.
+Enterprise logging costs more than your entire homelab.
 ELK requires a PhD in YAML.
 Cloud services see everything.
 
@@ -331,7 +314,7 @@ You just want to search your logs.
 ```
 ## LogNog: Logging for Humans
 
-✓ Splunk-familiar query language
+✓ Familiar pipe-based query language
 ✓ One docker-compose command
 ✓ No cloud dependencies ever
 ✓ Dashboards, alerts, live tail included
@@ -342,13 +325,13 @@ You just want to search your logs.
 ```
 ## How We Compare
 
-| | LogNog | Splunk | ELK | Loki |
-|---|---|---|---|---|
-| Cost | Free | $$$$ | Free* | Free* |
-| Setup | 10 min | Hours | Hours | 30+ min |
-| Query Language | Splunk-like | SPL | Lucene | LogQL |
-| Components | 1-3 | 1 | 3+ | 3+ |
-| Windows Native | Yes | Yes | No | No |
+| | LogNog | ELK | Loki |
+|---|---|---|---|
+| Cost | Free | Free* | Free* |
+| Setup | 10 min | Hours | 30+ min |
+| Query Language | Pipe-based | Lucene | LogQL |
+| Components | 1-3 | 3+ | 3+ |
+| Windows Native | Yes | No | No |
 
 *Requires significant infrastructure and expertise
 ```
@@ -357,7 +340,7 @@ You just want to search your logs.
 ```
 ## Trusted by Homelabbers Worldwide
 
-"Finally, a Splunk alternative that doesn't hate homelabs."
+"Finally, self-hosted logging that doesn't hate homelabs."
 
 "One docker-compose file. That's it."
 
@@ -433,7 +416,7 @@ docker-compose up -d
 - **License:** MIT (truly open source)
 - **First Release:** 2025
 - **Storage Options:** ClickHouse (scale) or SQLite (simple)
-- **Query Language:** Splunk-compatible DSL
+- **Query Language:** Pipe-based DSL
 - **Visualization Types:** 7 (Table, Bar, Pie, Line, Area, Heatmap, Gauge)
 - **Built-in Templates:** 15+ source types
 - **Windows Support:** Native, no Docker required
@@ -451,10 +434,10 @@ docker-compose up -d
 
 ### Twitter/X
 ```
-Tired of Splunk pricing? ELK complexity? Cloud logging costs?
+Tired of enterprise logging prices? ELK complexity? Cloud logging costs?
 
 LogNog: Self-hosted log management that doesn't suck.
-- Splunk-like queries
+- Pipe-based queries
 - One docker-compose
 - Actually free
 
@@ -463,11 +446,11 @@ github.com/taskmasterpeace/lognog
 
 ### Reddit r/homelab
 ```
-[Project] LogNog - Open source Splunk alternative for homelabs
+[Project] LogNog - Open source self-hosted log management for homelabs
 
-Frustrated with Splunk's pricing and ELK's complexity, I built LogNog.
+Frustrated with enterprise logging prices and ELK's complexity, I built LogNog.
 
-- Splunk-familiar query language
+- Familiar pipe-based query language
 - One docker-compose deployment
 - Built-in dashboards and alerts
 - Windows native support (no Docker required)
@@ -480,9 +463,9 @@ Free and MIT licensed. Feedback welcome!
 ```
 🔔 **LogNog** - Your Logs, Your Control
 
-Self-hosted Splunk alternative for homelabs.
+Self-hosted log management for homelabs.
 
-✅ Splunk-like queries
+✅ Pipe-based queries
 ✅ 10 minute setup
 ✅ No cloud required
 ✅ Free forever
@@ -503,7 +486,7 @@ A: You host it yourself. That's the trade-off for privacy and control.
 **Q: Can it handle enterprise scale?**
 A: With ClickHouse backend, yes. Millions of logs per day.
 
-**Q: Do I need to know Splunk?**
+**Q: Do I need prior query-language experience?**
 A: Helpful but not required. If you can Google, you can use LogNog.
 
 **Q: What about support?**

@@ -12,16 +12,16 @@ describe('isIndexAllowed', () => {
   });
 
   it('allows an index that is in the allow-list', () => {
-    expect(isIndexAllowed(['hey-youre-hired', 'directors-palette'], 'hey-youre-hired')).toBe(true);
+    expect(isIndexAllowed(['web-app', 'api-service'], 'web-app')).toBe(true);
   });
 
   it('rejects an index that is not in the allow-list', () => {
-    expect(isIndexAllowed(['hey-youre-hired'], 'directors-palette')).toBe(false);
+    expect(isIndexAllowed(['web-app'], 'api-service')).toBe(false);
   });
 
   it('matches case-insensitively (mixed-case allow-list vs lowercased index)', () => {
-    expect(isIndexAllowed(['Hey-Youre-Hired'], 'hey-youre-hired')).toBe(true);
-    expect(isIndexAllowed(['Hey-Youre-Hired', 'Directors-Palette'], 'directors-palette')).toBe(true);
+    expect(isIndexAllowed(['Web-App'], 'web-app')).toBe(true);
+    expect(isIndexAllowed(['Web-App', 'Api-Service'], 'api-service')).toBe(true);
   });
 
   it('rejects when undefined restriction is treated as scoped-empty? No — undefined = all', () => {
@@ -42,35 +42,35 @@ describe('firstDisallowedIndex', () => {
 
   it('returns null when every record is in the allow-list', () => {
     expect(
-      firstDisallowedIndex(['hey-youre-hired', 'directors-palette'], [
-        { index_name: 'hey-youre-hired' },
-        { index_name: 'directors-palette' },
+      firstDisallowedIndex(['web-app', 'api-service'], [
+        { index_name: 'web-app' },
+        { index_name: 'api-service' },
       ]),
     ).toBeNull();
   });
 
   it('returns the first disallowed index name', () => {
     expect(
-      firstDisallowedIndex(['hey-youre-hired'], [
-        { index_name: 'hey-youre-hired' },
-        { index_name: 'directors-palette' },
+      firstDisallowedIndex(['web-app'], [
+        { index_name: 'web-app' },
+        { index_name: 'api-service' },
         { index_name: 'evil' },
       ]),
-    ).toBe('directors-palette');
+    ).toBe('api-service');
   });
 
   it('matches case-insensitively', () => {
     expect(
-      firstDisallowedIndex(['Hey-Youre-Hired'], [{ index_name: 'hey-youre-hired' }]),
+      firstDisallowedIndex(['Web-App'], [{ index_name: 'web-app' }]),
     ).toBeNull();
     expect(
-      firstDisallowedIndex(['Hey-Youre-Hired'], [{ index_name: 'Directors-Palette' }]),
-    ).toBe('Directors-Palette');
+      firstDisallowedIndex(['Web-App'], [{ index_name: 'Api-Service' }]),
+    ).toBe('Api-Service');
   });
 
   it('treats a missing index_name as the storage default (main)', () => {
     // Records without index_name land in 'main' (COALESCE in the DB backend).
-    expect(firstDisallowedIndex(['hey-youre-hired'], [{}])).toBe('main');
+    expect(firstDisallowedIndex(['web-app'], [{}])).toBe('main');
     expect(firstDisallowedIndex(['main'], [{}])).toBeNull();
   });
 });

@@ -143,7 +143,7 @@ const INGEST_SCHEMA = {
   },
   // 3) The query language --------------------------------------------------
   dsl: {
-    description: 'Splunk-like, piped. Start with `search <filters>` then `| <command>`.',
+    description: 'pipe-based and piped. Start with `search <filters>` then `| <command>`.',
     filters: 'field=value, field!=value, severity<=3, message="text", AND/OR/NOT, index=<name>, app_name=<name>.',
     commands: {
       search: 'search severity<=3 app_name=my-app',

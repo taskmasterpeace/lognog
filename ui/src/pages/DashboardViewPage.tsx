@@ -314,7 +314,7 @@ function PanelVisualization({
     case 'linechart':
     case 'line': {
       // `timechart count by severity` comes back long-form: one row per
-      // (bucket, severity) with a single value column. Splunk pivots that into
+      // (bucket, severity) with a single value column. we pivot that into
       // one series per split-by value; without the pivot the split-by column
       // itself was drawn as a series ("severity" line next to "count").
       const pivot = pivotSplitBy(results, labelKey, valueKey, keys);
@@ -359,7 +359,7 @@ function PanelVisualization({
     case 'stat': {
       // A time series (e.g. `timechart count`) becomes a single value with a
       // trend: latest bucket vs the bucket before, with the whole series as a
-      // sparkline — Splunk's single-value-with-trendline.
+      // sparkline — a single-value-with-trendline.
       const timeKey = keys.find((k) => /(^|_)(time|timestamp|bucket|date)$/i.test(k) || k === '_time');
       const isSeries = results.length > 1 && !!timeKey && isNumericColumn(valueKey);
       if (isSeries && format.showTrend !== false) {
@@ -1132,7 +1132,7 @@ search error | timechart span=1h count"
             })()}
           </div>
 
-          {/* Format (Splunk-style chart formatting) */}
+          {/* Format (shorthand chart formatting) */}
           {FORMATTABLE_VIZ.has(visualization) && (
             <div className="border border-nog-200 dark:border-nog-700 rounded-lg">
               <button

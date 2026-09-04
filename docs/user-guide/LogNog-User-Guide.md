@@ -8,7 +8,7 @@ Screenshots: spots are marked with SCREENSHOT bracket-tags (e.g. search-page); t
 
 # LogNog — User & Admin Guide
 
-**Your logs, your control — a friendly, self-hosted Splunk for every log you own.**
+**Your logs, your control — a friendly, self-hosted log platform for every log you own.**
 **Current as of v0.9.0** · updated 2026-07-03
 
 > See [what's new](../SHIPPING-LOG.md) for changes since the last version.
@@ -57,13 +57,13 @@ Screenshots: spots are marked with SCREENSHOT bracket-tags (e.g. search-page); t
 
 ## 1. Overview
 
-**LogNog is a self-hosted log-management platform** — think of it as a friendlier Splunk you run on your own hardware. You point your apps, servers, routers, and devices at LogNog; it stores every log line; and then you search, chart, alert on, and report against those logs from a warm, clean web interface.
+**LogNog is a self-hosted log-management platform** — think of it as a friendly log platform you run on your own hardware. You point your apps, servers, routers, and devices at LogNog; it stores every log line; and then you search, chart, alert on, and report against those logs from a warm, clean web interface.
 
 **What it's for.** When something breaks — a website goes down, a payment fails, a server floods with errors, someone tries to break into your VPN — the evidence is in your logs. LogNog gives you one place to ask "what just happened?" and get an answer in seconds instead of SSH-ing into ten machines. It also watches for trouble on your behalf (alerts, anomaly detection, uptime checks) so you hear about problems before your users do.
 
 **Who it's for.**
 
-- **Homelab and small-business owners** who want Splunk-style power without Splunk's price tag and without sending their data to anyone's cloud.
+- **Homelab and small-business owners** who want enterprise-grade power without the enterprise price tag and without sending their data to anyone's cloud.
 - **Developers** who want their app's logs (errors, signups, payments, performance) searchable in one place.
 - **IT and security teams** who need to investigate incidents, monitor uptime, and keep an audit trail.
 
@@ -174,10 +174,10 @@ Only the terms you actually need to use LogNog.
 |------|---------|---------|
 | **Log / event** | One line of activity from an app or device, stored as a row with fields. | `Failed password for admin from 203.0.113.5` |
 | **Field** | A named piece of a log — hostname, severity, message, or any custom value you send. | `hostname=web-01`, `severity=3`, `user=admin` |
-| **Index** | A named "folder" that groups related logs. Created automatically on the first log; you never pre-provision one. | `hey-youre-hired`, `main`, `vercel` |
+| **Index** | A named "folder" that groups related logs. Created automatically on the first log; you never pre-provision one. | `my-app`, `main`, `vercel` |
 | **Source** | A single app/device sending logs (identified by app name + hostname). Appears automatically under Data Sources. | `nginx` on `web-01` |
 | **Severity** | Syslog severity 0–7, low number = more urgent. | 0 Emergency … 3 Error … 6 Info … 7 Debug |
-| **DSL** | LogNog's Splunk-style query language: `search … | stats … | sort …`. | `search severity<=3 | stats count by hostname` |
+| **DSL** | LogNog's pipe-based query language: `search … | stats … | sort …`. | `search severity<=3 | stats count by hostname` |
 | **Pipe (`|`)** | Passes results from one command to the next, like a conveyor belt of filters. | `search * | stats count | sort -count` |
 | **Time range** | The window of time your search covers (e.g. last 15 min, last 7 days). Chosen with the time picker. | `-24h` to `now` |
 | **Dashboard** | A saved page of panels (charts/tables), each backed by a query. | "System Overview" |
@@ -312,7 +312,7 @@ Every feature gets: what it does · where to find it · how to use it · a concr
 ### 7.2 The DSL Query Language
 
 **Status:** Available.
-**What it does:** LogNog's Splunk-style query language. Every query starts with `search` and pipes results through transformation commands that compile to fast database SQL under the hood.
+**What it does:** LogNog's pipe-based query language. Every query starts with `search` and pipes results through transformation commands that compile to fast database SQL under the hood.
 **Where to find it:** Used on the **Search** page; full reference in **Documentation** and in `docs/DSL_REFERENCE.md`.
 
 **Shape of a query:**
@@ -357,7 +357,7 @@ The twenty IPs with the most failed logins.
 **Inputs:** A text query.
 **Outputs:** Rows, aggregations, or time series.
 **Admin notes:** The compiler targets ClickHouse in the Docker deployment and SQLite in the single-machine "Lite" deployment; the DSL is the same either way.
-**Limitations:** Leading-wildcard/regex patterns (`message~".*error.*"`) are slow — prefer `message~"error"`. Not every Splunk command exists; the table above is the complete set. Some advanced patterns shown in older docs (e.g. `hour(timestamp)` grouping) are best expressed with `bin`/`timechart`.
+**Limitations:** Leading-wildcard/regex patterns (`message~".*error.*"`) are slow — prefer `message~"error"`. Not every command from other platforms exists; the table above is the complete set. Some advanced patterns shown in older docs (e.g. `hour(timestamp)` grouping) are best expressed with `bin`/`timechart`.
 
 ### 7.3 Saved Searches
 
@@ -427,7 +427,7 @@ There are also **Starter Templates**: **System Overview**, **Network Traffic**, 
 5. **Arrange (right).** Panels you add appear on the **Canvas**. **Drag to reorder**, **Duplicate**, or **Remove** them; click a panel's title to load it back into the editor for tweaking.
 6. **Save.** Click **Save dashboard**, choose **➕ New dashboard** (and name it) or an existing dashboard, and Studio lays the panels out for you (two per row). In edit mode the button reads **Save changes** and updates the existing dashboard in place — creating new panels, updating edited ones, and deleting removed ones.
 
-**Why it's easier than Splunk Dashboard Studio:** there's no JSON/XML source to hand-edit and no separate "data source" objects to wire up. You literally search, see the panel, flip its chart type, and drop it on a canvas. The Field Explorer turns exploration into panels in a single click, and editing an existing dashboard is the same flow — so building and refining feel identical.
+**Why it's easier than most dashboard builders:** there's no JSON/XML source to hand-edit and no separate "data source" objects to wire up. You literally search, see the panel, flip its chart type, and drop it on a canvas. The Field Explorer turns exploration into panels in a single click, and editing an existing dashboard is the same flow — so building and refining feel identical.
 
 **Example use case:** From `search * | stats count by app_name`, accept the recommended bar chart, click **Add to canvas**, then click **"Top severity"** in the Field Explorer to add a second panel — save both as "App Health" in under a minute.
 **Inputs:** Queries and chart-type choices.
@@ -609,7 +609,7 @@ Then confirm with `search index=my-app` on the Search page.
 
 **Source Templates tab:** pre-built parsing profiles (database, security, web, system, application) with setup instructions, agent/syslog config examples, field extractions, sample log lines, and example queries. Filter by category and click a template for details.
 
-**Example use case:** Connect Hey You're Hired by creating a key named "HYH Production," setting `X-Index: hey-youre-hired`, and posting batched events — they appear under Data Sources within seconds.
+**Example use case:** Connect My App by creating a key named "MyApp Production," setting `X-Index: my-app`, and posting batched events — they appear under Data Sources within seconds.
 **Inputs:** An API key and log payloads.
 **Outputs:** Searchable logs, an auto-created index, and a listed source.
 **Admin notes:** Keys can be scoped to `ingest`/`read`/`write`/`admin`; in production the `/api/ingest` path is exempt from the Cloudflare Access login so machines can ship logs.
@@ -731,7 +731,7 @@ search source_type=windows_events event_id=7045 | table timestamp computer messa
 
 **AI Agent** (sidebar → **Tools → AI Agent**, `/agent`). A full conversational assistant that can search logs, look up assets/identities, check anomalies, enrich IPs, and create alerts — reasoning step by step and showing its tool calls and results. Pick a **persona** (e.g. Security Analyst, SRE, Compliance) from the header; keep multiple **conversations** in the left panel. A status badge shows **AI Online/Offline**.
 
-**NogChat** (the floating chat button, bottom-right, on every page). Your always-available assistant. It answers "how do I…" questions about LogNog, helps you write queries (with copy-ready DSL and documentation **citations**), compares Splunk to LogNog, and can analyze your data ("What are my top error sources?") by running a query and summarizing the result. Quick-action buttons and starter prompts get you going.
+**NogChat** (the floating chat button, bottom-right, on every page). Your always-available assistant. It answers "how do I…" questions about LogNog, helps you write queries (with copy-ready DSL and documentation **citations**), answers conceptual questions, and can analyze your data ("What are my top error sources?") by running a query and summarizing the result. Quick-action buttons and starter prompts get you going.
 
 **How to use it:** Open the AI Agent or NogChat, type a question, and follow up conversationally. In AI search mode, type your question in the query box and press **Ask AI**.
 **Inputs:** Plain-English questions.
@@ -902,8 +902,8 @@ An **index** is a named folder for logs; a **source** is a single app/device tha
 **Is my data sent anywhere?**
 No. LogNog is self-hosted — logs stay in your ClickHouse/SQLite on your infrastructure. Even the AI features can run against a local Ollama model.
 
-**Do I need to know Splunk?**
-No, but if you do, you'll feel at home: the DSL is Splunk-style (`search … | stats … | sort …`). If you don't, use **AI mode** on the Search page or ask **NogChat** to write queries for you.
+**Do I need prior query-language experience?**
+No, but if you have some, you'll feel at home: the DSL is pipe-based (`search … | stats … | sort …`). If you don't, use **AI mode** on the Search page or ask **NogChat** to write queries for you.
 
 **How do I share a search or a dashboard?**
 For a search, copy the browser URL — it contains the query and time range and re-runs on open. For a dashboard, use **Share** to create a public (optionally password-protected) link, or **Export JSON** to hand off the whole dashboard.
@@ -937,7 +937,7 @@ Yes — via the **MCP server**. Create an API key and add LogNog to Claude Deskt
 - **CIM (Common Information Model)** — Standard field names that let one search work across differently-named sources.
 - **ClickHouse** — The high-volume database that stores logs in the Docker deployment (SQLite in "Lite").
 - **Dashboard / Panel** — A saved page of visualizations; a panel is one chart/table backed by a query.
-- **DSL** — LogNog's Splunk-style query language.
+- **DSL** — LogNog's pipe-based query language.
 - **Field** — A named piece of a log (hostname, severity, message, custom values).
 - **FIM (File Integrity Monitoring)** — The agent feature that hashes files and alerts on changes.
 - **Index** — A named folder that groups logs; auto-created on first log.

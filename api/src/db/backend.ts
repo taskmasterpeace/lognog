@@ -71,7 +71,7 @@ async function insertLogsDirect(logs: Record<string, unknown>[]): Promise<void> 
  * If the store is unreachable the batch is spooled to SQLite and the call
  * still resolves: the client's POST is acknowledged and the events are
  * replayed by replayIngestSpool() once the store is back. (During the
- * 2026-08-31 → 09-02 ClickHouse outage every HYH/DP batch got a 500 and was
+ * 2026-08-31 → 09-02 ClickHouse outage every ingest batch got a 500 and was
  * lost.) Only persistent-store failures are spooled; a batch the store
  * itself rejects as malformed would fail again on replay, so those keep
  * throwing when the store is otherwise healthy.
@@ -400,7 +400,7 @@ export function validateDslCondition(conditionText: string): string | null {
 
 /**
  * Filter result rows in memory with a bare DSL condition — the engine behind
- * alert "custom conditions" (Splunk's secondary search over the results).
+ * alert "custom conditions" (a secondary search over the results).
  */
 export function filterRowsByDslCondition(
   rows: Record<string, unknown>[],

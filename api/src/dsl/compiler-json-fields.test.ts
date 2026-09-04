@@ -37,7 +37,7 @@ describe('ClickHouse compiler: structured_data fields', () => {
 
   it('sum/avg over custom fields yield NULL (skipped) for rows without the field', () => {
     const result = compileDSL(parseToAST(
-      'search index=directors-palette | stats sum(credits_cost) as credits, avg(duration_ms) by model_id'
+      'search index=api-service | stats sum(credits_cost) as credits, avg(duration_ms) by model_id'
     ));
     expect(result.sql).toContain(`sum(${NUM('credits_cost')}) AS credits`);
     expect(result.sql).toContain(`avg(${NUM('duration_ms')}) AS avg_duration_ms`);
@@ -70,7 +70,7 @@ describe('ClickHouse compiler: structured_data fields', () => {
       .toContain("GROUP BY JSONExtractString(structured_data, 'user_id') ORDER BY count ASC");
   });
 
-  it('top/rare accept Splunk count forms: none (10), N, limit=N', () => {
+  it('top/rare accept count forms: none (10), N, limit=N', () => {
     expect(parseToAST('search * | top model_id').stages[1]).toMatchObject({ type: 'top', field: 'model_id', limit: 10 });
     expect(parseToAST('search * | top 5 model_id').stages[1]).toMatchObject({ type: 'top', limit: 5 });
     expect(parseToAST('search * | top limit=3 model_id').stages[1]).toMatchObject({ type: 'top', limit: 3 });

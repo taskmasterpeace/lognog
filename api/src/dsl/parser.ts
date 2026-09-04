@@ -132,7 +132,7 @@ export class Parser {
       case TokenType.STRING:
         // Implicit search-all / bare-phrase search: `* | stats count by level`
         // and `"timeout" | stats count` work like their `search`-prefixed forms
-        // (Splunk allows the same shorthand).
+        // (the same shorthand is allowed).
         return this.parseImplicitSearch();
       default:
         if (token.type === TokenType.EOF) return null;
@@ -485,12 +485,12 @@ export class Parser {
 
     // Parse fields
     while (!this.isAtEnd() && !this.check(TokenType.PIPE)) {
-      // Check for Splunk-style -field (descending) or +field (ascending)
+      // Check for shorthand -field (descending) or +field (ascending)
       let fieldDirection: 'asc' | 'desc' | null = null;
       if (this.match(TokenType.MINUS)) {
-        fieldDirection = 'desc';  // Splunk-style: -count means descending
+        fieldDirection = 'desc';  // shorthand: -count means descending
       } else if (this.match(TokenType.PLUS)) {
-        fieldDirection = 'asc';   // Splunk-style: +count means ascending
+        fieldDirection = 'asc';   // shorthand: +count means ascending
       }
 
       // Allow both identifiers and aggregation function keywords as field names
@@ -746,7 +746,7 @@ export class Parser {
   }
 
   /**
-   * Result count for top/rare. Splunk accepts `top 5 field`, `top limit=5 field`
+   * Result count for top/rare. the parser accepts `top 5 field`, `top limit=5 field`
    * and plain `top field` (10 results); the count used to be mandatory here, so
    * the most common form was a parse error.
    */
@@ -832,7 +832,7 @@ export class Parser {
   private parseTimechart(): TimechartNode {
     this.consume(TokenType.TIMECHART, 'Expected "timechart"');
 
-    // span=<value> is OPTIONAL (Splunk defaults it). `timechart count by level`
+    // span=<value> is OPTIONAL (it defaults). `timechart count by level`
     // is valid; only parse a span when the `span=` clause is actually present.
     let span = '1h'; // default bucket size
     if (this.check(TokenType.SPAN)) {

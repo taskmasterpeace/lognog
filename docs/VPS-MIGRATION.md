@@ -88,7 +88,7 @@ Set/confirm these in the Coolify UI, then redeploy the service:
 
 ## 4. Cutover (preserve `logs.machinekinglabs.com` as the canonical name)
 
-Clients (HeyYoureHired, Directors Palette, the Windows agents) all ship to
+Clients (MyApp, API Service, the Windows agents) all ship to
 `https://logs.machinekinglabs.com/api/ingest/…`. The clean cutover keeps that
 hostname and just moves where it points — **zero client changes**.
 
@@ -101,7 +101,7 @@ hostname and just moves where it points — **zero client changes**.
    to the Hetzner IP (proxied/orange is fine; traefik still serves it). Cloudflare
    propagates in seconds.
 4. **Verify** through `https://logs.machinekinglabs.com`: login, run a search, load
-   the Directors Palette dashboard, `POST /api/ingest/http` a test event, confirm it
+   the API Service dashboard, `POST /api/ingest/http` a test event, confirm it
    lands. Then re-check row counts match §2.
 5. **Stop the desktop stack** once traffic is confirmed on the cloud. Keep the box
    intact ~1 week for rollback (flip the `logs.…` DNS/tunnel back).

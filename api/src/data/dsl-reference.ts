@@ -115,14 +115,14 @@ export const DSL_COMMANDS: DSLCommand[] = [
   },
   {
     name: 'sort',
-    description: 'Order results by field values. Supports both LogNog syntax (sort desc field) and Splunk-style syntax (sort -field for descending, sort +field for ascending).',
+    description: 'Order results by field values. Supports both LogNog syntax (sort desc field) and shorthand syntax (sort -field for descending, sort +field for ascending).',
     syntax: 'sort [asc|desc] <field> [, <field>...] OR sort [-|+]<field> [, [-|+]<field>...]',
     examples: [
       { query: 'search * | sort desc timestamp', description: 'Newest first (LogNog syntax)' },
-      { query: 'search * | sort -timestamp', description: 'Newest first (Splunk-style)' },
+      { query: 'search * | sort -timestamp', description: 'Newest first (shorthand)' },
       { query: 'search * | sort asc severity', description: 'Most critical first' },
       { query: 'search * | stats count by hostname | sort desc count', description: 'Sort aggregation results' },
-      { query: 'search * | stats count by hostname | sort -count', description: 'Sort aggregation results (Splunk-style)' },
+      { query: 'search * | stats count by hostname | sort -count', description: 'Sort aggregation results (shorthand)' },
     ],
   },
   {
@@ -249,7 +249,7 @@ export const DSL_COMPARISON_OPERATORS: DSLOperator[] = [
   { symbol: '<=', name: 'less than or equal', description: 'Less than or equal', example: 'severity<=3' },
   { symbol: '>', name: 'greater than', description: 'Greater than', example: 'bytes>1000' },
   { symbol: '>=', name: 'greater than or equal', description: 'Greater than or equal', example: 'response_time>=100' },
-  { symbol: '~ or :', name: 'contains/regex', description: 'Contains substring or matches regex (both ~ and : are supported for Splunk compatibility)', example: 'message~"error" or message:"error"' },
+  { symbol: '~ or :', name: 'contains/regex', description: 'Contains substring or matches regex (both ~ and : are supported)', example: 'message~"error" or message:"error"' },
 ];
 
 export const DSL_LOGICAL_OPERATORS: DSLOperator[] = [
@@ -413,7 +413,7 @@ export const DSL_COMMON_PATTERNS = [
 export function generateDSLMarkdown(): string {
   let md = `# LogNog DSL Reference
 
-A Splunk-like query language for searching and analyzing logs.
+A pipe-based query language for searching and analyzing logs.
 
 ## Quick Start
 

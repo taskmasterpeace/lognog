@@ -203,7 +203,7 @@ After each phase, run this comprehensive browser test:
 
 1. **Login** — authenticate as admin
 2. **Search** — load search page, verify TimePicker and query input
-3. **Dashboards** — list dashboards, open HYH dashboard, verify charts render with no parse errors
+3. **Dashboards** — list dashboards, open MyApp dashboard, verify charts render with no parse errors
 4. **Alerts** — load alerts page
 5. **Settings** — click through all 8 tabs (preferences, account, notifications, data, geoip, users, system, ai)
 6. **Docs** — click through all 8 doc sections

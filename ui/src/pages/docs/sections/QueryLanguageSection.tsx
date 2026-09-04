@@ -10,7 +10,7 @@ function QueryLanguageIntro() {
       <section>
         <h2 className="text-2xl font-bold text-nog-900 dark:text-nog-100 mb-4">What is the LogNog Query Language?</h2>
         <p className="text-nog-600 dark:text-nog-400 mb-4">
-          LogNog Query Language (LQL) is a Splunk-inspired DSL designed for querying and analyzing log data.
+          LogNog Query Language (LQL) is a pipe-based DSL designed for querying and analyzing log data.
           It compiles to optimized ClickHouse SQL under the hood, giving you the power of a columnar database
           with the simplicity of a pipe-based query syntax.
         </p>

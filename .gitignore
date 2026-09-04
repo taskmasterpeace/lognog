@@ -111,3 +111,11 @@ ui/e2e/debug-*.spec.ts
 
 # migration data bundle (binary, transferred out-of-band)
 migration-bundle/
+
+# Claude Code local config (untracked; do not publish)
+.claude_settings.json
+
+# Personal homelab watchdog config + runtime state (contains a live API key / local state)
+watchdog-config.json
+.watchdog-state.json
+.watchdog-count

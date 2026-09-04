@@ -979,8 +979,8 @@ async function sendToSyslog(events: LogEvent[], host: string, port: number, prot
 const program = new Command();
 
 program
-  .name('spunk-test-data')
-  .description('Generate realistic syslog test data for Spunk')
+  .name('lognog-test-data')
+  .description('Generate realistic syslog test data for LogNog')
   .version('1.0.0');
 
 program

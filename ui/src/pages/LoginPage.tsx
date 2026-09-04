@@ -113,7 +113,7 @@ export default function LoginPage() {
           </p>
           <ul className="mt-7 flex flex-wrap gap-x-6 gap-y-2 text-sm text-honey-100/90">
             <li className="flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-honey-400" /> Splunk-style search
+              <span className="w-1.5 h-1.5 rounded-full bg-honey-400" /> shorthand search
             </li>
             <li className="flex items-center gap-2">
               <span className="w-1.5 h-1.5 rounded-full bg-honey-400" /> Live dashboards

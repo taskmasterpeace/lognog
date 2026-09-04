@@ -359,11 +359,11 @@ LogNog In is designed to be lightweight:
 
 ## Comparison
 
-| Feature | LogNog In | Splunk UF | Elastic Agent | Fluentd |
-|---------|-----------|-----------|---------------|---------|
-| Open Source | Yes | No | Partial | Yes |
-| System Tray | Yes | No | No | No |
-| FIM Built-in | Yes | No | Yes | No |
-| Single Binary | Yes | No | Yes | No |
-| Config UI | Yes | No | Via Fleet | No |
-| Memory | ~50MB | ~150MB | ~200MB | ~50MB |
+| Feature | LogNog In | Elastic Agent | Fluentd |
+|---------|-----------|---------------|---------|
+| Open Source | Yes | Partial | Yes |
+| System Tray | Yes | No | No |
+| FIM Built-in | Yes | Yes | No |
+| Single Binary | Yes | Yes | No |
+| Config UI | Yes | Via Fleet | No |
+| Memory | ~50MB | ~200MB | ~50MB |

@@ -142,7 +142,7 @@
   <main class="content">
 <h1 id="lognog-integration-guide-for-ai-coding-agents">LogNog — Integration Guide for AI Coding Agents</h1>
 <p><strong>You are an AI coding agent (e.g. Claude Code). Your job: instrument this project to send its logs to LogNog correctly.</strong> This guide is self-contained — everything you need to configure logging is below. Follow it top to bottom.</p>
-<p>LogNog is a self-hosted log platform (a friendlier Splunk). It ingests structured JSON log events over HTTP, stores them in ClickHouse, and lets a human search them with a Splunk-like query language, build dashboards, and get alerts. "The right logs" means <strong>structured, severity-tagged events with useful fields</strong> — not <code>console.log</code> spam. This guide tells you exactly what to send.</p>
+<p>LogNog is a self-hosted log platform. It ingests structured JSON log events over HTTP, stores them in ClickHouse, and lets a human search them with a pipe-based query language, build dashboards, and get alerts. "The right logs" means <strong>structured, severity-tagged events with useful fields</strong> — not <code>console.log</code> spam. This guide tells you exactly what to send.</p>
 <ul><li><strong>Fetch the latest version of this guide:</strong> <code>GET https://logs.machinekinglabs.com/api/ingest/guide</code> (returns this markdown).</li><li><strong>Fetch the machine-readable contract:</strong> <code>GET https://logs.machinekinglabs.com/api/ingest/schema</code> (returns JSON).</li><li><strong>Want to READ logs and manage alerts programmatically</strong> (not just send logs)? See <a href="#read--act--the-agent-api">Read &amp; act — the Agent API</a>. Same API key.</li></ul>
 <hr>
 <h2 id="tldr-self-configure-in-4-steps">TL;DR — self-configure in 4 steps</h2>
@@ -310,7 +310,7 @@ if _ENABLED:
 <p>If nothing shows: check <code>LOGNOG_URL</code> has no trailing <code>/api/...</code> path, the key is valid (a <code>401</code> means it's wrong), the body is a JSON <strong>array</strong>, and events were flushed (the clients flush on interval/shutdown — call <code>flush()</code> in short-lived scripts).</p>
 <hr>
 <h2 id="query-language-dsl-cheat-sheet">Query language (DSL) cheat-sheet</h2>
-<p>You'll need this to search (below, and via the ingest verify step). It's Splunk-like and piped: start with <code>search &lt;filters&gt;</code>, then <code>| &lt;command&gt;</code>.</p>
+<p>You'll need this to search (below, and via the ingest verify step). It's pipe-based: start with <code>search &lt;filters&gt;</code>, then <code>| &lt;command&gt;</code>.</p>
 <p><strong>Filters:</strong> <code>field=value</code> · <code>field!=value</code> · <code>severity&lt;=3</code> · <code>message="some text"</code> · <code>AND</code> / <code>OR</code> / <code>NOT</code> · <code>index=&lt;name&gt;</code> · <code>app_name=&lt;name&gt;</code>. Severity: <code>0</code>=emergency … <code>3</code>=error … <code>7</code>=debug, so <strong><code>severity&lt;=3</code> = errors and worse</strong>.</p>
 <p><strong>Commands (pipe after the search):</strong></p>
 <div class="table-wrap"><table><thead><tr><th>Command</th><th>Example</th></tr></thead><tbody><tr><td><code>stats</code></td><td><code>stats count by app_name</code> · <code>stats avg(duration_ms) by route</code> · <code>stats dc(user_id)</code></td></tr><tr><td><code>timechart</code></td><td><code>timechart count by level</code> (span optional; <code>timechart span=1h count</code>)</td></tr><tr><td><code>sort</code></td><td><code>sort -count</code> ( <code>-</code> desc, <code>+</code> asc)</td></tr><tr><td><code>head</code> / <code>tail</code> / <code>limit</code></td><td><code>head 10</code></td></tr><tr><td><code>top</code> / <code>rare</code></td><td><code>top hostname</code> · <code>rare status_code</code></td></tr><tr><td><code>table</code> / <code>fields</code></td><td><code>table timestamp, message, user_id</code></td></tr><tr><td><code>dedup</code></td><td><code>dedup user_id</code></td></tr><tr><td><code>rex</code></td><td><code>rex field=message "(?&lt;code&gt;\d{3})"</code> (extract a field)</td></tr><tr><td><code>eval</code></td><td><code>eval slow = duration_ms &gt; 1000</code></td></tr><tr><td><code>where</code></td><td><code>where status_code &gt;= 500</code></td></tr><tr><td><code>rename</code></td><td><code>rename hostname as host</code></td></tr></tbody></table></div>
@@ -340,9 +340,9 @@ curl -H "X-API-Key: $KEY" "$LOGNOG_URL/api/agent/summary"</code></pre>
 <div class="table-wrap"><table><thead><tr><th>Endpoint</th><th>Does</th><th>Needs</th></tr></thead><tbody><tr><td><code>POST /api/agent/alerts</code></td><td>Create an alert.</td><td>write</td></tr><tr><td><code>PATCH /api/agent/alerts/:id</code></td><td>Update fields (threshold, enabled, query, schedule, …).</td><td>write</td></tr><tr><td><code>POST /api/agent/alerts/:id/evaluate</code></td><td>Evaluate the alert now.</td><td>write</td></tr><tr><td><code>DELETE /api/agent/alerts/:id</code></td><td>Delete it.</td><td>write</td></tr></tbody></table></div>
 <p><strong>Create-alert body</strong> (only <code>name</code> + <code>search_query</code> are required):</p>
 <pre><code>{
-  "name": "HYH error spike",
+  "name": "MyApp error spike",
   "description": "created by an agent",
-  "search_query": "search app_name=hey-youre-hired severity&lt;=3 | stats count",
+  "search_query": "search app_name=my-app severity&lt;=3 | stats count",
   "trigger_type": "number_of_results",
   "trigger_condition": "greater_than",
   "trigger_threshold": 50,

@@ -2,7 +2,7 @@
 
 ## Component Created Successfully
 
-Location: `C:\git\spunk\ui\src\components\FacetFilters.tsx`
+Location: `ui/src/components/FacetFilters.tsx`
 
 ## Features Implemented
 
@@ -56,7 +56,7 @@ Location: `C:\git\spunk\ui\src\components\FacetFilters.tsx`
 ## File Structure
 
 ```
-C:\git\spunk\ui\src\components\
+ui/src/components/
 ├── FacetFilters.tsx              # Main component (219 lines)
 ├── FacetFilters.README.md        # Usage documentation
 ├── FacetFilters.VISUAL.md        # Visual reference/mockups
@@ -102,7 +102,7 @@ const [selectedFilters, setSelectedFilters] = useState<Record<string, string[]>>
 
 ## Visual Design
 
-Follows Splunk's left sidebar facet design:
+Follows a left sidebar facet design:
 - Clean, minimalist interface
 - Slate grays for neutral elements
 - Sky blues for interactive/selected states

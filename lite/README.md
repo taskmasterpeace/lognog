@@ -23,7 +23,7 @@ The server runs in the system tray. Right-click the icon to access options or ex
 ## What You Get
 
 - Full web dashboard at http://localhost:4000
-- Splunk-like query language
+- pipe-based query language
 - Custom dashboards
 - Report generation
 - Receives logs from LogNog In agents

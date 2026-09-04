@@ -69,7 +69,7 @@ function buildApp(): Express {
 describe('isValidIndexName (#37)', () => {
   it('accepts valid index names', () => {
     expect(isValidIndexName('main')).toBe(true);
-    expect(isValidIndexName('hey-youre-hired')).toBe(true);
+    expect(isValidIndexName('web-app')).toBe(true);
     expect(isValidIndexName('app_logs2')).toBe(true);
   });
 

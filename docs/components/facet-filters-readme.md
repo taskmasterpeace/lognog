@@ -1,6 +1,6 @@
 # FacetFilters Component
 
-A Splunk-style faceted filter component for quick filtering of search results.
+A faceted filter component for quick filtering of search results.
 
 ## Features
 

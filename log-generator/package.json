@@ -1,7 +1,7 @@
 {
-  "name": "spunk-log-generator",
+  "name": "lognog-log-generator",
   "version": "1.0.0",
-  "description": "Generate realistic syslog messages for testing Spunk",
+  "description": "Generate realistic syslog messages for testing LogNog",
   "main": "generator.js",
   "type": "module",
   "scripts": {

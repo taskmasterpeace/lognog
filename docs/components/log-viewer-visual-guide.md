@@ -302,4 +302,4 @@ Search Query: search severity>=4 hostname="web-server-01"
 
 ---
 
-This visual guide demonstrates the professional, polished look and feel of the LogViewer component. It's designed to match the quality of enterprise logging solutions like Splunk and Datadog.
+This visual guide demonstrates the professional, polished look and feel of the LogViewer component. It's designed to match the quality of enterprise logging solutions.

@@ -58,7 +58,7 @@ export function AppScopeFilter({ value, onChange, className = '' }: AppScopeFilt
   );
 }
 
-// Format scope name for display (e.g., "hey-youre-hired" -> "Hey Youre Hired")
+// Format scope name for display (e.g., "web-app" -> "Web App")
 function formatScopeName(scope: string): string {
   return scope
     .split('-')

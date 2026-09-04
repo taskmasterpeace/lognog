@@ -4,40 +4,40 @@ import { BUILTIN_CIM_MODELS, DEFAULT_FIELD_MAPPINGS, OCSF_CLASS_MAP, LEGACY_MIGR
 /**
  * Legal realignment (roadmap items L1/L2): the shipped CIM must be rebased on
  * Elastic Common Schema (ECS) canonical field names + OCSF event classes, with
- * Splunk-style names demoted to input aliases only. These tests pin that so the
- * Splunk-mirroring taxonomy can never silently return.
+ * legacy short names demoted to input aliases only. These tests pin that so the
+ * proprietary-mirroring taxonomy can never silently return.
  */
 
-// Splunk-CIM-specific flat field names that must NOT be canonical (aliases only).
-const SPLUNK_FLAT_NAMES = new Set([
+// legacy proprietary flat field names that must NOT be canonical (aliases only).
+const LEGACY_FLAT_NAMES = new Set([
   'src', 'dest', 'src_ip', 'dest_ip', 'src_port', 'dest_port',
   'uri', 'uri_query', 'bytes_in', 'bytes_out', 'command_line',
   'file_hash', 'file_path', 'http_host', 'process_id', 'parent_process',
 ]);
 
-// Splunk-CIM model names we must not ship verbatim.
-const SPLUNK_MODEL_NAMES = new Set(['Network_Traffic', 'Endpoint', 'Web']);
+// legacy proprietary CIM model names we must not ship verbatim.
+const LEGACY_MODEL_NAMES = new Set(['Network_Traffic', 'Endpoint', 'Web']);
 
 describe('built-in CIM models rebased on ECS/OCSF', () => {
-  it('ships none of the Splunk-CIM model names', () => {
+  it('ships none of the legacy proprietary CIM model names', () => {
     const names = BUILTIN_CIM_MODELS.map((m) => m.name);
-    for (const splunk of SPLUNK_MODEL_NAMES) {
-      expect(names).not.toContain(splunk);
+    for (const legacy of LEGACY_MODEL_NAMES) {
+      expect(names).not.toContain(legacy);
     }
   });
 
-  it('uses ECS dotted canonical field names, never Splunk flat names', () => {
+  it('uses ECS dotted canonical field names, never legacy flat names', () => {
     for (const model of BUILTIN_CIM_MODELS) {
       for (const field of model.fields) {
         expect(
-          SPLUNK_FLAT_NAMES.has(field.name),
-          `${model.name}.${field.name} is a Splunk flat name; it must be an alias, not canonical`,
+          LEGACY_FLAT_NAMES.has(field.name),
+          `${model.name}.${field.name} is a legacy flat name; it must be an alias, not canonical`,
         ).toBe(false);
       }
     }
   });
 
-  it('keeps Splunk-style names as input aliases so normalization still resolves them', () => {
+  it('keeps legacy short names as input aliases so normalization still resolves them', () => {
     const auth = BUILTIN_CIM_MODELS.find((m) => m.name === 'Authentication');
     expect(auth, 'Authentication model must exist').toBeDefined();
 

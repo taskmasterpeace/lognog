@@ -34,15 +34,15 @@ This is the **universal endpoint** for all application integrations. Do NOT use 
 | Header | Required | Description | Example |
 |--------|----------|-------------|---------|
 | `X-API-Key` | Yes | Your LogNog API key | `lnog_abc123...` |
-| `X-App-Name` | Yes | Unique app identifier (kebab-case) | `hey-youre-hired` |
-| `X-Index` | Yes | Index for querying (use same as app name) | `hey-youre-hired` |
+| `X-App-Name` | Yes | Unique app identifier (kebab-case) | `my-app` |
+| `X-Index` | Yes | Index for querying (use same as app name) | `my-app` |
 | `Content-Type` | Yes | Must be `application/json` | `application/json` |
 
 ### Naming Convention
 
 Use **kebab-case** for both `X-App-Name` and `X-Index`:
-- `hey-youre-hired` (not `HeyYoureHired` or `hey_youre_hired`)
-- `directors-palette` (not `DirectorsPalette`)
+- `my-app` (not `MyApp` or `my_app`)
+- `api-service` (not `ApiService`)
 - `my-awesome-app` (not `myAwesomeApp`)
 
 ## Payload Format
@@ -98,7 +98,7 @@ LogNog automatically maps common field names:
 1. Log into LogNog UI at https://logs.machinekinglabs.com
 2. Go to **Settings** → **API Keys**
 3. Click **Create API Key**
-4. Give it a descriptive name (e.g., "Hey You're Hired Production")
+4. Give it a descriptive name (e.g., "My App Production")
 5. Copy the key immediately (it won't be shown again)
 
 Store the API key securely:
@@ -256,8 +256,8 @@ await flushLogs();
 ```bash
 LOGNOG_URL=https://logs.machinekinglabs.com
 LOGNOG_API_KEY=lnog_your_key_here
-LOGNOG_APP_NAME=hey-youre-hired
-LOGNOG_INDEX=hey-youre-hired
+LOGNOG_APP_NAME=my-app
+LOGNOG_INDEX=my-app
 ```
 
 ### Python
@@ -394,12 +394,12 @@ export LOGNOG_API_KEY="lnog_your_key_here"
 curl -X POST https://logs.machinekinglabs.com/api/ingest/http \
   -H "Content-Type: application/json" \
   -H "X-API-Key: $LOGNOG_API_KEY" \
-  -H "X-App-Name: hey-youre-hired" \
-  -H "X-Index: hey-youre-hired" \
+  -H "X-App-Name: my-app" \
+  -H "X-Index: my-app" \
   -d '[{"level": "info", "message": "Test log from curl", "test": true}]'
 
 # Expected response:
-# {"accepted":1,"index":"hey-youre-hired"}
+# {"accepted":1,"index":"my-app"}
 ```
 
 ## Testing Your Integration
@@ -454,22 +454,22 @@ main();
 
 ```
 # All logs from your app
-search index=hey-youre-hired
+search index=my-app
 
 # Errors only (severity 3 or lower)
-search index=hey-youre-hired severity<=3
+search index=my-app severity<=3
 
 # Last hour
-search index=hey-youre-hired earliest=-1h
+search index=my-app earliest=-1h
 
 # Search by user
-search index=hey-youre-hired userId="user_123"
+search index=my-app userId="user_123"
 
 # Count by level
-search index=hey-youre-hired | stats count by level
+search index=my-app | stats count by level
 
 # Time chart
-search index=hey-youre-hired | timechart span=1h count
+search index=my-app | timechart span=1h count
 ```
 
 ## Best Practices
@@ -588,8 +588,8 @@ process.exit(0);
 
 | App | X-App-Name | X-Index | Status |
 |-----|------------|---------|--------|
-| Hey You're Hired | `hey-youre-hired` | `hey-youre-hired` | Live |
-| Directors Palette | `directors-palette` | `directors-palette` | Pending |
+| My App | `my-app` | `my-app` | Live |
+| API Service | `api-service` | `api-service` | Pending |
 
 ---
 
@@ -659,9 +659,9 @@ Only significant events are logged: mutations, errors, slow requests (>1s), and 
     "source_type": "http",
     "event_count": 22,
     "duration_ms": 45,
-    "index_name": "hey-youre-hired",
-    "app_name": "hey-youre-hired",
-    "description": "Ingested 22 events via http to index=hey-youre-hired from app=hey-youre-hired (45ms)"
+    "index_name": "my-app",
+    "app_name": "my-app",
+    "description": "Ingested 22 events via http to index=my-app from app=my-app (45ms)"
   }
 }
 ```

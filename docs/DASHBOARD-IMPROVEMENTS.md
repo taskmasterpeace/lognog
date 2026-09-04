@@ -6,7 +6,7 @@
 
 ## Executive Summary
 
-The dashboard is LogNog's most visible feature and the primary interface for users to derive value from their logs. This plan outlines a comprehensive strategy to make LogNog dashboards not just competitive with Splunk, but **better** - especially for the homelab and SMB market.
+The dashboard is LogNog's most visible feature and the primary interface for users to derive value from their logs. This plan outlines a comprehensive strategy to make LogNog dashboards not just competitive with commercial log platforms, but **better** - especially for the homelab and SMB market.
 
 **Key Differentiators We'll Build:**
 - Dashboard branding (logos, colors per application)
@@ -65,11 +65,11 @@ onBrushEnd?: (range: { start: number; end: number }) => void;
 
 ---
 
-## Part 2: Features to Beat Splunk
+## Part 2: Features to Beat Commercial Platforms
 
-### Splunk Dashboard Features (Must Have)
+### Enterprise Dashboard Features (Must Have)
 
-| Feature | Splunk | LogNog Current | Priority |
+| Feature | Enterprise | LogNog Current | Priority |
 |---------|--------|----------------|----------|
 | Dashboard Variables | Yes ($token$) | No | P0 |
 | Drilldown Navigation | Yes | No | P0 |
@@ -81,16 +81,16 @@ onBrushEnd?: (range: { start: number; end: number }) => void;
 | Trellis Layout | Yes | No | P3 |
 | Dark/Light Mode | Yes | Yes (partial) | Done |
 
-### Where We Can Beat Splunk
+### Where We Can Beat Enterprise Tools
 
 | Advantage | Why It Matters |
 |-----------|----------------|
-| **Branding/Logos** | Splunk doesn't do per-dashboard branding - we can! |
-| **AI Insights** | Local Ollama integration - Splunk requires cloud |
+| **Branding/Logos** | Enterprise tools don't do per-dashboard branding - we can! |
+| **AI Insights** | Local Ollama integration - enterprise tools require cloud |
 | **Homelab Templates** | Pre-built dashboards for pfSense, Ubiquiti, etc. |
 | **One-Click Setup** | Docker-compose vs enterprise deployment |
-| **No License Limits** | Splunk's 500MB/day dev license is a joke |
-| **Mobile-First** | Splunk mobile is an afterthought |
+| **No License Limits** | Enterprise 500MB/day dev licenses are a joke |
+| **Mobile-First** | Enterprise mobile apps are an afterthought |
 
 ---
 
@@ -436,7 +436,7 @@ const layout = panels.map(panel => ({
 - AI insights interaction rate
 
 ### Comparative
-- Time to first dashboard (vs Splunk)
+- Time to first dashboard (vs commercial platforms)
 - Dashboard creation time (vs Grafana)
 - User satisfaction score
 
@@ -525,12 +525,12 @@ Week 6: Polish & Launch
 
 ---
 
-## Appendix B: Splunk-to-LogNog Dashboard Migration
+## Appendix B: Classic/XML Dashboard Migration
 
-For users migrating from Splunk, we should provide:
+For users migrating from a classic XML-based dashboard tool, we should provide:
 
-1. **Dashboard JSON Converter** - Parse Splunk SimpleXML, output LogNog JSON
-2. **Query Translator** - Convert SPL to LogNog DSL (best effort)
+1. **Dashboard JSON Converter** - Parse legacy SimpleXML, output LogNog JSON
+2. **Query Translator** - Convert legacy query syntax to LogNog DSL (best effort)
 3. **Migration Guide** - Step-by-step documentation
 
 ---
@@ -539,7 +539,7 @@ For users migrating from Splunk, we should provide:
 
 This plan positions LogNog dashboards as a **key differentiator** rather than a checkbox feature. By focusing on:
 
-1. **Branding** - Something Splunk doesn't do
+1. **Branding** - Something commercial tools don't do
 2. **AI Integration** - Local-first, privacy-respecting
 3. **Homelab Focus** - Pre-built templates for our audience
 4. **Ease of Use** - One-click drilldown, natural language

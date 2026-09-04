@@ -400,7 +400,7 @@ export class Compiler {
 
     if (isAggregation) {
       // Group-by columns come back under their field names (`model_id`, not
-      // `JSONExtractString(structured_data, 'model_id')`), as Splunk returns
+      // `JSONExtractString(structured_data, 'model_id')`), as some log tools return
       // them; GROUP BY itself still uses the raw expressions.
       const allFields = [...groupBySelect, ...aggregationSelect];
       sql += allFields.join(', ');
@@ -523,7 +523,7 @@ export class Compiler {
 
       case '!=':
         if (cond.value === '*') {
-          // Splunk `field!=*`: rows where the field is absent/empty.
+          // The `field!=*` form: rows where the field is absent/empty.
           expr = isKnownColumn ? `${field} = ''` : `NOT ${this.jsonHas(cond.field)}`;
         } else if (mappedField === 'severity') {
           // Severity is numeric - convert string levels to numbers
@@ -760,7 +760,7 @@ export class Compiler {
    * down by every row without the field and `sum(credits_cost)` was 0 for
    * string-typed clients. Read the raw token (unquoting strings) and parse it;
    * anything unparsable becomes NULL, which ClickHouse aggregates skip — the
-   * same way Splunk's stats ignore events that lack the field.
+   * same way stats ignore events that lack the field.
    */
   private jsonNumber(fieldName: string): string {
     const safeField = sanitizeFieldName(fieldName);

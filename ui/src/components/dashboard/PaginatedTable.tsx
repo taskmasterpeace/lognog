@@ -244,7 +244,7 @@ function formatCellValue(value: unknown, format?: PanelFormat): string {
   return String(value);
 }
 
-/** Colour a numeric cell by the highest threshold it crosses (Splunk-style). */
+/** Colour a numeric cell by the highest threshold it crosses (shorthand). */
 function thresholdColor(value: unknown, format?: PanelFormat): string | undefined {
   if (!format?.thresholds || format.thresholds.length === 0) return undefined;
   const n = Number(value);

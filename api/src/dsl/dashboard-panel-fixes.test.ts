@@ -3,12 +3,12 @@ import { parseAndCompile, parseToAST } from './index';
 
 /**
  * Regression tests for the four DSL bugs that broke 27 of 105 real production
- * dashboard panels (Directors Palette / HeyYoureHired). See the 2026-07-03 pass.
+ * dashboard panels (Api Service / WebApp). See the 2026-07-03 pass.
  */
 describe('Dashboard panel DSL fixes', () => {
   it('timechart works WITHOUT an explicit span (Bug C)', () => {
     // `timechart count by level` previously threw ParseError: Expected "span".
-    expect(() => parseToAST('search index=directors-palette | timechart count by level')).not.toThrow();
+    expect(() => parseToAST('search index=api-service | timechart count by level')).not.toThrow();
     const r = parseAndCompile('search * | timechart count by level');
     expect(r.sql).toContain('count()');
   });
@@ -16,7 +16,7 @@ describe('Dashboard panel DSL fixes', () => {
   it('sort by an aggregation alias references the column, not structured_data (Bug A)', () => {
     // `stats count by X | sort -count` was compiling ORDER BY
     // JSONExtractString(structured_data, 'count') and erroring in ClickHouse.
-    const r = parseAndCompile('search index=directors-palette | stats count by model_id | sort desc count | limit 10');
+    const r = parseAndCompile('search index=api-service | stats count by model_id | sort desc count | limit 10');
     expect(r.sql).toContain('count() AS count');
     expect(r.sql).toContain('ORDER BY count DESC');
     expect(r.sql).not.toContain("structured_data, 'count'");

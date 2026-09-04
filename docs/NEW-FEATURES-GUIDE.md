@@ -1,6 +1,6 @@
 # LogNog New Features Guide
 
-A plain-English guide to the 5 major features added to LogNog. Written for Splunk users who want to understand what these do and how to use them.
+A plain-English guide to the 5 major features added to LogNog. Written for anyone who wants to understand what these do and how to use them.
 
 ---
 
@@ -60,7 +60,7 @@ Anomaly detection learns each entity's unique baseline, so "unusual" is personal
    - The AI's analysis and recommendations
 4. Mark anomalies as "true positive" or "false positive" to improve accuracy
 
-**Splunk Equivalent**: This is like Splunk UBA (User Behavior Analytics), but built-in and using your local Ollama AI instead of cloud services.
+**How it compares**: This is built-in User Behavior Analytics (UBA), powered by your local Ollama AI instead of cloud services.
 
 ---
 
@@ -116,7 +116,7 @@ Without an asset/identity database, you're flying blind.
    - Department/role info
 4. Use in searches: `search host=* | lookup assets by hostname`
 
-**Splunk Equivalent**: This is like Splunk's Asset & Identity Framework from Enterprise Security, but simpler and built-in.
+**How it compares**: This is a simpler, built-in Asset & Identity framework.
 
 ---
 
@@ -177,7 +177,7 @@ search user=admin
    - CIM Field: `user`
 5. Now searches using `user` will automatically find Windows `AccountName`
 
-**Splunk Equivalent**: This is exactly like Splunk's Common Information Model, just simplified.
+**How it compares**: This is a simplified common information model (CIM).
 
 ---
 
@@ -235,7 +235,7 @@ The AI Agent lets you just ask questions in plain English.
    - Provide an answer with evidence
 5. Ask follow-up questions to dig deeper
 
-**Splunk Equivalent**: This is like Splunk AI Assistant, but runs locally using Ollama (no cloud, no cost per query).
+**How it compares**: This is an AI query assistant that runs locally using Ollama (no cloud, no cost per query).
 
 ---
 
@@ -313,7 +313,7 @@ Synthetic monitoring is proactive - it continuously tests your services from the
 4. Save and watch the dashboard for results
 5. View history to see uptime percentages and trends
 
-**Splunk Equivalent**: This is like Splunk Synthetic Monitoring (formerly Rigor), but built-in and free.
+**How it compares**: This is built-in synthetic monitoring, free of charge.
 
 ---
 
@@ -372,7 +372,7 @@ Minimal impact:
 
 Nope. Each feature is independent. Use what you need, ignore the rest.
 
-**Q: How is this different from Splunk Enterprise Security?**
+**Q: How is this different from a commercial SIEM's security suite?**
 
 Similar concepts, but:
 - Built-in (no separate purchase)

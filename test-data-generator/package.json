@@ -1,7 +1,7 @@
 {
-  "name": "spunk-test-data-generator",
+  "name": "lognog-test-data-generator",
   "version": "1.0.0",
-  "description": "Generate realistic syslog test data for Spunk",
+  "description": "Generate realistic syslog test data for LogNog",
   "main": "dist/index.js",
   "type": "module",
   "scripts": {

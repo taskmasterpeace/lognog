@@ -1,6 +1,6 @@
 # Alert Variable Templating
 
-LogNog alerts support Splunk-style variable templating in alert titles, messages, and webhook payloads. This allows you to create dynamic, context-rich notifications that include specific information from your query results.
+LogNog alerts support variable templating in alert titles, messages, and webhook payloads. This allows you to create dynamic, context-rich notifications that include specific information from your query results.
 
 ## Overview
 

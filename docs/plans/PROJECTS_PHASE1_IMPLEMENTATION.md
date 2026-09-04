@@ -121,7 +121,7 @@ interface DashboardLogo {
 1. Gets unique `app_scope` values from dashboards
 2. Creates a project for each app_scope
 3. Updates dashboards to reference their project_id
-4. Creates "Hey You're Hired" project with HYH branding
+4. Creates "My App" project with MyApp branding
 5. Creates "General" project for default/empty scopes
 
 **Run with:**
@@ -147,8 +147,8 @@ npx tsx scripts/test-projects-api.ts
 The migration was successfully run on the existing database:
 
 ```
-✓ Created project: Directors Palette (directors-palette)
-✓ Created project: Hey Youre Hired (hey-youre-hired)
+✓ Created project: API Service (api-service)
+✓ Created project: My App (my-app)
 ✓ Created General project
 ✓ Migrated 12/12 dashboards to projects
 ```

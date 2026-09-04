@@ -507,7 +507,7 @@ const LogRow: React.FC<LogRowProps> = ({
                   </button>
                 )}
                 {/* Surrounding events: re-run search scoped to this host in a
-                    ±5 min window (Splunk's "Nearby Events"). */}
+                    ±5 min window (a "Nearby Events" view). */}
                 {onShowContext && (log.hostname || log.host || log.source) && (
                   <button
                     onClick={() => onShowContext(log)}

@@ -171,7 +171,7 @@ export const ALERT_TEMPLATES: AlertTemplateData[] = [
   },
 
   // ============================================
-  // SaaS Analytics Alerts (Hey You're Hired)
+  // SaaS Analytics Alerts (Web App)
   // ============================================
 
   // OAuth Login Failures

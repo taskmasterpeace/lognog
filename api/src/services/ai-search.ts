@@ -1,5 +1,5 @@
 /**
- * AI-powered natural language to Spunk Query Language translator
+ * AI-powered natural language to LogNog Query Language translator
  */
 
 interface TranslationResult {
@@ -28,7 +28,7 @@ const FIELD_ALIASES: Record<string, string> = {
   'source': 'hostname',
   'user': 'user',
   'users': 'user',
-  // SaaS field aliases (Hey You're Hired)
+  // SaaS field aliases
   'email': 'user_email',
   'plan': 'plan_name',
   'subscription': 'plan_name',
@@ -360,7 +360,7 @@ const QUERY_PATTERNS: Array<{
   },
 
   // ============================================
-  // SaaS Analytics Patterns (Hey You're Hired)
+  // SaaS Analytics Patterns
   // ============================================
 
   // "new signups" / "user signups" / "registrations"
@@ -681,7 +681,7 @@ const QUERY_PATTERNS: Array<{
 ];
 
 /**
- * Translate natural language to Spunk Query Language
+ * Translate natural language to LogNog Query Language
  */
 export function translateNaturalLanguage(input: string): TranslationResult & { timeRange?: { earliest?: string; latest?: string } } {
   const normalizedInput = input.trim().toLowerCase();

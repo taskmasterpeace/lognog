@@ -275,6 +275,4 @@ Pre-built logging setups for:
 
 ## Sources
 
-- [Splunk AI Assistant for SPL](https://www.splunk.com/en_us/blog/platform/flatten-the-spl-learning-curve-introducing-splunk-ai-assistant-for-spl.html)
-- [Building an AI Assistant in Splunk Observability Cloud](https://www.splunk.com/en_us/blog/artificial-intelligence/building-an-ai-assistant-in-splunk-observability-cloud.html)
 - [Grafana AI/ML for Observability](https://grafana.com/blog/2024/07/02/identify-anomalies-outlier-detection-forecasting-how-grafana-cloud-uses-ai-ml-to-make-observability-easier/)

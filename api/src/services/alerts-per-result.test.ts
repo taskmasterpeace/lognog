@@ -1,5 +1,5 @@
 /**
- * Splunk-style "trigger for each result" with per-field throttling.
+ * per-result triggering with per-field throttling.
  *
  * A per_result alert fires once per result row, suppressing repeats for the
  * same throttle-field value(s) inside the throttle window, so a noisy host

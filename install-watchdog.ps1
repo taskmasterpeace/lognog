@@ -2,7 +2,7 @@
 # Run as Administrator: powershell -ExecutionPolicy Bypass -File install-watchdog.ps1
 
 $taskName = "LogNog Watchdog"
-$scriptPath = "C:\git\spunk\watchdog.ps1"
+$scriptPath = "C:\git\lognog\watchdog.ps1"
 
 Write-Host "Installing LogNog Watchdog scheduled task..." -ForegroundColor Cyan
 
@@ -29,6 +29,6 @@ Write-Host "SUCCESS! Watchdog installed." -ForegroundColor Green
 Write-Host ""
 Write-Host "Task: $taskName" -ForegroundColor Yellow
 Write-Host "Runs: Every 15 minutes" -ForegroundColor Yellow
-Write-Host "Log:  C:\git\spunk\watchdog.log" -ForegroundColor Yellow
+Write-Host "Log:  C:\git\lognog\watchdog.log" -ForegroundColor Yellow
 Write-Host ""
 Write-Host "To uninstall: Unregister-ScheduledTask -TaskName '$taskName' -Confirm:`$false" -ForegroundColor Gray

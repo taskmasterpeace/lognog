@@ -1,28 +1,28 @@
 # LogNog Feature Gap Analysis Report
 
-This report analyzes what features Splunk users wish existed, what open source projects we should leverage, and what improvements we need.
+This report analyzes what features users of commercial log platforms wish existed, what open source projects we should leverage, and what improvements we need.
 
 ---
 
-## Part 1: Splunk Features Users Wish Existed
+## Part 1: Features Users Wish Existed in Commercial Log Platforms
 
-Based on research from [Splunk Community](https://community.splunk.com), [Quora discussions](https://www.quora.com/What-are-the-criticisms-of-Splunk), and [user reviews](https://uk.trustpilot.com/review/splunk.com):
+Based on research into common criticisms of commercial log platforms and real user reviews:
 
-### Top User Pain Points with Splunk
+### Top User Pain Points with Commercial Log Platforms
 
 | Pain Point | What Users Say | LogNog Status |
 |------------|----------------|---------------|
 | **Pricing** | "Too expensive for small businesses", "$2000/GB/day is insane" | ✅ FREE (MIT license) |
 | **Complexity** | "Need a full-time person just to manage it" | ✅ Simple docker-compose |
-| **Steep Learning Curve** | "SPL is hard to learn" | ✅ Simpler DSL, built-in docs |
+| **Steep Learning Curve** | "The query language is hard to learn" | ✅ Simpler DSL, built-in docs |
 | **Outdated UI** | "Interface needs a revamp" | ⚠️ Needs improvement |
 | **Cloud Lock-in** | "Have to open tickets for everything" | ✅ 100% self-hosted |
 | **Dashboard Embedding** | "Can't embed dashboards without login" | ⚠️ Not implemented |
 | **Search Optimization** | "Optimizing searches is more art than science" | ⚠️ No query optimizer |
 | **Real-time Limitations** | "Real-time searches are resource-heavy" | ✅ SSE Live Tail works well |
-| **Windows Deployment Issues** | "260 char path limits crash Splunk" | ✅ LogNog Lite works on Windows |
+| **Windows Deployment Issues** | "260 char path limits cause crashes on Windows" | ✅ LogNog Lite works on Windows |
 
-### Most Requested Splunk Features (From Splunk Ideas)
+### Most Requested Features (From Community Feedback)
 
 | Feature Request | LogNog Status | Effort to Add |
 |-----------------|---------------|---------------|
@@ -37,9 +37,9 @@ Based on research from [Splunk Community](https://community.splunk.com), [Quora 
 | **Saved search templates** | ✅ Have it | - |
 | **Multi-tenant support** | ⚠️ Basic roles | Medium |
 
-### What We're Missing vs Splunk
+### What We're Missing vs Commercial Platforms
 
-| Feature | Splunk Has | LogNog Has | Priority |
+| Feature | Others Have | LogNog Has | Priority |
 |---------|------------|------------|----------|
 | Machine Learning Toolkit | ✅ | ❌ | High |
 | Threat Intelligence | ✅ | ❌ | Medium |

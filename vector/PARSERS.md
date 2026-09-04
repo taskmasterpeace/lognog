@@ -215,8 +215,8 @@ index_name: "errors"
 
 2. **Docker Compose Pattern**: Detects `project_service_instance` format
    ```
-   app_name: "spunk_api_1" →
-     docker_compose_project: "spunk"
+   app_name: "lognog_api_1" →
+     docker_compose_project: "lognog"
      docker_compose_service: "api"
      docker_compose_instance: 1
    ```
@@ -229,7 +229,7 @@ index_name: "errors"
 **Example Output Fields**:
 ```
 docker_enabled: true
-docker_compose_project: "spunk"
+docker_compose_project: "lognog"
 docker_compose_service: "api"
 docker_compose_instance: 1
 ```
@@ -275,7 +275,7 @@ test-log-parsers.bat
 
 **Connect to ClickHouse**:
 ```bash
-docker exec -it spunk-clickhouse clickhouse-client --user spunk --password spunk123 --database spunk
+docker exec -it lognog-clickhouse clickhouse-client --user lognog --password <clickhouse-password> --database lognog
 ```
 
 **View log types**:
@@ -354,7 +354,7 @@ source = '''
 
 4. Extract fields following naming conventions
 
-5. Validate with `docker exec spunk-vector vector validate`
+5. Validate with `docker exec lognog-vector vector validate`
 
 ## Field Naming Conventions
 
@@ -370,12 +370,12 @@ source = '''
 
 1. **Check logs are reaching Vector**:
    ```bash
-   docker logs spunk-vector
+   docker logs lognog-vector
    ```
 
 2. **Enable console sink** (uncomment in vector.toml):
    ```bash
-   docker logs spunk-vector | grep "console"
+   docker logs lognog-vector | grep "console"
    ```
 
 3. **Verify regex patterns**:
@@ -384,7 +384,7 @@ source = '''
 
 4. **Validate configuration**:
    ```bash
-   docker exec spunk-vector vector validate
+   docker exec lognog-vector vector validate
    ```
 
 ### Performance issues

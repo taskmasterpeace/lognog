@@ -253,7 +253,7 @@ Windows events appear in LogNog with:
 - **file_path:** `EventLog://{channel}`
 
 Example LogNog query:
-```splunk
+```text
 search source_type=windows_security
   | filter metadata.event_id=4625
   | stats count by metadata.user_sid
@@ -263,17 +263,17 @@ search source_type=windows_security
 ## Files Modified/Created
 
 ### Modified
-- `C:\git\spunk\agent\pyproject.toml` - Added pywin32 dependency
-- `C:\git\spunk\agent\src\lognog_in\config.py` - Added WindowsEventsConfig
-- `C:\git\spunk\agent\src\lognog_in\agent.py` - Integrated collector
-- `C:\git\spunk\agent\README.md` - Updated documentation
+- `agent\pyproject.toml` - Added pywin32 dependency
+- `agent\src\lognog_in\config.py` - Added WindowsEventsConfig
+- `agent\src\lognog_in\agent.py` - Integrated collector
+- `agent\README.md` - Updated documentation
 
 ### Created
-- `C:\git\spunk\agent\src\lognog_in\collectors\__init__.py`
-- `C:\git\spunk\agent\src\lognog_in\collectors\windows_events.py`
-- `C:\git\spunk\agent\tests\test_windows_events.py`
-- `C:\git\spunk\agent\docs\WINDOWS-EVENTS.md`
-- `C:\git\spunk\agent\config.example.yaml`
+- `agent\src\lognog_in\collectors\__init__.py`
+- `agent\src\lognog_in\collectors\windows_events.py`
+- `agent\tests\test_windows_events.py`
+- `agent\docs\WINDOWS-EVENTS.md`
+- `agent\config.example.yaml`
 
 ## Testing Recommendations
 

@@ -245,7 +245,7 @@ lognog.info('Subscription cancelled', { user_id, reason, tenure_days });
 
 ## Part 5: Example Output
 
-### Application: Hey You're Hired
+### Application: My App
 
 **Questionnaire Answers:**
 
@@ -341,8 +341,8 @@ After completing the questionnaire:
 
 | App | Index | Dashboards | Alerts | Status |
 |-----|-------|------------|--------|--------|
-| Hey You're Hired | `hey-youre-hired` | 5 | 6 | Complete |
-| Directors Palette | `directors-palette` | - | - | Pending |
+| My App | `my-app` | 5 | 6 | Complete |
+| API Service | `api-service` | - | - | Pending |
 | LogNog Internal | `lognog-internal` | 1 | 2 | Complete |
 
 ---

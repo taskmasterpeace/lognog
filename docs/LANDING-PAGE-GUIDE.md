@@ -4,9 +4,9 @@ This document provides a comprehensive guide to the LogNog landing page, includi
 
 ## Overview
 
-The landing page is designed to be **conversion-focused** with clear value propositions for Splunk users, homelab enthusiasts, and growing development teams. It emphasizes:
+The landing page is designed to be **conversion-focused** with clear value propositions for teams migrating off commercial log platforms, homelab enthusiasts, and growing development teams. It emphasizes:
 
-- **Zero learning curve** for Splunk users
+- **Zero learning curve** for anyone with pipe-based query experience
 - **Cost savings** compared to commercial solutions
 - **Simplicity** compared to ELK/Loki stacks
 - **Self-hosted control** over your data
@@ -54,9 +54,9 @@ This reusable component displays:
 **Aspect Ratio:** 16:9
 **Dimensions:** 1920x1080px
 **Description:** Search interface showing DSL query bar, field extraction sidebar, and log results table with syntax highlighting
-**Purpose:** Show Splunk users the familiar query interface
+**Purpose:** Show users the familiar pipe-based query interface
 **What to capture:**
-- Query bar with example SPL-like query (e.g., `search severity=error | stats count by hostname`)
+- Query bar with example pipe-based query (e.g., `search severity=error | stats count by hostname`)
 - Field extraction sidebar on the left
 - Log results in table format
 - Syntax highlighting in query bar
@@ -170,15 +170,15 @@ This reusable component displays:
 **Purpose:** Detailed feature walkthrough
 
 ### 8. The Problem
-- 4 cards showing pain points: Splunk cost, ELK complexity, Chronicle lock-in, SaaS privacy concerns
+- 4 cards showing pain points: commercial license cost, ELK complexity, Chronicle lock-in, SaaS privacy concerns
 **Purpose:** Empathize with visitor's current pain
 
-### 9. Coming From Splunk?
-- Side-by-side SPL vs LogNog query comparison table
-**Purpose:** Show zero learning curve for Splunk users
+### 9. Coming From a Commercial Log Platform?
+- Side-by-side legacy query vs LogNog query comparison table
+**Purpose:** Show zero learning curve for anyone with pipe-based query experience
 
 ### 10. How LogNog Compares
-- Full comparison table: LogNog vs Splunk vs ELK vs Loki vs Chronicle
+- Full comparison table: LogNog vs ELK vs Loki vs Chronicle
 - 8 criteria: Cost, Setup Time, Query Language, Dashboards, Alerts, Memory, Self-Hosted, Open Source
 **Purpose:** Objective feature comparison
 
@@ -232,10 +232,10 @@ This reusable component displays:
 
 ### Target Personas
 
-**1. Splunk Refugee**
+**1. Commercial Platform Refugee**
 - Pain: $1,800+/year licensing costs
 - Value Prop: Same query language, $0 cost
-- Key Message: "Your SPL knowledge transfers directly"
+- Key Message: "Your query-language knowledge transfers directly"
 
 **2. Homelab Enthusiast**
 - Pain: Tools are too complex or too expensive
@@ -243,7 +243,7 @@ This reusable component displays:
 - Key Message: "One docker-compose file"
 
 **3. Startup/SMB Developer**
-- Pain: Can't afford Splunk, ELK is too complex
+- Pain: Can't afford commercial tools, ELK is too complex
 - Value Prop: Enterprise features without enterprise complexity
 - Key Message: "Stop paying $500/month for logs"
 
@@ -254,7 +254,7 @@ This reusable component displays:
 
 ### Key Differentiators
 
-1. **Splunk-like Query Language** - Zero learning curve for Splunk users
+1. **Pipe-based Query Language** - Zero learning curve for anyone with prior query experience
 2. **Cost** - Free vs $1,800+/year
 3. **Simplicity** - One docker-compose file vs 3+ components
 4. **Self-hosted** - Your data stays on your servers

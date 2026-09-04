@@ -1,13 +1,14 @@
 import type { DashboardExport } from '../../api/client';
 
 /**
- * Convert a Splunk Classic (SimpleXML) dashboard into a LogNog DashboardExport,
+ * Convert a Classic dashboard XML (SimpleXML) file into a LogNog DashboardExport,
  * so the existing import pipeline can create it. Best-effort: the panel queries
- * are carried across (SPL ≈ LogNog DSL for common cases) and normalised to start
- * with `search`; the user tweaks anything Splunk-specific afterwards.
+ * are carried across (the classic pipe syntax maps closely to the LogNog DSL for
+ * common cases) and normalised to start with `search`; the user tweaks anything
+ * tool-specific afterwards.
  */
 
-// Splunk charting.chart value → LogNog visualization.
+// Classic charting.chart value → LogNog visualization.
 const CHART_MAP: Record<string, string> = {
   line: 'linechart',
   area: 'line', // LogNog 'line' is the area chart
@@ -50,7 +51,7 @@ function text(el: Element | null | undefined): string | undefined {
   return t || undefined;
 }
 
-export function parseSplunkXml(xml: string): DashboardExport {
+export function parseClassicXml(xml: string): DashboardExport {
   const doc = new DOMParser().parseFromString(xml, 'text/xml');
   const parseError = doc.querySelector('parsererror');
   if (parseError) {
@@ -58,7 +59,7 @@ export function parseSplunkXml(xml: string): DashboardExport {
   }
   const root = doc.querySelector('dashboard, form');
   if (!root) {
-    throw new Error('Not a Splunk dashboard: no <dashboard> or <form> root element.');
+    throw new Error('Not a recognized dashboard: no <dashboard> or <form> root element.');
   }
 
   const name = text(root.querySelector('label')) || 'Imported dashboard';
@@ -92,7 +93,7 @@ export function parseSplunkXml(xml: string): DashboardExport {
   }
 
   if (panels.length === 0) {
-    throw new Error('No panels found in the Splunk XML.');
+    throw new Error('No panels found in the XML.');
   }
 
   // <input> tokens → LogNog dashboard variables (best-effort).
@@ -119,7 +120,7 @@ export function parseSplunkXml(xml: string): DashboardExport {
     panels,
     variables: variables.length > 0 ? variables : undefined,
     exported_at: new Date().toISOString(),
-    version: 'imported-from-splunk-xml',
+    version: 'imported-from-xml',
   };
 }
 

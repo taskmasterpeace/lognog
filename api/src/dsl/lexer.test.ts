@@ -107,7 +107,7 @@ describe('Lexer', () => {
     ]);
   });
 
-  it('tokenizes Splunk-style colon operator as contains', () => {
+  it('tokenizes colon operator as contains', () => {
     const lexer = new Lexer('search message:"error"');
     const tokens = lexer.tokenize();
 

@@ -100,7 +100,7 @@ router.get('/', READ, (req: Request, res: Response) => {
       'POST /api/agent/alerts/:id/evaluate': 'Evaluate an alert now. Needs: write.',
       'DELETE /api/agent/alerts/:id': 'Delete an alert. Needs: write.',
     },
-    dsl: 'Splunk-like: `search severity<=3 | stats count by app_name | sort -count | head 10`. Commands: search, filter, where, stats, sort, limit/head/tail, table, fields, dedup, rename, top, rare, bin, timechart, rex, eval, lookup.',
+    dsl: 'Pipe-based: `search severity<=3 | stats count by app_name | sort -count | head 10`. Commands: search, filter, where, stats, sort, limit/head/tail, table, fields, dedup, rename, top, rare, bin, timechart, rex, eval, lookup.',
     docs: '/api/ingest/guide',
   });
 });

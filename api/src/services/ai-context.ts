@@ -74,7 +74,7 @@ export function buildAIContext(
   return {
     service: 'LogNog',
     description:
-      'Self-hosted log management with a Splunk-like DSL. Query logs, build detections, and read normalized (CIM) fields.',
+      'Self-hosted log management with a pipe-based DSL. Query logs, build detections, and read normalized (CIM) fields.',
     query_language: {
       name: 'LogNog DSL',
       reference: '/api/ingest/guide',
@@ -83,7 +83,7 @@ export function buildAIContext(
     },
     cim: {
       note:
-        'Canonical field names follow Elastic Common Schema (ECS); each model is classified by its OCSF event class. Splunk-style names (src, dest, uri, ...) are recognized as input aliases that normalize to the canonical names.',
+        'Canonical field names follow Elastic Common Schema (ECS); each model is classified by its OCSF event class. shorthand names (src, dest, uri, ...) are recognized as input aliases that normalize to the canonical names.',
       models,
       field_index: fieldIndex,
     },

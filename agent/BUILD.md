@@ -13,21 +13,21 @@ This document describes how to build a standalone Windows executable for the Log
 ### Option 1: Using Python Build Script (Recommended)
 
 ```bash
-cd C:\git\spunk\agent
+cd agent
 python build.py
 ```
 
 ### Option 2: Using Windows Batch Script
 
 ```bash
-cd C:\git\spunk\agent
+cd agent
 build_exe.bat
 ```
 
 ### Option 3: Manual Build
 
 ```bash
-cd C:\git\spunk\agent
+cd agent
 pip install -e ".[dev]"
 pyinstaller LogNogIn.spec --clean --noconfirm
 ```

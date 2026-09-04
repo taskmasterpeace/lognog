@@ -5,8 +5,8 @@
  *   - Canonical field names follow the Elastic Common Schema (ECS, Apache-2.0).
  *   - Each model is classified by its OCSF event class (Open Cybersecurity
  *     Schema Framework, Apache-2.0) — see OCSF_CLASS_MAP.
- * Splunk-style field names (src, dest, uri, …) are preserved ONLY as input
- * `aliases`, so existing sources still normalize, without shipping Splunk's
+ * legacy short field names (src, dest, uri, …) are preserved ONLY as input
+ * `aliases`, so existing sources still normalize, without shipping the legacy schema's
  * proprietary CIM taxonomy as our own. See docs/NOTICE for attribution.
  */
 
@@ -102,7 +102,7 @@ const webFields: CIMField[] = [
 ];
 
 // ============================================================================
-// Built-in Model Definitions (names align to OCSF classes, not Splunk CIM)
+// Built-in Model Definitions (names align to OCSF classes, not a proprietary CIM)
 // ============================================================================
 export const BUILTIN_CIM_MODELS = [
   {
@@ -184,11 +184,11 @@ export const DEFAULT_FIELD_MAPPINGS = [
 ];
 
 // ============================================================================
-// Migration: legacy Splunk-mirroring built-ins → ECS/OCSF taxonomy
+// Migration: legacy proprietary-mirroring built-ins → ECS/OCSF taxonomy
 // ============================================================================
 /**
  * Per legacy built-in model: its new OCSF-aligned name and the old→new field
- * renames used to repoint existing field_mappings. Splunk-style names remain
+ * renames used to repoint existing field_mappings. legacy short names remain
  * recognized as `aliases` on the reseeded models (see the field definitions).
  */
 export const LEGACY_MIGRATIONS: Array<{
@@ -241,7 +241,7 @@ export const LEGACY_MIGRATIONS: Array<{
 ];
 
 /**
- * Upgrades an already-seeded install from the legacy Splunk-mirroring built-ins
+ * Upgrades an already-seeded install from the legacy proprietary-mirroring built-ins
  * to the ECS/OCSF taxonomy. Idempotent: safe to run on every startup.
  *  1. Repoint existing field_mappings (data_model + cim_field) to the new names.
  *  2. Remove the stale built-in models (raw SQL bypasses the built-in guard).

@@ -8,7 +8,8 @@ import {
 } from '../db/sqlite.js';
 import { DASHBOARD_TEMPLATES } from './dashboard-templates.js';
 
-// Pre-built saved searches for Hey You're Hired SaaS analytics
+// Pre-built saved searches that showcase common LogNog queries. They seed a
+// new install with useful, product-neutral examples across the core commands.
 export interface SavedSearchTemplate {
   name: string;
   query: string;
@@ -19,105 +20,91 @@ export interface SavedSearchTemplate {
 }
 
 export const SAVED_SEARCH_TEMPLATES: SavedSearchTemplate[] = [
-  // Funnel Tracking
+  // Errors & health
   {
-    name: 'New Signups Today',
-    query: 'search message~"User signup completed" | stats count by user_email | sort desc count',
-    description: 'All user signups from today with email addresses',
-    time_range: '-24h',
-    tags: ['hey-youre-hired', 'funnel', 'signups'],
-    is_shared: true,
-  },
-  {
-    name: 'Signups by UTM Source',
-    query: 'search message~"User signup completed" | stats count by utm_source | sort desc count',
-    description: 'Track which marketing channels drive signups',
-    time_range: '-7d',
-    tags: ['hey-youre-hired', 'funnel', 'marketing'],
-    is_shared: true,
-  },
-  {
-    name: 'Profile Completions',
-    query: 'search message~"Profile completion" | stats count by user_email, completion_step | sort desc count',
-    description: 'Track profile wizard completion rates',
-    time_range: '-7d',
-    tags: ['hey-youre-hired', 'funnel', 'onboarding'],
-    is_shared: true,
-  },
-  {
-    name: 'Checkout Attempts',
-    query: 'search message~"Checkout" | stats count by user_email, plan_name | sort desc count',
-    description: 'All checkout page visits and attempts',
-    time_range: '-7d',
-    tags: ['hey-youre-hired', 'funnel', 'payments'],
-    is_shared: true,
-  },
-  {
-    name: 'Successful Conversions',
-    query: 'search message~"Subscription created" OR message~"Payment successful" | stats count by user_email, plan_name | sort desc count',
-    description: 'Completed subscription purchases',
-    time_range: '-7d',
-    tags: ['hey-youre-hired', 'funnel', 'payments', 'conversions'],
-    is_shared: true,
-  },
-
-  // Feature Usage
-  {
-    name: 'Job Recommendations Usage',
-    query: 'search message~"Job recommendations" feature_name="job_recommendations" | stats count by user_email | sort desc count',
-    description: 'Track job recommendation feature usage per user',
-    time_range: '-7d',
-    tags: ['hey-youre-hired', 'features', 'ai'],
-    is_shared: true,
-  },
-  {
-    name: 'Cover Letter Usage',
-    query: 'search message~"Cover letter" feature_name="cover_letter" | stats count by user_email | sort desc count',
-    description: 'Track AI cover letter generation usage',
-    time_range: '-7d',
-    tags: ['hey-youre-hired', 'features', 'ai'],
-    is_shared: true,
-  },
-  {
-    name: 'Slow Job Searches (>5s)',
-    query: 'search message~"Job search completed" duration_ms>5000 | table timestamp, user_email, duration_ms, query | sort desc duration_ms',
-    description: 'Identify slow-performing job searches for optimization',
-    time_range: '-24h',
-    tags: ['hey-youre-hired', 'performance'],
-    is_shared: true,
-  },
-
-  // Error Tracking
-  {
-    name: 'All Errors Today',
+    name: 'Top Errors (24h)',
     query: 'search severity<=3 | stats count by message | sort desc count | head 50',
-    description: 'Top 50 error messages from today',
+    description: 'The 50 most frequent error messages from the last day',
     time_range: '-24h',
-    tags: ['hey-youre-hired', 'errors'],
+    tags: ['getting-started', 'errors'],
     is_shared: true,
   },
   {
-    name: 'OAuth Failures',
-    query: 'search message~"OAuth login failed" | stats count by error_reason, provider | sort desc count',
-    description: 'Track Google/OAuth authentication failures',
+    name: 'Errors Over Time',
+    query: 'search severity<=3 | timechart span=1h count',
+    description: 'Hourly error volume — spot spikes at a glance',
     time_range: '-24h',
-    tags: ['hey-youre-hired', 'errors', 'auth'],
+    tags: ['getting-started', 'errors', 'trends'],
     is_shared: true,
   },
   {
-    name: 'Payment Issues',
-    query: 'search message~"Subscription sync failed" OR message~"Stripe webhook error" OR message~"Payment failed" | table timestamp, user_email, error, message',
-    description: 'All payment and subscription related errors',
-    time_range: '-7d',
-    tags: ['hey-youre-hired', 'errors', 'payments'],
+    name: 'Recent Warnings',
+    query: 'search severity=4 | table timestamp, hostname, message | sort desc timestamp | head 100',
+    description: 'Latest warning-level events with host and message',
+    time_range: '-24h',
+    tags: ['getting-started', 'errors'],
+    is_shared: true,
+  },
+
+  // Volume & trends
+  {
+    name: 'Log Volume Trend',
+    query: 'search * | timechart span=1h count',
+    description: 'Total events per hour across all sources',
+    time_range: '-24h',
+    tags: ['getting-started', 'volume', 'trends'],
     is_shared: true,
   },
   {
-    name: 'External API Errors',
-    query: 'search message~"External API" (message~"failed" OR message~"error" OR message~"timeout") | stats count by api_name, error_type | sort desc count',
-    description: 'JobSpy, Active Jobs DB, and other external API failures',
+    name: 'Top Hosts by Volume',
+    query: 'search * | stats count by hostname | sort desc count | head 20',
+    description: 'Which hosts are sending the most logs',
     time_range: '-24h',
-    tags: ['hey-youre-hired', 'errors', 'integrations'],
+    tags: ['getting-started', 'volume'],
+    is_shared: true,
+  },
+  {
+    name: 'Volume by Source',
+    query: 'search * | stats count by source | sort desc count | head 20',
+    description: 'Event counts grouped by log source',
+    time_range: '-24h',
+    tags: ['getting-started', 'volume'],
+    is_shared: true,
+  },
+  {
+    name: 'Events by Severity',
+    query: 'search * | stats count by severity | sort severity',
+    description: 'Distribution of events across severity levels',
+    time_range: '-24h',
+    tags: ['getting-started', 'volume'],
+    is_shared: true,
+  },
+
+  // Performance
+  {
+    name: 'Slow Requests (>5s)',
+    query: 'search duration_ms>5000 | table timestamp, hostname, duration_ms, message | sort desc duration_ms',
+    description: 'Requests taking longer than 5 seconds, slowest first',
+    time_range: '-24h',
+    tags: ['getting-started', 'performance'],
+    is_shared: true,
+  },
+
+  // Security
+  {
+    name: 'Authentication Failures',
+    query: 'search message~"authentication failed" OR message~"login failed" | stats count by hostname | sort desc count',
+    description: 'Failed sign-in attempts grouped by host',
+    time_range: '-24h',
+    tags: ['getting-started', 'security', 'auth'],
+    is_shared: true,
+  },
+  {
+    name: 'Top Sources by Error Rate',
+    query: 'search severity<=3 | stats count by source | sort desc count | head 20',
+    description: 'Which sources are producing the most errors',
+    time_range: '-24h',
+    tags: ['getting-started', 'security', 'errors'],
     is_shared: true,
   },
 ];

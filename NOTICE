@@ -29,12 +29,3 @@ MITRE ATT&CK(R)
   knowledge base within LogNog does not imply endorsement by The MITRE
   Corporation.
   https://attack.mitre.org/resources/legal-and-branding/terms-of-use/
-
---------------------------------------------------------------------------------
-Trademarks
-
-  "Splunk" and "Splunk Common Information Model" are trademarks of their
-  respective owner. LogNog is not affiliated with, endorsed by, or sponsored by
-  that owner. Any reference is nominative and factual. LogNog does not adopt the
-  Splunk CIM taxonomy; Splunk-style field names are recognized only as input
-  aliases that normalize to the ECS/OCSF canonical names above.

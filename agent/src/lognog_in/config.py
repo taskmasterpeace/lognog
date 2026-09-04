@@ -38,7 +38,7 @@ def normalize_index_name(value) -> Optional[str]:
 class WatchPath:
     """A path to watch for log files.
 
-    Splunk-style per-input settings live here so one agent can tail very
+    Per-input settings live here so one agent can tail very
     different files with the right treatment for each:
 
     - ``exclude``: glob patterns (matched against the file name and the full

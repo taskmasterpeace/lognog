@@ -2,7 +2,7 @@
 
 ## Overview
 
-Implemented Splunk-style variable templating for LogNog alerts, allowing dynamic substitution of query results and alert metadata into email subjects, bodies, and webhook payloads.
+Implemented variable templating for LogNog alerts, allowing dynamic substitution of query results and alert metadata into email subjects, bodies, and webhook payloads.
 
 ## Changes Made
 

@@ -119,14 +119,14 @@ Vector restarted and processing logs successfully with new parsers active.
 
 ### Files Added
 
-1. `C:\git\spunk\vector\PARSERS.md` - Complete parser documentation
-2. `C:\git\spunk\test-log-parsers.sh` - Linux/macOS test script
-3. `C:\git\spunk\test-log-parsers.bat` - Windows test script
-4. `C:\git\spunk\vector\CHANGELOG.md` - This file
+1. `vector\PARSERS.md` - Complete parser documentation
+2. `test-log-parsers.sh` - Linux/macOS test script
+3. `test-log-parsers.bat` - Windows test script
+4. `vector\CHANGELOG.md` - This file
 
 ### Files Modified
 
-1. `C:\git\spunk\vector\vector.toml` - Added 5 new transform blocks (330+ lines)
+1. `vector\vector.toml` - Added 5 new transform blocks (330+ lines)
 
 ---
 

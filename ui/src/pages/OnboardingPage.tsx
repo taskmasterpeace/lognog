@@ -6,7 +6,7 @@ import { Copy, Check, Bot, Sparkles, Code, Zap, LayoutDashboard, Bell, Search, C
 // ============================================================================
 const OVERVIEW_CONTENT = `# What is LogNog?
 
-LogNog is a self-hosted log management platform for centralized application logging. Send structured logs from any application and query them using a Splunk-like DSL.
+LogNog is a self-hosted log management platform for centralized application logging. Send structured logs from any application and query them using a pipe-based DSL.
 
 ## What Should Apps Send to LogNog?
 
@@ -47,8 +47,8 @@ Your App → HTTP POST to /api/ingest/http → LogNog → ClickHouse
 |----------|-------------|---------|
 | LOGNOG_URL | LogNog server URL | https://logs.machinekinglabs.com |
 | LOGNOG_API_KEY | Your API key (get from Settings > API Keys) | lnog_abc123... |
-| LOGNOG_APP_NAME | Your app identifier (kebab-case) | hey-youre-hired |
-| LOGNOG_INDEX | Index name for queries (usually same as app name) | hey-youre-hired |
+| LOGNOG_APP_NAME | Your app identifier (kebab-case) | my-app |
+| LOGNOG_INDEX | Index name for queries (usually same as app name) | my-app |
 `;
 
 // ============================================================================
@@ -282,9 +282,9 @@ Track MRR, conversions, and churn.
 
 ## Naming Conventions
 
-- **Dashboard names**: \`[App Name] - [Purpose]\` (e.g., "Hey You're Hired - User Funnel")
+- **Dashboard names**: \`[App Name] - [Purpose]\` (e.g., "My App - User Funnel")
 - **Panel titles**: Clear, action-oriented (e.g., "Signups Today", "Error Rate")
-- **Index names**: kebab-case matching app name (e.g., \`hey-youre-hired\`)
+- **Index names**: kebab-case matching app name (e.g., \`my-app\`)
 
 ## Creating Dashboards
 
@@ -410,8 +410,8 @@ search [conditions] | command1 | command2 | ...
 
 ### By Index (App)
 \`\`\`
-search index=hey-youre-hired
-search index=directors-palette
+search index=my-app
+search index=my-other-app
 \`\`\`
 
 ### By Severity
@@ -787,7 +787,7 @@ export default function OnboardingPage() {
                 3
               </span>
               <span className="text-nog-600 dark:text-nog-400">
-                Tell the AI your app name (e.g., "Integrate LogNog into my app called directors-palette")
+                Tell the AI your app name (e.g., "Integrate LogNog into my app called my-other-app")
               </span>
             </li>
             <li className="flex items-start gap-3">
@@ -817,9 +817,9 @@ export default function OnboardingPage() {
               </thead>
               <tbody>
                 <tr>
-                  <td className="text-nog-900 dark:text-nog-100">Hey You're Hired</td>
+                  <td className="text-nog-900 dark:text-nog-100">Web App</td>
                   <td>
-                    <code className="code text-xs">hey-youre-hired</code>
+                    <code className="code text-xs">web-app</code>
                   </td>
                   <td>
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
@@ -828,9 +828,9 @@ export default function OnboardingPage() {
                   </td>
                 </tr>
                 <tr>
-                  <td className="text-nog-900 dark:text-nog-100">Directors Palette</td>
+                  <td className="text-nog-900 dark:text-nog-100">API Service</td>
                   <td>
-                    <code className="code text-xs">directors-palette</code>
+                    <code className="code text-xs">api-service</code>
                   </td>
                   <td>
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-nog-100 text-nog-600 dark:bg-nog-700 dark:text-nog-400">

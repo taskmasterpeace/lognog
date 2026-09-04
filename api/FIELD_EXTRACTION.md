@@ -300,7 +300,7 @@ Response includes extracted fields:
 ```json
 {
   "query": "search index=web | limit 100",
-  "sql": "SELECT * FROM spunk.logs WHERE ...",
+  "sql": "SELECT * FROM lognog.logs WHERE ...",
   "results": [
     {
       "timestamp": "2023-12-21T10:30:45Z",

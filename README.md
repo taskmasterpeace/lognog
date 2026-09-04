@@ -103,7 +103,7 @@ That's it! You're now running a fully-featured log management platform.
 
 ## Why LogNog?
 
-**Enterprise log management shouldn't require enterprise budgets.** Tools like Splunk offer powerful features, but their pricing puts them out of reach for homelabbers, small teams, and independent developers.
+**Enterprise log management shouldn't require enterprise budgets.** Enterprise log platforms offer powerful features, but their pricing puts them out of reach for homelabbers, small teams, and independent developers.
 
 **LogNog is different:**
 - 100% open source (MIT license)
@@ -116,11 +116,11 @@ That's it! You're now running a fully-featured log management platform.
 
 ## How LogNog Compares
 
-| Feature | LogNog | Splunk | ELK Stack | Grafana Loki |
-|---------|--------|--------|-----------|--------------|
+| Feature | LogNog | Enterprise SIEM | ELK Stack | Grafana Loki |
+|---------|--------|-----------------|-----------|--------------|
 | **Cost** | Free (MIT) | $$$$ | Free* | Free* |
 | **Setup Time** | 5 minutes | Hours | Hours | 30+ min |
-| **Query Language** | Splunk-like DSL | SPL | Lucene/KQL | LogQL |
+| **Query Language** | pipe-based DSL | Proprietary | Lucene/KQL | LogQL |
 | **Learning Curve** | Low | High | Medium | Medium |
 | **Single Binary** | Yes (Lite) | No | No | No |
 | **Windows Native** | Yes | Yes | Painful | No |
@@ -206,7 +206,7 @@ Need to access LogNog from outside your network? See our **[Deployment Guide](do
 
 | Feature | Description |
 |---------|-------------|
-| **Real-time Log Search** | Powerful Splunk-like query language with sub-second results |
+| **Real-time Log Search** | Powerful pipe-based query language with sub-second results |
 | **Live Tail** | SSE-powered real-time log streaming |
 | **Welcome Wizard** | Guided 4-step setup for new users |
 | **Demo Data Generator** | One-click sample data for exploring features |
@@ -534,7 +534,7 @@ Lightweight agent that ships logs to your LogNog server.
 
 ## Query Language
 
-LogNog uses a Splunk-like query language that compiles to SQL.
+LogNog uses a pipe-based query language that compiles to SQL.
 
 ### Commands Reference
 

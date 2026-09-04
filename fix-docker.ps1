@@ -17,7 +17,7 @@ Write-Host "Waiting 40 seconds for Docker to initialize..." -ForegroundColor Yel
 Start-Sleep 40
 
 Write-Host "Starting LogNog containers..." -ForegroundColor Yellow
-Set-Location "C:\git\spunk"
+Set-Location "C:\git\lognog"
 docker-compose up -d
 
 Write-Host ""

@@ -2,7 +2,7 @@
 
 > **Your Data, Your Way** - Master the art of log searching
 
-The LogNog DSL (Domain Specific Language) is a powerful, Splunk-inspired query language that compiles to ClickHouse SQL. Learn it once, query forever.
+The LogNog DSL (Domain Specific Language) is a powerful, pipe-based query language that compiles to ClickHouse SQL. Learn it once, query forever.
 
 ---
 

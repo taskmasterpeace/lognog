@@ -25,7 +25,7 @@ Welcome to the LogNog Query Language (LQL) complete reference. This comprehensiv
 
 ### What is the LogNog Query Language?
 
-LogNog Query Language (LQL) is a Splunk-inspired DSL designed for querying and analyzing log data. It compiles to optimized ClickHouse SQL (or SQLite for LogNog Lite) under the hood, giving you the power of a columnar database with the simplicity of a pipe-based query syntax.
+LogNog Query Language (LQL) is a pipe-based DSL designed for querying and analyzing log data. It compiles to optimized ClickHouse SQL (or SQLite for LogNog Lite) under the hood, giving you the power of a columnar database with the simplicity of a pipe-based query syntax.
 
 **Key Features:**
 - **Pipe-based**: Chain commands together with `|` for intuitive data flow

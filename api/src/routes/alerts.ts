@@ -1,7 +1,7 @@
 /**
  * Alerts API Routes
  *
- * CRUD operations for Splunk-style alerts.
+ * CRUD operations for configurable alerts.
  *
  * Route order matters: every static path (`/history`, `/test`, `/templates`,
  * `/evaluate-all`, ...) is registered BEFORE the `/:id` family, otherwise

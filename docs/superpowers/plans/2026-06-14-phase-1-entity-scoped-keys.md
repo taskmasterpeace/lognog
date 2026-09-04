@@ -62,11 +62,11 @@ describe('isIndexAllowed', () => {
   });
 
   it('allows an index that is in the allow-list', () => {
-    expect(isIndexAllowed(['hey-youre-hired', 'directors-palette'], 'hey-youre-hired')).toBe(true);
+    expect(isIndexAllowed(['my-app', 'api-service'], 'my-app')).toBe(true);
   });
 
   it('rejects an index that is not in the allow-list', () => {
-    expect(isIndexAllowed(['hey-youre-hired'], 'directors-palette')).toBe(false);
+    expect(isIndexAllowed(['my-app'], 'api-service')).toBe(false);
   });
 
   it('rejects when undefined restriction is treated as scoped-empty? No — undefined = all', () => {
@@ -201,11 +201,11 @@ describe('API key index scoping (round trip)', () => {
 
   it('stores and returns allowed_indexes for a scoped key', async () => {
     const { apiKey } = await createApiKey(userId, 'scoped-key', ['write'], undefined, [
-      'hey-youre-hired',
+      'my-app',
     ]);
     const result = await validateApiKey(apiKey);
     expect(result).not.toBeNull();
-    expect(result!.allowedIndexes).toEqual(['hey-youre-hired']);
+    expect(result!.allowedIndexes).toEqual(['my-app']);
   });
 
   it('returns null allowedIndexes for an unscoped key', async () => {
@@ -425,17 +425,17 @@ import { isIndexAllowed } from '../auth/index-scope.js';
 describe('ingest index scoping', () => {
   it('helper rejects a disallowed index (guards the 403 path)', () => {
     // Mirrors the runtime check in the HTTP ingest handler.
-    expect(isIndexAllowed(['hey-youre-hired'], 'directors-palette')).toBe(false);
-    expect(isIndexAllowed(['hey-youre-hired'], 'hey-youre-hired')).toBe(true);
-    expect(isIndexAllowed(null, 'directors-palette')).toBe(true);
+    expect(isIndexAllowed(['my-app'], 'api-service')).toBe(false);
+    expect(isIndexAllowed(['my-app'], 'my-app')).toBe(true);
+    expect(isIndexAllowed(null, 'api-service')).toBe(true);
   });
 });
 ```
 
 > Note: a full HTTP-level 403 test requires a request carrying a scoped key. If `ingest.test.ts`
-> already constructs authenticated requests, add a case that POSTs `{ index: 'directors-palette' }`
-> with a key scoped to `['hey-youre-hired']` and asserts `res.status === 403`. If the suite mocks
-> auth, set `req.allowedIndexes = ['hey-youre-hired']` in the mock and assert the same. The helper
+> already constructs authenticated requests, add a case that POSTs `{ index: 'api-service' }`
+> with a key scoped to `['my-app']` and asserts `res.status === 403`. If the suite mocks
+> auth, set `req.allowedIndexes = ['my-app']` in the mock and assert the same. The helper
 > test above is the minimum that must pass.
 
 - [ ] **Step 5: Run ingest tests**
@@ -500,8 +500,8 @@ Manual smoke (with the dev server running and an admin JWT):
 # Create a scoped key
 curl -s -X POST http://localhost:4000/api/auth/keys \
   -H "Authorization: Bearer <ADMIN_JWT>" -H "Content-Type: application/json" \
-  -d '{"name":"hyh-only","permissions":["write"],"allowed_indexes":["hey-youre-hired"]}'
-# Expect: JSON containing the new apiKey and keyData.allowed_indexes = ["hey-youre-hired"]
+  -d '{"name":"my-app-only","permissions":["write"],"allowed_indexes":["my-app"]}'
+# Expect: JSON containing the new apiKey and keyData.allowed_indexes = ["my-app"]
 ```
 
 - [ ] **Step 5: Commit**
@@ -529,16 +529,16 @@ Expected: Clean (fix any new lint errors in touched files).
 
 With `cd api && npm run dev` running:
 ```bash
-# 1. Create a key scoped to hey-youre-hired (see Task 6 smoke for the create call), capture $KEY.
+# 1. Create a key scoped to my-app (see Task 6 smoke for the create call), capture $KEY.
 # 2. Authorized write -> 200:
 curl -s -o /dev/null -w "scoped-ok: %{http_code}\n" -X POST http://localhost:4000/api/ingest/http \
   -H "X-API-Key: $KEY" -H "Content-Type: application/json" \
-  -d '{"index":"hey-youre-hired","message":"phase1 ok","severity":6,"hostname":"t"}'
+  -d '{"index":"my-app","message":"phase1 ok","severity":6,"hostname":"t"}'
 # Expect: 200
 # 3. Unauthorized write -> 403:
 curl -s -o /dev/null -w "scoped-deny: %{http_code}\n" -X POST http://localhost:4000/api/ingest/http \
   -H "X-API-Key: $KEY" -H "Content-Type: application/json" \
-  -d '{"index":"directors-palette","message":"should be blocked","severity":6,"hostname":"t"}'
+  -d '{"index":"api-service","message":"should be blocked","severity":6,"hostname":"t"}'
 # Expect: 403
 ```
 

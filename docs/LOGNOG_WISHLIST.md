@@ -1,23 +1,23 @@
 # LogNog Feature Wishlist
 
-Feature requests and improvement ideas for LogNog collected from Hey You're Hired dashboard usage.
+Feature requests and improvement ideas for LogNog collected from My App dashboard usage.
 
 ---
 
 ## 1. Dashboard Organization
 
 ### Folders/Categories
-- **Problem:** With multiple apps (Hey You're Hired, Directors Palette, etc.), dashboards become cluttered
+- **Problem:** With multiple apps (My App, API Service, etc.), dashboards become cluttered
 - **Solution:** Add folder structure or categories to organize dashboards
-  - Group by app: `Hey You're Hired/`, `Directors Palette/`, `System/`
+  - Group by app: `My App/`, `API Service/`, `System/`
   - Or use tags/labels for filtering
 
 ### App Scope Filter
 - **Problem:** Dashboards have `app_scope` but no UI to filter by it
 - **Solution:** Add dropdown to filter dashboard list by `app_scope`
   - "All Apps"
-  - "hey-youre-hired"
-  - "directors-palette"
+  - "my-app"
+  - "api-service"
   - etc.
 
 ---

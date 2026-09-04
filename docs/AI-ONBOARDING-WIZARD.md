@@ -796,7 +796,6 @@ For the hosted LogNog cloud version, the wizard could:
 
 | Competitor | Onboarding Experience |
 |------------|----------------------|
-| **Splunk** | Read 100+ page manual, hire consultant |
 | **Datadog** | Auto-instrument (but $$$), generic dashboards |
 | **ELK** | Configure YAML for 3 days, pray |
 | **Chronicle** | Google will tell you what to log (their way) |

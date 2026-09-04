@@ -7,7 +7,7 @@ A complete suite of 6 advanced chart components for the LogNog UI, built with Ap
 ## Files Created
 
 ```
-C:\git\spunk\ui\src\components\charts\
+ui/src/components/charts/
 ├── TimeSeriesChart.tsx    (5.7 KB) - Line/area chart for log volume over time
 ├── HeatmapChart.tsx       (4.0 KB) - Heatmap for severity by hour/day
 ├── GaugeChart.tsx         (3.2 KB) - Single value gauge with thresholds

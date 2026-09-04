@@ -704,7 +704,7 @@ function EventTypeModal({
               className="input font-mono text-sm resize-none"
             />
             <p className="text-xs text-nog-500 mt-1">
-              Use Splunk DSL syntax to define the event matching criteria
+              Use LogNog DSL syntax to define the event matching criteria
             </p>
           </div>
 

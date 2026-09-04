@@ -177,13 +177,13 @@ router.post('/llama/seed-docs', async (_req: Request, res: Response) => {
     const docs = [
       {
         title: 'LogNog Overview',
-        content: `LogNog is a self-hosted, fully-local Splunk alternative for homelab log management. Zero cloud dependencies.
-Key features: 100% local data, Splunk-like query language (DSL), built-in alerting and dashboards, supports syslog/OTLP/HTTP ingestion, AI-powered features using local LLMs.
+        content: `LogNog is a self-hosted, fully-local log management platform for homelabs. Zero cloud dependencies.
+Key features: 100% local data, pipe-based query language (DSL), built-in alerting and dashboards, supports syslog/OTLP/HTTP ingestion, AI-powered features using local LLMs.
 Deploy in under 10 minutes with docker-compose up.`,
       },
       {
         title: 'LogNog Query Language Basics',
-        content: `LogNog uses a Splunk-like DSL (Domain Specific Language). Queries are pipelines connected by |.
+        content: `LogNog uses a pipe-based DSL (Domain Specific Language). Queries are pipelines connected by |.
 Basic search: search host=router severity>=warning
 Common commands: search, filter, stats, sort, limit, table, timechart, dedup, rename, eval, rex.
 Operators: = (exact), != (not), >= <= > < (compare), ~ (regex match), !~ (regex not match).
@@ -389,45 +389,40 @@ CLOUD SERVICES:
 Query: search sourcetype=supabase | stats count by event_type`,
       },
       {
-        title: 'Splunk to LogNog Migration Guide',
-        content: `SPLUNK TO LOGNOG QUICK REFERENCE
+        title: 'LogNog DSL Quick Reference',
+        content: `LOGNOG DSL QUICK REFERENCE
 
-COMMAND EQUIVALENTS:
-Splunk SPL → LogNog DSL
+COMMON COMMANDS:
+search *                                   → all events
+search hostname=server1                    → filter by field
+search sourcetype=syslog                   → filter by source type
+| stats count by hostname                  → aggregate counts by field
+| stats count, sum(bytes)                  → multiple aggregations
+| top 10 hostname                          → most common values
+| rare hostname                            → least common values
+| sort desc count                          → sort descending
+| limit 100 (or | head 100)                → cap results
+| tail 50                                  → last N results
+| dedup hostname                           → drop duplicate values
+| table hostname, message                  → choose columns
+| fields - raw                             → drop a field
+| rename hostname as server                → rename a field
+| rex field=message "user=(?P<user>\\w+)"   → extract with regex
+| eval new_field=field1+field2             → compute a field
+| where count > 10                         → post-aggregation filter
+| timechart span=1h count                  → time series
 
-index=main → search *
-index=main host=server1 → search hostname=server1
-sourcetype=syslog → search sourcetype=syslog
-| stats count by host → | stats count by hostname
-| stats count, sum(bytes) → | stats count, sum(bytes)
-| top 10 host → | top 10 hostname
-| rare host → | rare hostname
-| sort -count → | sort desc count
-| head 100 → | limit 100 (or | head 100)
-| tail 50 → | tail 50
-| dedup host → | dedup hostname
-| table host, message → | table hostname, message
-| fields - _raw → | fields - raw
-| rename host AS server → | rename hostname as server
-| rex field=message "user=(?<user>\\w+)" → | rex field=message "user=(?P<user>\\w+)"
-| eval new_field=field1+field2 → | eval new_field=field1+field2
-| where count > 10 → | where count > 10
-| timechart span=1h count → | timechart span=1h count
-
-KEY DIFFERENCES:
-1. LogNog requires explicit "search" command (Splunk allows implicit)
-2. Field names use snake_case: hostname, app_name, severity (not host, sourcetype)
-3. Time range is set in UI/API, not in query (no earliest= or latest=)
-4. Regex named groups use Python syntax: (?P<name>pattern) not (?<name>pattern)
-5. Regex match operator is ~ not regex: message~"error"
+KEY POINTS:
+1. Every query starts with the "search" command
+2. Field names use snake_case: hostname, app_name, severity
+3. Time range is set in the UI/API, not in the query (no earliest= or latest=)
+4. Regex named groups use Python syntax: (?P<name>pattern)
+5. Regex match operator is ~ : message~"error"
 6. Use != for not equal, !~ for regex not match
 
-EXAMPLE TRANSLATIONS:
-Splunk: index=main host=web* status>=400 | stats count by host, status | sort -count
-LogNog: search hostname~"web.*" status>=400 | stats count by hostname, status | sort desc count
-
-Splunk: index=security action=failed | stats count by src_ip | where count > 5
-LogNog: search action=failed | stats count by src_ip | where count > 5`,
+EXAMPLES:
+search hostname~"web.*" status>=400 | stats count by hostname, status | sort desc count
+search action=failed | stats count by src_ip | where count > 5`,
       },
       {
         title: 'LogNog Common Query Templates',
@@ -543,7 +538,7 @@ HOW TO USE:
 3. Click anomaly to see: baseline vs actual value, AI analysis, recommendations
 4. Mark as "true positive" or "false positive" to improve accuracy
 
-Similar to Splunk UBA, but built-in and runs locally with Ollama.`,
+Behavior-based anomaly detection, built in and running locally with Ollama.`,
       },
       {
         title: 'LogNog Assets and Identities',
@@ -572,7 +567,7 @@ HOW TO USE:
 3. Edit entries to add criticality scores, owners, tags
 4. Use in searches: search host=* | lookup assets by hostname
 
-Similar to Splunk Asset & Identity Framework from Enterprise Security, but simpler.`,
+A simple built-in asset & identity layer for enriching events.`,
       },
       {
         title: 'LogNog Common Information Model (CIM)',
@@ -610,7 +605,7 @@ search (sourcetype=windows AccountName=admin) OR (sourcetype=linux user=admin) O
 AFTER CIM:
 search user=admin
 
-Similar to Splunk Common Information Model, just simplified.`,
+A simplified common information model (CIM) for normalized fields.`,
       },
       {
         title: 'LogNog AI Agent Framework',
@@ -647,7 +642,7 @@ HOW TO USE:
 4. Watch the AI think, run searches, provide answers with evidence
 5. Ask follow-up questions to dig deeper
 
-Similar to Splunk AI Assistant, but runs locally with Ollama - no cloud costs.`,
+An AI assistant that runs locally with Ollama - no cloud costs.`,
       },
       {
         title: 'LogNog Synthetic Monitoring',
@@ -688,7 +683,7 @@ HOW TO USE:
 ALERTING:
 After X consecutive failures, trigger an alert via email or webhook.
 
-Similar to Splunk Synthetic Monitoring (formerly Rigor), but built-in and free.`,
+Built-in synthetic monitoring - free and self-hosted.`,
       },
       {
         title: 'LogNog Feature Quick Reference',
@@ -731,7 +726,7 @@ Q: Do I need to set up everything? No - each feature is independent`,
         content: `INDEX MANAGEMENT - How logs are organized in LogNog
 
 HOW INDEXES WORK:
-Logs are grouped into indexes (similar to Splunk indexes or folders). Each log belongs to one index.
+Logs are grouped into indexes (think folders). Each log belongs to one index.
 - Default index is 'main' if not specified during ingestion
 - Different ingestion sources have default indexes: agent='agent', supabase='supabase', vercel='vercel', http='http', otel='otel'
 - You can specify a custom index when sending logs
@@ -807,8 +802,8 @@ router.post('/llama/seed-fts', async (_req: Request, res: Response) => {
   try {
     // LogNog documentation for FTS search (same as seed-docs but without LlamaIndex)
     const docs = [
-      { title: 'LogNog Overview', content: 'LogNog is a self-hosted, fully-local Splunk alternative for homelab log management. Zero cloud dependencies. Key features: 100% local data, Splunk-like query language (DSL), built-in alerting and dashboards, supports syslog/OTLP/HTTP ingestion, AI-powered features using local LLMs. Deploy in under 10 minutes with docker-compose up.' },
-      { title: 'LogNog Query Language Basics', content: 'LogNog uses a Splunk-like DSL (Domain Specific Language). Queries are pipelines connected by |. Basic search: search host=router severity>=warning. Common commands: search, filter, stats, sort, limit, table, timechart, dedup, rename, eval, rex. Operators: = (exact), != (not), >= <= > < (compare), ~ (regex match), !~ (regex not match). Example: search app_name=nginx | filter message~"404" | stats count by hostname' },
+      { title: 'LogNog Overview', content: 'LogNog is a self-hosted, fully-local log management platform for homelabs. Zero cloud dependencies. Key features: 100% local data, pipe-based query language (DSL), built-in alerting and dashboards, supports syslog/OTLP/HTTP ingestion, AI-powered features using local LLMs. Deploy in under 10 minutes with docker-compose up.' },
+      { title: 'LogNog Query Language Basics', content: 'LogNog uses a pipe-based DSL (Domain Specific Language). Queries are pipelines connected by |. Basic search: search host=router severity>=warning. Common commands: search, filter, stats, sort, limit, table, timechart, dedup, rename, eval, rex. Operators: = (exact), != (not), >= <= > < (compare), ~ (regex match), !~ (regex not match). Example: search app_name=nginx | filter message~"404" | stats count by hostname' },
       { title: 'LogNog Statistics Functions', content: 'Statistics functions for aggregation: count - count events, sum(field) - sum values, avg(field) - average, min(field) / max(field) - extremes, dc(field) - distinct count, values(field) - list unique values, list(field) - collect all values, p50/p90/p95/p99 - percentiles, stddev(field) - standard deviation, variance(field) - variance, range(field) - max minus min, earliest(field)/latest(field) - first/last value. Example: search * | stats count, avg(response_time), p95(response_time) by hostname' },
       { title: 'Searching for Errors', content: 'To search for errors in LogNog: search severity>=4 finds warnings and errors (syslog severity 4 = warning, 3 = error, 2 = critical). search message~"error|fail|exception" searches message content. search app_name=nginx severity<=3 finds critical errors from nginx. Combine with stats: search severity<=3 | stats count by hostname, app_name | sort desc count. Use timechart for error trends: search severity<=3 | timechart span=1h count by app_name' },
       { title: 'Time Filtering', content: 'LogNog uses the time picker in the UI for time ranges. Default is last 15 minutes. Time syntax in queries: earliest=-24h (last 24 hours), latest=-1h (up to 1 hour ago), earliest=2024-01-01T00:00:00 (specific time). The bin command buckets by time: bin span=1h timestamp creates hourly buckets. timechart is a shortcut: timechart span=5m count by hostname gives time-series data for charts.' },

@@ -6,11 +6,11 @@
 
 ## What is LogNog?
 
-LogNog is a self-hosted, fully-local Splunk alternative designed for homelabs and small teams. It lets you collect, search, and analyze logs from all your devices without sending data to the cloud.
+LogNog is a self-hosted, fully-local log management platform designed for homelabs and small teams. It lets you collect, search, and analyze logs from all your devices without sending data to the cloud.
 
 **Key Benefits:**
 - 100% local - your logs never leave your network
-- Splunk-like query language that's easy to learn
+- Pipe-based query language that's easy to learn
 - Built-in alerting and dashboards
 - Supports syslog, OTLP, and many integrations
 - AI-powered features using local LLMs
@@ -43,7 +43,7 @@ docker-compose up -d
 
 ## Query Language (DSL)
 
-LogNog uses a Splunk-like query language. Queries are pipelines of commands connected by `|`.
+LogNog uses a pipe-based query language. Queries are pipelines of commands connected by `|`.
 
 ### Basic Search
 

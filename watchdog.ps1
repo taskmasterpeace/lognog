@@ -1,9 +1,9 @@
 # LogNog Watchdog v2 - Self-Monitoring Edition
 # Sends logs TO LogNog so you can track uptime/downtime in the app itself
 
-$configFile = "C:\git\spunk\watchdog-config.json"
-$logFile = "C:\git\spunk\watchdog.log"
-$stateFile = "C:\git\spunk\.watchdog-state.json"
+$configFile = "C:\git\lognog\watchdog-config.json"
+$logFile = "C:\git\lognog\watchdog.log"
+$stateFile = "C:\git\lognog\.watchdog-state.json"
 $maxLogLines = 500
 
 # Load config
@@ -118,7 +118,7 @@ function Repair-Docker {
     Write-Log "RECOVERY: Docker Desktop starting, waiting 45 seconds..."
     Start-Sleep 45
 
-    Set-Location "C:\git\spunk"
+    Set-Location "C:\git\lognog"
     $output = docker-compose up -d 2>&1
     Write-Log "RECOVERY: docker-compose output: $output"
 

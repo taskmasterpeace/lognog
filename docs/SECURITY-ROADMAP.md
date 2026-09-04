@@ -11,7 +11,7 @@ This document outlines the planned security features and integrations that will 
 ### What LogNog Can Do Today
 
 - **Log Collection**: Syslog (UDP/TCP), OpenTelemetry, Agent-based collection
-- **Real-time Search**: Splunk-like DSL for log analysis
+- **Real-time Search**: pipe-based DSL for log analysis
 - **Alerting**: Threshold-based alerts with email, webhook, and log actions
 - **File Integrity Monitoring (FIM)**: Track file changes on endpoints
 - **Dashboards**: Custom visualizations for monitoring
@@ -359,7 +359,6 @@ GET  /api/reports/compliance # Generate compliance report
 
 - [SigmaHQ](https://github.com/SigmaHQ/sigma) - 3000+ detection rules
 - [Elastic Detection Rules](https://github.com/elastic/detection-rules)
-- [Splunk Security Content](https://github.com/splunk/security_content)
 
 ### GeoIP Databases
 

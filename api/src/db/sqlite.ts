@@ -161,7 +161,7 @@ function initializeSchema(): void {
       created_at TEXT DEFAULT (datetime('now'))
     );
 
-    -- Alerts (Splunk-style alerting)
+    -- Alerts (flexible alerting)
     CREATE TABLE IF NOT EXISTS alerts (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -249,7 +249,7 @@ function initializeSchema(): void {
       updated_at TEXT DEFAULT (datetime('now'))
     );
 
-    -- Source Configurations (Splunk-style source routing and parsing)
+    -- Source Configurations (shorthand source routing and parsing)
     CREATE TABLE IF NOT EXISTS source_configs (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -843,7 +843,7 @@ function initializeSchema(): void {
   `);
 
   // Add app_scope column to organize dashboards, alerts, reports by application
-  // This allows filtering by app (e.g., "hey-youre-hired", "directors-palette")
+  // This allows filtering by app (e.g., "web-app", "api-service")
   if (!columnNames.includes('app_scope')) {
     database.exec("ALTER TABLE dashboards ADD COLUMN app_scope TEXT DEFAULT 'default'");
   }
@@ -875,7 +875,7 @@ function initializeSchema(): void {
   if (!alertColumnNames.includes('last_value')) {
     database.exec("ALTER TABLE alerts ADD COLUMN last_value REAL");
   }
-  // Splunk-style trigger mode: 'once' (one notification per evaluation) or
+  // trigger mode: 'once' (one notification per evaluation) or
   // 'per_result' (one per result row, throttled per throttle_fields value).
   if (!alertColumnNames.includes('trigger_mode')) {
     database.exec("ALTER TABLE alerts ADD COLUMN trigger_mode TEXT DEFAULT 'once'");

@@ -13,7 +13,7 @@ import { migrateBuiltinCIMModelsToOCSF } from './builtin-cim-models.js';
 
 /**
  * Roadmap item C2: migrating an already-seeded install (prod shipped the
- * Splunk-mirroring built-ins) must replace the stale models AND repoint every
+ * proprietary-mirroring built-ins) must replace the stale models AND repoint every
  * existing field_mapping to the new ECS/OCSF names, dropping nothing.
  */
 describe('migrateBuiltinCIMModelsToOCSF', () => {
@@ -21,7 +21,7 @@ describe('migrateBuiltinCIMModelsToOCSF', () => {
     const db = getSQLiteDB();
     db.exec('DELETE FROM field_mappings; DELETE FROM data_models;');
 
-    // Simulate a legacy install: old Splunk-style built-ins.
+    // Simulate a legacy install: old legacy short built-ins.
     createDataModel({
       name: 'Authentication',
       description: 'legacy',
@@ -58,7 +58,7 @@ describe('migrateBuiltinCIMModelsToOCSF', () => {
     createFieldMapping({ source_type: 'nginx', source_field: 'request_uri', data_model: 'Web', cim_field: 'uri', priority: 50, enabled: true });
   });
 
-  it('removes the legacy Splunk-named built-ins', () => {
+  it('removes the legacy legacy built-ins', () => {
     migrateBuiltinCIMModelsToOCSF();
     expect(getDataModel('Network_Traffic')).toBeNull();
     expect(getDataModel('Endpoint')).toBeNull();

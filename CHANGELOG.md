@@ -23,7 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Tabbed Interface** - Templates and Active Sources in separate tabs
 
 #### Search Features
-- **Field Discovery Sidebar** - Splunk-style sidebar to explore fields and top values
+- **Field Discovery Sidebar** - sidebar to explore fields and top values
 - **Search-to-Action Buttons** - Save searches as dashboards, alerts, or reports in one click
 - **Custom Field Queries** - Query fields from structured_data
 
@@ -43,7 +43,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - **Mobile Navigation** - Collapsible menus and short labels
 
 ### Changed
-- Rebranded from "Spunk" to "LogNog" throughout documentation
+- Renamed the project to LogNog throughout the codebase and documentation
 - Improved DSL compiler for custom field support
 
 ### Fixed

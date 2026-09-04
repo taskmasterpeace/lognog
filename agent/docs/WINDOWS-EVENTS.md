@@ -293,7 +293,7 @@ Windows events are sent to LogNog with:
 
 Search in LogNog:
 
-```splunk
+```text
 search source_type=windows_security
   | filter metadata.event_id=4624
   | stats count by metadata.user_sid

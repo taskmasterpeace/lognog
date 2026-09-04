@@ -17,7 +17,7 @@ LogNog
 ### One-Line Description
 
 ```
-Self-hosted log management platform with Splunk-like DSL query language for homelabs, small teams, and developers who need enterprise-grade log analysis without enterprise pricing.
+Self-hosted log management platform with a pipe-based DSL query language for homelabs, small teams, and developers who need enterprise-grade log analysis without enterprise pricing.
 ```
 
 ### Project Owner
@@ -124,7 +124,7 @@ Total Monthly Burn: ~$0 (community-driven)
 ```
 Primary User: Homelab enthusiasts, DevOps engineers, small development teams
   - Demographics: Technical professionals, 25-55, self-hosting community
-  - Use Case: Centralized log management without Splunk/Datadog costs
+  - Use Case: Centralized log management without enterprise SIEM costs
   - Size: Millions of self-hosting enthusiasts globally
 
 Secondary Audiences:
@@ -136,11 +136,11 @@ Secondary Audiences:
 ### Competitive Landscape
 
 ```
-Direct Competitors: Splunk, Datadog, Elastic/Kibana, Graylog, Loki, Seq
-Competitive Advantage: Splunk-like DSL, zero cost, AI-powered, simple deployment
+Direct Competitors: Datadog, Elastic/Kibana, Graylog, Loki, Seq
+Competitive Advantage: pipe-based DSL, zero cost, AI-powered, simple deployment
 Market Position: Challenger/Niche (self-hosted alternative)
 Differentiation:
-  - Familiar Splunk-style query language
+  - Familiar pipe-based query language
   - Built-in AI features (NLQ, anomaly detection, UEBA)
   - No telemetry, fully local
   - Windows Lite edition for single machines
@@ -355,7 +355,7 @@ Meeting Cadence: Async (open source community)
 
 ```
 - [Feature]: Complete projects/panel copying system | Owner: Active | Status: In Progress
-- [Feature]: HYH dashboard templates | Owner: Active | Status: In Progress
+- [Feature]: MyApp dashboard templates | Owner: Active | Status: In Progress
 - [Bug Fix]: GaugeChart improvements | Owner: Active | Status: In Progress
 - [Docs]: Update DASHBOARDS.md | Owner: Active | Status: In Progress
 ```
@@ -395,7 +395,7 @@ Meeting Cadence: Async (open source community)
 ```
 - Learning 1: SQLite Lite edition opened access to Windows-only users significantly
 - Learning 2: AI features (NLQ, UEBA) are major differentiators worth investment
-- Learning 3: Splunk-like DSL familiarity reduces onboarding friction substantially
+- Learning 3: pipe-based DSL familiarity reduces onboarding friction substantially
 ```
 
 ### Last Updated
@@ -414,7 +414,7 @@ Use this checklist to confirm all officers have essential context:
 
 - [x] **Tyrion (Strategic Coordinator)** : Understands goals (community growth, 1000 stars), timeline (active development), key decisions (Lite edition, AI features), dependencies (ClickHouse, Vector, Ollama)
 - [x] **Petyr (Master of Coin)** : Knows revenue model (open source/free), costs ($0 infrastructure - user self-hosted), financial targets (N/A - community project), budget constraints (volunteer-driven)
-- [x] **Wack (Competitive Intelligence)** : Familiar with competitive landscape (Splunk, Datadog, Elastic, Graylog, Loki), market positioning (self-hosted alternative), go-to-market (GitHub, Reddit, homelab community)
+- [x] **Wack (Competitive Intelligence)** : Familiar with competitive landscape (Datadog, Elastic, Graylog, Loki), market positioning (self-hosted alternative), go-to-market (GitHub, Reddit, homelab community)
 - [x] **Data (Technical Intelligence)** : Has tech stack (TS/Express/React/ClickHouse), architecture overview (3-tier + Docker), API documentation (34 endpoints, MCP integration)
 - [x] **Phoenix (Content Strategy)** : Knows target audience (homelab, DevOps, small teams), messaging (enterprise features, zero cost), marketing channels (organic/GitHub), content needs (docs, video tutorials)
 - [x] **Bran (Memory Keeper)** : Has complete intake form for institutional memory and historical context

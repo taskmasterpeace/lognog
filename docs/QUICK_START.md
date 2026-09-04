@@ -8,7 +8,7 @@ Welcome to LogNog! This guide will have you ingesting, searching, and analyzing 
 
 ## What is LogNog?
 
-LogNog is a **self-hosted, fully-local Splunk alternative** for homelab log management. Think Splunk, but:
+LogNog is a **self-hosted, fully-local log management platform** for homelabs. What sets it apart:
 - 100% local (no cloud, no subscriptions, no data leaving your network)
 - Runs entirely in Docker (one command to start)
 - Free forever (open source)

@@ -4,7 +4,7 @@ import type { Request, Response } from 'express';
  * Ownership gate for team objects (alerts, reports, dashboards).
  *
  * Reads stay open to every authenticated user — these are shared operational
- * objects, as in Splunk's app-level sharing. Mutations (edit, delete, toggle,
+ * objects, as in app-level sharing. Mutations (edit, delete, toggle,
  * run, share) are limited to the owner or an admin. Rows created before
  * ownership existed have no owner and remain editable by everyone.
  *

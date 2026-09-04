@@ -6,7 +6,6 @@
  * 1. Gets all unique app_scope values from dashboards
  * 2. Creates a project for each app_scope
  * 3. Updates dashboards to reference their project_id
- * 4. Creates a "Hey You're Hired" project with HYH branding
  */
 
 import { getSQLiteDB, getAppScopes, getDashboards, updateDashboard, createProject, getProjects } from '../src/db/sqlite.js';
@@ -60,21 +59,6 @@ function migrate() {
       console.log(`✓ Created project: ${name} (${slug})`);
     } catch (error) {
       console.error(`✗ Failed to create project for ${appScope}:`, error);
-    }
-  }
-
-  // Create "Hey You're Hired" project with branding if it doesn't exist
-  if (!projectMap.has('hey-youre-hired')) {
-    try {
-      const hyhProject = createProject('Hey You\'re Hired', 'hey-youre-hired', {
-        description: 'AI-powered job application tracking system',
-        logo_url: 'https://yourehired.ai/logo.png',
-        accent_color: '#3b82f6',
-      });
-      projectMap.set('hey-youre-hired', hyhProject.id);
-      console.log('✓ Created Hey You\'re Hired project with branding');
-    } catch (error) {
-      console.error('✗ Failed to create Hey You\'re Hired project:', error);
     }
   }
 

@@ -36,7 +36,7 @@ interface QuickAction {
   icon: React.ElementType;
   label: string;
   prompt: string;
-  category: 'learn' | 'query' | 'insight' | 'splunk';
+  category: 'learn' | 'query' | 'insight' | 'migrate';
 }
 
 const QUICK_ACTIONS: QuickAction[] = [
@@ -49,9 +49,9 @@ const QUICK_ACTIONS: QuickAction[] = [
   },
   {
     icon: Zap,
-    label: 'Splunk → LogNog',
-    prompt: 'I\'m a Splunk expert. Show me how LogNog compares and give me a quick translation guide.',
-    category: 'splunk',
+    label: 'Learn the DSL',
+    prompt: 'I know other query languages. Give me a quick reference for LogNog\'s DSL with side-by-side examples.',
+    category: 'migrate',
   },
   // Query Building
   {
@@ -82,7 +82,7 @@ const QUICK_ACTIONS: QuickAction[] = [
 ];
 
 const STARTER_PROMPTS = [
-  'What\'s the LogNog equivalent of Splunk\'s "index=main | stats count by host"?',
+  'How do I count events by host over the last hour?',
   'Show me how to create an alert for high error rates',
   'What log sources can I connect to LogNog?',
   'Help me write a timechart query',

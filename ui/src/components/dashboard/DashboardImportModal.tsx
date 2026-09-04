@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { X, Upload, FileJson, Loader2, Check, AlertCircle, LayoutGrid, Variable, Palette } from 'lucide-react';
 import { DashboardExport } from '../../api/client';
-import { parseSplunkXml, looksLikeXml } from './splunkXmlImport';
+import { parseClassicXml, looksLikeXml } from './classicXmlImport';
 
 interface DashboardImportModalProps {
   onImport: (template: DashboardExport, name?: string) => void;
@@ -22,9 +22,9 @@ export function DashboardImportModal({
 
   const parseJson = useCallback((text: string) => {
     try {
-      // Accept either a LogNog JSON export or a Splunk Classic (SimpleXML)
+      // Accept either a LogNog JSON export or a Classic dashboard XML (SimpleXML)
       // dashboard, converting the latter so migration is a copy-paste.
-      const parsed = looksLikeXml(text) ? parseSplunkXml(text) : (JSON.parse(text) as DashboardExport);
+      const parsed = looksLikeXml(text) ? parseClassicXml(text) : (JSON.parse(text) as DashboardExport);
 
       // Validate required fields
       if (!parsed.name || !parsed.panels) {
@@ -49,7 +49,7 @@ export function DashboardImportModal({
 
   const handleFileRead = useCallback((file: File) => {
     if (!file.name.endsWith('.json') && !file.name.endsWith('.xml')) {
-      setError('Please select a JSON export or a Splunk .xml dashboard');
+      setError('Please select a JSON export or a Classic .xml dashboard');
       return;
     }
 
