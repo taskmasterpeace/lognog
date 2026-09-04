@@ -41,6 +41,22 @@ function initializeSchema(): void {
       updated_at TEXT DEFAULT (datetime('now'))
     );
 
+    -- Event annotations: timeline markers (deployments, incidents, maintenance)
+    -- overlaid on timecharts. end_ts is optional (a point vs a span).
+    CREATE TABLE IF NOT EXISTS event_annotations (
+      id TEXT PRIMARY KEY,
+      title TEXT NOT NULL,
+      description TEXT,
+      start_ts TEXT NOT NULL,
+      end_ts TEXT,
+      color TEXT,
+      tags TEXT,
+      created_by TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+    CREATE INDEX IF NOT EXISTS idx_event_annotations_start ON event_annotations(start_ts);
+
     -- Dashboards
     CREATE TABLE IF NOT EXISTS dashboards (
       id TEXT PRIMARY KEY,
