@@ -1341,11 +1341,6 @@ export default function DashboardViewPage() {
   // Dropdown options come from the API (query variables run their search over
   // the dashboard's current time range). Stable identity matters: the bar
   // re-fetches when this callback changes.
-  const getVariableOptions = useCallback(
-    (variableId: string) => getDashboardVariableOptions(id!, variableId, { earliest: timeRange, latest: timeRangeLatest }),
-    [id, timeRange, timeRangeLatest]
-  );
-
   // Initialize variable values from defaults
   useEffect(() => {
     const defaults: Record<string, string> = {};
@@ -1390,6 +1385,25 @@ export default function DashboardViewPage() {
     result = result.replace(/(\w+)\s*=\s*\$[A-Za-z0-9_]+\$/g, '*').replace(/\$[A-Za-z0-9_]+\$/g, '*');
     return result;
   }, [variableValues, dashboardVariables]);
+
+  // Resolve a variable's dropdown options. A **dependent** dropdown — a query
+  // variable whose query references another variable ($token$) — is re-resolved
+  // with the current values substituted in, so choosing a parent narrows the
+  // child. (Depends on variableValues, so the callback identity changes when a
+  // value changes and the child re-fetches.)
+  const getVariableOptions = useCallback(
+    (variableId: string) => {
+      const v = dashboardVariables.find((dv) => dv.id === variableId);
+      if (v?.type === 'query' && v.query && /\$[A-Za-z0-9_]+\$/.test(v.query)) {
+        return previewDashboardVariableOptions(id!, substituteVariables(v.query), {
+          earliest: timeRange,
+          latest: timeRangeLatest,
+        });
+      }
+      return getDashboardVariableOptions(id!, variableId, { earliest: timeRange, latest: timeRangeLatest });
+    },
+    [id, timeRange, timeRangeLatest, dashboardVariables, substituteVariables],
+  );
 
   const createPanelMutation = useMutation({
     mutationFn: (data: PanelSaveData) => createDashboardPanel(id!, data),

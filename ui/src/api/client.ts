@@ -1431,10 +1431,14 @@ export async function getDashboardVariableOptions(
 }
 
 /** Preview the options an unsaved variable query would produce. */
-export async function previewDashboardVariableOptions(dashboardId: string, query: string): Promise<string[]> {
+export async function previewDashboardVariableOptions(
+  dashboardId: string,
+  query: string,
+  range?: { earliest?: string; latest?: string }
+): Promise<string[]> {
   const res = await request<{ options: string[] }>(`/dashboards/${dashboardId}/variables/preview-options`, {
     method: 'POST',
-    body: JSON.stringify({ query }),
+    body: JSON.stringify({ query, ...(range ?? {}) }),
   });
   return res.options;
 }
