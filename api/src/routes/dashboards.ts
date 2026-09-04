@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { v4 as uuidv4 } from 'uuid';
+import { generateShareToken } from '../services/share-token.js';
 import bcrypt from 'bcrypt';
 import { safeJsonParse } from '../utils/json.js';
 import {
@@ -737,7 +738,7 @@ router.post('/:id/share', async (req: Request, res: Response) => {
     }
 
     const { password, expires_at } = req.body;
-    const token = uuidv4();
+    const token = generateShareToken();
     let hashedPassword = null;
 
     if (password) {
@@ -786,7 +787,7 @@ router.put('/:id/share', async (req: Request, res: Response) => {
 
     // Enabling (or updating an already-public dashboard): keep the existing
     // token if there is one so old links don't break.
-    const token = dashboard.public_token || uuidv4();
+    const token = dashboard.public_token || generateShareToken();
 
     // Empty string => explicitly clear; undefined => leave unchanged.
     let passwordUpdate: string | undefined;
