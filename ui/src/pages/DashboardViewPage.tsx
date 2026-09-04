@@ -41,8 +41,11 @@ import {
   ArrowLeft,
   MoreVertical,
   LayoutDashboard,
+  Radar as RadarIcon,
+  Workflow,
+  TrendingUp,
 } from 'lucide-react';
-import { AreaChart, BarChart, PieChart, ScatterChart, FunnelChart, TreemapChart, StatCard } from '../components/charts';
+import { AreaChart, BarChart, PieChart, ScatterChart, FunnelChart, TreemapChart, StatCard, RadarChart, SankeyChart } from '../components/charts';
 import { readPanelFormat, formatPanelValue, THRESHOLD_COLORS, type PanelFormat } from '../components/dashboard/panelFormat';
 import { readDrilldownConfig, readRefreshSeconds, type DrilldownType } from '../components/dashboard/panelDrilldown';
 import { useTheme } from '../contexts/ThemeContext';
@@ -108,6 +111,9 @@ const VISUALIZATION_OPTIONS = [
   { value: 'scatter', label: 'Scatter Plot', icon: Circle },
   { value: 'funnel', label: 'Funnel Chart', icon: GitMerge },
   { value: 'treemap', label: 'Treemap', icon: LayoutGrid },
+  { value: 'linechart', label: 'Line Chart', icon: TrendingUp },
+  { value: 'radar', label: 'Radar', icon: RadarIcon },
+  { value: 'sankey', label: 'Sankey', icon: Workflow },
 ];
 
 const AUTO_REFRESH_OPTIONS = [
@@ -297,6 +303,7 @@ function PanelVisualization({
     }
 
     case 'area':
+    case 'linechart':
     case 'line': {
       // `timechart count by severity` comes back long-form: one row per
       // (bucket, severity) with a single value column. Splunk pivots that into
@@ -325,6 +332,7 @@ function PanelVisualization({
           xAxisKey={labelKey}
           height={200}
           darkMode={isDarkMode}
+          fill={panel.visualization !== 'linechart'}
           stacked={format.stacked}
           yMin={format.yMin}
           yMax={format.yMax}
@@ -555,6 +563,47 @@ function PanelVisualization({
           />
         </div>
       );
+    }
+
+    case 'radar': {
+      const radarData = results
+        .map((r) => ({ category: String(r[labelKey] ?? ''), value: Number(r[valueKey]) || 0 }))
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 8);
+      return (
+        <RadarChart
+          data={radarData}
+          height={240}
+          darkMode={isDarkMode}
+          seriesName={valueKey}
+          onPointClick={(category) => {
+            const item = results.find((r) => String(r[labelKey]) === category);
+            if (item) handleChartClick(item);
+          }}
+        />
+      );
+    }
+
+    case 'sankey': {
+      // Needs two dimension columns + a value: the first two non-value keys
+      // become source/target and the value column sets the band width. (A
+      // numeric dimension like severity is still a valid category here.)
+      const catKeys = keys.filter((k) => k !== valueKey);
+      if (catKeys.length < 2) {
+        return (
+          <div className="flex flex-col items-center justify-center h-full px-4 text-center text-nog-400">
+            <p className="text-sm">Sankey needs two categories.</p>
+            <p className="text-xs mt-1">Try <code className="font-mono text-xs">| stats count by field_a field_b</code>.</p>
+          </div>
+        );
+      }
+      const [srcKey, tgtKey] = catKeys;
+      const links = results.map((r) => ({
+        source: String(r[srcKey] ?? ''),
+        target: String(r[tgtKey] ?? ''),
+        value: Number(r[valueKey]) || 0,
+      }));
+      return <SankeyChart data={links} height={260} darkMode={isDarkMode} />;
     }
 
     case 'table':

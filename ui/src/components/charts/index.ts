@@ -31,5 +31,11 @@ export type { FunnelChartProps, FunnelChartData } from './FunnelChart';
 export { TreemapChart } from './TreemapChart';
 export type { TreemapChartProps, TreemapNode } from './TreemapChart';
 
+export { RadarChart } from './RadarChart';
+export type { RadarChartProps, RadarChartData } from './RadarChart';
+
+export { SankeyChart } from './SankeyChart';
+export type { SankeyChartProps, SankeyLink } from './SankeyChart';
+
 export { CHART_PALETTE, CHART_ACCENT, getChartTheme } from './palette';
 export type { ChartTheme } from './palette';

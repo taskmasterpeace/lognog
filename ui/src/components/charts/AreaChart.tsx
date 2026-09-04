@@ -28,6 +28,8 @@ export interface AreaChartProps {
   legendPosition?: 'top' | 'bottom' | 'right';
   /** Stack the series on top of each other. */
   stacked?: boolean;
+  /** Draw the filled area under the line (false = a plain line chart). */
+  fill?: boolean;
   yMin?: number;
   yMax?: number;
   yAxisLabel?: string;
@@ -48,6 +50,7 @@ export const AreaChart: React.FC<AreaChartProps> = ({
   showLegend = true,
   legendPosition = 'top',
   stacked = false,
+  fill = true,
   yMin,
   yMax,
   yAxisLabel,
@@ -96,10 +99,12 @@ export const AreaChart: React.FC<AreaChartProps> = ({
         width: 2,
         color: s.color,
       },
-      areaStyle: {
-        // Stacked series need a solid fill or they read as one blob.
-        color: stacked ? s.color + '99' : gradientDefs[idx],
-      },
+      areaStyle: fill
+        ? {
+            // Stacked series need a solid fill or they read as one blob.
+            color: stacked ? s.color + '99' : gradientDefs[idx],
+          }
+        : undefined,
       emphasis: {
         focus: 'series' as const,
       },
@@ -196,7 +201,7 @@ export const AreaChart: React.FC<AreaChartProps> = ({
       },
       series: seriesConfig,
     };
-  }, [data, series, xAxisKey, title, darkMode, showGrid, showLegend, legendPosition, stacked, yMin, yMax, yAxisLabel, thresholds, xAxisFormatter, tooltipFormatter, theme]);
+  }, [data, series, xAxisKey, title, darkMode, showGrid, showLegend, legendPosition, stacked, fill, yMin, yMax, yAxisLabel, thresholds, xAxisFormatter, tooltipFormatter, theme]);
 
   if (!data || data.length === 0) {
     return (
