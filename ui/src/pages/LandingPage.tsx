@@ -282,13 +282,13 @@ export default function LandingPage() {
             <div className="flex items-center gap-5 text-sm text-nog-400">
               <Link to="/docs" className="transition hover:text-nog-100">Docs</Link>
               <a
-                href="/api/ingest/guide"
+                href="/llms.txt"
                 target="_blank"
                 rel="noreferrer"
-                title="Integration guide + API for AI coding agents"
+                title="llms.txt — a guide to LogNog for LLMs and AI agents (links to the ingest guide, schema, and query context)"
                 className="flex items-center gap-1.5 transition hover:text-honey-400"
               >
-                <Bot className="h-4 w-4" /> For AI agents
+                <Bot className="h-4 w-4" /> For LLMs
               </a>
               <a href="https://github.com/taskmasterpeace/lognog" target="_blank" rel="noreferrer" className="transition hover:text-nog-100">GitHub</a>
               <span className="flex items-center gap-1.5"><Lock className="h-3.5 w-3.5" /> Self-hosted</span>

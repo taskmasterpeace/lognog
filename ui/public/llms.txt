@@ -1,0 +1,27 @@
+# LogNog
+
+> Self-hosted, fully-local log management platform with a pipe-based query language, built-in alerting, dashboards, and AI-assisted search. Runs on your own hardware with zero cloud dependencies.
+
+LogNog collects logs over syslog, HTTP, OTLP, and a Windows/Linux agent, stores them in ClickHouse (or SQLite in single-machine "Lite" mode), and queries them with a pipe-based DSL. It normalizes fields to a common information model (ECS/OCSF), ships MITRE ATT&CK detection content, and includes dashboards, scheduled reports, and alerting. Live instance: https://logs.machinekinglabs.com
+
+## For AI agents and coding tools
+
+- [Ingest guide](https://logs.machinekinglabs.com/api/ingest/guide): full markdown guide for sending logs — endpoints, authentication, and payload shape. Public; no API key needed to read.
+- [Ingest schema](https://logs.machinekinglabs.com/api/ingest/schema): machine-readable JSON contract for the ingest API.
+- [Query context](https://logs.machinekinglabs.com/ai/context): machine-readable description of the DSL, fields, and query surface for building queries (requires an API key).
+- MCP server: a Model Context Protocol endpoint at `/mcp/sse` for Claude Desktop and other MCP clients.
+
+## Query language
+
+LogNog's DSL is a pipe-based language. Example:
+
+`search severity<=3 | stats count by hostname | sort desc count | limit 10`
+
+Commands: search, filter, where, stats, sort, limit, head, tail, table, fields, dedup, rename, top, rare, bin, timechart, rex, eval, lookup.
+
+Operators: `=` (exact), `!=` (not equal), `>= <= > <` (compare), `~` (regex / contains), `!~` (regex not match). Time range is set in the UI or API, not in the query.
+
+## Docs and source
+
+- [User guide](https://logs.machinekinglabs.com/user-guide.html): end-user documentation.
+- [Source on GitHub](https://github.com/taskmasterpeace/lognog): self-hosting instructions and code.
