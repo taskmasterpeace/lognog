@@ -73,6 +73,24 @@ router.post('/setup', rateLimit(5, 60000), async (req, res) => {
       return;
     }
 
+    // Guard the takeover window: if the DB is ever empty in production (fresh,
+    // wiped, or restored), the first internet visitor would otherwise become
+    // admin. Require an out-of-band SETUP_TOKEN to create the first user in prod.
+    if (process.env.NODE_ENV === 'production') {
+      const expected = process.env.SETUP_TOKEN;
+      if (!expected) {
+        res.status(503).json({
+          error: 'Setup is disabled. Set SETUP_TOKEN in the server environment to enable initial admin creation.',
+        });
+        return;
+      }
+      if (req.get('x-setup-token') !== expected) {
+        logAuthEvent(null, 'setup_denied', req.ip, req.get('user-agent'));
+        res.status(403).json({ error: 'Invalid or missing setup token' });
+        return;
+      }
+    }
+
     const data = registerSchema.parse(req.body);
     const user = await createUser(data.username, data.email, data.password, 'admin');
 

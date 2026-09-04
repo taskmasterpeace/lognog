@@ -95,8 +95,12 @@ export function useLiveTail(options: UseLiveTailOptions = {}): UseLiveTailReturn
     setError(null);
     setIsStreaming(true);
 
-    // Build SSE URL with query parameter
+    // Build SSE URL with query parameter. EventSource can't set an Authorization
+    // header, so pass the (short-lived) access token as a query param — the
+    // server requires it now that /sse/tail is no longer public.
     const params = new URLSearchParams({ query });
+    const token = localStorage.getItem('lognog_access_token');
+    if (token) params.set('access_token', token);
     const sseUrl = `/api/sse/tail?${params.toString()}`;
 
     const eventSource = new EventSource(sseUrl);

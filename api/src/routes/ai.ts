@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { authenticate, rateLimit } from '../auth/middleware.js';
 import dslGeneration from './ai/dsl-generation.js';
 import insights from './ai/insights.js';
 import interview from './ai/interview.js';
@@ -12,6 +13,13 @@ import helpbot from './ai/helpbot.js';
 import aiContext from './ai/context.js';
 
 const router = Router();
+
+// Every AI route runs LLM calls that hit Ollama or the paid OpenRouter key and
+// can read/write log-derived context, so the whole surface requires auth, and a
+// rate limit caps runaway spend/abuse. (helpbot/context also apply their own
+// auth; running it again here is harmless.)
+router.use(authenticate);
+router.use(rateLimit(60, 60000));
 
 router.use('/', dslGeneration);
 router.use('/', insights);

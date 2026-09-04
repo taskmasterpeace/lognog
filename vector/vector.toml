@@ -584,7 +584,9 @@ database = "lognog"
 table = "logs"
 auth.strategy = "basic"
 auth.user = "lognog"
-auth.password = "lognog-dev-only"
+# Overridable via the CLICKHOUSE_PASSWORD env var (set on the vector service in
+# docker-compose); falls back to the dev default for local use.
+auth.password = "${CLICKHOUSE_PASSWORD:-lognog-dev-only}"
 skip_unknown_fields = true
 compression = "gzip"
 

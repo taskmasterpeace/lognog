@@ -1066,8 +1066,12 @@ router.get('/lookup-tables', (_req: Request, res: Response) => {
 });
 
 // Saved Searches CRUD
+// NOTE: these are a legacy duplicate of the canonical (owner-scoped) /saved-searches
+// router the UI actually uses; they remain only as a documented API. They were
+// unauthenticated — anyone could list, tamper with, or DELETE any saved search —
+// so every verb now requires auth.
 
-router.get('/saved', (_req: Request, res: Response) => {
+router.get('/saved', authenticate, (_req: Request, res: Response) => {
   try {
     const searches = getSavedSearches();
     return res.json(searches);
@@ -1077,7 +1081,7 @@ router.get('/saved', (_req: Request, res: Response) => {
   }
 });
 
-router.get('/saved/:id', (req: Request, res: Response) => {
+router.get('/saved/:id', authenticate, (req: Request, res: Response) => {
   try {
     const search = getSavedSearch(req.params.id);
     if (!search) {
@@ -1090,7 +1094,7 @@ router.get('/saved/:id', (req: Request, res: Response) => {
   }
 });
 
-router.post('/saved', (req: Request, res: Response) => {
+router.post('/saved', authenticate, (req: Request, res: Response) => {
   try {
     const { name, query, description } = req.body;
 
@@ -1106,7 +1110,7 @@ router.post('/saved', (req: Request, res: Response) => {
   }
 });
 
-router.put('/saved/:id', (req: Request, res: Response) => {
+router.put('/saved/:id', authenticate, (req: Request, res: Response) => {
   try {
     const { name, query, description } = req.body;
 
@@ -1126,7 +1130,7 @@ router.put('/saved/:id', (req: Request, res: Response) => {
   }
 });
 
-router.delete('/saved/:id', (req: Request, res: Response) => {
+router.delete('/saved/:id', authenticate, (req: Request, res: Response) => {
   try {
     const deleted = deleteSavedSearch(req.params.id);
     if (!deleted) {

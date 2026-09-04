@@ -8,16 +8,53 @@ import { getSQLiteDB } from '../db/sqlite.js';
 const JWT_SECRET = process.env.JWT_SECRET;
 const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET;
 
-if (!JWT_SECRET || !JWT_REFRESH_SECRET) {
-  if (process.env.NODE_ENV === 'production') {
-    throw new Error('FATAL: JWT_SECRET and JWT_REFRESH_SECRET environment variables must be set in production');
+// Dev-only fallbacks. These are PUBLIC (this repo is public), so a token signed
+// with one can be forged by anyone. Production must never use them — the guard
+// below refuses to boot if it does.
+const DEV_JWT_SECRET = 'lognog-dev-secret-INSECURE';
+const DEV_JWT_REFRESH_SECRET = 'lognog-refresh-secret-INSECURE';
+
+// Secret values that are public knowledge (the committed dev fallbacks plus the
+// docker-compose placeholders). Booting production with one of these means any
+// attacker who can read the source can mint an admin token.
+const KNOWN_INSECURE_SECRETS = new Set([
+  DEV_JWT_SECRET,
+  DEV_JWT_REFRESH_SECRET,
+  'lognog-jwt-secret-change-me',
+  'lognog-refresh-secret-change-me',
+  'change-me',
+  'secret',
+]);
+
+// Fail-hard in production unless a secret is set, long enough to resist brute
+// force, and not a known public value. The previous guard only checked presence,
+// so a weak or committed secret sailed straight through.
+function assertProductionSecret(name: string, value: string | undefined): void {
+  if (process.env.NODE_ENV !== 'production') return;
+  if (!value) {
+    throw new Error(`FATAL: ${name} must be set in production`);
   }
-  console.warn('WARNING: JWT_SECRET/JWT_REFRESH_SECRET not set - using insecure defaults (dev only)');
+  if (value.length < 32) {
+    throw new Error(`FATAL: ${name} must be at least 32 characters in production`);
+  }
+  if (KNOWN_INSECURE_SECRETS.has(value)) {
+    throw new Error(
+      `FATAL: ${name} is set to a known/default value — generate a fresh random secret (e.g. \`openssl rand -hex 32\`)`,
+    );
+  }
 }
 
-// Getter functions that apply defaults only in development
-const getJwtSecret = (): string => JWT_SECRET || 'lognog-dev-secret-INSECURE';
-const getJwtRefreshSecret = (): string => JWT_REFRESH_SECRET || 'lognog-refresh-secret-INSECURE';
+assertProductionSecret('JWT_SECRET', JWT_SECRET);
+assertProductionSecret('JWT_REFRESH_SECRET', JWT_REFRESH_SECRET);
+
+if ((!JWT_SECRET || !JWT_REFRESH_SECRET) && process.env.NODE_ENV !== 'production') {
+  console.warn('WARNING: JWT_SECRET/JWT_REFRESH_SECRET not set - using insecure dev defaults (never use in production)');
+}
+
+// Getter functions that apply defaults only in development (production has
+// already been forced to provide strong, unique secrets by the guard above).
+const getJwtSecret = (): string => JWT_SECRET || DEV_JWT_SECRET;
+const getJwtRefreshSecret = (): string => JWT_REFRESH_SECRET || DEV_JWT_REFRESH_SECRET;
 const ACCESS_TOKEN_EXPIRY = '15m';
 const REFRESH_TOKEN_EXPIRY = '7d';
 const SALT_ROUNDS = 12;
@@ -351,7 +388,9 @@ export async function generateTokenPair(user: User | UserPublic): Promise<TokenP
 
 export function verifyAccessToken(token: string): JwtPayload | null {
   try {
-    const payload = jwt.verify(token, getJwtSecret()) as JwtPayload;
+    // Pin the algorithm: never accept a token that asks to be verified with a
+    // different (or "none") algorithm than the one we sign with.
+    const payload = jwt.verify(token, getJwtSecret(), { algorithms: ['HS256'] }) as JwtPayload;
     if (payload.type !== 'access') return null;
     return payload;
   } catch {
@@ -361,7 +400,7 @@ export function verifyAccessToken(token: string): JwtPayload | null {
 
 export async function refreshTokens(refreshToken: string): Promise<TokenPair | null> {
   try {
-    const payload = jwt.verify(refreshToken, getJwtRefreshSecret()) as JwtPayload;
+    const payload = jwt.verify(refreshToken, getJwtRefreshSecret(), { algorithms: ['HS256'] }) as JwtPayload;
     if (payload.type !== 'refresh') return null;
 
     const user = getUserById(payload.userId);
@@ -440,14 +479,22 @@ export async function validateApiKey(
   apiKey: string,
 ): Promise<{ userId: string; permissions: string[]; allowedIndexes: string[] | null } | null> {
   if (!apiKey.startsWith('lnog_')) return null;
+  // A well-formed key is `lnog_<32 hex>_<64 hex>` (102 chars). Reject anything
+  // too short before touching the DB — this stops a stub like `lnog_` from
+  // reaching the bcrypt loop below.
+  if (apiKey.length < 40) return null;
 
   const db = getSQLiteDB();
-  const prefix = apiKey.split('_').slice(0, 2).join('_').slice(0, 13);
+  // The stored key_prefix is exactly the first 13 chars (`lnog_` + 8 hex), so
+  // match it EXACTLY. Never use LIKE here: SQL LIKE treats the `_` in `lnog_` as
+  // a single-char wildcard, so `LIKE 'lnog_%'` matches every stored prefix and
+  // bcrypt-compares every key — an unauthenticated CPU DoS.
+  const prefix = apiKey.slice(0, 13);
 
   // Find keys with matching prefix
   const keys = db.prepare(`
     SELECT * FROM api_keys
-    WHERE key_prefix LIKE ? || '%'
+    WHERE key_prefix = ?
     AND is_active = 1
     AND (expires_at IS NULL OR expires_at > datetime('now'))
   `).all(prefix) as ApiKey[];

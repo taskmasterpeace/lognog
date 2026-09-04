@@ -2,15 +2,17 @@ import { Router, Request, Response } from 'express';
 import { executeQuery } from '../db/clickhouse.js';
 import { getActiveSources } from '../db/backend.js';
 import { getSQLiteDB } from '../db/sqlite.js';
-import { optionalAuth } from '../auth/middleware.js';
+import { authenticate } from '../auth/middleware.js';
 import { isIndexAllowed, indexScopeSqlClause } from '../auth/index-scope.js';
 
 const router = Router();
 
-// Phase 5: read-side index scoping for the stats router. optionalAuth populates
-// req.allowedIndexes for scoped API keys; unscoped keys / JWT / no-auth leave it
-// undefined so indexScopeSqlClause() returns null and queries are unchanged.
-router.use(optionalAuth);
+// Stats leak index names, volumes, top hostnames and sample field values, so the
+// whole router now REQUIRES auth (was optionalAuth, which let anonymous callers
+// read all of it). authenticate still populates req.allowedIndexes for scoped API
+// keys; JWT / unscoped keys leave it undefined so indexScopeSqlClause() returns
+// null and queries are unchanged for full-access users.
+router.use(authenticate);
 
 /**
  * Build SQL fragments for ANDing the index scope into a stats query.

@@ -37,6 +37,10 @@ services:
     image: timberio/vector:0.35.0-alpine
     container_name: lognog-vector
     command: ["--config", "/etc/vector/vector.toml"]
+    environment:
+      # Vector interpolates this into vector.toml's ClickHouse auth. Override in
+      # production; falls back to the dev default for local use.
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-lognog-dev-only}
     ports:
       - "514:514/udp"   # Syslog UDP
       - "514:514/tcp"   # Syslog TCP

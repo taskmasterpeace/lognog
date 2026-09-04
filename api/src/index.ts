@@ -46,6 +46,7 @@ import sourcesRouter from './routes/sources.js';
 import pullCollectorsRouter from './routes/pull-collectors.js';
 import { healthCheck as clickhouseHealth, executeQuery, closeConnection } from './db/clickhouse.js';
 import { closeDatabase } from './db/sqlite.js';
+import { verifyAccessToken } from './auth/auth.js';
 import { startScheduler } from './services/scheduler.js';
 import { apiLogger } from './middleware/api-logger.js';
 import { csrfProtection } from './middleware/csrf.js';
@@ -61,6 +62,11 @@ const PORT = process.env.PORT || 4000;
 
 // Create Express app with WebSocket support
 const { app } = expressWs(express());
+
+// Behind nginx/Cloudflare: trust the first proxy hop so req.ip resolves to the
+// real client IP (rate-limit buckets and the auth audit log key on it) instead
+// of the proxy's address, which would collapse every client into one bucket.
+app.set('trust proxy', 1);
 
 // Middleware
 // CORS: the UI is served same-origin via nginx and ingest is server-to-server,
@@ -96,10 +102,18 @@ app.use(cookieParser());
 app.use(express.json({ limit: '10mb' }));  // Explicit size limit
 
 // Security headers
-app.use((_req, res, next) => {
+app.use((req, res, next) => {
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-XSS-Protection', '1; mode=block');
+  // CSP frame-ancestors reinforces clickjacking protection for modern browsers.
+  // (A full resource-level CSP for the UI HTML belongs at nginx, which serves it.)
+  res.setHeader('Content-Security-Policy', "frame-ancestors 'none'");
+  // HSTS only applies over HTTPS; behind the proxy we check the forwarded scheme.
+  // Browsers ignore it on plain HTTP, so this never affects local dev.
+  if (req.secure || req.headers['x-forwarded-proto'] === 'https') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
   next();
 });
 
@@ -180,22 +194,36 @@ app.use('/pull-collectors', pullCollectorsRouter);
 const liveTailClients: Set<WebSocket> = new Set();
 
 app.ws('/ws/tail', (ws: WebSocket, req: express.Request) => {
-  // Validate origin header to prevent cross-origin WebSocket hijacking
+  // This endpoint broadcasts live log rows, so it must not be open to the
+  // internet. Require a valid access token — a browser WebSocket can't set
+  // headers, so it is passed as a query param.
+  const token = (req.query.access_token as string) || '';
+  const payload = token ? verifyAccessToken(token) : null;
+  if (!payload) {
+    ws.close(1008, 'Unauthorized');
+    return;
+  }
+
+  // Reject cross-origin AND missing-origin connections. A browser always sends
+  // an Origin header, so a missing one is a non-browser client trying to slip
+  // past the same-origin check.
   const origin = req.headers.origin;
-  if (origin) {
-    const allowedHost = req.headers.host;
-    try {
-      const originHost = new URL(origin).host;
-      if (allowedHost && originHost !== allowedHost) {
-        console.warn(`WebSocket connection rejected: origin ${origin} does not match host ${allowedHost}`);
-        ws.close(1008, 'Origin not allowed');
-        return;
-      }
-    } catch {
-      console.warn(`WebSocket connection rejected: invalid origin ${origin}`);
-      ws.close(1008, 'Invalid origin');
+  const allowedHost = req.headers.host;
+  if (!origin) {
+    ws.close(1008, 'Origin required');
+    return;
+  }
+  try {
+    const originHost = new URL(origin).host;
+    if (!allowedHost || originHost !== allowedHost) {
+      console.warn(`WebSocket connection rejected: origin ${origin} does not match host ${allowedHost}`);
+      ws.close(1008, 'Origin not allowed');
       return;
     }
+  } catch {
+    console.warn(`WebSocket connection rejected: invalid origin ${origin}`);
+    ws.close(1008, 'Invalid origin');
+    return;
   }
 
   console.log('Client connected to live tail');
@@ -280,13 +308,26 @@ interface SSEClient {
 const sseClients: Set<SSEClient> = new Set();
 
 app.get('/sse/tail', (req: express.Request, res: express.Response) => {
+  // Require a valid access token. EventSource can't set headers, so the browser
+  // passes the token as a query param; also accept a Bearer header for
+  // non-browser clients. This endpoint streams live log rows — never public.
+  const headerToken = req.headers.authorization?.startsWith('Bearer ')
+    ? req.headers.authorization.slice(7)
+    : '';
+  const token = (req.query.access_token as string) || headerToken;
+  const payload = token ? verifyAccessToken(token) : null;
+  if (!payload) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return;
+  }
+
   const query = req.query.query as string || 'search *';
 
-  // Set SSE headers
+  // Set SSE headers. No wildcard CORS: the UI is same-origin behind nginx, and a
+  // wildcard would let any website open an EventSource and read the org's logs.
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
   res.setHeader('Connection', 'keep-alive');
-  res.setHeader('Access-Control-Allow-Origin', '*');
   res.flushHeaders();
 
   const client: SSEClient = {
