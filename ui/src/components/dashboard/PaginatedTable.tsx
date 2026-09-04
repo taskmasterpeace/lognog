@@ -8,12 +8,15 @@ import {
   ArrowDown,
   ExternalLink,
 } from 'lucide-react';
+import { formatPanelValue, THRESHOLD_COLORS, type PanelFormat } from './panelFormat';
 
 interface PaginatedTableProps {
   data: Record<string, unknown>[];
   columns?: string[];
   pageSize?: number;
   onRowClick?: (row: Record<string, unknown>) => void;
+  /** Optional per-panel formatting applied to numeric cells (unit/decimals + threshold colour). */
+  format?: PanelFormat;
 }
 
 export function PaginatedTable({
@@ -21,6 +24,7 @@ export function PaginatedTable({
   columns: propColumns,
   pageSize: initialPageSize = 25,
   onRowClick,
+  format,
 }: PaginatedTableProps) {
   const [page, setPage] = useState(0);
   const [pageSize, setPageSize] = useState(initialPageSize);
@@ -122,14 +126,18 @@ export function PaginatedTable({
                   onRowClick ? 'cursor-pointer' : ''
                 }`}
               >
-                {columns.map((column) => (
-                  <td
-                    key={column}
-                    className="p-2 border-b border-nog-100 dark:border-nog-700/50 text-nog-700 dark:text-nog-300"
-                  >
-                    {formatCellValue(row[column])}
-                  </td>
-                ))}
+                {columns.map((column) => {
+                  const color = thresholdColor(row[column], format);
+                  return (
+                    <td
+                      key={column}
+                      className="p-2 border-b border-nog-100 dark:border-nog-700/50 text-nog-700 dark:text-nog-300 tabular-nums"
+                      style={color ? { color, fontWeight: 600 } : undefined}
+                    >
+                      {formatCellValue(row[column], format)}
+                    </td>
+                  );
+                })}
                 {onRowClick && (
                   <td className="p-2 border-b border-nog-100 dark:border-nog-700/50">
                     <ExternalLink className="w-4 h-4 text-nog-400" />
@@ -225,10 +233,30 @@ export function PaginatedTable({
   );
 }
 
-function formatCellValue(value: unknown): string {
+function formatCellValue(value: unknown, format?: PanelFormat): string {
   if (value === null || value === undefined) return '';
   if (typeof value === 'object') return JSON.stringify(value);
+  // Numeric cells honour the panel's unit/decimals formatting.
+  if (format && (format.unit !== undefined || format.decimals !== undefined)) {
+    const n = Number(value);
+    if (Number.isFinite(n) && String(value).trim() !== '') return formatPanelValue(n, format);
+  }
   return String(value);
+}
+
+/** Colour a numeric cell by the highest threshold it crosses (Splunk-style). */
+function thresholdColor(value: unknown, format?: PanelFormat): string | undefined {
+  if (!format?.thresholds || format.thresholds.length === 0) return undefined;
+  const n = Number(value);
+  if (!Number.isFinite(n) || String(value).trim() === '') return undefined;
+  const sorted = [...format.thresholds].sort((a, b) => a.value - b.value);
+  let match: (typeof sorted)[number] | undefined;
+  let matchIndex = -1;
+  sorted.forEach((t, i) => {
+    if (n >= t.value) { match = t; matchIndex = i; }
+  });
+  if (!match) return undefined;
+  return match.color || THRESHOLD_COLORS[Math.min(matchIndex, THRESHOLD_COLORS.length - 1)];
 }
 
 function generatePageNumbers(current: number, total: number): (number | '...')[] {

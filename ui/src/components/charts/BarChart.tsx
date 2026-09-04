@@ -69,6 +69,14 @@ export const BarChart: React.FC<BarChartProps> = ({
     return processedData.map(d => d.value);
   }, [processedData]);
 
+  // Horizontal bars need ~28px per category or the y-axis labels overlap into an
+  // unreadable smear. Grow the chart to fit every label (the panel body scrolls);
+  // vertical bars keep the caller's height.
+  const effectiveHeight = React.useMemo(() => {
+    if (!horizontal) return height;
+    return Math.max(height, processedData.length * 28 + 40);
+  }, [horizontal, height, processedData.length]);
+
   const theme = getChartTheme(darkMode);
 
   const option: EChartsOption = React.useMemo(() => {
@@ -85,7 +93,11 @@ export const BarChart: React.FC<BarChartProps> = ({
         color: theme.textMuted,
         interval: 0,
         rotate: horizontal ? 0 : 45,
-        fontSize: 11,
+        fontSize: 12,
+        // Long category names (hostnames, URLs) get an ellipsis instead of
+        // colliding with the plot; the full value is in the tooltip.
+        width: horizontal ? 140 : undefined,
+        overflow: horizontal ? ('truncate' as const) : undefined,
       },
       axisLine: {
         lineStyle: {
@@ -217,7 +229,7 @@ export const BarChart: React.FC<BarChartProps> = ({
     <div className="w-full">
       <ReactECharts
         option={option}
-        style={{ height: `${height}px` }}
+        style={{ height: `${effectiveHeight}px` }}
         notMerge={true}
         lazyUpdate={true}
         onEvents={onEvents}

@@ -563,6 +563,7 @@ function PanelVisualization({
         <PaginatedTable
           data={results}
           pageSize={10}
+          format={format}
           onRowClick={(row) => {
             if (onDrilldown && keys.length > 0) {
               const firstKey = keys[0];
@@ -709,7 +710,7 @@ function PanelCard({
           </div>
         </div>
       </div>
-      <div className="flex-1 p-3 min-h-0">
+      <div className="flex-1 p-3 min-h-0 overflow-y-auto">
         <PanelVisualization
           panel={panel}
           data={data}
