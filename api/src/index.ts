@@ -52,7 +52,7 @@ import { executeDSLQuery, ingestSpoolStats, healthCheck as backendHealth, getBac
 import { isSmtpConfigured } from './services/scheduler.js';
 import { seedBuiltinTemplates } from './data/builtin-templates.js';
 import { seedDashboardTemplates, seedSavedSearches } from './data/seed-templates.js';
-import { seedBuiltinCIMModels } from './data/builtin-cim-models.js';
+import { migrateBuiltinCIMModelsToOCSF } from './data/builtin-cim-models.js';
 
 const PORT = process.env.PORT || 4000;
 
@@ -485,7 +485,7 @@ app.listen(PORT, () => {
     seedBuiltinTemplates();
     seedDashboardTemplates();
     seedSavedSearches();
-    seedBuiltinCIMModels();
+    migrateBuiltinCIMModelsToOCSF();
   } catch (error) {
     console.error('Failed to seed templates:', error);
   }

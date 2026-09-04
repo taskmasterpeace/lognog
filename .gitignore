@@ -46,11 +46,13 @@ npm-debug.log*
 Thumbs.db
 
 # Docker volumes and bind mounts (local)
-clickhouse-data/
-vector-data/
-api-data/
-data/
-backups/
+# NOTE: anchor these to the repo root so they don't match source dirs like
+# api/src/data/ (an unanchored `data/` matched any nested directory named data).
+/clickhouse-data/
+/vector-data/
+/api-data/
+/data/
+/backups/
 
 # Test coverage
 coverage/
