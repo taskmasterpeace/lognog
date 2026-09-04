@@ -44,8 +44,9 @@ import {
   Radar as RadarIcon,
   Workflow,
   TrendingUp,
+  Map as MapIcon,
 } from 'lucide-react';
-import { AreaChart, BarChart, PieChart, ScatterChart, FunnelChart, TreemapChart, StatCard, RadarChart, SankeyChart } from '../components/charts';
+import { AreaChart, BarChart, PieChart, ScatterChart, FunnelChart, TreemapChart, StatCard, RadarChart, SankeyChart, GeoMapChart } from '../components/charts';
 import { readPanelFormat, formatPanelValue, THRESHOLD_COLORS, type PanelFormat } from '../components/dashboard/panelFormat';
 import { readDrilldownConfig, readRefreshSeconds, type DrilldownType } from '../components/dashboard/panelDrilldown';
 import { downloadCsv } from '../components/dashboard/csvExport';
@@ -115,6 +116,7 @@ const VISUALIZATION_OPTIONS = [
   { value: 'linechart', label: 'Line Chart', icon: TrendingUp },
   { value: 'radar', label: 'Radar', icon: RadarIcon },
   { value: 'sankey', label: 'Sankey', icon: Workflow },
+  { value: 'map', label: 'Map', icon: MapIcon },
 ];
 
 const AUTO_REFRESH_OPTIONS = [
@@ -605,6 +607,24 @@ function PanelVisualization({
         value: Number(r[valueKey]) || 0,
       }));
       return <SankeyChart data={links} height={260} darkMode={isDarkMode} />;
+    }
+
+    case 'map': {
+      // Choropleth: the group-by column is a country name, the value is the count.
+      const mapData = results
+        .map((r) => ({ name: String(r[labelKey] ?? ''), value: Number(r[valueKey]) || 0 }))
+        .filter((d) => d.name);
+      return (
+        <GeoMapChart
+          data={mapData}
+          height={300}
+          darkMode={isDarkMode}
+          onCountryClick={(name) => {
+            const item = results.find((r) => String(r[labelKey]) === name);
+            if (item) handleChartClick(item);
+          }}
+        />
+      );
     }
 
     case 'table':

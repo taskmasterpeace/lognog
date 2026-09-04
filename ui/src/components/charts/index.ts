@@ -37,5 +37,8 @@ export type { RadarChartProps, RadarChartData } from './RadarChart';
 export { SankeyChart } from './SankeyChart';
 export type { SankeyChartProps, SankeyLink } from './SankeyChart';
 
+export { GeoMapChart } from './GeoMapChart';
+export type { GeoMapChartProps, GeoMapData } from './GeoMapChart';
+
 export { CHART_PALETTE, CHART_ACCENT, getChartTheme } from './palette';
 export type { ChartTheme } from './palette';
