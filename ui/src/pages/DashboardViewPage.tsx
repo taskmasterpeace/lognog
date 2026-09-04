@@ -52,6 +52,7 @@ import { AreaChart, BarChart, PieChart, ScatterChart, FunnelChart, TreemapChart,
 import { readPanelFormat, formatPanelValue, THRESHOLD_COLORS, type PanelFormat } from '../components/dashboard/panelFormat';
 import { readDrilldownConfig, readRefreshSeconds, type DrilldownType } from '../components/dashboard/panelDrilldown';
 import { downloadCsv } from '../components/dashboard/csvExport';
+import { downsampleRows } from '../components/dashboard/downsample';
 import { useTheme } from '../contexts/ThemeContext';
 import {
   getDashboard,
@@ -316,10 +317,12 @@ function PanelVisualization({
       // one series per split-by value; without the pivot the split-by column
       // itself was drawn as a series ("severity" line next to "count").
       const pivot = pivotSplitBy(results, labelKey, valueKey, keys);
-      const chartData = pivot ? pivot.rows : results;
       const chartSeries = pivot
         ? pivot.series.map((name, i) => ({ name, dataKey: name, color: CHART_COLORS[i % CHART_COLORS.length] }))
         : seriesKeys.map((k, i) => ({ name: k, dataKey: k, color: CHART_COLORS[i % CHART_COLORS.length] }));
+      // Perf: a fine-grained timechart over a long range can return thousands of
+      // points; LTTB-downsample to ~800 (shape-preserving) before rendering.
+      const chartData = downsampleRows(pivot ? pivot.rows : results, labelKey, chartSeries[0]?.dataKey, 800);
       // Axis labels: times only within a day or two, dates beyond that.
       const xs = chartData.map((r) => new Date(String(r[labelKey]).replace(' ', 'T')).getTime()).filter((t) => !isNaN(t));
       const spanMs = xs.length > 1 ? Math.max(...xs) - Math.min(...xs) : 0;
