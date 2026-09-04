@@ -44,6 +44,7 @@ import {
 } from 'lucide-react';
 import { AreaChart, BarChart, PieChart, ScatterChart, FunnelChart, TreemapChart, StatCard } from '../components/charts';
 import { readPanelFormat, formatPanelValue, THRESHOLD_COLORS, type PanelFormat } from '../components/dashboard/panelFormat';
+import { readDrilldownConfig, readRefreshSeconds, type DrilldownType } from '../components/dashboard/panelDrilldown';
 import { useTheme } from '../contexts/ThemeContext';
 import {
   getDashboard,
@@ -593,13 +594,22 @@ function PanelCard({
   onDelete: () => void;
   onDuplicate: () => void;
   onRefresh: () => void;
-  onDrilldown?: (field: string, value: string) => void;
+  onDrilldown?: (field: string, value: string, panel: DashboardPanel) => void;
   onFullscreen?: () => void;
   onViewOrigin?: () => void;
   editMode?: boolean;
 }) {
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const panelRefreshSeconds = readRefreshSeconds(panel.options);
+
+  // Per-panel auto-refresh: this panel re-runs on its own interval, independent
+  // of the dashboard-wide auto-refresh.
+  useEffect(() => {
+    if (!panelRefreshSeconds || editMode) return;
+    const timer = setInterval(onRefresh, panelRefreshSeconds * 1000);
+    return () => clearInterval(timer);
+  }, [panelRefreshSeconds, editMode, onRefresh]);
   const vizOption = VISUALIZATION_OPTIONS.find(v => v.value === panel.visualization) || VISUALIZATION_OPTIONS[0];
   const VizIcon = vizOption.icon;
 
@@ -632,6 +642,15 @@ function PanelCard({
           </div>
         </div>
         <div className={`flex items-center gap-1 flex-shrink-0 ${editMode ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`} ref={menuRef}>
+          {panelRefreshSeconds && (
+            <span
+              className="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium text-honey-700 dark:text-honey-300 bg-honey-100 dark:bg-honey-900/40"
+              title={`This panel auto-refreshes every ${panelRefreshSeconds}s`}
+            >
+              <RefreshCw className="w-2.5 h-2.5" />
+              {panelRefreshSeconds}s
+            </span>
+          )}
           <button onClick={onRefresh} className="p-1.5 text-nog-400 dark:text-nog-400 hover:text-nog-600 dark:hover:text-nog-200 hover:bg-nog-100 dark:hover:bg-nog-700 rounded" title="Refresh">
             <RefreshCw className="w-3.5 h-3.5" />
           </button>
@@ -691,7 +710,12 @@ function PanelCard({
         </div>
       </div>
       <div className="flex-1 p-3 min-h-0">
-        <PanelVisualization panel={panel} data={data} onRefresh={onRefresh} onDrilldown={onDrilldown} />
+        <PanelVisualization
+          panel={panel}
+          data={data}
+          onRefresh={onRefresh}
+          onDrilldown={onDrilldown ? (field, value) => onDrilldown(field, value, panel) : undefined}
+        />
       </div>
     </div>
   );
@@ -802,6 +826,14 @@ function PanelEditor({ panel, pages = [], defaultPageId = null, onSave, onCancel
   const [thresholdText, setThresholdText] = useState(() =>
     (readPanelFormat(existingOptions).thresholds || []).map((t) => (t.label ? `${t.value}:${t.label}` : String(t.value))).join(', ')
   );
+  // Drilldown + per-panel refresh (stored in options.drilldown / options.refresh_seconds).
+  const [drilldownType, setDrilldownType] = useState<'' | DrilldownType>(() => readDrilldownConfig(existingOptions)?.type || '');
+  const [drilldownTarget, setDrilldownTarget] = useState(() => readDrilldownConfig(existingOptions)?.target || '');
+  const [drilldownNewTab, setDrilldownNewTab] = useState(() => !!readDrilldownConfig(existingOptions)?.newTab);
+  const [refreshSeconds, setRefreshSeconds] = useState<string>(() => {
+    const r = readRefreshSeconds(existingOptions);
+    return r ? String(r) : '';
+  });
 
   const parseThresholds = (text: string): PanelFormat['thresholds'] => {
     const parsed = text.split(',').map((s) => s.trim()).filter(Boolean).map((entry) => {
@@ -821,6 +853,18 @@ function PanelEditor({ panel, pages = [], defaultPageId = null, onSave, onCancel
       );
       const options: Record<string, unknown> = { ...(existingOptions || {}) };
       if (Object.keys(formatOut).length > 0) options.format = formatOut; else delete options.format;
+
+      // Drilldown config.
+      if (drilldownType && drilldownTarget.trim()) {
+        options.drilldown = { type: drilldownType, target: drilldownTarget.trim(), newTab: drilldownNewTab };
+      } else {
+        delete options.drilldown;
+      }
+      // Per-panel refresh interval.
+      const rs = Number(refreshSeconds);
+      if (Number.isFinite(rs) && rs > 0) options.refresh_seconds = rs;
+      else delete options.refresh_seconds;
+
       onSave({ title, query, visualization, description: description || undefined, page_id: pageId || null, options });
     }
   };
@@ -1053,6 +1097,53 @@ search error | timechart span=1h count"
               )}
             </div>
           )}
+
+          {/* Drilldown + per-panel refresh (apply to every visualization) */}
+          <div className="border-t border-nog-100 dark:border-nog-700 pt-4">
+            <div className="text-sm font-medium text-nog-700 dark:text-nog-200 mb-2">Drilldown &amp; refresh</div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-nog-500 mb-1">On click</label>
+                <select value={drilldownType} onChange={(e) => setDrilldownType(e.target.value as '' | DrilldownType)} className="input">
+                  <option value="">Default (search this field)</option>
+                  <option value="search">Custom search</option>
+                  <option value="dashboard">Another dashboard</option>
+                  <option value="url">External URL</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-nog-500 mb-1">Auto-refresh (seconds)</label>
+                <input type="number" min={0} value={refreshSeconds} onChange={(e) => setRefreshSeconds(e.target.value)} placeholder="off" className="input" />
+              </div>
+              {drilldownType && (
+                <div className="col-span-2">
+                  <label className="block text-xs text-nog-500 mb-1">
+                    {drilldownType === 'search' ? 'Search query' : drilldownType === 'dashboard' ? 'Dashboard id or path' : 'URL'}
+                  </label>
+                  <input
+                    type="text"
+                    value={drilldownTarget}
+                    onChange={(e) => setDrilldownTarget(e.target.value)}
+                    placeholder={
+                      drilldownType === 'search'
+                        ? 'search source.ip=$click.value$ | stats count'
+                        : drilldownType === 'dashboard'
+                        ? '/dashboards/<id>?ip=$click.value$'
+                        : 'https://ipinfo.io/$click.value$'
+                    }
+                    className="input font-mono text-sm"
+                  />
+                  <p className="text-xs text-nog-500 mt-1">
+                    Tokens: <code>$click.value$</code>, <code>$click.field$</code>, <code>$row.&lt;field&gt;$</code>, <code>$earliest$</code>, <code>$latest$</code>.
+                  </p>
+                  <label className="flex items-center gap-2 mt-2">
+                    <input type="checkbox" checked={drilldownNewTab} onChange={(e) => setDrilldownNewTab(e.target.checked)} className="w-4 h-4 rounded border-nog-300" />
+                    <span className="text-nog-700 dark:text-nog-300 text-sm">Open in a new tab</span>
+                  </label>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         <div className="modal-footer">
@@ -1077,7 +1168,7 @@ export default function DashboardViewPage() {
   const { id } = useParams<{ id: string }>();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const { drilldown } = useDrilldown();
+  const { drilldown, drilldownConfigured } = useDrilldown();
   const { confirm } = useConfirm();
   const toast = useToast();
 
@@ -1437,8 +1528,13 @@ export default function DashboardViewPage() {
     updateLayoutMutation.mutate(layoutUpdate);
   };
 
-  const handleDrilldown = (field: string, value: string) => {
-    drilldown({ field, value, timeRange, timeRangeLatest });
+  const handleDrilldown = (field: string, value: string, panel?: DashboardPanel) => {
+    const config = panel ? readDrilldownConfig(panel.options) : null;
+    if (config) {
+      drilldownConfigured(config, { field, value, earliest: timeRange, latest: timeRangeLatest });
+    } else {
+      drilldown({ field, value, timeRange, timeRangeLatest });
+    }
   };
 
   const handleExport = async () => {

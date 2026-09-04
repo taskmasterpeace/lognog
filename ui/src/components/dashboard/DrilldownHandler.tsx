@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { type DrilldownConfig, type DrilldownContext, substituteTokens } from './panelDrilldown';
 
 /**
  * Dashboard → Search drilldown.
@@ -75,10 +76,34 @@ export function useDrilldown() {
     [navigate]
   );
 
+  // Configured (per-panel) drilldown: navigate to a custom search, another
+  // dashboard, or a URL, with click tokens substituted into the target.
+  const drilldownConfigured = useCallback(
+    (config: DrilldownConfig, ctx: DrilldownContext) => {
+      const resolved = substituteTokens(config.target, ctx).trim();
+      if (!resolved) return;
+
+      if (config.type === 'url') {
+        window.open(resolved, config.newTab ? '_blank' : '_self', 'noopener,noreferrer');
+        return;
+      }
+      if (config.type === 'dashboard') {
+        const path = resolved.startsWith('/') ? resolved : `/dashboards/${resolved}`;
+        if (config.newTab) window.open(path, '_blank', 'noopener,noreferrer');
+        else navigate(path);
+        return;
+      }
+      // search: the target is a DSL query template.
+      navigate(searchUrl(resolved, ctx.earliest, ctx.latest));
+    },
+    [navigate]
+  );
+
   return {
     drilldown,
     drilldownFromRow,
     drilldownTimeRange,
+    drilldownConfigured,
   };
 }
 
