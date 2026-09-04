@@ -48,6 +48,7 @@ import {
 import { AreaChart, BarChart, PieChart, ScatterChart, FunnelChart, TreemapChart, StatCard, RadarChart, SankeyChart } from '../components/charts';
 import { readPanelFormat, formatPanelValue, THRESHOLD_COLORS, type PanelFormat } from '../components/dashboard/panelFormat';
 import { readDrilldownConfig, readRefreshSeconds, type DrilldownType } from '../components/dashboard/panelDrilldown';
+import { downloadCsv } from '../components/dashboard/csvExport';
 import { useTheme } from '../contexts/ThemeContext';
 import {
   getDashboard,
@@ -745,6 +746,14 @@ function PanelCard({
                 >
                   <Copy className="w-4 h-4" />
                   Duplicate
+                </button>
+                <button
+                  onClick={() => { downloadCsv(panel.title, data.results || []); setShowMenu(false); }}
+                  disabled={!data.results || data.results.length === 0}
+                  className="w-full px-3 py-2 text-left text-sm text-nog-700 dark:text-nog-200 hover:bg-nog-100 dark:hover:bg-nog-700 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <Download className="w-4 h-4" />
+                  Download CSV
                 </button>
                 <div className="border-t border-nog-200 dark:border-nog-600 my-1" />
                 <button
