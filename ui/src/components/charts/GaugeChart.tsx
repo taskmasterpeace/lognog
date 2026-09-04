@@ -46,8 +46,9 @@ export const GaugeChart: React.FC<GaugeChartProps> = ({
           color: 'auto' as any,
         },
         progress: {
-          show: true,
-          width: 18,
+          // Off: the coloured axisLine (green→honey→red zones) + pointer is the
+          // gauge. A progress overlay defaults to ECharts blue, which is off-brand.
+          show: false,
         },
         pointer: {
           length: '70%',

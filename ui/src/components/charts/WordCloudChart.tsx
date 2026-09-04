@@ -2,7 +2,8 @@ import React from 'react';
 import ReactECharts from 'echarts-for-react';
 import * as echarts from 'echarts';
 import 'echarts-wordcloud';
-import { CHART_PALETTE } from './palette';
+// Word clouds read best in one warm family; the full categorical palette's
+// teal/green "functional" colours look off-brand scattered across random words.
 
 export interface WordCloudData {
   name: string;
@@ -19,7 +20,7 @@ export interface WordCloudChartProps {
   maxWords?: number;
 }
 
-const DEFAULT_COLORS = CHART_PALETTE;
+const DEFAULT_COLORS = ['#C8862B', '#5A3F24', '#DCA23E', '#A66A1E', '#8B7355', '#B4702A', '#D4C4B0'];
 
 export const WordCloudChart: React.FC<WordCloudChartProps> = ({
   data,

@@ -4,6 +4,9 @@ export type { TimeSeriesChartProps, TimeSeriesData } from './TimeSeriesChart';
 export { HeatmapChart } from './HeatmapChart';
 export type { HeatmapChartProps, HeatmapData } from './HeatmapChart';
 
+export { MatrixHeatmapChart } from './MatrixHeatmapChart';
+export type { MatrixHeatmapChartProps, MatrixHeatmapData } from './MatrixHeatmapChart';
+
 export { GaugeChart } from './GaugeChart';
 export type { GaugeChartProps } from './GaugeChart';
 

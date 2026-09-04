@@ -78,6 +78,7 @@ import {
   DashboardVariable as APIDashboardVariable,
 } from '../api/client';
 import { HeatmapChart, HeatmapData } from '../components/charts/HeatmapChart';
+import { MatrixHeatmapChart } from '../components/charts/MatrixHeatmapChart';
 import { GaugeChart } from '../components/charts/GaugeChart';
 import { WordCloudChart } from '../components/charts/WordCloudChart';
 import TimePickerEnhanced from '../components/TimePickerEnhanced';
@@ -106,21 +107,21 @@ import { getDefaultDashboard, setDefaultDashboard } from './DashboardsPage';
 const CHART_COLORS = ['#C8862B', '#DCA23E', '#A66A1E', '#E6BB63', '#845117', '#5A3F24', '#8B7355', '#D4C4B0'];
 
 const VISUALIZATION_OPTIONS = [
-  { value: 'table', label: 'Table', icon: Table2 },
-  { value: 'bar', label: 'Bar Chart', icon: BarChart3 },
-  { value: 'pie', label: 'Pie Chart', icon: PieChartIcon },
-  { value: 'line', label: 'Area Chart', icon: LineChart },
-  { value: 'stat', label: 'Single Stat', icon: Hash },
-  { value: 'heatmap', label: 'Heatmap', icon: Grid3X3 },
-  { value: 'gauge', label: 'Gauge', icon: Gauge },
-  { value: 'wordcloud', label: 'Word Cloud', icon: Cloud },
-  { value: 'scatter', label: 'Scatter Plot', icon: Circle },
-  { value: 'funnel', label: 'Funnel Chart', icon: GitMerge },
-  { value: 'treemap', label: 'Treemap', icon: LayoutGrid },
-  { value: 'linechart', label: 'Line Chart', icon: TrendingUp },
-  { value: 'radar', label: 'Radar', icon: RadarIcon },
-  { value: 'sankey', label: 'Sankey', icon: Workflow },
-  { value: 'map', label: 'Map', icon: MapIcon },
+  { value: 'table', label: 'Table', icon: Table2, desc: 'Raw rows across columns — best for details, top-N lists, and results you\'ll scan or export.', example: 'search severity<=3 | table _time host app_name message' },
+  { value: 'bar', label: 'Bar Chart', icon: BarChart3, desc: 'Compare one value across categories. Sorted, so it\'s ideal for rankings ("top hosts").', example: 'search * | stats count by host' },
+  { value: 'pie', label: 'Pie Chart', icon: PieChartIcon, desc: 'Each category\'s share of a whole. Use with a handful of slices, not dozens.', example: 'search * | stats count by severity' },
+  { value: 'line', label: 'Area Chart', icon: LineChart, desc: 'Volume or rate over time with a filled area. Good for a single trend at a glance.', example: 'search * | timechart span=1h count' },
+  { value: 'stat', label: 'Single Stat', icon: Hash, desc: 'One headline number with a trend arrow + sparkline. Great for KPIs (total events, error rate).', example: 'search severity<=3 | timechart span=1h count' },
+  { value: 'heatmap', label: 'Heatmap', icon: Grid3X3, desc: 'Density across two dimensions — spot hotspots (e.g. host × severity, or hour × day).', example: 'search * | stats count by host severity' },
+  { value: 'gauge', label: 'Gauge', icon: Gauge, desc: 'One value against a range or threshold. Good for utilization or a health score.', example: 'search * | stats count' },
+  { value: 'wordcloud', label: 'Word Cloud', icon: Cloud, desc: 'Frequent terms/values sized by count — a fast sense of what dominates.', example: 'search * | top 40 message' },
+  { value: 'scatter', label: 'Scatter Plot', icon: Circle, desc: 'Relationship between two numeric fields — spot correlations and outliers.', example: 'search * | stats count avg(duration_ms) as latency by host' },
+  { value: 'funnel', label: 'Funnel Chart', icon: GitMerge, desc: 'Stage-to-stage drop-off, e.g. a conversion or processing pipeline.', example: 'search * | stats count by stage' },
+  { value: 'treemap', label: 'Treemap', icon: LayoutGrid, desc: 'Nested proportions — many categories sized by value in a compact space.', example: 'search * | stats count by host' },
+  { value: 'linechart', label: 'Line Chart', icon: TrendingUp, desc: 'A trend over time as a clean line — best when comparing several series.', example: 'search * | timechart span=1h count by severity' },
+  { value: 'radar', label: 'Radar', icon: RadarIcon, desc: 'Compare one series across several categories at a glance (e.g. counts by severity).', example: 'search * | stats count by severity' },
+  { value: 'sankey', label: 'Sankey', icon: Workflow, desc: 'Flow between two dimensions — band width is the volume (e.g. app → action).', example: 'search * | stats count by app_name action' },
+  { value: 'map', label: 'Map', icon: MapIcon, desc: 'Geographic distribution by country — great for source IPs or attacks by region.', example: 'search * | stats count by country' },
 ];
 
 const AUTO_REFRESH_OPTIONS = [
@@ -422,10 +423,26 @@ function PanelVisualization({
       const timeKey = keys.find((k) => /(^|_)(time|timestamp|bucket|date)/i.test(k));
       const hasHour = keys.includes('hour') || keys.includes('day') || !!timeKey;
       if (!hasHour) {
+        // Two group-by columns + a value → a category × category matrix
+        // (e.g. `stats count by host severity`).
+        const dimKeys = keys.filter((k) => k !== valueKey);
+        if (dimKeys.length >= 2) {
+          const [xKey, yKey] = dimKeys;
+          const matrix = results.map((r) => ({
+            x: String(r[xKey] ?? ''),
+            y: String(r[yKey] ?? ''),
+            value: Number(r[valueKey]) || 0,
+          }));
+          return (
+            <div className="h-full w-full">
+              <MatrixHeatmapChart data={matrix} height={240} darkMode={isDarkMode} xLabel={xKey} yLabel={yKey} />
+            </div>
+          );
+        }
         return (
           <div className="flex items-center justify-center h-full text-nog-400 text-sm text-center px-4">
-            Heatmap needs an <code className="mx-1">hour</code>/<code className="mx-1">day</code> or time field.
-            Try <code className="mx-1">bin _time span=1h</code> in the query.
+            Heatmap needs a time field (<code className="mx-1">bin _time span=1h</code>) or two group-by
+            fields (<code className="mx-1">stats count by host severity</code>).
           </div>
         );
       }
@@ -1080,7 +1097,7 @@ search error | timechart span=1h count"
                 return (
                   <FloatingTooltip
                     key={option.value}
-                    content={option.label}
+                    content={`${option.label} — ${option.desc}`}
                     placement="top"
                   >
                     <button
@@ -1098,6 +1115,21 @@ search error | timechart span=1h count"
                 );
               })}
             </div>
+            {/* What is the selected visualization good for? */}
+            {(() => {
+              const sel = VISUALIZATION_OPTIONS.find((o) => o.value === visualization);
+              if (!sel) return null;
+              const SelIcon = sel.icon;
+              return (
+                <div className="mt-2 flex items-start gap-2 rounded-lg border border-nog-100 dark:border-nog-700 bg-nog-50 dark:bg-nog-800/50 px-3 py-2">
+                  <SelIcon className="w-4 h-4 mt-0.5 flex-shrink-0 text-honey-600 dark:text-honey-400" />
+                  <div className="text-xs text-nog-600 dark:text-nog-400 leading-relaxed">
+                    <span className="font-medium text-nog-700 dark:text-nog-300">{sel.label}:</span> {sel.desc}
+                    <div className="mt-1 font-mono text-[11px] text-nog-500 dark:text-nog-500">e.g. {sel.example}</div>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           {/* Format (Splunk-style chart formatting) */}
