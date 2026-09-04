@@ -12,11 +12,13 @@ import {
   getSourceConfigExtractions,
   getSourceConfigTransforms,
   getSourceRoutingRules,
+  getMappingsForSource,
   SourceConfig,
   SourceConfigExtraction,
   SourceConfigTransform,
   SourceRoutingRule,
 } from '../db/sqlite.js';
+import { applyTransform } from './cim-normalizer.js';
 
 interface LogRecord {
   timestamp?: string;
@@ -295,6 +297,48 @@ function applyTransforms(log: ProcessedLog, configId: string): void {
 }
 
 /**
+ * Apply CIM normalization: map a source's fields to the canonical ECS/OCSF
+ * field names via the configured field_mappings, writing the canonical fields
+ * INTO structured_data (raw source fields are preserved). This makes canonical
+ * fields queryable (e.g. `search source.ip=...`) even when the source only
+ * emitted `rhost`. Runs at ingest so normalization is persisted, not on-demand.
+ *
+ * NOTE (perf): looks up mappings per record. If a busy source becomes a
+ * bottleneck, cache getMappingsForSource by source_type (roadmap C1 follow-up).
+ */
+function applyCIMNormalization(log: ProcessedLog): void {
+  const data = typeof log.structured_data === 'string'
+    ? JSON.parse(log.structured_data || '{}')
+    : (log.structured_data || {});
+
+  const sourceType = (data.source_type as string) || log.app_name;
+  if (!sourceType) return;
+
+  let mappings: Map<string, { cim_field: string; transform: string | null }>;
+  try {
+    mappings = getMappingsForSource(sourceType);
+  } catch {
+    return;
+  }
+  if (!mappings || mappings.size === 0) return;
+
+  let changed = false;
+  for (const [sourceField, mapping] of mappings) {
+    // Source value may live in structured_data or as a top-level log field.
+    const raw = data[sourceField] !== undefined
+      ? data[sourceField]
+      : (log as Record<string, unknown>)[sourceField];
+    if (raw === undefined || raw === null) continue;
+    data[mapping.cim_field] = applyTransform(raw, mapping.transform);
+    changed = true;
+  }
+
+  if (changed) {
+    log.structured_data = JSON.stringify(data);
+  }
+}
+
+/**
  * Determine the target index for a log record using routing rules
  */
 function determineIndex(log: LogRecord): string | null {
@@ -404,6 +448,9 @@ export function processLog(log: LogRecord): ProcessedLog {
       processed.index_name = config.target_index;
     }
   }
+
+  // 4b. CIM normalization (field_mappings-driven; independent of source config).
+  applyCIMNormalization(processed);
 
   // 5. Apply routing rules (can override config index)
   const routedIndex = determineIndex(processed);

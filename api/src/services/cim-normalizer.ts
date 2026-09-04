@@ -35,7 +35,7 @@ export interface ValidationResult {
 /**
  * Apply a transform expression to a value
  */
-function applyTransform(value: unknown, transform: string | null): unknown {
+export function applyTransform(value: unknown, transform: string | null): unknown {
   if (!transform || value === null || value === undefined) {
     return value;
   }
