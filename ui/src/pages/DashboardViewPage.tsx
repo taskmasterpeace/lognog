@@ -1852,7 +1852,7 @@ export default function DashboardViewPage() {
         headerColor={dashboard.header_color}
         backLink="/dashboards"
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-end gap-2">
             {/* Open this dashboard in the Studio to add/edit panels visually. */}
             <button
               onClick={() => navigate(`/dashboards/studio?dashboard=${id}`)}

@@ -46,20 +46,31 @@ export function DashboardGrid({
     return () => observer.disconnect();
   }, [width]);
 
-  // Convert our PanelLayout to react-grid-layout's Layout format
-  const gridLayout: Layout = layouts.map((l) => ({
-    i: l.id,
-    x: l.x,
-    y: l.y,
-    w: l.w,
-    h: l.h,
-    minW: 2,
-    minH: 2,
-    maxW: 12,
-  }));
+  // Below ~820px (iPad portrait and phones) a 12-column grid leaves half-width
+  // panels squished with dead space beside them. Collapse to a single full-width
+  // column, stacked in reading order. This is a view-only transform — it is not
+  // persisted, so the desktop layout is preserved.
+  const effectiveWidth = width ?? measured;
+  const narrow = effectiveWidth < 820;
+  const cols = narrow ? 1 : 12;
+
+  const gridLayout: Layout = (() => {
+    if (!narrow) {
+      return layouts.map((l) => ({ i: l.id, x: l.x, y: l.y, w: l.w, h: l.h, minW: 2, minH: 2, maxW: 12 }));
+    }
+    const ordered = [...layouts].sort((a, b) => a.y - b.y || a.x - b.x);
+    let cy = 0;
+    return ordered.map((l) => {
+      const item = { i: l.id, x: 0, y: cy, w: 1, h: l.h, minW: 1, minH: 2, maxW: 1 };
+      cy += l.h;
+      return item;
+    });
+  })();
 
   const handleLayoutChange = useCallback(
     (newLayout: Layout) => {
+      // Never save the collapsed single-column layout over the real one.
+      if (narrow) return;
       const panelLayouts: PanelLayout[] = newLayout.map((l) => ({
         id: l.i,
         x: l.x,
@@ -69,7 +80,7 @@ export function DashboardGrid({
       }));
       onLayoutChange(panelLayouts);
     },
-    [onLayoutChange]
+    [onLayoutChange, narrow]
   );
 
   return (
@@ -79,17 +90,17 @@ export function DashboardGrid({
         layout={gridLayout}
         width={width ?? measured}
         gridConfig={{
-          cols: 12,
+          cols,
           rowHeight: 80,
           margin: [16, 16],
           containerPadding: [0, 0],
         }}
         dragConfig={{
-          enabled: editMode,
+          enabled: editMode && !narrow,
           handle: '.panel-drag-handle',
         }}
         resizeConfig={{
-          enabled: editMode,
+          enabled: editMode && !narrow,
         }}
         onLayoutChange={handleLayoutChange}
       >
