@@ -1860,7 +1860,7 @@ export default function DashboardViewPage() {
               title="Edit in Dashboard Studio"
             >
               <LayoutDashboard className="w-4 h-4" />
-              <span className="hidden sm:inline ml-1 text-sm">Studio</span>
+              <span className="hidden xl:inline ml-1 text-sm">Studio</span>
             </button>
             {/* Variables — always available so the FIRST variable can be created
                 (previously gated on length > 0, an unbreakable chicken-and-egg). */}
@@ -1899,7 +1899,7 @@ export default function DashboardViewPage() {
                 ) : (
                   <Pause className="w-4 h-4 text-nog-400" />
                 )}
-                <span className="hidden sm:inline">
+                <span className="hidden xl:inline">
                   {autoRefreshInterval > 0 && countdownSeconds > 0 ? (
                     <span className="tabular-nums">
                       {isRefreshPaused ? 'Paused' : `${countdownSeconds}s`}
@@ -1958,7 +1958,7 @@ export default function DashboardViewPage() {
 
             <button onClick={handleRefreshAll} className="btn-secondary">
               <RefreshCw className="w-4 h-4" />
-              <span className="hidden sm:inline">Refresh</span>
+              <span className="hidden xl:inline">Refresh</span>
             </button>
 
             {/* Share button - prominent */}
@@ -1967,7 +1967,7 @@ export default function DashboardViewPage() {
               className="btn-secondary text-honey-600 border-honey-200 hover:bg-honey-50 dark:text-honey-400 dark:border-honey-800 dark:hover:bg-honey-900/30"
             >
               <Share2 className="w-4 h-4" />
-              <span className="hidden sm:inline">Share</span>
+              <span className="hidden xl:inline">Share</span>
             </button>
 
             {/* Actions dropdown */}
@@ -2092,7 +2092,7 @@ export default function DashboardViewPage() {
               title="Copy existing panel from another dashboard"
             >
               <Folder className="w-4 h-4" />
-              <span className="hidden sm:inline">Copy Panel</span>
+              <span className="hidden xl:inline">Copy Panel</span>
             </button>
 
             <button
@@ -2101,9 +2101,10 @@ export default function DashboardViewPage() {
                 setShowPanelEditor(true);
               }}
               className="btn-primary"
+              title="Add Panel"
             >
               <Plus className="w-4 h-4" />
-              <span>Add Panel</span>
+              <span className="hidden xl:inline">Add Panel</span>
             </button>
           </div>
         }
