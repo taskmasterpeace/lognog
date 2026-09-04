@@ -63,6 +63,14 @@ function presentDashboard<T extends { public_password?: string | null }>(d: T): 
   return { ...rest, has_password: !!public_password };
 }
 
+// Dashboard RBAC: a 'private' dashboard is readable only by its owner and admins.
+// 'shared' (the default) stays visible to any authenticated user.
+function canReadDashboard(req: Request, d: { owner_id?: string | null; visibility?: string | null }): boolean {
+  if (d.visibility !== 'private') return true;
+  const user = req.user;
+  return !!user && (user.role === 'admin' || d.owner_id === user.id);
+}
+
 // ---- Dashboard variables ----
 //
 // The `query` column doubles as the value list for `custom` variables (one
@@ -253,7 +261,7 @@ router.get('/app-scopes', (_req: Request, res: Response) => {
 router.get('/', (req: Request, res: Response) => {
   try {
     const appScope = req.query.app_scope as string | undefined;
-    const dashboards = getDashboards(appScope);
+    const dashboards = getDashboards(appScope).filter((d) => canReadDashboard(req, d));
     return res.json(dashboards.map(d => withOwnership(req, presentDashboard(d))));
   } catch (error) {
     console.error('Error fetching dashboards:', error);
@@ -339,6 +347,10 @@ router.get('/:id', (req: Request, res: Response) => {
   try {
     const dashboard = getDashboard(req.params.id);
     if (!dashboard) {
+      return res.status(404).json({ error: 'Dashboard not found' });
+    }
+    // Private dashboards 404 for non-owners (don't reveal they exist).
+    if (!canReadDashboard(req, dashboard)) {
       return res.status(404).json({ error: 'Dashboard not found' });
     }
 
@@ -659,7 +671,7 @@ router.put('/:id', (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Dashboard not found' });
     }
 
-    const { name, description, logo_url, accent_color, header_color, category, project_id } = req.body;
+    const { name, description, logo_url, accent_color, header_color, category, project_id, visibility } = req.body;
     const updated = updateDashboard(req.params.id, {
       name,
       description,
@@ -668,6 +680,7 @@ router.put('/:id', (req: Request, res: Response) => {
       header_color,
       category,
       project_id,
+      ...(visibility === 'private' || visibility === 'shared' ? { visibility } : {}),
     });
 
     return res.json(updated);

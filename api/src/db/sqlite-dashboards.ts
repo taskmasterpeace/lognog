@@ -204,6 +204,7 @@ export interface Dashboard {
   category?: string;
   project_id?: string;
   owner_id?: string | null;
+  visibility?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -845,12 +846,17 @@ export function updateDashboard(
     app_scope?: string;
     category?: string;
     project_id?: string;
+    visibility?: string;
   }
 ): Dashboard | undefined {
   const database = getSQLiteDB();
   const fields: string[] = [];
   const values: unknown[] = [];
 
+  if (updates.visibility !== undefined) {
+    fields.push('visibility = ?');
+    values.push(updates.visibility);
+  }
   if (updates.name !== undefined) {
     fields.push('name = ?');
     values.push(updates.name);

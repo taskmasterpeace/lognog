@@ -45,6 +45,8 @@ import {
   Workflow,
   TrendingUp,
   Map as MapIcon,
+  Lock,
+  Globe,
 } from 'lucide-react';
 import { AreaChart, BarChart, PieChart, ScatterChart, FunnelChart, TreemapChart, StatCard, RadarChart, SankeyChart, GeoMapChart } from '../components/charts';
 import { readPanelFormat, formatPanelValue, THRESHOLD_COLORS, type PanelFormat } from '../components/dashboard/panelFormat';
@@ -55,6 +57,7 @@ import {
   getDashboard,
   executeSearch,
   createDashboardPanel,
+  updateDashboard,
   updateDashboardPanel,
   deleteDashboardPanel,
   updateDashboardLayout,
@@ -1965,6 +1968,25 @@ export default function DashboardViewPage() {
                     >
                       <Palette className="w-4 h-4" />
                       Branding
+                    </button>
+                  )}
+                  {dashboard.is_owner !== false && (
+                    <button
+                      onClick={async () => {
+                        const next = dashboard.visibility === 'private' ? 'shared' : 'private';
+                        try {
+                          await updateDashboard(id!, { visibility: next });
+                          queryClient.invalidateQueries({ queryKey: ['dashboard', id] });
+                          toast.success(next === 'private' ? 'Dashboard is now private (owner + admins only)' : 'Dashboard is now shared');
+                        } catch {
+                          toast.error('Failed to change visibility');
+                        }
+                        setShowActionsDropdown(false);
+                      }}
+                      className="dropdown-item"
+                    >
+                      {dashboard.visibility === 'private' ? <Globe className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
+                      {dashboard.visibility === 'private' ? 'Make Shared' : 'Make Private'}
                     </button>
                   )}
                   {dashboard.is_owner !== false && (

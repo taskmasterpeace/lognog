@@ -219,6 +219,8 @@ export interface Dashboard {
   public_expires_at?: string;
   owner_id?: string | null;
   is_owner?: boolean;
+  /** 'shared' (any authenticated user) or 'private' (owner + admins only). */
+  visibility?: string;
 }
 
 export interface DashboardPanel {

@@ -737,6 +737,11 @@ function initializeSchema(): void {
   if (!columnNames.includes('icon')) {
     database.exec('ALTER TABLE dashboards ADD COLUMN icon TEXT');
   }
+  // RBAC: 'shared' (any authenticated user) vs 'private' (owner + admins only).
+  // Default 'shared' so existing dashboards stay visible.
+  if (!columnNames.includes('visibility')) {
+    database.exec("ALTER TABLE dashboards ADD COLUMN visibility TEXT DEFAULT 'shared'");
+  }
 
   // Add dashboard_pages table for multi-page dashboards
   database.exec(`
