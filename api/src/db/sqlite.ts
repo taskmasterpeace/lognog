@@ -31,6 +31,16 @@ function initializeSchema(): void {
       updated_at TEXT DEFAULT (datetime('now'))
     );
 
+    -- Search macros: reusable named DSL fragments (referenced in queries).
+    CREATE TABLE IF NOT EXISTS macros (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL UNIQUE,
+      definition TEXT NOT NULL,
+      description TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+
     -- Dashboards
     CREATE TABLE IF NOT EXISTS dashboards (
       id TEXT PRIMARY KEY,

@@ -12,6 +12,8 @@
 import * as clickhouse from './clickhouse.js';
 import * as sqliteLogs from './sqlite-logs.js';
 import { parseToAST } from '../dsl/index.js';
+import { expandMacros } from '../services/macros.js';
+import { resolveMacroDefinition } from './sqlite-macros.js';
 import { compileDSL } from '../dsl/compiler.js';
 import { compileDSLToSQLite } from '../dsl/compiler-sqlite.js';
 import { logQueryExecution } from '../services/internal-logger.js';
@@ -179,7 +181,8 @@ export async function executeDSLQuery<T = Record<string, unknown>>(
   const startTime = Date.now();
 
   try {
-    const ast = parseToAST(dslQuery);
+    // Expand `macro` / saved-search references before parsing (chaining).
+    const ast = parseToAST(expandMacros(dslQuery, resolveMacroDefinition));
 
     // Split AST at lookup stages: compile pre-lookup to SQL, post-lookup as in-memory
     const lookupIndex = ast.stages.findIndex(s => s.type === 'lookup');
