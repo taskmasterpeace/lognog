@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseAndCompile, parseToAST } from './index';
+import { parseAndCompile, parseToAST, compileDSL } from './index';
 import { compileDSLToSQLite } from './compiler-sqlite';
 
 const sqlite = (q: string) => compileDSLToSQLite(parseToAST(q)).sql;
@@ -63,6 +63,45 @@ describe('wildcard with = (host=web*)', () => {
   it('field=* is still an existence check, not LIKE', () => {
     const r = parseAndCompile('search hostname=*');
     expect(r.sql).not.toContain('LIKE');
+  });
+});
+
+describe('chart command (was a dead no-op)', () => {
+  it('chart with count aggregates by the x field', () => {
+    const r = parseAndCompile('search * | chart type=bar x=hostname agg=count');
+    expect(r.sql).toContain('count()');
+    expect(r.sql).toContain('GROUP BY');
+    expect(r.sql).toContain('hostname');
+  });
+
+  it('chart avg(y) over x aggregates and groups', () => {
+    const r = parseAndCompile('search * | chart type=line x=hostname y=bytes agg=avg');
+    expect(r.sql).toContain('avg(');
+    expect(r.sql).toContain('GROUP BY');
+  });
+
+  it('chart with a split-by series groups by x and series', () => {
+    const r = parseAndCompile('search * | chart type=bar x=status_code agg=count by=hostname');
+    expect(r.sql).toContain('GROUP BY');
+    expect(r.sql).toContain('hostname');
+  });
+
+  it('surfaces chartType + fields as metadata', () => {
+    const r = compileDSL(parseToAST('search * | chart type=pie x=hostname agg=count'));
+    expect(r.metadata?.chart?.chartType).toBe('pie');
+    expect(r.metadata?.chart?.xField).toBe('hostname');
+  });
+
+  it('a bare chart (no agg) counts', () => {
+    const r = parseAndCompile('search * | chart type=table x=hostname');
+    expect(r.sql).toContain('count()');
+    expect(r.sql).toContain('GROUP BY');
+  });
+
+  it('SQLite backend: chart aggregates by x', () => {
+    const s = sqlite('search * | chart type=bar x=hostname agg=count');
+    expect(s).toMatch(/COUNT\(\*\)/i);
+    expect(s).toContain('GROUP BY');
   });
 });
 

@@ -1102,13 +1102,23 @@ export class Parser {
 
     // Parse options
     while (!this.isAtEnd() && !this.check(TokenType.PIPE)) {
+      // `by=<field>` — `by` lexes as a keyword, not an identifier, so handle it
+      // explicitly before the identifier-keyed options below.
+      if (this.check(TokenType.BY)) {
+        this.advance();
+        this.consume(TokenType.EQUALS, 'Expected "=" after by');
+        groupBy = this.consume(TokenType.IDENTIFIER, 'Expected group by field').value;
+        continue;
+      }
       if (this.check(TokenType.IDENTIFIER)) {
         const key = this.peek().value.toLowerCase();
 
         if (key === 'type') {
           this.advance();
           this.consume(TokenType.EQUALS, 'Expected "="');
-          const typeValue = this.consume(TokenType.IDENTIFIER, 'Expected chart type').value.toLowerCase();
+          // The value may be a keyword (`table`), so take the raw token value
+          // rather than requiring an IDENTIFIER.
+          const typeValue = this.advance().value.toLowerCase();
           if (['line', 'bar', 'pie', 'scatter', 'area', 'table'].includes(typeValue)) {
             chartType = typeValue as typeof chartType;
           }

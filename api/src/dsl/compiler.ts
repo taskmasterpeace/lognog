@@ -40,6 +40,12 @@ export interface CompiledQueryWithMeta extends CompiledQuery {
       span: string;
       series?: 'relative' | 'exact';
     };
+    chart?: {
+      chartType: string;
+      xField?: string;
+      yField?: string;
+      groupBy?: string;
+    };
   };
 }
 
@@ -201,9 +207,10 @@ export class Compiler {
     // and group-by field names — NOT structured_data fields, which are collapsed.
     const outputAliases = new Set<string>();
 
-    // Metadata for post-processing (compare, timewrap)
+    // Metadata for post-processing (compare, timewrap) and presentation (chart)
     let compareMetadata: { offset: string; fields?: string[] } | undefined;
     let timewrapMetadata: { span: string; series?: 'relative' | 'exact' } | undefined;
+    let chartMetadata: { chartType: string; xField?: string; yField?: string; groupBy?: string } | undefined;
 
     for (const stage of stages) {
       switch (stage.type) {
@@ -392,6 +399,43 @@ export class Compiler {
             series: (stage as TimewrapNode).series,
           };
           break;
+
+        case 'chart': {
+          // Chart aggregates like stats: group by the x field (and an optional
+          // split-by series), aggregating agg(y) — or count. Previously a dead
+          // no-op. chartType is a presentation hint surfaced as metadata so the
+          // UI can pick the visualization; the SQL just shapes the data.
+          isAggregation = true;
+          let fn = stage.aggregation || 'count';
+          if (fn !== 'count' && !stage.yField) fn = 'count';
+          aggregationSelect = this.compileStats({
+            type: 'stats',
+            aggregations: [{ function: fn, field: stage.yField || null }],
+            groupBy: [],
+          });
+          groupByFields = [];
+          groupBySelect = [];
+          if (stage.xField) {
+            groupByFields.push(this.mapFieldForSelect(stage.xField, 'string'));
+            groupBySelect.push(this.projectGroupBy(stage.xField));
+          }
+          if (stage.groupBy) {
+            groupByFields.push(this.mapFieldForSelect(stage.groupBy, 'string'));
+            groupBySelect.push(this.projectGroupBy(stage.groupBy));
+          }
+          if (stage.xField) {
+            orderByFields = [`${this.mapFieldForSelect(stage.xField, 'string')} ASC`];
+          }
+          if (stage.limit != null) limitCount = stage.limit;
+          aggregationSelect.forEach(s => outputAliases.add(this.outputFieldName(s).toLowerCase()));
+          chartMetadata = {
+            chartType: stage.chartType,
+            xField: stage.xField,
+            yField: stage.yField,
+            groupBy: stage.groupBy,
+          };
+          break;
+        }
       }
     }
 
@@ -452,13 +496,16 @@ export class Compiler {
     // Build result with optional metadata
     const result: CompiledQueryWithMeta = { sql, params: this.params };
 
-    if (compareMetadata || timewrapMetadata) {
+    if (compareMetadata || timewrapMetadata || chartMetadata) {
       result.metadata = {};
       if (compareMetadata) {
         result.metadata.compare = compareMetadata;
       }
       if (timewrapMetadata) {
         result.metadata.timewrap = timewrapMetadata;
+      }
+      if (chartMetadata) {
+        result.metadata.chart = chartMetadata;
       }
     }
 

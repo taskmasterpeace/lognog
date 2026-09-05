@@ -40,6 +40,12 @@ export interface CompiledQueryWithMeta extends CompiledQuery {
       span: string;
       series?: 'relative' | 'exact';
     };
+    chart?: {
+      chartType: string;
+      xField?: string;
+      yField?: string;
+      groupBy?: string;
+    };
   };
 }
 
@@ -169,9 +175,10 @@ export class SQLiteCompiler {
     let aggregationSelect: string[] = [];
     let dedupFields: string[] = [];
 
-    // Metadata for post-processing (compare, timewrap)
+    // Metadata for post-processing (compare, timewrap) and presentation (chart)
     let compareMetadata: { offset: string; fields?: string[] } | undefined;
     let timewrapMetadata: { span: string; series?: 'relative' | 'exact' } | undefined;
+    let chartMetadata: { chartType: string; xField?: string; yField?: string; groupBy?: string } | undefined;
 
     for (const stage of stages) {
       switch (stage.type) {
@@ -329,6 +336,41 @@ export class SQLiteCompiler {
             series: (stage as TimewrapNode).series,
           };
           break;
+
+        case 'chart': {
+          // Chart aggregates like stats: group by the x field (and an optional
+          // split-by series), aggregating agg(y) — or count. Previously a dead
+          // no-op. chartType is a presentation hint surfaced as metadata.
+          isAggregation = true;
+          let fn = stage.aggregation || 'count';
+          if (fn !== 'count' && !stage.yField) fn = 'count';
+          aggregationSelect = this.compileStats({
+            type: 'stats',
+            aggregations: [{ function: fn, field: stage.yField || null }],
+            groupBy: [],
+          });
+          groupByFields = [];
+          groupBySelectFields = [];
+          if (stage.xField) {
+            groupByFields.push(this.mapFieldForSelect(stage.xField));
+            groupBySelectFields.push(this.projectGroupBy(stage.xField));
+          }
+          if (stage.groupBy) {
+            groupByFields.push(this.mapFieldForSelect(stage.groupBy));
+            groupBySelectFields.push(this.projectGroupBy(stage.groupBy));
+          }
+          if (stage.xField) {
+            orderByFields = [`${this.mapFieldForSelect(stage.xField)} ASC`];
+          }
+          if (stage.limit != null) limitCount = stage.limit;
+          chartMetadata = {
+            chartType: stage.chartType,
+            xField: stage.xField,
+            yField: stage.yField,
+            groupBy: stage.groupBy,
+          };
+          break;
+        }
       }
     }
 
@@ -387,13 +429,16 @@ export class SQLiteCompiler {
     // Build result with optional metadata
     const result: CompiledQueryWithMeta = { sql, params: this.params };
 
-    if (compareMetadata || timewrapMetadata) {
+    if (compareMetadata || timewrapMetadata || chartMetadata) {
       result.metadata = {};
       if (compareMetadata) {
         result.metadata.compare = compareMetadata;
       }
       if (timewrapMetadata) {
         result.metadata.timewrap = timewrapMetadata;
+      }
+      if (chartMetadata) {
+        result.metadata.chart = chartMetadata;
       }
     }
 
