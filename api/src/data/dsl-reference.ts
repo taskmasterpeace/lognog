@@ -29,7 +29,7 @@ export interface DSLOperator {
 
 export interface DSLFunction {
   name: string;
-  category: 'aggregation' | 'eval-math' | 'eval-string' | 'eval-conditional' | 'eval-ip';
+  category: 'aggregation' | 'eval-math' | 'eval-string' | 'eval-conditional' | 'eval-ip' | 'eval-date';
   description: string;
   syntax: string;
   example: string;
@@ -43,7 +43,7 @@ export interface DSLField {
 }
 
 // =============================================================================
-// COMMANDS (18)
+// COMMANDS (29)
 // =============================================================================
 
 export const DSL_COMMANDS: DSLCommand[] = [
@@ -58,6 +58,7 @@ export const DSL_COMMANDS: DSLCommand[] = [
     examples: [
       { query: 'search *', description: 'Return all recent logs' },
       { query: 'search host=webserver', description: 'Filter by hostname' },
+      { query: 'search hostname=web*', description: 'Wildcard match — hosts starting with "web" (also *.internal, 4*, etc.)' },
       { query: 'search severity<=3', description: 'Show errors and above (Emergency, Alert, Critical, Error)' },
       { query: 'search index="myapp" error', description: 'Search for "error" in myapp index' },
       { query: 'search (host=web1 OR host=web2) AND severity<=4', description: 'Complex filter with grouping' },
@@ -198,20 +199,22 @@ export const DSL_COMMANDS: DSLCommand[] = [
   },
   {
     name: 'top',
-    description: 'Find the most common values of a field.',
-    syntax: 'top <number> <field>',
+    description: 'Find the most common values of a field. With `by`, returns the top N per group.',
+    syntax: 'top <number> <field> [by <group_field>]',
     examples: [
       { query: 'search * | top 10 hostname', description: 'Top 10 most active hosts' },
       { query: 'search * | top 5 app_name', description: 'Top 5 applications by event count' },
+      { query: 'search * | top 3 status_code by hostname', description: 'Top 3 status codes for each host (per-group)' },
     ],
   },
   {
     name: 'rare',
-    description: 'Find the least common values of a field.',
-    syntax: 'rare <number> <field>',
+    description: 'Find the least common values of a field. With `by`, returns the rarest N per group.',
+    syntax: 'rare <number> <field> [by <group_field>]',
     examples: [
       { query: 'search * | rare 10 hostname', description: 'Least active 10 hosts' },
       { query: 'search * | rare 5 app_name', description: 'Rarest 5 applications' },
+      { query: 'search * | rare 3 status_code by hostname', description: 'Rarest 3 status codes for each host' },
     ],
   },
   {
@@ -234,6 +237,108 @@ export const DSL_COMMANDS: DSLCommand[] = [
     examples: [
       { query: 'search * | rex "user=(?P<username>\\w+)"', description: 'Extract username from message' },
       { query: 'search * | rex field=raw "(?P<ip>\\d+\\.\\d+\\.\\d+\\.\\d+)"', description: 'Extract IP from raw' },
+    ],
+  },
+  {
+    name: 'lookup',
+    description: 'Enrich results by matching a field against a lookup/KV table and adding its columns.',
+    syntax: 'lookup <table> field=<field> [match=<key_field>] [output <field1>, <field2>...]',
+    examples: [
+      { query: 'search * | lookup http_status field=status_code', description: 'Add status name/category from the http_status table' },
+      { query: 'search * | lookup users field=user_id match=id output name, email', description: 'Join on id and add name and email' },
+    ],
+  },
+  {
+    name: 'chart',
+    description: 'Aggregate into a chartable shape: group by an x field (and an optional split-by series), aggregating a value or count. The chart type is a display hint for the UI.',
+    syntax: 'chart type=<line|bar|pie|scatter|area|table> x=<field> [y=<field>] [agg=<func>] [by=<series>] [limit=<n>]',
+    parameters: [
+      { name: 'type', description: 'Visualization type', required: false },
+      { name: 'x', description: 'Field for the x-axis (grouping)', required: false },
+      { name: 'y', description: 'Field to aggregate (used with agg)', required: false },
+      { name: 'agg', description: 'Aggregation: count, sum, avg, min, max, dc', required: false },
+      { name: 'by', description: 'Split-by series field', required: false },
+    ],
+    examples: [
+      { query: 'search * | chart type=bar x=status_code agg=count', description: 'Count events by status code as a bar chart' },
+      { query: 'search * | chart type=line x=hostname y=duration_ms agg=avg', description: 'Average duration per host' },
+      { query: 'search * | chart type=bar x=status_code agg=count by=hostname', description: 'Counts split into a series per host' },
+    ],
+  },
+  {
+    name: 'fillnull',
+    description: 'Replace null or empty values with a fill value (default 0).',
+    syntax: 'fillnull [value=<v>] [field1 field2 ...]',
+    examples: [
+      { query: 'search * | fillnull model_id', description: 'Fill a missing model_id with 0' },
+      { query: 'search * | fillnull value="N/A" city, country', description: 'Fill missing city/country with "N/A"' },
+    ],
+  },
+  {
+    name: 'convert',
+    description: 'Convert field values between types/formats.',
+    syntax: 'convert <num|ctime|mktime>(<field>) [as <alias>], ...',
+    examples: [
+      { query: 'search * | convert num(bytes)', description: 'Cast bytes to a number' },
+      { query: 'search * | convert ctime(epoch) as time_str', description: 'Format an epoch time as a readable string' },
+      { query: 'search * | convert mktime(created)', description: 'Parse a time string into epoch seconds' },
+    ],
+  },
+  {
+    name: 'inputlookup',
+    description: 'Read a lookup/KV table as the data source instead of the logs. Usually the first command.',
+    syntax: 'inputlookup <table>',
+    examples: [
+      { query: 'inputlookup watchlist', description: 'Return every row of the watchlist table' },
+      { query: 'inputlookup watchlist | search role=admin', description: 'Filter the table rows downstream' },
+    ],
+  },
+  {
+    name: 'outputlookup',
+    description: 'Write the current result set to a lookup table (keyed on the first field).',
+    syntax: '... | outputlookup <table>',
+    examples: [
+      { query: 'search severity<=3 | dedup hostname | table hostname | outputlookup error_hosts', description: 'Save the list of hosts that had errors' },
+    ],
+  },
+  {
+    name: 'append',
+    description: 'Run a subsearch and append its rows to the current result set (a union of two searches).',
+    syntax: '... | append [ <subsearch> ]',
+    examples: [
+      { query: 'search index=app | append [ search index=web ]', description: 'Combine results from two indexes' },
+    ],
+  },
+  {
+    name: 'filldown',
+    description: 'Fill empty field values downward using the last non-empty value.',
+    syntax: 'filldown [field1 field2 ...]',
+    examples: [
+      { query: 'search * | filldown user_id', description: 'Carry the last-seen user_id into blank rows' },
+    ],
+  },
+  {
+    name: 'transaction',
+    description: 'Group related events into transactions by shared field values within time constraints.',
+    syntax: 'transaction <field> [maxspan=<time>] [maxpause=<time>]',
+    examples: [
+      { query: 'search * | transaction session_id maxspan=30m', description: 'Group events into sessions up to 30 minutes apart' },
+    ],
+  },
+  {
+    name: 'compare',
+    description: 'Compare the current period to an earlier offset period; adds change columns.',
+    syntax: 'compare <offset> [field1 field2 ...]',
+    examples: [
+      { query: 'search * | stats count by hostname | compare 1d', description: "Compare today's counts to yesterday" },
+    ],
+  },
+  {
+    name: 'timewrap',
+    description: 'Overlay multiple time periods as separate series for comparison.',
+    syntax: 'timewrap <span> [series=relative|exact]',
+    examples: [
+      { query: 'search * | timechart span=1h count | timewrap 1d', description: 'Overlay each day as its own series' },
     ],
   },
 ];
@@ -330,6 +435,10 @@ export const DSL_EVAL_FUNCTIONS: DSLFunction[] = [
   { name: 'coalesce', category: 'eval-conditional', description: 'First non-null value', syntax: 'coalesce(<value1>, <value2>, ...)', example: 'eval name=coalesce(display_name, username, "unknown")' },
   { name: 'nullif', category: 'eval-conditional', description: 'Return null if values equal', syntax: 'nullif(<value1>, <value2>)', example: 'eval clean=nullif(value, "N/A")' },
   { name: 'case', category: 'eval-conditional', description: 'Multi-condition expression', syntax: 'case(<cond1>, <val1>, <cond2>, <val2>, ..., <default>)', example: 'eval level=case(severity<=1, "critical", severity<=3, "error", "info")' },
+
+  // Date/time functions (Splunk arg order: value first, then format)
+  { name: 'strftime', category: 'eval-date', description: 'Format an epoch time as a string', syntax: 'strftime(<epoch>, <format>)', example: 'eval day=strftime(timestamp, "%Y-%m-%d")' },
+  { name: 'strptime', category: 'eval-date', description: 'Parse a time string into epoch seconds', syntax: 'strptime(<string>, <format>)', example: 'eval epoch=strptime(created, "%Y-%m-%d %H:%M:%S")' },
 
   // IP classification functions
   { name: 'classify_ip', category: 'eval-ip', description: 'Classify IP type', syntax: 'classify_ip(<ip>)', example: 'eval ip_type=classify_ip(source_ip)' },

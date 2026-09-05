@@ -19,6 +19,7 @@ The LogNog DSL (Domain Specific Language) is a powerful, pipe-based query langua
 9. [Time Expressions](#time-expressions)
 10. [Common Patterns](#common-patterns)
 11. [Performance Tips](#performance-tips)
+12. [Enrichment & Advanced Commands](#enrichment--advanced-commands)
 
 ---
 
@@ -751,6 +752,86 @@ WHERE hostname LIKE '%web%' AND severity <= 4
 GROUP BY app_name
 ORDER BY count DESC
 LIMIT 5
+```
+
+---
+
+## Enrichment & Advanced Commands
+
+Beyond the core pipeline, LogNog supports wildcards, reshaping, enrichment, and multi-search commands.
+
+### Wildcards in search
+
+`field=value*` works directly (previously only `field~"value*"`):
+
+```
+search hostname=web*          # hosts starting with "web"
+search hostname=*.internal    # hosts ending in ".internal"
+search status_code=4*         # 4xx status codes
+```
+
+### chart
+
+Aggregate into a chartable shape. The `type` is a display hint for the UI.
+
+```
+chart type=bar x=status_code agg=count
+chart type=line x=hostname y=duration_ms agg=avg
+chart type=bar x=status_code agg=count by=hostname   # split into a series per host
+```
+
+### top / rare … by
+
+Per-group top/rare — the top (or rarest) N values for **each** group:
+
+```
+search * | top 3 status_code by hostname    # top 3 status codes for each host
+search * | rare 3 url by hostname
+```
+
+### fillnull
+
+Replace null/empty values with a fill value (default `0`):
+
+```
+search * | fillnull model_id
+search * | fillnull value="N/A" city, country
+```
+
+### convert & date functions
+
+```
+search * | convert num(bytes)                       # cast to a number
+search * | convert ctime(epoch) as time_str         # epoch seconds -> readable string
+search * | eval day=strftime(timestamp, "%Y-%m-%d") # format a time
+search * | eval e=strptime(created, "%Y-%m-%d")     # parse a time string -> epoch
+```
+
+### lookup / inputlookup / outputlookup
+
+Enrich from, read, or write lookup/KV tables:
+
+```
+search * | lookup http_status field=status_code                                  # enrich with table columns
+inputlookup watchlist | search role=admin                                        # read a table as the data source
+search severity<=3 | dedup hostname | table hostname | outputlookup error_hosts   # write results to a table
+```
+
+### append
+
+Union a subsearch onto the current results:
+
+```
+search index=app | append [ search index=web ]
+```
+
+### filldown / transaction / compare / timewrap
+
+```
+search * | filldown user_id                            # carry the last value into blank rows
+search * | transaction session_id maxspan=30m          # group events into sessions
+search * | stats count by hostname | compare 1d        # compare today to yesterday
+search * | timechart span=1h count | timewrap 1d       # overlay each day as its own series
 ```
 
 ---
