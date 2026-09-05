@@ -25,6 +25,11 @@ import {
   ChartNode,
   CompareNode,
   TimewrapNode,
+  FillnullNode,
+  ConvertNode,
+  InputLookupNode,
+  OutputLookupNode,
+  AppendNode,
   Condition,
   SimpleCondition,
   LogicGroup,
@@ -125,6 +130,16 @@ export class Parser {
         return this.parseCompare();
       case TokenType.TIMEWRAP:
         return this.parseTimewrap();
+      case TokenType.FILLNULL:
+        return this.parseFillnull();
+      case TokenType.CONVERT:
+        return this.parseConvert();
+      case TokenType.INPUTLOOKUP:
+        return this.parseInputLookup();
+      case TokenType.OUTPUTLOOKUP:
+        return this.parseOutputLookup();
+      case TokenType.APPEND:
+        return this.parseAppend();
       case TokenType.IDENTIFIER:
         // Implicit search with field=value
         return this.parseImplicitSearch();
@@ -824,15 +839,11 @@ export class Parser {
     // Parse field
     const field = this.consume(TokenType.IDENTIFIER, 'Expected field name').value;
 
-    // Optional: by count (default behavior, so we can ignore it)
-    if (this.match(TokenType.BY)) {
-      const byField = this.peek().value;
-      if (byField.toLowerCase() === 'count') {
-        this.advance(); // consume 'count'
-      }
-    }
+    // Optional `by`: `by count` is the default ranking metric (ignore); a bare
+    // `by <field>` means per-group top-N (top N values of `field` for each group).
+    const by = this.parseTopRareBy();
 
-    return { type: 'top', limit, field };
+    return { type: 'top', limit, field, by };
   }
 
   private parseRare(): RareNode {
@@ -843,7 +854,105 @@ export class Parser {
     // Parse field
     const field = this.consume(TokenType.IDENTIFIER, 'Expected field name').value;
 
-    return { type: 'rare', limit, field };
+    const by = this.parseTopRareBy();
+
+    return { type: 'rare', limit, field, by };
+  }
+
+  /** Optional `by <field>` for top/rare. `by count` is the default → ignored. */
+  private parseTopRareBy(): string | undefined {
+    if (!this.match(TokenType.BY)) return undefined;
+    if (this.check(TokenType.COUNT)) {
+      this.advance();
+      return undefined;
+    }
+    if (this.checkFieldName()) {
+      return this.advance().value;
+    }
+    return undefined;
+  }
+
+  private parseFillnull(): FillnullNode {
+    this.consume(TokenType.FILLNULL, 'Expected "fillnull"');
+    let value: string | number = 0;
+    const fields: string[] = [];
+
+    while (!this.isAtEnd() && !this.check(TokenType.PIPE)) {
+      // value=<v>  (the fill value; default 0)
+      if (this.check(TokenType.IDENTIFIER) && this.peek().value.toLowerCase() === 'value') {
+        this.advance();
+        this.consume(TokenType.EQUALS, 'Expected "=" after value');
+        if (this.check(TokenType.NUMBER)) {
+          value = parseFloat(this.advance().value);
+        } else if (this.check(TokenType.STRING) || this.check(TokenType.IDENTIFIER)) {
+          value = this.advance().value;
+        }
+      } else if (this.checkFieldName()) {
+        fields.push(this.advance().value);
+        this.match(TokenType.COMMA);
+      } else {
+        break;
+      }
+    }
+
+    return { type: 'fillnull', fields, value };
+  }
+
+  private parseConvert(): ConvertNode {
+    this.consume(TokenType.CONVERT, 'Expected "convert"');
+    const conversions: { func: string; field: string; alias?: string }[] = [];
+
+    while (!this.isAtEnd() && !this.check(TokenType.PIPE)) {
+      if (!this.check(TokenType.IDENTIFIER)) break;
+      const func = this.advance().value.toLowerCase();
+      this.consume(TokenType.LPAREN, 'Expected "(" after convert function');
+      const field = this.consume(TokenType.IDENTIFIER, 'Expected field name').value;
+      this.consume(TokenType.RPAREN, 'Expected ")"');
+      let alias: string | undefined;
+      if (this.match(TokenType.AS)) {
+        alias = this.consume(TokenType.IDENTIFIER, 'Expected alias').value;
+      }
+      conversions.push({ func, field, alias });
+      this.match(TokenType.COMMA);
+    }
+
+    return { type: 'convert', conversions };
+  }
+
+  private parseInputLookup(): InputLookupNode {
+    this.consume(TokenType.INPUTLOOKUP, 'Expected "inputlookup"');
+    const table = this.consume(TokenType.IDENTIFIER, 'Expected lookup table name').value;
+    return { type: 'inputlookup', table };
+  }
+
+  private parseOutputLookup(): OutputLookupNode {
+    this.consume(TokenType.OUTPUTLOOKUP, 'Expected "outputlookup"');
+    const table = this.consume(TokenType.IDENTIFIER, 'Expected lookup table name').value;
+    return { type: 'outputlookup', table };
+  }
+
+  private parseAppend(): AppendNode {
+    this.consume(TokenType.APPEND, 'Expected "append"');
+    this.consume(TokenType.LBRACKET, 'Expected "[" after append');
+
+    // Extract the bracketed subsearch tokens (handling nesting) and parse them
+    // as an independent query, so every per-command parser works normally and
+    // sees EOF where the closing bracket is.
+    const subTokens: Token[] = [];
+    let depth = 1;
+    while (!this.isAtEnd()) {
+      if (this.check(TokenType.LBRACKET)) depth++;
+      else if (this.check(TokenType.RBRACKET)) {
+        depth--;
+        if (depth === 0) break;
+      }
+      subTokens.push(this.advance());
+    }
+    this.consume(TokenType.RBRACKET, 'Expected "]" to close append subsearch');
+    subTokens.push({ type: TokenType.EOF, value: '', line: 0, column: 0 });
+
+    const subsearch = new Parser(subTokens).parse();
+    return { type: 'append', subsearch };
   }
 
   private parseBin(): BinNode {

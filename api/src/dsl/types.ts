@@ -37,6 +37,11 @@ export enum TokenType {
   OUTPUT = 'OUTPUT',
   COMPARE = 'COMPARE',
   TIMEWRAP = 'TIMEWRAP',
+  FILLNULL = 'FILLNULL',
+  CONVERT = 'CONVERT',
+  INPUTLOOKUP = 'INPUTLOOKUP',
+  OUTPUTLOOKUP = 'OUTPUTLOOKUP',
+  APPEND = 'APPEND',
 
   // Aggregation functions
   COUNT = 'COUNT',
@@ -88,6 +93,8 @@ export enum TokenType {
   COMMA = 'COMMA',
   LPAREN = 'LPAREN',
   RPAREN = 'RPAREN',
+  LBRACKET = 'LBRACKET',
+  RBRACKET = 'RBRACKET',
 
   // Special
   EOF = 'EOF',
@@ -123,7 +130,12 @@ export type ASTNode =
   | LookupNode
   | ChartNode
   | CompareNode
-  | TimewrapNode;
+  | TimewrapNode
+  | FillnullNode
+  | ConvertNode
+  | InputLookupNode
+  | OutputLookupNode
+  | AppendNode;
 
 export interface SearchNode {
   type: 'search';
@@ -291,6 +303,7 @@ export interface RareNode {
   type: 'rare';
   limit: number;
   field: string;
+  by?: string; // optional per-group field
 }
 
 export interface BinNode {
@@ -365,6 +378,52 @@ export interface TimewrapNode {
   type: 'timewrap';
   span: string;         // "1d", "1w", "1mo"
   series?: 'relative' | 'exact';  // Naming style for period labels
+}
+
+/**
+ * fillnull - replace null/empty values with a fill value.
+ * Syntax: | fillnull [value=<v>] [field1 field2 ...]  (default value 0, all fields)
+ */
+export interface FillnullNode {
+  type: 'fillnull';
+  fields: string[];        // empty = all currently-selected fields
+  value: string | number;  // fill value (default 0)
+}
+
+/**
+ * convert - convert field values between types/formats.
+ * Syntax: | convert num(field) [as alias], ctime(field), mktime(field), ...
+ */
+export interface ConvertNode {
+  type: 'convert';
+  conversions: { func: string; field: string; alias?: string }[];
+}
+
+/**
+ * inputlookup - read a lookup/KV table as the data source (replaces the search).
+ * Syntax: | inputlookup <table>   (usually the first stage)
+ */
+export interface InputLookupNode {
+  type: 'inputlookup';
+  table: string;
+}
+
+/**
+ * outputlookup - write the current result set to a lookup table.
+ * Syntax: ... | outputlookup <table>
+ */
+export interface OutputLookupNode {
+  type: 'outputlookup';
+  table: string;
+}
+
+/**
+ * append - run a subsearch and append its rows to the current result set.
+ * Syntax: ... | append [ <subsearch> ]
+ */
+export interface AppendNode {
+  type: 'append';
+  subsearch: QueryAST;
 }
 
 // Query AST

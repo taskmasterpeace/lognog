@@ -211,6 +211,8 @@ export class Compiler {
     let compareMetadata: { offset: string; fields?: string[] } | undefined;
     let timewrapMetadata: { span: string; series?: 'relative' | 'exact' } | undefined;
     let chartMetadata: { chartType: string; xField?: string; yField?: string; groupBy?: string } | undefined;
+    // Per-group top/rare (`top N field by group`) -> ClickHouse `LIMIT N BY`.
+    let perGroupLimit: { count: number; byExpr: string } | null = null;
 
     for (const stage of stages) {
       switch (stage.type) {
@@ -316,8 +318,18 @@ export class Compiler {
           aggregationSelect = [`count() AS count`];
           groupByFields = [this.mapFieldForSelect(stage.field, 'string')];
           groupBySelect = [this.projectGroupBy(stage.field)];
-          orderByFields = ['count DESC'];
-          limitCount = stage.limit;
+          if (stage.by) {
+            // Per-group top-N (`top N field by group`): group by [group, field],
+            // rank within each group, keep N per group via `LIMIT N BY group`.
+            const byExpr = this.mapFieldForSelect(stage.by, 'string');
+            groupByFields.unshift(byExpr);
+            groupBySelect.unshift(this.projectGroupBy(stage.by));
+            orderByFields = [byExpr, 'count DESC'];
+            perGroupLimit = { count: stage.limit, byExpr };
+          } else {
+            orderByFields = ['count DESC'];
+            limitCount = stage.limit;
+          }
           outputAliases.add('count');
           break;
 
@@ -327,8 +339,16 @@ export class Compiler {
           aggregationSelect = [`count() AS count`];
           groupByFields = [this.mapFieldForSelect(stage.field, 'string')];
           groupBySelect = [this.projectGroupBy(stage.field)];
-          orderByFields = ['count ASC'];
-          limitCount = stage.limit;
+          if (stage.by) {
+            const byExpr = this.mapFieldForSelect(stage.by, 'string');
+            groupByFields.unshift(byExpr);
+            groupBySelect.unshift(this.projectGroupBy(stage.by));
+            orderByFields = [byExpr, 'count ASC'];
+            perGroupLimit = { count: stage.limit, byExpr };
+          } else {
+            orderByFields = ['count ASC'];
+            limitCount = stage.limit;
+          }
           outputAliases.add('count');
           break;
 
@@ -436,6 +456,61 @@ export class Compiler {
           };
           break;
         }
+
+        case 'fillnull': {
+          // Replace null/empty values with a fill value (default 0). Structured
+          // fields return '' when absent, so NULLIF('') catches those too.
+          const fv = typeof stage.value === 'number'
+            ? String(stage.value)
+            : `'${this.escape(String(stage.value))}'`;
+          if (stage.fields.length === 0) {
+            selectFields = selectFields.map(sf => {
+              const name = this.outputFieldName(sf);
+              const expr = this.selectExpr(sf);
+              return `COALESCE(NULLIF(toString(${expr}), ''), ${fv}) AS ${name}`;
+            });
+          } else {
+            for (const f of stage.fields) {
+              const name = sanitizeFieldName(f);
+              const expr = this.mapFieldForSelect(f);
+              selectFields = selectFields.filter(sf => {
+                const on = this.outputFieldName(sf);
+                return on !== f && on !== name;
+              });
+              selectFields.push(`COALESCE(NULLIF(toString(${expr}), ''), ${fv}) AS ${name}`);
+            }
+          }
+          break;
+        }
+
+        case 'convert': {
+          // Type/format conversions. num -> number; ctime -> formatted time from
+          // epoch seconds; mktime -> epoch seconds from a formatted time string.
+          for (const c of stage.conversions) {
+            const src = this.mapFieldForSelect(c.field);
+            const outName = c.alias || sanitizeFieldName(c.field);
+            let expr: string;
+            switch (c.func) {
+              case 'num':
+                expr = `toFloat64OrNull(toString(${src}))`;
+                break;
+              case 'ctime':
+                expr = `formatDateTime(toDateTime(toInt64OrZero(toString(${src}))), '%Y-%m-%d %H:%M:%S')`;
+                break;
+              case 'mktime':
+                expr = `toUnixTimestamp(parseDateTimeBestEffort(toString(${src})))`;
+                break;
+              default:
+                expr = src; // unsupported converter: pass through unchanged
+            }
+            selectFields = selectFields.filter(sf => {
+              const on = this.outputFieldName(sf);
+              return on !== c.field && on !== outName;
+            });
+            selectFields.push(`${expr} AS ${outName}`);
+          }
+          break;
+        }
       }
     }
 
@@ -487,7 +562,10 @@ export class Compiler {
       sql += ` LIMIT 1 BY ${dedupFields.join(', ')}`;
     }
 
-    if (limitCount !== null) {
+    if (perGroupLimit) {
+      // `top N field by group` -> keep N rows per group (ClickHouse LIMIT n BY).
+      sql += ` LIMIT ${perGroupLimit.count} BY ${perGroupLimit.byExpr}`;
+    } else if (limitCount !== null) {
       sql += ` LIMIT ${limitCount}`;
     } else if (!isAggregation) {
       sql += ' LIMIT 1000'; // Default limit
@@ -1074,6 +1152,14 @@ export class Compiler {
       case 'is_reserved_ip':
         // Returns true if the IP is reserved
         return `(toIPv4(${compiledArgs[0]}) BETWEEN toIPv4('0.0.0.0') AND toIPv4('0.255.255.255')) OR (toIPv4(${compiledArgs[0]}) BETWEEN toIPv4('240.0.0.0') AND toIPv4('255.255.255.255'))`;
+
+      // Date formatting (Splunk arg order: value first, format second)
+      case 'strftime':
+        // strftime(epoch_seconds, format) -> formatted string
+        return `formatDateTime(toDateTime(toInt64OrZero(toString(${compiledArgs[0]}))), ${compiledArgs[1]})`;
+      case 'strptime':
+        // strptime(time_string, format) -> epoch seconds (best-effort parse)
+        return `toUnixTimestamp(parseDateTimeBestEffort(toString(${compiledArgs[0]})))`;
 
       default:
         // Unknown function - pass through as-is

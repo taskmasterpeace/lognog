@@ -39,6 +39,11 @@ const KEYWORDS: Record<string, TokenType> = {
   'output': TokenType.OUTPUT,
   'compare': TokenType.COMPARE,
   'timewrap': TokenType.TIMEWRAP,
+  'fillnull': TokenType.FILLNULL,
+  'convert': TokenType.CONVERT,
+  'inputlookup': TokenType.INPUTLOOKUP,
+  'outputlookup': TokenType.OUTPUTLOOKUP,
+  'append': TokenType.APPEND,
   // Aggregation functions
   'count': TokenType.COUNT,
   'sum': TokenType.SUM,
@@ -102,6 +107,10 @@ export class Lexer {
         return this.advance() && this.makeToken(TokenType.LPAREN, '(');
       case ')':
         return this.advance() && this.makeToken(TokenType.RPAREN, ')');
+      case '[':
+        return this.advance() && this.makeToken(TokenType.LBRACKET, '[');
+      case ']':
+        return this.advance() && this.makeToken(TokenType.RBRACKET, ']');
       case '~':
         return this.advance() && this.makeToken(TokenType.CONTAINS, '~');
       case ':':

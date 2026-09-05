@@ -179,6 +179,8 @@ export class SQLiteCompiler {
     let compareMetadata: { offset: string; fields?: string[] } | undefined;
     let timewrapMetadata: { span: string; series?: 'relative' | 'exact' } | undefined;
     let chartMetadata: { chartType: string; xField?: string; yField?: string; groupBy?: string } | undefined;
+    // Per-group top/rare (`top N field by group`) -> a ROW_NUMBER() window subquery.
+    let perGroupLimit: { count: number; byExpr: string; direction: 'ASC' | 'DESC' } | null = null;
 
     for (const stage of stages) {
       switch (stage.type) {
@@ -264,8 +266,16 @@ export class SQLiteCompiler {
           aggregationSelect = [`COUNT(*) AS count`];
           groupByFields = [this.mapFieldForSelect(stage.field)];
           groupBySelectFields = [this.projectGroupBy(stage.field)];
-          orderByFields = ['count DESC'];
-          limitCount = stage.limit;
+          if (stage.by) {
+            const byExpr = this.mapFieldForSelect(stage.by);
+            groupByFields.unshift(byExpr);
+            groupBySelectFields.unshift(this.projectGroupBy(stage.by));
+            orderByFields = [byExpr, 'count DESC'];
+            perGroupLimit = { count: stage.limit, byExpr, direction: 'DESC' };
+          } else {
+            orderByFields = ['count DESC'];
+            limitCount = stage.limit;
+          }
           break;
 
         case 'rare':
@@ -274,8 +284,16 @@ export class SQLiteCompiler {
           aggregationSelect = [`COUNT(*) AS count`];
           groupByFields = [this.mapFieldForSelect(stage.field)];
           groupBySelectFields = [this.projectGroupBy(stage.field)];
-          orderByFields = ['count ASC'];
-          limitCount = stage.limit;
+          if (stage.by) {
+            const byExpr = this.mapFieldForSelect(stage.by);
+            groupByFields.unshift(byExpr);
+            groupBySelectFields.unshift(this.projectGroupBy(stage.by));
+            orderByFields = [byExpr, 'count ASC'];
+            perGroupLimit = { count: stage.limit, byExpr, direction: 'ASC' };
+          } else {
+            orderByFields = ['count ASC'];
+            limitCount = stage.limit;
+          }
           break;
 
         case 'bin':
@@ -371,6 +389,61 @@ export class SQLiteCompiler {
           };
           break;
         }
+
+        case 'fillnull': {
+          // Replace null/empty values with a fill value (default 0). SQLite is
+          // dynamically typed, so NULLIF/COALESCE work across types directly.
+          const fv = typeof stage.value === 'number'
+            ? String(stage.value)
+            : `'${this.escape(String(stage.value))}'`;
+          const aliasOf = (f: string) => f.replace(/[^A-Za-z0-9_]/g, '_');
+          if (stage.fields.length === 0) {
+            selectFields = selectFields.map(sf => {
+              const name = this.outputFieldName(sf);
+              const expr = this.selectExpr(sf);
+              return `COALESCE(NULLIF(${expr}, ''), ${fv}) AS ${name}`;
+            });
+          } else {
+            for (const f of stage.fields) {
+              const name = aliasOf(f);
+              const expr = this.mapFieldForSelect(f);
+              selectFields = selectFields.filter(sf => {
+                const on = this.outputFieldName(sf);
+                return on !== f && on !== name;
+              });
+              selectFields.push(`COALESCE(NULLIF(${expr}, ''), ${fv}) AS ${name}`);
+            }
+          }
+          break;
+        }
+
+        case 'convert': {
+          const aliasOf = (f: string) => f.replace(/[^A-Za-z0-9_]/g, '_');
+          for (const c of stage.conversions) {
+            const src = this.mapFieldForSelect(c.field);
+            const outName = c.alias || aliasOf(c.field);
+            let expr: string;
+            switch (c.func) {
+              case 'num':
+                expr = `CAST(${src} AS REAL)`;
+                break;
+              case 'ctime':
+                expr = `strftime('%Y-%m-%d %H:%M:%S', ${src}, 'unixepoch')`;
+                break;
+              case 'mktime':
+                expr = `strftime('%s', ${src})`;
+                break;
+              default:
+                expr = src;
+            }
+            selectFields = selectFields.filter(sf => {
+              const on = this.outputFieldName(sf);
+              return on !== c.field && on !== outName;
+            });
+            selectFields.push(`${expr} AS ${outName}`);
+          }
+          break;
+        }
       }
     }
 
@@ -399,31 +472,44 @@ export class SQLiteCompiler {
       whereConditions.push(indexScope);
     }
 
-    if (whereConditions.length > 0) {
-      sql += ' WHERE ' + whereConditions.join(' AND ');
-    }
+    const whereClause = whereConditions.length > 0 ? ' WHERE ' + whereConditions.join(' AND ') : '';
 
-    if (groupByFields.length > 0) {
-      sql += ' GROUP BY ' + groupByFields.join(', ');
-    } else if (dedupFields.length > 0) {
-      // Bug #41-3: real dedup on SQLite. GROUP BY the dedup keys collapses each
-      // distinct combination to a single row while the bare (non-aggregated)
-      // select list still returns every column. SQLite (3.7.11+) resolves each
-      // bare column from the max(rowid) row of the group, so we deterministically
-      // keep the most-recently-inserted row per key.
-      sql += ' GROUP BY ' + dedupFields.join(', ');
-    }
+    if (perGroupLimit) {
+      // `top/rare N field by group`: SQLite has no LIMIT..BY, so rank each row
+      // within its group with ROW_NUMBER() and keep the first N per group.
+      const selectList = [...(groupBySelectFields ?? groupByFields), ...aggregationSelect];
+      const groupByClause = groupByFields.length > 0 ? ' GROUP BY ' + groupByFields.join(', ') : '';
+      const inner =
+        `SELECT ${selectList.join(', ')}, ` +
+        `ROW_NUMBER() OVER (PARTITION BY ${perGroupLimit.byExpr} ORDER BY COUNT(*) ${perGroupLimit.direction}) AS __rn` +
+        ` FROM logs${whereClause}${groupByClause}`;
+      sql = `SELECT * FROM (${inner}) WHERE __rn <= ${perGroupLimit.count} ` +
+        `ORDER BY ${perGroupLimit.byExpr}, count ${perGroupLimit.direction}`;
+    } else {
+      sql += whereClause;
 
-    if (orderByFields.length > 0) {
-      sql += ' ORDER BY ' + orderByFields.join(', ');
-    } else if (!isAggregation) {
-      sql += ' ORDER BY timestamp DESC';
-    }
+      if (groupByFields.length > 0) {
+        sql += ' GROUP BY ' + groupByFields.join(', ');
+      } else if (dedupFields.length > 0) {
+        // Bug #41-3: real dedup on SQLite. GROUP BY the dedup keys collapses each
+        // distinct combination to a single row while the bare (non-aggregated)
+        // select list still returns every column. SQLite (3.7.11+) resolves each
+        // bare column from the max(rowid) row of the group, so we deterministically
+        // keep the most-recently-inserted row per key.
+        sql += ' GROUP BY ' + dedupFields.join(', ');
+      }
 
-    if (limitCount !== null) {
-      sql += ` LIMIT ${limitCount}`;
-    } else if (!isAggregation) {
-      sql += ' LIMIT 1000'; // Default limit
+      if (orderByFields.length > 0) {
+        sql += ' ORDER BY ' + orderByFields.join(', ');
+      } else if (!isAggregation) {
+        sql += ' ORDER BY timestamp DESC';
+      }
+
+      if (limitCount !== null) {
+        sql += ` LIMIT ${limitCount}`;
+      } else if (!isAggregation) {
+        sql += ' LIMIT 1000'; // Default limit
+      }
     }
 
     // Build result with optional metadata
@@ -1018,6 +1104,13 @@ export class SQLiteCompiler {
       case 'is_reserved_ip':
         // Returns true (1) if the IP is reserved
         return `(${this.compileIPRangeCheckSQLite(compiledArgs[0], '0.0.0.0', '0.255.255.255')} OR ${this.compileIPRangeCheckSQLite(compiledArgs[0], '240.0.0.0', '255.255.255.255')})`;
+
+      // Date formatting. Splunk arg order is (value, format); SQLite's native
+      // strftime is (format, value), so the args are swapped here.
+      case 'strftime':
+        return `strftime(${compiledArgs[1]}, ${compiledArgs[0]}, 'unixepoch')`;
+      case 'strptime':
+        return `strftime('%s', ${compiledArgs[0]})`;
 
       default:
         // Unknown function - pass through as-is
