@@ -17,10 +17,10 @@ import { resolveMacroDefinition } from './sqlite-macros.js';
 import { compileDSL } from '../dsl/compiler.js';
 import { compileDSLToSQLite } from '../dsl/compiler-sqlite.js';
 import { logQueryExecution } from '../services/internal-logger.js';
-import { applyLookup } from '../services/lookup-tables.js';
+import { applyLookup, getLookupTable, setLookupTable } from '../services/lookup-tables.js';
 import { recordHeartbeats } from '../services/heartbeat.js';
 import { spoolBatch, takeSpooledBatches, deleteSpooledBatch, markSpoolAttempt, spoolStats } from './sqlite-ingest-spool.js';
-import type { ASTNode, LookupNode, Condition, SimpleCondition } from '../dsl/types.js';
+import type { ASTNode, LookupNode, Condition, SimpleCondition, QueryAST, AppendNode, InputLookupNode, OutputLookupNode } from '../dsl/types.js';
 import { isLogicGroup } from '../dsl/types.js';
 import { indexScopeSqlClause } from '../auth/index-scope.js';
 
@@ -184,73 +184,20 @@ export async function executeDSLQuery<T = Record<string, unknown>>(
     // Expand `macro` / saved-search references before parsing (chaining).
     const ast = parseToAST(expandMacros(dslQuery, resolveMacroDefinition));
 
-    // Split AST at lookup stages: compile pre-lookup to SQL, post-lookup as in-memory
-    const lookupIndex = ast.stages.findIndex(s => s.type === 'lookup');
-    const hasLookup = lookupIndex !== -1;
-    let postLookupStages: ASTNode[] = [];
+    // Dispatch: append / outputlookup / inputlookup aren't a single SQL query
+    // against the logs table; runQueryAST handles them and otherwise compiles +
+    // executes normally (including the lookup split).
+    const { sql, results } = await runQueryAST<T>(ast, options);
 
-    if (hasLookup) {
-      // Extract stages from lookup onwards for post-processing
-      postLookupStages = ast.stages.splice(lookupIndex);
-    }
+    // Log query execution
+    logQueryExecution({
+      dsl_query: dslQuery.substring(0, 500),  // Truncate long queries
+      execution_time_ms: Date.now() - startTime,
+      row_count: results.length,
+      user_id: options?.user_id,
+    });
 
-    if (isLiteMode()) {
-      // Compile to SQLite SQL (with mandatory read-side index scoping applied
-      // pre-lookup, so any post-lookup in-memory stages already see constrained
-      // rows). Time bounds are passed into the compiler so they are built into
-      // the top-level WHERE rather than spliced in afterwards (#37/#41-11).
-      const compiled = compileDSLToSQLite(ast, options?.allowedIndexes, {
-        earliest: options?.earliest,
-        latest: options?.latest,
-      });
-      const sql = compiled.sql;
-
-      let results = await sqliteLogs.executeQuery<T>(sql);
-
-      // Apply lookup + post-lookup stages as in-memory post-processing
-      if (hasLookup) {
-        results = applyPostLookupStages(results as Record<string, unknown>[], postLookupStages) as T[];
-      }
-
-      // Log query execution
-      logQueryExecution({
-        dsl_query: dslQuery.substring(0, 500),  // Truncate long queries
-        execution_time_ms: Date.now() - startTime,
-        row_count: results.length,
-        user_id: options?.user_id,
-      });
-
-      return { sql, results };
-    } else {
-      // Compile to ClickHouse SQL (with mandatory read-side index scoping applied
-      // pre-lookup, so any post-lookup in-memory stages already see constrained
-      // rows). Time bounds are passed into the compiler so they are built into
-      // the top-level WHERE rather than spliced in afterwards with sql.replace,
-      // which only hit the first match and could land in a subquery/CTE or be
-      // dropped (#37/#41-11).
-      const compiled = compileDSL(ast, options?.allowedIndexes, {
-        earliest: options?.earliest,
-        latest: options?.latest,
-      });
-      const sql = compiled.sql;
-
-      let results = await clickhouse.executeQuery<T>(sql);
-
-      // Apply lookup + post-lookup stages as in-memory post-processing
-      if (hasLookup) {
-        results = applyPostLookupStages(results as Record<string, unknown>[], postLookupStages) as T[];
-      }
-
-      // Log query execution
-      logQueryExecution({
-        dsl_query: dslQuery.substring(0, 500),  // Truncate long queries
-        execution_time_ms: Date.now() - startTime,
-        row_count: results.length,
-        user_id: options?.user_id,
-      });
-
-      return { sql, results };
-    }
+    return { sql, results };
   } catch (err) {
     // Log failed query execution
     logQueryExecution({
@@ -262,6 +209,126 @@ export async function executeDSLQuery<T = Record<string, unknown>>(
     });
     throw err;
   }
+}
+
+type DSLExecOptions = { earliest?: string; latest?: string; user_id?: string; allowedIndexes?: string[] };
+
+/**
+ * Run a parsed query, handling the stages that aren't a single SQL query against
+ * the logs table (append / outputlookup / inputlookup) and otherwise compiling +
+ * executing normally.
+ */
+async function runQueryAST<T = Record<string, unknown>>(
+  ast: QueryAST,
+  options?: DSLExecOptions
+): Promise<{ sql: string; results: T[] }> {
+  const stages = ast.stages;
+
+  // append [ subsearch ]: run the pipeline before it, then the subsearch, and
+  // concatenate the two result sets.
+  const appendIdx = stages.findIndex(s => s.type === 'append');
+  if (appendIdx !== -1) {
+    const appendNode = stages[appendIdx] as AppendNode;
+    const main = await runQueryAST<T>({ stages: stages.slice(0, appendIdx) }, options);
+    const sub = await runQueryAST<T>(appendNode.subsearch, options);
+    return { sql: main.sql, results: [...main.results, ...sub.results] };
+  }
+
+  // outputlookup <table>: run the pipeline before it, then write the rows to the
+  // named lookup table (in-memory; not yet persisted across restarts).
+  const outIdx = stages.findIndex(s => s.type === 'outputlookup');
+  if (outIdx !== -1) {
+    const outNode = stages[outIdx] as OutputLookupNode;
+    const base = await runQueryAST<T>({ stages: stages.slice(0, outIdx) }, options);
+    writeResultsToLookup(outNode.table, base.results as Record<string, unknown>[]);
+    return base;
+  }
+
+  // inputlookup <table>: read the lookup table as the data source, then apply any
+  // downstream stages in memory (search/where/filter, table/fields, sort, limit,
+  // dedup — see applyPostLookupStages).
+  if (stages[0]?.type === 'inputlookup') {
+    const inNode = stages[0] as InputLookupNode;
+    const rows = readLookupAsRows(inNode.table);
+    const results = applyPostLookupStages(rows, stages.slice(1)) as T[];
+    return { sql: `-- inputlookup ${inNode.table}`, results };
+  }
+
+  return compileAndExecute<T>(ast, options);
+}
+
+/** Compile a query to backend SQL, execute it, and apply any | lookup post-processing. */
+async function compileAndExecute<T = Record<string, unknown>>(
+  ast: QueryAST,
+  options?: DSLExecOptions
+): Promise<{ sql: string; results: T[] }> {
+  // Split AST at lookup stages: compile pre-lookup to SQL, post-lookup as in-memory.
+  const lookupIndex = ast.stages.findIndex(s => s.type === 'lookup');
+  const hasLookup = lookupIndex !== -1;
+  let postLookupStages: ASTNode[] = [];
+  if (hasLookup) {
+    postLookupStages = ast.stages.splice(lookupIndex);
+  }
+
+  // Time bounds and read-side index scoping are built into the compiled WHERE
+  // (not spliced afterwards) so they reliably hit the base table only (#37/#41-11).
+  if (isLiteMode()) {
+    const compiled = compileDSLToSQLite(ast, options?.allowedIndexes, {
+      earliest: options?.earliest,
+      latest: options?.latest,
+    });
+    let results = await sqliteLogs.executeQuery<T>(compiled.sql);
+    if (hasLookup) {
+      results = applyPostLookupStages(results as Record<string, unknown>[], postLookupStages) as T[];
+    }
+    return { sql: compiled.sql, results };
+  }
+
+  const compiled = compileDSL(ast, options?.allowedIndexes, {
+    earliest: options?.earliest,
+    latest: options?.latest,
+  });
+  let results = await clickhouse.executeQuery<T>(compiled.sql);
+  if (hasLookup) {
+    results = applyPostLookupStages(results as Record<string, unknown>[], postLookupStages) as T[];
+  }
+  return { sql: compiled.sql, results };
+}
+
+/** Read a lookup/KV table as data rows (keyField reconstructed from the map key). */
+function readLookupAsRows(tableName: string): Record<string, unknown>[] {
+  const table = getLookupTable(tableName);
+  if (!table) {
+    throw new Error(`Lookup table '${tableName}' not found`);
+  }
+  return Array.from(table.data.entries()).map(([key, values]) => ({
+    [table.keyField]: key,
+    ...values,
+  }));
+}
+
+/** Write a result set to a lookup table (first field becomes the key). */
+function writeResultsToLookup(tableName: string, rows: Record<string, unknown>[]): void {
+  const flat = rows.map((r) => {
+    const sd = r.structured_data;
+    if (!sd) return r;
+    const parsed = typeof sd === 'string'
+      ? (() => { try { return JSON.parse(sd); } catch { return null; } })()
+      : sd;
+    if (!parsed || typeof parsed !== 'object') return r;
+    const merged: Record<string, unknown> = { ...r };
+    for (const [k, v] of Object.entries(parsed as Record<string, unknown>)) {
+      if (!(k in merged)) merged[k] = v;
+    }
+    delete merged.structured_data;
+    return merged;
+  });
+  const keyField = flat.length > 0 ? (Object.keys(flat[0])[0] || 'key') : 'key';
+  const data = flat.map((r) => ({
+    key: String(r[keyField] ?? ''),
+    values: Object.fromEntries(Object.entries(r).filter(([k]) => k !== keyField)),
+  }));
+  setLookupTable(tableName, 'Created by outputlookup', keyField, data);
 }
 
 /**
@@ -296,13 +363,67 @@ function applyPostLookupStages(
         s.matchField,
         s.outputFields.length > 0 ? s.outputFields : undefined
       );
-    } else if (stage.type === 'where' || stage.type === 'filter') {
-      const conditions = (stage as unknown as { conditions: Condition[] }).conditions;
-      data = data.filter(row => evaluateConditions(row, conditions));
+    } else if (stage.type === 'where' || stage.type === 'filter' || stage.type === 'search') {
+      data = data.filter(row => evaluateConditions(row, stage.conditions));
+    } else if (stage.type === 'table') {
+      data = data.map(row => pickFields(row, stage.fields));
+    } else if (stage.type === 'fields') {
+      data = stage.include
+        ? data.map(row => pickFields(row, stage.fields))
+        : data.map(row => omitFields(row, stage.fields));
+    } else if (stage.type === 'sort') {
+      data = sortRows(data, stage.fields);
+    } else if (stage.type === 'limit') {
+      data = data.slice(0, stage.count);
+    } else if (stage.type === 'dedup') {
+      data = dedupRows(data, stage.fields);
     }
   }
 
   return data;
+}
+
+function pickFields(row: Record<string, unknown>, fields: string[]): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const f of fields) out[f] = row[f];
+  return out;
+}
+
+function omitFields(row: Record<string, unknown>, fields: string[]): Record<string, unknown> {
+  const drop = new Set(fields);
+  return Object.fromEntries(Object.entries(row).filter(([k]) => !drop.has(k)));
+}
+
+function sortRows(
+  rows: Record<string, unknown>[],
+  sortFields: { field: string; direction: 'asc' | 'desc' }[]
+): Record<string, unknown>[] {
+  return [...rows].sort((a, b) => {
+    for (const { field, direction } of sortFields) {
+      const av = a[field];
+      const bv = b[field];
+      const an = Number(av);
+      const bn = Number(bv);
+      let cmp: number;
+      if (!Number.isNaN(an) && !Number.isNaN(bn) && av !== '' && bv !== '') {
+        cmp = an - bn;
+      } else {
+        cmp = String(av ?? '').localeCompare(String(bv ?? ''));
+      }
+      if (cmp !== 0) return direction === 'desc' ? -cmp : cmp;
+    }
+    return 0;
+  });
+}
+
+function dedupRows(rows: Record<string, unknown>[], fields: string[]): Record<string, unknown>[] {
+  const seen = new Set<string>();
+  return rows.filter(row => {
+    const key = fields.map(f => String(row[f] ?? '')).join(' ');
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 /**

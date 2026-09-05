@@ -14,7 +14,7 @@
  * into memory on startup and after CRUD operations.
  *
  * Wildcard matching: Keys ending with * match any value starting
- * with the prefix (e.g., "taskmasterpeace*" matches "taskmasterpeace+test@gmail.com").
+ * with the prefix (e.g., "svc-*" matches "svc-web-01" and "svc-db-02").
  */
 
 export interface LookupTable {
