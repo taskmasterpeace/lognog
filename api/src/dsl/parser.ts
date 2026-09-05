@@ -334,23 +334,78 @@ export class Parser {
       return { field: '_raw', operator: '~', value: field, negate };
     }
 
-    // Parse value
-    let value: string | number | null = null;
-
-    if (this.match(TokenType.STRING)) {
-      value = this.previous().value;
-    } else if (this.match(TokenType.NUMBER)) {
-      value = parseFloat(this.previous().value);
-    } else if (this.match(TokenType.IDENTIFIER)) {
-      value = this.previous().value;
-    } else if (this.match(TokenType.MULTIPLY)) {
-      value = '*';
-    } else if (this.match(TokenType.REGEX)) {
+    // A regex literal forces a contains/regex match.
+    if (this.check(TokenType.REGEX)) {
       operator = '~';
-      value = this.previous().value;
+      return { field, operator, value: this.advance().value, negate };
     }
 
-    return { field, operator, value, negate };
+    // The value may be a wildcard bareword (host=web*, status=4*, app_*prod):
+    // adjacent identifier/number/`*` tokens with no whitespace between them are
+    // glued into one value. A `*`-containing value becomes a LIKE via the `~`
+    // operator (the compiler turns `*` into `%`); a `!=` wildcard is a negated
+    // LIKE. This runs only in value position, so eval arithmetic (`a * b`) and
+    // bare `search *` are unaffected.
+    const parsed = this.parseConditionValue();
+    if (parsed.wildcard) {
+      if (operator === '!=') negate = true;
+      operator = '~';
+    }
+
+    return { field, operator, value: parsed.value, negate };
+  }
+
+  /**
+   * Read a condition value that may be a wildcard bareword. Adjacent
+   * IDENTIFIER / NUMBER / `*` tokens (no whitespace between them) are glued:
+   * `web*`, `*.log`, `4*`, `app_*prod` all become a single value. Whitespace
+   * ends the value, so this never swallows a following condition and never
+   * affects eval arithmetic (which uses a separate code path).
+   */
+  private parseConditionValue(): { value: string | number | null; wildcard: boolean } {
+    if (this.check(TokenType.STRING)) {
+      return { value: this.advance().value, wildcard: false };
+    }
+
+    const isValuePart = (t: Token): boolean =>
+      t.type === TokenType.IDENTIFIER ||
+      t.type === TokenType.NUMBER ||
+      t.type === TokenType.MULTIPLY ||
+      Parser.FIELD_KEYWORDS.has(t.type);
+
+    if (!isValuePart(this.peek())) {
+      return { value: null, wildcard: false };
+    }
+
+    const parts: Token[] = [];
+    let hasStar = false;
+    while (
+      !this.isAtEnd() &&
+      isValuePart(this.peek()) &&
+      (parts.length === 0 || this.adjacent(parts[parts.length - 1], this.peek()))
+    ) {
+      const t = this.advance();
+      if (t.type === TokenType.MULTIPLY) hasStar = true;
+      parts.push(t);
+    }
+
+    const text = parts.map((t) => t.value).join('');
+
+    // A lone `*` is the existing "match anything / field exists" value, not a
+    // LIKE '%' — leave it for the compiler's existence handling.
+    if (text === '*') {
+      return { value: '*', wildcard: false };
+    }
+    // A single plain number stays numeric so comparisons keep working.
+    if (parts.length === 1 && parts[0].type === TokenType.NUMBER) {
+      return { value: parseFloat(text), wildcard: false };
+    }
+    return { value: text, wildcard: hasStar };
+  }
+
+  /** True when token b starts exactly where token a ends (no gap, same line). */
+  private adjacent(a: Token, b: Token): boolean {
+    return a.line === b.line && b.column === a.column + a.value.length;
   }
 
   private parseStats(): StatsNode {

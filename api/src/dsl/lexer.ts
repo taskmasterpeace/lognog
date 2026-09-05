@@ -197,8 +197,10 @@ export class Lexer {
       return this.readNumber();
     }
 
-    // Identifiers and keywords
-    if (this.isIdentifierStart(char)) {
+    // Identifiers and keywords. A leading '.' followed by an identifier char is
+    // allowed so wildcard suffixes like `*.log` / `*.internal` tokenize (the '.'
+    // segment reads as an identifier and the parser glues it to the preceding *).
+    if (this.isIdentifierStart(char) || (char === '.' && this.isIdentifierChar(this.peekNext()))) {
       return this.readIdentifier();
     }
 
