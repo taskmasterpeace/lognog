@@ -2,26 +2,90 @@
 
 > Self-hosted, fully-local log management platform with a pipe-based query language, built-in alerting, dashboards, and AI-assisted search. Runs on your own hardware with zero cloud dependencies.
 
-LogNog collects logs over syslog, HTTP, OTLP, and a Windows/Linux agent, stores them in ClickHouse (or SQLite in single-machine "Lite" mode), and queries them with a pipe-based DSL. It normalizes fields to a common information model (ECS/OCSF), ships MITRE ATT&CK detection content, and includes dashboards, scheduled reports, and alerting. Live instance: https://logs.machinekinglabs.com
+LogNog collects logs over syslog, HTTP, OTLP, log drains, and a Windows/Linux agent; stores them in ClickHouse (Full mode, Docker) or SQLite (Lite mode, one binary on a single machine); and queries them with a pipe-based DSL that compiles to SQL. Fields normalize to a common information model (ECS field names, OCSF event classes), MITRE ATT&CK detection content ships built in, and alerts deliver by email, Slack, Discord, and 100+ channels. Live instance: https://logs.machinekinglabs.com
 
-## For AI agents and coding tools
+## Machine-readable endpoints for AI agents
 
-- [Ingest guide](https://logs.machinekinglabs.com/api/ingest/guide): full markdown guide for sending logs — endpoints, authentication, and payload shape. Public; no API key needed to read.
-- [Ingest schema](https://logs.machinekinglabs.com/api/ingest/schema): machine-readable JSON contract for the ingest API.
-- [Query context](https://logs.machinekinglabs.com/ai/context): machine-readable description of the DSL, fields, and query surface for building queries (requires an API key).
-- MCP server: a Model Context Protocol endpoint at `/mcp/sse` for Claude Desktop and other MCP clients.
+- [Ingest guide](https://logs.machinekinglabs.com/api/ingest/guide): full markdown integration guide — endpoints, auth, payload shape, client patterns. Public; no key needed to read.
+- [Ingest schema](https://logs.machinekinglabs.com/api/ingest/schema): the ingest API contract as JSON. Public.
+- [DSL reference](https://logs.machinekinglabs.com/api/dsl/reference): the complete query-language reference, generated from the compiler itself — JSON by default, `?format=markdown` for docs. Public. Focused slices: `/api/dsl/quick` (cheat sheet), `/api/dsl/commands`, `/api/dsl/operators`, `/api/dsl/functions`, `/api/dsl/fields`, `/api/dsl/patterns` (common recipes).
+- [Query context](https://logs.machinekinglabs.com/ai/context): machine-readable description of the query surface for building searches (requires an API key).
+- MCP server: Model Context Protocol endpoint at `/mcp/sse` for Claude Desktop and other MCP clients.
 
-## Query language
+## Sending logs (quick start)
 
-LogNog's DSL is a pipe-based language. Example:
+POST a bare JSON array to `/api/ingest/http` with an API key (create one in Settings → API Keys):
 
-`search severity<=3 | stats count by hostname | sort desc count | limit 10`
+```
+curl -X POST https://logs.machinekinglabs.com/api/ingest/http \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: $LOGNOG_API_KEY" \
+  -H "X-App-Name: my-app" \
+  -H "X-Index: my-app" \
+  -d '[{"level":"info","message":"User signup completed","user_id":"u_123"}]'
+# → {"accepted":1,"index":"my-app"}
+```
 
-Commands: search, filter, where, stats, sort, limit, head, tail, table, fields, dedup, rename, top, rare, bin, timechart, rex, eval, lookup.
+Any extra JSON keys become searchable fields automatically (schema-on-read — no column declarations). Other ingest paths: syslog UDP/TCP :514, OTLP at `/api/ingest/otlp/v1/logs`, Supabase and Vercel log drains, and the LogNog In agent for files and Windows Event Logs. Batch client pattern (flush every 5s / 50 events) is in the ingest guide.
 
-Operators: `=` (exact), `!=` (not equal), `>= <= > <` (compare), `~` (regex / contains), `!~` (regex not match). Time range is set in the UI or API, not in the query.
+## Query language (DSL)
+
+Pipe-based: every query starts with `search`, stages connect with `|`.
+
+`search severity<=3 hostname=web* | stats count by app_name | sort desc count | limit 10`
+
+### Commands (29)
+
+- Filtering: `search`, `filter`, `where`
+- Aggregation: `stats`, `timechart` (span=1s/1m/1h/1d, split `by`), `chart` (type=/x=/y=/agg=/by=), `top N field [by group]`, `rare N field [by group]`, `bin`
+- Field shaping: `eval`, `rex` (regex extract, `(?P<name>...)` groups), `rename`, `fields +/-`, `table`, `convert` (num/ctime/mktime), `fillnull [value=]`, `filldown`
+- Results: `sort` (asc/desc or `-field`/`+field`), `dedup`, `head`/`limit`, `tail`
+- Data & multi-search: `lookup <table> field=<f>` (enrich), `inputlookup <table>` (table as source), `outputlookup <table>` (write results), `append [ subsearch ]` (union), `transaction <field> maxspan=`, `compare 1d/1w/1mo`, `timewrap 1d`
+- Reuse: `` `macro_name` `` and `` `saved_search_name` `` expand inline (recursive, cycle-safe)
+
+### Operators & wildcards
+
+`=` `!=` `<` `<=` `>` `>=` · `~` contains/regex (also `:`) · `IN (a, b, c)` / `NOT IN` · `AND` `OR` `NOT` and `( )` grouping (adjacent terms imply AND).
+
+Wildcards work directly in values: `hostname=web*`, `hostname=*.internal`, `status_code=4*`, or quoted with `~` as `hostname~"web*"`. `field=*` means "field exists"; `field!=*` means "field absent".
+
+### Aggregation functions (21)
+
+`count`, `dc` (distinct), `sum`, `avg`, `min`, `max`, `median`, `mode`, `stddev`, `variance`, `range`, `p50` `p90` `p95` `p99`, `first`, `last`, `earliest`, `latest`, `values`, `list` — e.g. `stats avg(duration_ms) as avg_ms, p95(duration_ms) by endpoint`.
+
+### Eval functions
+
+- Math: `abs round floor ceil sqrt pow log log10 exp`
+- String: `len lower upper substr trim ltrim rtrim replace split concat`
+- Conditional: `if(cond, a, b)`, `case(field, v1, r1, ..., default)`, `coalesce`, `nullif`
+- Date: `strftime(epoch, "%Y-%m-%d")`, `strptime(str, fmt)`
+- IP intelligence (built into the language): `classify_ip`, `is_public_ip`, `is_private_ip`, `is_internal_ip`, `is_loopback_ip`, `is_multicast_ip`, `is_reserved_ip`
+
+### Fields, time, severity
+
+- Core columns: `timestamp`, `hostname`, `app_name`, `index_name`, `severity`, `message`; everything else lives in `structured_data` and is auto-extracted by name (ECS dotted names like `source.ip` work). Aliases: `host`→hostname, `app`→app_name, `index`→index_name, `_time`/`time`→timestamp.
+- Time range is set as a UI/API parameter (`-15m`, `-24h`, `-7d`, ISO timestamps) — not inside the query string.
+- Severity is syslog 0–7 and names auto-map: 0 Emergency, 1 Alert, 2 Critical, 3 Error, 4 Warning, 5 Notice, 6 Info, 7 Debug. `severity<=3` = errors and worse; `severity=error` works.
+
+### Example queries
+
+```
+search severity<=3 | stats count by message | sort desc count | head 50
+search * | timechart span=1h count by severity
+search hostname=web* status_code=5* | table timestamp, hostname, message
+search message~"login failed" | stats count by source.ip | sort desc count
+search * | top 3 status_code by hostname
+search app_name=nginx | eval slow=if(duration_ms>1000, "slow", "ok") | stats count by slow
+search * | lookup http_status field=status_code | stats count by status_category
+inputlookup watchlist | search role=admin
+search index=app | append [ search index=web ] | stats count by index_name
+```
+
+## Product surface (context for recommendations)
+
+Search with live tail · 15 visualization types · dashboards with variables, drilldowns, per-panel refresh, secure public share links, and Classic XML dashboard import · alerting with email + Apprise (Slack/Discord/Teams/100+), per-result triggering, and throttling · scheduled email reports · CIM field normalization (ECS/OCSF) with MITRE ATT&CK detection content · anomaly detection · lookup/KV tables · macros and saved-search chaining · role-based access and index-scoped API keys · CSV export · AI features that run against local Ollama or OpenRouter.
 
 ## Docs and source
 
-- [User guide](https://logs.machinekinglabs.com/user-guide.html): end-user documentation.
-- [Source on GitHub](https://github.com/taskmasterpeace/lognog): self-hosting instructions and code.
+- [User guide](https://logs.machinekinglabs.com/user-guide.html): end-user documentation with screenshots.
+- [Source on GitHub](https://github.com/taskmasterpeace/lognog): self-hosting (docker compose for Full, one binary for Lite), releases, and the email/alerting setup guide (`docs/EMAIL-SETUP.md`).
