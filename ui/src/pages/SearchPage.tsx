@@ -89,12 +89,16 @@ const QUERY_TEMPLATES = [
     { name: 'Remove duplicates', query: 'search * | dedup hostname', desc: 'Unique values only' },
     { name: 'Sort results', query: 'search * | sort desc timestamp', desc: 'Order results' },
     { name: 'Limit results', query: 'search * | head 100', desc: 'First N results' },
-    { name: 'Fill nulls', query: 'search * | filldown hostname', desc: 'Fill empty values' },
+    { name: 'Fill nulls', query: 'search * | fillnull value="N/A" hostname', desc: 'Replace empty values' },
+    { name: 'Fill down', query: 'search * | filldown hostname', desc: 'Carry last value forward' },
   ]},
   { category: 'Advanced', templates: [
     { name: 'Extract fields', query: 'search * | rex field=message "user=(?<username>\\w+)"', desc: 'Regex extraction' },
     { name: 'Eval expression', query: 'search * | eval duration_ms = duration * 1000', desc: 'Calculated field' },
     { name: 'Chain commands', query: 'search severity<=3 | stats count by hostname | sort desc count | head 10', desc: 'Pipeline' },
+    { name: 'Chart', query: 'search * | chart type=bar x=hostname agg=count', desc: 'Aggregate with a viz hint' },
+    { name: 'Compare periods', query: 'search * | stats count by hostname | compare 1d', desc: 'Today vs yesterday' },
+    { name: 'Enrich from lookup', query: 'search * | lookup http_status field=status_code', desc: 'Join a lookup table' },
   ]},
 ];
 
@@ -1068,8 +1072,8 @@ export default function SearchPage() {
                     className={`h-11 sm:h-12 px-3 sm:px-4 rounded-lg font-medium transition-all flex items-center gap-2 flex-shrink-0 ${
                       liveTailEnabled
                         ? liveTail.isPaused
-                          ? 'bg-honey-100 text-honey-700 border-2 border-honey-300 hover:bg-honey-200'
-                          : 'bg-green-100 text-green-700 border-2 border-green-300 hover:bg-green-200 animate-pulse'
+                          ? 'bg-honey-100 text-honey-700 border-2 border-honey-300 hover:bg-honey-200 dark:bg-honey-900/30 dark:text-honey-300 dark:border-honey-700 dark:hover:bg-honey-900/50'
+                          : 'bg-green-100 text-green-700 border-2 border-green-300 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-700 dark:hover:bg-green-900/50'
                         : 'btn-secondary'
                     }`}
                   >
@@ -1277,11 +1281,11 @@ export default function SearchPage() {
               : 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-700'
           }`}>
             <div className="flex items-center gap-3">
-              <div className={`flex items-center gap-2 ${liveTail.isPaused ? 'text-honey-700' : 'text-green-700'}`}>
+              <div className={`flex items-center gap-2 ${liveTail.isPaused ? 'text-honey-700 dark:text-honey-300' : 'text-green-700 dark:text-green-300'}`}>
                 {liveTail.isPaused ? (
                   <Pause className="w-5 h-5" />
                 ) : (
-                  <Radio className="w-5 h-5 animate-pulse" />
+                  <Radio className="w-5 h-5" />
                 )}
                 <span className="font-medium">
                   {liveTail.isPaused ? 'Live tail paused' : 'Live tail active'}

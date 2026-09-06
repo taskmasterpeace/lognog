@@ -1,4 +1,5 @@
 import { useState, useCallback, useMemo, useEffect } from 'react';
+import { severityTone } from './charts/palette';
 import {
   ChevronRight,
   ChevronDown,
@@ -40,17 +41,15 @@ interface LogViewerProps {
   isLoading?: boolean;
 }
 
-// Severity configuration
-const SEVERITY_CONFIG = {
-  0: { name: 'Emergency', color: 'text-red-700 bg-red-100 ring-red-600/30', bgColor: 'bg-red-50/50' },
-  1: { name: 'Alert', color: 'text-red-700 bg-red-100 ring-red-600/30', bgColor: 'bg-red-50/50' },
-  2: { name: 'Critical', color: 'text-honey-700 bg-honey-100 ring-honey-600/30', bgColor: 'bg-honey-50/50' },
-  3: { name: 'Error', color: 'text-red-700 bg-red-100 ring-red-600/30', bgColor: 'bg-red-50/50' },
-  4: { name: 'Warning', color: 'text-honey-700 bg-honey-100 ring-honey-600/30', bgColor: 'bg-honey-50/50' },
-  5: { name: 'Notice', color: 'text-honey-700 bg-honey-100 ring-honey-600/30', bgColor: 'bg-honey-50/50' },
-  6: { name: 'Info', color: 'text-honey-700 bg-honey-100 ring-honey-600/30', bgColor: 'bg-honey-50/50' },
-  7: { name: 'Debug', color: 'text-nog-700 dark:text-nog-300 bg-nog-100 dark:bg-nog-800 ring-nog-600/30', bgColor: 'bg-nog-50/50 dark:bg-nog-800/50' },
-};
+// Severity configuration — sourced from the shared BRANDING §2.3 tones so all
+// eight levels are visually distinct (four used to collapse into honey) and
+// every badge/row tint has proper dark-mode variants.
+const SEVERITY_CONFIG = Object.fromEntries(
+  Array.from({ length: 8 }, (_, level) => {
+    const tone = severityTone(level);
+    return [level, { name: tone.name, color: tone.badge, bgColor: tone.row }];
+  })
+) as Record<number, { name: string; color: string; bgColor: string }>;
 
 // Build a stable per-log key for expansion / diagnosis state. Prefer the log's
 // own id; otherwise fall back to a content-derived key. Crucially this must NOT

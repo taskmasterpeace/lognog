@@ -250,6 +250,8 @@ export interface DashboardPage {
 export interface Stats {
   totalLogs: number;
   last24Hours: number;
+  /** Errors (severity<=3) in the last 24h; optional for older API versions. */
+  last24HoursErrors?: number;
   bySeverity: { severity: number; count: number }[];
   topHosts: { hostname: string; count: number }[];
   topApps: { app_name: string; count: number }[];

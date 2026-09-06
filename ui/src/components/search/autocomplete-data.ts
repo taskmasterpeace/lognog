@@ -3,7 +3,7 @@
 import { CommandDefinition, Suggestion } from './autocomplete-types';
 
 // ============================================================================
-// COMMANDS (17)
+// COMMANDS (29)
 // ============================================================================
 
 export const COMMANDS: CommandDefinition[] = [
@@ -107,16 +107,16 @@ export const COMMANDS: CommandDefinition[] = [
   },
   {
     name: 'top',
-    description: 'Most common field values',
-    syntax: 'top <number> <field>',
+    description: 'Most common field values, optionally per group',
+    syntax: 'top <number> <field> [by <field>]',
     example: 'top 10 hostname',
     expectsNumber: true,
     expectsFields: true,
   },
   {
     name: 'rare',
-    description: 'Least common field values',
-    syntax: 'rare <number> <field>',
+    description: 'Least common field values, optionally per group',
+    syntax: 'rare <number> <field> [by <field>]',
     example: 'rare 10 hostname',
     expectsNumber: true,
     expectsFields: true,
@@ -134,6 +134,79 @@ export const COMMANDS: CommandDefinition[] = [
     syntax: 'rex field=<field> "<regex>"',
     example: 'rex field=message "user=(?P<user>\\\\w+)"',
     expectsFields: true,
+  },
+  {
+    name: 'chart',
+    description: 'Aggregate into a chartable shape with a viz hint',
+    syntax: 'chart type=<line|bar|pie|scatter|area|table> x=<field> [y=<field>] [agg=<func>] [by=<series>]',
+    example: 'chart type=bar x=status_code agg=count',
+    expectsFields: true,
+  },
+  {
+    name: 'lookup',
+    description: 'Enrich results from a lookup table',
+    syntax: 'lookup <table> field=<field> [match=<key>] [output <fields>]',
+    example: 'lookup http_status field=status_code',
+    expectsFields: true,
+  },
+  {
+    name: 'inputlookup',
+    description: 'Read a lookup table as the data source',
+    syntax: 'inputlookup <table>',
+    example: 'inputlookup watchlist',
+  },
+  {
+    name: 'outputlookup',
+    description: 'Save current results to a lookup table',
+    syntax: 'outputlookup <table>',
+    example: 'dedup hostname | table hostname | outputlookup error_hosts',
+  },
+  {
+    name: 'append',
+    description: 'Union rows from a subsearch',
+    syntax: 'append [ <subsearch> ]',
+    example: 'search index=app | append [ search index=web ]',
+  },
+  {
+    name: 'fillnull',
+    description: 'Replace null/empty values (default 0)',
+    syntax: 'fillnull [value=<v>] [<field>...]',
+    example: 'fillnull value="N/A" city, country',
+    expectsFields: true,
+  },
+  {
+    name: 'filldown',
+    description: 'Fill empty values from the last non-empty row',
+    syntax: 'filldown [<field>...]',
+    example: 'filldown user_id',
+    expectsFields: true,
+  },
+  {
+    name: 'convert',
+    description: 'Convert field types and time formats',
+    syntax: 'convert <num|ctime|mktime>(<field>) [as <alias>]',
+    example: 'convert num(bytes)',
+    expectsFields: true,
+  },
+  {
+    name: 'transaction',
+    description: 'Group related events into transactions',
+    syntax: 'transaction <field> [maxspan=<time>] [maxpause=<time>]',
+    example: 'transaction session_id maxspan=30m',
+    expectsFields: true,
+  },
+  {
+    name: 'compare',
+    description: 'Compare against an earlier period',
+    syntax: 'compare <offset> [<field>...]',
+    example: 'stats count by hostname | compare 1d',
+    expectsFields: true,
+  },
+  {
+    name: 'timewrap',
+    description: 'Overlay time periods as separate series',
+    syntax: 'timewrap <span> [series=relative|exact]',
+    example: 'timechart span=1h count | timewrap 1d',
   },
 ];
 
@@ -197,6 +270,10 @@ export const EVAL_FUNCTIONS: Suggestion[] = [
   { id: 'eval-coalesce', label: 'coalesce()', insertText: 'coalesce(, )', category: 'eval-function', description: 'First non-null', syntax: 'coalesce(<val1>, <val2>, ...)', score: 80 },
   { id: 'eval-nullif', label: 'nullif()', insertText: 'nullif(, )', category: 'eval-function', description: 'Null if equal', syntax: 'nullif(<val1>, <val2>)', score: 70 },
   { id: 'eval-case', label: 'case()', insertText: 'case(, , , )', category: 'eval-function', description: 'Case expression', syntax: 'case(<cond1>, <val1>, ..., <default>)', score: 75 },
+
+  // Date/time formatting
+  { id: 'eval-strftime', label: 'strftime()', insertText: 'strftime(, "%Y-%m-%d")', category: 'eval-function', description: 'Format a time as a string', syntax: 'strftime(<time>, <format>)', score: 78 },
+  { id: 'eval-strptime', label: 'strptime()', insertText: 'strptime(, "%Y-%m-%d")', category: 'eval-function', description: 'Parse a time string', syntax: 'strptime(<str>, <format>)', score: 72 },
 ];
 
 // ============================================================================

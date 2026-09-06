@@ -30,6 +30,80 @@ export const HEATMAP_HONEY_RAMP: [string, string, string] = [
   '#845117', // honey-700
 ];
 
+// ---------------------------------------------------------------------------
+// Severity (syslog 0–7) — the ONE source of truth per BRANDING.md §2.3.
+// Every severity badge, chip, swatch, and chart series must come from here;
+// this replaces four contradictory ad-hoc schemes (StatsPage, LogViewer,
+// FieldSidebar, docs) that had four severities collapsed into identical honey.
+// ---------------------------------------------------------------------------
+
+export interface SeverityTone {
+  /** Syslog level name. */
+  name: string;
+  /** Chart series color. 0–2 are shades of red (BRANDING groups them as red;
+   *  slight shade variance keeps adjacent chart slices distinguishable). */
+  hex: string;
+  /** Badge classes (text + bg + ring), light and dark. */
+  badge: string;
+  /** Chip classes (text + bg + border), light and dark — facet/filter style. */
+  chip: string;
+  /** Subtle full-row tint, light and dark. */
+  row: string;
+}
+
+export const SEVERITY_TONES: SeverityTone[] = [
+  { name: 'Emergency', hex: '#B91C1C',
+    badge: 'text-red-700 bg-red-100 ring-red-600/30 dark:text-red-400 dark:bg-red-950 dark:ring-red-800',
+    chip: 'text-red-700 bg-red-50 border-red-200 dark:text-red-400 dark:bg-red-950 dark:border-red-800',
+    row: 'bg-red-50/50 dark:bg-red-950/30' },
+  { name: 'Alert', hex: '#DC2626',
+    badge: 'text-red-700 bg-red-100 ring-red-600/30 dark:text-red-400 dark:bg-red-950 dark:ring-red-800',
+    chip: 'text-red-700 bg-red-50 border-red-200 dark:text-red-400 dark:bg-red-950 dark:border-red-800',
+    row: 'bg-red-50/50 dark:bg-red-950/30' },
+  { name: 'Critical', hex: '#EF4444',
+    badge: 'text-red-700 bg-red-100 ring-red-600/30 dark:text-red-400 dark:bg-red-950 dark:ring-red-800',
+    chip: 'text-red-700 bg-red-50 border-red-200 dark:text-red-400 dark:bg-red-950 dark:border-red-800',
+    row: 'bg-red-50/50 dark:bg-red-950/30' },
+  { name: 'Error', hex: '#EA580C',
+    badge: 'text-orange-700 bg-orange-100 ring-orange-600/30 dark:text-orange-400 dark:bg-orange-950 dark:ring-orange-800',
+    chip: 'text-orange-700 bg-orange-50 border-orange-200 dark:text-orange-400 dark:bg-orange-950 dark:border-orange-800',
+    row: 'bg-orange-50/50 dark:bg-orange-950/30' },
+  { name: 'Warning', hex: '#CA8A04',
+    badge: 'text-amber-700 bg-amber-100 ring-amber-600/30 dark:text-amber-400 dark:bg-amber-950 dark:ring-amber-800',
+    chip: 'text-amber-700 bg-amber-50 border-amber-200 dark:text-amber-400 dark:bg-amber-950 dark:border-amber-800',
+    row: 'bg-amber-50/50 dark:bg-amber-950/30' },
+  { name: 'Notice', hex: '#16A34A',
+    badge: 'text-green-700 bg-green-100 ring-green-600/30 dark:text-green-400 dark:bg-green-950 dark:ring-green-800',
+    chip: 'text-green-700 bg-green-50 border-green-200 dark:text-green-400 dark:bg-green-950 dark:border-green-800',
+    row: 'bg-green-50/50 dark:bg-green-950/30' },
+  { name: 'Info', hex: '#0D9488',
+    badge: 'text-teal-700 bg-teal-100 ring-teal-600/30 dark:text-teal-400 dark:bg-teal-950 dark:ring-teal-800',
+    chip: 'text-teal-700 bg-teal-50 border-teal-200 dark:text-teal-400 dark:bg-teal-950 dark:border-teal-800',
+    row: 'bg-teal-50/50 dark:bg-teal-950/30' },
+  { name: 'Debug', hex: '#78716C',
+    badge: 'text-stone-700 bg-stone-100 ring-stone-600/30 dark:text-stone-300 dark:bg-stone-800 dark:ring-stone-700',
+    chip: 'text-stone-700 bg-stone-50 border-stone-200 dark:text-stone-300 dark:bg-stone-800 dark:border-stone-700',
+    row: 'bg-stone-50/50 dark:bg-stone-800/30' },
+];
+
+/** Chart hex colors indexed by severity 0–7. */
+export const SEVERITY_HEX: string[] = SEVERITY_TONES.map(t => t.hex);
+
+/** Severity names indexed 0–7. */
+export const SEVERITY_NAMES: string[] = SEVERITY_TONES.map(t => t.name);
+
+const NEUTRAL_TONE: SeverityTone = {
+  name: 'Unknown', hex: '#8B7355',
+  badge: 'text-nog-700 bg-nog-100 ring-nog-600/30 dark:text-nog-300 dark:bg-nog-800 dark:ring-nog-700',
+  chip: 'text-nog-700 bg-nog-50 border-nog-200 dark:text-nog-300 dark:bg-nog-800 dark:border-nog-700',
+  row: 'bg-nog-50/50 dark:bg-nog-800/50',
+};
+
+/** Safe accessor: tone for a severity level, neutral nog for out-of-range. */
+export function severityTone(level: number): SeverityTone {
+  return Number.isInteger(level) && level >= 0 && level <= 7 ? SEVERITY_TONES[level] : NEUTRAL_TONE;
+}
+
 /**
  * Theme-aware colors for chart chrome (axes, gridlines, labels, tooltips).
  * Derived from the warm `nog` ramp so charts never go cool-grey.

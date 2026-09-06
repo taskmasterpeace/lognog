@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronRight, X } from 'lucide-react';
+import { severityTone } from './charts/palette';
 
 export interface FacetValue {
   value: string;
@@ -63,25 +64,16 @@ export default function FacetFilters({ facets, selectedFilters, onFilterChange }
     return labels[field] || field;
   };
 
+  // Shared BRANDING §2.3 severity names/chips (was another ad-hoc scheme with
+  // four severities collapsed into identical honey and no dark variants).
   const getSeverityLabel = (value: string): string => {
-    const severityNames = ['Emergency', 'Alert', 'Critical', 'Error', 'Warning', 'Notice', 'Info', 'Debug'];
     const num = parseInt(value, 10);
-    return !isNaN(num) && num >= 0 && num <= 7 ? severityNames[num] : value;
+    const tone = severityTone(num);
+    return tone.name === 'Unknown' ? value : tone.name;
   };
 
   const getSeverityColor = (value: string): string => {
-    const num = parseInt(value, 10);
-    const colors = [
-      'text-red-700 bg-red-50 border-red-200',      // Emergency
-      'text-honey-700 bg-honey-50 border-honey-200', // Alert
-      'text-honey-700 bg-honey-50 border-honey-200',    // Critical
-      'text-yellow-700 bg-yellow-50 border-yellow-200', // Error
-      'text-lime-700 bg-lime-50 border-lime-200',       // Warning
-      'text-green-700 bg-green-50 border-green-200',    // Notice
-      'text-honey-700 bg-honey-50 border-honey-200', // Info
-      'text-honey-700 bg-honey-50 border-honey-200',       // Debug
-    ];
-    return !isNaN(num) && num >= 0 && num <= 7 ? colors[num] : 'text-nog-700 bg-nog-50 border-nog-200 dark:text-nog-300 dark:bg-nog-800 dark:border-nog-700';
+    return severityTone(parseInt(value, 10)).chip;
   };
 
   const totalSelected = getTotalSelectedCount();

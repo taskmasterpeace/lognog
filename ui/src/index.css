@@ -126,14 +126,17 @@
   }
 
   /* Severity badges */
+  /* Syslog severity badges — keep in sync with BRANDING.md §2.3 and
+     src/components/charts/palette.ts SEVERITY_TONES (0-2 red family, 3 orange,
+     4 amber, 5 green, 6 teal, 7 warm grey). */
   .severity-0 { @apply bg-red-100 text-red-800 ring-1 ring-red-600/30 dark:bg-red-900/30 dark:text-red-400 dark:ring-red-500/30; }
-  .severity-1 { @apply bg-orange-100 text-orange-800 ring-1 ring-orange-600/30 dark:bg-orange-900/30 dark:text-orange-400 dark:ring-orange-500/30; }
-  .severity-2 { @apply bg-amber-100 text-amber-800 ring-1 ring-amber-600/30 dark:bg-amber-900/30 dark:text-amber-400 dark:ring-amber-500/30; }
-  .severity-3 { @apply bg-yellow-100 text-yellow-800 ring-1 ring-yellow-600/30 dark:bg-yellow-900/30 dark:text-yellow-400 dark:ring-yellow-500/30; }
-  .severity-4 { @apply bg-lime-100 text-lime-800 ring-1 ring-lime-600/30 dark:bg-lime-900/30 dark:text-lime-400 dark:ring-lime-500/30; }
+  .severity-1 { @apply bg-red-100 text-red-800 ring-1 ring-red-600/30 dark:bg-red-900/30 dark:text-red-400 dark:ring-red-500/30; }
+  .severity-2 { @apply bg-red-100 text-red-800 ring-1 ring-red-600/30 dark:bg-red-900/30 dark:text-red-400 dark:ring-red-500/30; }
+  .severity-3 { @apply bg-orange-100 text-orange-800 ring-1 ring-orange-600/30 dark:bg-orange-900/30 dark:text-orange-400 dark:ring-orange-500/30; }
+  .severity-4 { @apply bg-amber-100 text-amber-800 ring-1 ring-amber-600/30 dark:bg-amber-900/30 dark:text-amber-400 dark:ring-amber-500/30; }
   .severity-5 { @apply bg-green-100 text-green-800 ring-1 ring-green-600/30 dark:bg-green-900/30 dark:text-green-400 dark:ring-green-500/30; }
-  .severity-6 { @apply bg-emerald-100 text-emerald-800 ring-1 ring-emerald-600/30 dark:bg-emerald-900/30 dark:text-emerald-400 dark:ring-emerald-500/30; }
-  .severity-7 { @apply bg-nog-100 text-nog-800 ring-1 ring-nog-600/30 dark:bg-nog-900/30 dark:text-nog-400 dark:ring-nog-500/30; }
+  .severity-6 { @apply bg-teal-100 text-teal-800 ring-1 ring-teal-600/30 dark:bg-teal-900/30 dark:text-teal-400 dark:ring-teal-500/30; }
+  .severity-7 { @apply bg-stone-100 text-stone-700 ring-1 ring-stone-600/30 dark:bg-stone-800/50 dark:text-stone-300 dark:ring-stone-500/30; }
 
   /* Table */
   .table-container {

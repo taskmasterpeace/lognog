@@ -43,9 +43,10 @@ router.get('/overview', async (req: Request, res: Response) => {
         `SELECT count() as count FROM lognog.logs${scope.where}`
       ),
 
-      // Logs in last 24 hours
-      executeQuery<{ count: number }>(
-        `SELECT count() as count FROM lognog.logs WHERE timestamp > now() - INTERVAL 24 HOUR${scope.and}`
+      // Logs in last 24 hours (total + errors, so the UI's "Errors (24h)" card
+      // is actually time-scoped — bySeverity below is all-time)
+      executeQuery<{ count: number; errors: number }>(
+        `SELECT count() as count, countIf(severity <= 3) as errors FROM lognog.logs WHERE timestamp > now() - INTERVAL 24 HOUR${scope.and}`
       ),
 
       // Logs by severity
@@ -67,6 +68,7 @@ router.get('/overview', async (req: Request, res: Response) => {
     return res.json({
       totalLogs: totalLogs[0]?.count || 0,
       last24Hours: recentLogs[0]?.count || 0,
+      last24HoursErrors: (recentLogs[0] as { count: number; errors?: number })?.errors || 0,
       bySeverity,
       topHosts: byHost,
       topApps: byApp,

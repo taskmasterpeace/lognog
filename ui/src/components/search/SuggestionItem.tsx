@@ -9,15 +9,17 @@ interface SuggestionItemProps {
   onClick: () => void;
 }
 
+// One distinct brand-safe hue per category so badges are scannable at a glance
+// (was: four categories all honey, two both emerald).
 const CATEGORY_STYLES: Record<SuggestionCategory, { bg: string; text: string; label: string }> = {
-  command: { bg: 'bg-honey-500/20', text: 'text-honey-400', label: 'Cmd' },
-  aggregation: { bg: 'bg-honey-500/20', text: 'text-honey-400', label: 'Agg' },
-  'eval-function': { bg: 'bg-emerald-500/20', text: 'text-emerald-400', label: 'Func' },
-  field: { bg: 'bg-honey-500/20', text: 'text-honey-400', label: 'Field' },
-  value: { bg: 'bg-emerald-500/20', text: 'text-emerald-400', label: 'Val' },
-  operator: { bg: 'bg-honey-500/20', text: 'text-honey-400', label: 'Op' },
-  keyword: { bg: 'bg-nog-500/20', text: 'text-nog-300', label: 'Key' },
-  history: { bg: 'bg-nog-500/20', text: 'text-nog-400', label: 'History' },
+  command: { bg: 'bg-honey-500/20', text: 'text-honey-700 dark:text-honey-400', label: 'Cmd' },
+  aggregation: { bg: 'bg-teal-500/20', text: 'text-teal-700 dark:text-teal-400', label: 'Agg' },
+  'eval-function': { bg: 'bg-emerald-500/20', text: 'text-emerald-700 dark:text-emerald-400', label: 'Func' },
+  field: { bg: 'bg-amber-500/20', text: 'text-amber-700 dark:text-amber-400', label: 'Field' },
+  value: { bg: 'bg-stone-500/20', text: 'text-stone-600 dark:text-stone-400', label: 'Val' },
+  operator: { bg: 'bg-orange-500/20', text: 'text-orange-700 dark:text-orange-400', label: 'Op' },
+  keyword: { bg: 'bg-nog-500/20', text: 'text-nog-600 dark:text-nog-300', label: 'Key' },
+  history: { bg: 'bg-nog-500/20', text: 'text-nog-500 dark:text-nog-400', label: 'History' },
 };
 
 export function SuggestionItem({ suggestion, isSelected, onClick }: SuggestionItemProps) {

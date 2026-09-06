@@ -205,12 +205,13 @@ export default function WelcomeWizard({ onComplete, onSkip }: WelcomeWizardProps
     }
   };
 
+  // Matches AlertsPage's SEVERITIES scheme (was: high/medium/low all identical honey).
   const getSeverityColor = (severity: string) => {
     switch (severity) {
       case 'critical': return 'text-red-500 bg-red-50 dark:bg-red-900/20';
-      case 'high': return 'text-honey-500 bg-honey-50 dark:bg-honey-900/20';
-      case 'medium': return 'text-honey-500 bg-honey-50 dark:bg-honey-900/20';
-      case 'low': return 'text-honey-500 bg-honey-50 dark:bg-honey-900/20';
+      case 'high': return 'text-orange-500 bg-orange-50 dark:bg-orange-900/20';
+      case 'medium': return 'text-yellow-600 bg-yellow-50 dark:text-yellow-500 dark:bg-yellow-900/20';
+      case 'low': return 'text-nog-500 bg-nog-50 dark:text-nog-400 dark:bg-nog-700';
       default: return 'text-nog-500 bg-nog-50 dark:bg-nog-700';
     }
   };

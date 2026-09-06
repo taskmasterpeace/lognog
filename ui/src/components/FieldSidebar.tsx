@@ -3,6 +3,7 @@ import { ChevronDown, ChevronRight, Pin, Search, Loader2, VolumeX, Volume2, Data
 import { discoverFields, getFieldPreferences, pinField, getFieldValues, DiscoveredField } from '../api/client';
 import { useMute } from '../contexts/MuteContext';
 import FieldBrowserModal from './FieldBrowserModal';
+import { severityTone } from './charts/palette';
 
 // Stats for a field
 interface FieldStats {
@@ -329,21 +330,9 @@ export default function FieldSidebar({
     return !isNaN(num) && num >= 0 && num <= 7 ? severityNames[num] : value;
   };
 
+  // Shared BRANDING §2.3 severity chips (was a third, contradictory ad-hoc scheme).
   const getSeverityColor = (value: string): string => {
-    const num = parseInt(value, 10);
-    const colors = [
-      'text-red-700 bg-red-50 border-red-200 dark:text-red-400 dark:bg-red-950 dark:border-red-800',
-      'text-honey-700 bg-honey-50 border-honey-200 dark:text-honey-400 dark:bg-honey-950 dark:border-honey-800',
-      'text-honey-700 bg-honey-50 border-honey-200 dark:text-honey-400 dark:bg-honey-950 dark:border-honey-800',
-      'text-yellow-700 bg-yellow-50 border-yellow-200 dark:text-yellow-400 dark:bg-yellow-950 dark:border-yellow-800',
-      'text-lime-700 bg-lime-50 border-lime-200 dark:text-lime-400 dark:bg-lime-950 dark:border-lime-800',
-      'text-green-700 bg-green-50 border-green-200 dark:text-green-400 dark:bg-green-950 dark:border-green-800',
-      'text-honey-700 bg-honey-50 border-honey-200 dark:text-honey-400 dark:bg-honey-950 dark:border-honey-800',
-      'text-honey-700 bg-honey-50 border-honey-200 dark:text-honey-400 dark:bg-honey-950 dark:border-honey-800',
-    ];
-    return !isNaN(num) && num >= 0 && num <= 7
-      ? colors[num]
-      : 'text-nog-700 bg-nog-50 border-nog-200 dark:text-nog-300 dark:bg-nog-800 dark:border-nog-700';
+    return severityTone(parseInt(value, 10)).chip;
   };
 
   const renderFacet = (facet: Facet, showPinButton: boolean = false) => {

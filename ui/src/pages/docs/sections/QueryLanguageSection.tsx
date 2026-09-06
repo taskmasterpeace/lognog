@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ChevronRight, Terminal } from 'lucide-react';
 import CodeBlock from '../components/CodeBlock';
 import QuerySubNav from '../components/QuerySubNav';
+import { SEVERITY_TONES } from '../../../components/charts/palette';
 import type { QuerySubsection } from '../DocsPage';
 
 function QueryLanguageIntro() {
@@ -29,7 +30,7 @@ function QueryLanguageIntro() {
               </li>
               <li className="flex items-start gap-2">
                 <ChevronRight className="w-4 h-4 text-honey-500 mt-0.5 flex-shrink-0" />
-                <span className="text-nog-600 dark:text-nog-300">50+ built-in functions for math, strings, and aggregations</span>
+                <span className="text-nog-600 dark:text-nog-300">29 pipeline commands and 50+ built-in functions</span>
               </li>
               <li className="flex items-start gap-2">
                 <ChevronRight className="w-4 h-4 text-honey-500 mt-0.5 flex-shrink-0" />
@@ -82,18 +83,9 @@ search host=router severity>=warning`} />
       <section>
         <h2 className="text-xl font-bold text-nog-900 dark:text-nog-100 mb-4">Severity Levels</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          {[
-            { level: 0, name: 'Emergency', color: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800' },
-            { level: 1, name: 'Alert', color: 'bg-honey-100 text-honey-800 border-honey-200 dark:bg-honey-900/20 dark:text-honey-300 dark:border-honey-800' },
-            { level: 2, name: 'Critical', color: 'bg-honey-100 text-honey-800 border-honey-200 dark:bg-honey-900/20 dark:text-honey-300 dark:border-honey-800' },
-            { level: 3, name: 'Error', color: 'bg-yellow-100 text-yellow-800 border-yellow-200 dark:bg-yellow-900/20 dark:text-yellow-300 dark:border-yellow-800' },
-            { level: 4, name: 'Warning', color: 'bg-lime-100 text-lime-800 border-lime-200 dark:bg-lime-900/20 dark:text-lime-300 dark:border-lime-800' },
-            { level: 5, name: 'Notice', color: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/20 dark:text-green-300 dark:border-green-800' },
-            { level: 6, name: 'Info', color: 'bg-honey-100 text-honey-800 border-honey-200 dark:bg-honey-900/20 dark:text-honey-300 dark:border-honey-800' },
-            { level: 7, name: 'Debug', color: 'bg-honey-100 text-honey-800 border-honey-200 dark:bg-honey-900/20 dark:text-honey-300 dark:border-honey-800' },
-          ].map((s) => (
-            <div key={s.level} className={`p-3 rounded-lg border ${s.color}`}>
-              <span className="font-mono font-bold">{s.level}</span>
+          {SEVERITY_TONES.map((s, level) => (
+            <div key={level} className={`p-3 rounded-lg border ${s.chip}`}>
+              <span className="font-mono font-bold">{level}</span>
               <span className="ml-2">{s.name}</span>
             </div>
           ))}
@@ -518,12 +510,13 @@ function AdvancedCommands() {
             <Terminal className="w-4 h-4 text-honey-500" />
             top
           </h3>
-          <p className="text-sm text-nog-600 dark:text-nog-400 mb-3">Find the top N most common values</p>
+          <p className="text-sm text-nog-600 dark:text-nog-400 mb-3">Find the top N most common values, optionally per group</p>
           <CodeBlock code={`search * | top 10 hostname
 search * | top 5 app_name
-search * | top 20 source_ip`} />
+search * | top 3 app_name by hostname`} />
           <p className="text-xs text-nog-500 dark:text-nog-400 mt-2">
-            Shorthand for: <code className="code text-xs">stats count by field | sort desc | limit N</code>
+            Shorthand for: <code className="code text-xs">stats count by field | sort desc | limit N</code>.
+            With <code className="code text-xs">by</code>, returns the top N within each group.
           </p>
         </div>
 
@@ -532,11 +525,12 @@ search * | top 20 source_ip`} />
             <Terminal className="w-4 h-4 text-honey-500" />
             rare
           </h3>
-          <p className="text-sm text-nog-600 dark:text-nog-400 mb-3">Find the rarest N values</p>
+          <p className="text-sm text-nog-600 dark:text-nog-400 mb-3">Find the rarest N values, optionally per group</p>
           <CodeBlock code={`search * | rare 10 hostname
-search * | rare 5 app_name`} />
+search * | rare 5 app_name by hostname`} />
           <p className="text-xs text-nog-500 dark:text-nog-400 mt-2">
-            Shorthand for: <code className="code text-xs">stats count by field | sort asc | limit N</code>
+            Shorthand for: <code className="code text-xs">stats count by field | sort asc | limit N</code>.
+            With <code className="code text-xs">by</code>, returns the rarest N within each group.
           </p>
         </div>
 
@@ -594,6 +588,133 @@ search * | rex "status=(?P<status>\\d+)"`} />
           </p>
         </div>
       </div>
+
+      <section>
+        <h2 className="text-2xl font-bold text-nog-900 dark:text-nog-100 mb-4">Charting & Comparison</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="card p-4 dark:bg-nog-800">
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 flex items-center gap-2 mb-2">
+              <Terminal className="w-4 h-4 text-honey-500" />
+              chart
+            </h3>
+            <p className="text-sm text-nog-600 dark:text-nog-400 mb-3">Aggregate into a chartable shape with a visualization hint</p>
+            <CodeBlock code={`search * | chart type=bar x=status_code agg=count
+search * | chart type=line x=hostname y=duration_ms agg=avg
+search * | chart type=pie x=app_name agg=count limit=10`} />
+          </div>
+
+          <div className="card p-4 dark:bg-nog-800">
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 flex items-center gap-2 mb-2">
+              <Terminal className="w-4 h-4 text-honey-500" />
+              compare
+            </h3>
+            <p className="text-sm text-nog-600 dark:text-nog-400 mb-3">Compare the current period to an earlier one; adds change columns</p>
+            <CodeBlock code={`search * | stats count by hostname | compare 1d
+search severity<=3 | stats count by app_name | compare 1w`} />
+          </div>
+
+          <div className="card p-4 dark:bg-nog-800">
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 flex items-center gap-2 mb-2">
+              <Terminal className="w-4 h-4 text-honey-500" />
+              timewrap
+            </h3>
+            <p className="text-sm text-nog-600 dark:text-nog-400 mb-3">Overlay multiple time periods as separate series</p>
+            <CodeBlock code={`search * | timechart span=1h count | timewrap 1d`} />
+          </div>
+
+          <div className="card p-4 dark:bg-nog-800">
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 flex items-center gap-2 mb-2">
+              <Terminal className="w-4 h-4 text-honey-500" />
+              transaction
+            </h3>
+            <p className="text-sm text-nog-600 dark:text-nog-400 mb-3">Group related events by shared field values within time constraints</p>
+            <CodeBlock code={`search * | transaction session_id maxspan=30m`} />
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2 className="text-2xl font-bold text-nog-900 dark:text-nog-100 mb-4">Lookups & Enrichment</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="card p-4 dark:bg-nog-800">
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 flex items-center gap-2 mb-2">
+              <Terminal className="w-4 h-4 text-honey-500" />
+              lookup
+            </h3>
+            <p className="text-sm text-nog-600 dark:text-nog-400 mb-3">Enrich results with columns from a lookup table</p>
+            <CodeBlock code={`search * | lookup http_status field=status_code
+search * | lookup users field=user_id match=id output name, email`} />
+          </div>
+
+          <div className="card p-4 dark:bg-nog-800">
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 flex items-center gap-2 mb-2">
+              <Terminal className="w-4 h-4 text-honey-500" />
+              inputlookup
+            </h3>
+            <p className="text-sm text-nog-600 dark:text-nog-400 mb-3">Read a lookup table as the data source instead of logs</p>
+            <CodeBlock code={`inputlookup watchlist
+inputlookup watchlist | search role=admin`} />
+          </div>
+
+          <div className="card p-4 dark:bg-nog-800">
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 flex items-center gap-2 mb-2">
+              <Terminal className="w-4 h-4 text-honey-500" />
+              outputlookup
+            </h3>
+            <p className="text-sm text-nog-600 dark:text-nog-400 mb-3">Save the current results to a lookup table</p>
+            <CodeBlock code={`search severity<=3 | dedup hostname
+  | table hostname | outputlookup error_hosts`} />
+          </div>
+
+          <div className="card p-4 dark:bg-nog-800">
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 flex items-center gap-2 mb-2">
+              <Terminal className="w-4 h-4 text-honey-500" />
+              append
+            </h3>
+            <p className="text-sm text-nog-600 dark:text-nog-400 mb-3">Union the rows of a subsearch onto the current results</p>
+            <CodeBlock code={`search index=app | append [ search index=web ]`} />
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h2 className="text-2xl font-bold text-nog-900 dark:text-nog-100 mb-4">Data Cleanup</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="card p-4 dark:bg-nog-800">
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 flex items-center gap-2 mb-2">
+              <Terminal className="w-4 h-4 text-honey-500" />
+              fillnull
+            </h3>
+            <p className="text-sm text-nog-600 dark:text-nog-400 mb-3">Replace null or empty values with a fill value (default 0)</p>
+            <CodeBlock code={`search * | fillnull model_id
+search * | fillnull value="N/A" city, country`} />
+          </div>
+
+          <div className="card p-4 dark:bg-nog-800">
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 flex items-center gap-2 mb-2">
+              <Terminal className="w-4 h-4 text-honey-500" />
+              filldown
+            </h3>
+            <p className="text-sm text-nog-600 dark:text-nog-400 mb-3">Fill empty values downward using the last non-empty value</p>
+            <CodeBlock code={`search * | filldown user_id`} />
+          </div>
+
+          <div className="card p-4 dark:bg-nog-800 md:col-span-2">
+            <h3 className="font-semibold text-nog-900 dark:text-nog-100 flex items-center gap-2 mb-2">
+              <Terminal className="w-4 h-4 text-honey-500" />
+              convert
+            </h3>
+            <p className="text-sm text-nog-600 dark:text-nog-400 mb-3">Convert field values between types and time formats</p>
+            <CodeBlock code={`search * | convert num(bytes)
+search * | convert ctime(epoch) as time_str
+search * | convert mktime(created)
+search * | eval day=strftime(timestamp, "%Y-%m-%d")`} />
+            <p className="text-xs text-nog-500 dark:text-nog-400 mt-2">
+              <code className="code text-xs">strftime()</code> / <code className="code text-xs">strptime()</code> are also available inside <code className="code text-xs">eval</code> for custom time formatting and parsing
+            </p>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
@@ -716,7 +837,7 @@ export default function QueryLanguageSection() {
 
   return (
     <div className="space-y-8">
-      <div className="card p-4 bg-honey-50 border-honey-200 dark:from-honey-900/20 dark:to-honey-900/20 dark:border-honey-800">
+      <div className="card p-4 bg-honey-50 border-honey-200 dark:bg-honey-900/20 dark:border-honey-800">
         <p className="text-honey-800 dark:text-honey-300">
           <strong>LogNog Query Academy:</strong> Complete reference for the LogNog Query Language.
           Choose a topic below to learn more about each feature.

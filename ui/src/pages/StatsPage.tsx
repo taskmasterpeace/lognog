@@ -17,8 +17,8 @@ import { getStats, getTimeSeries } from '../api/client';
 import StorageTab from '../components/analytics/StorageTab';
 import { useTheme } from '../contexts/ThemeContext';
 
-const SEVERITY_COLORS = ['#dc2626', '#ea580c', '#d97706', '#eab308', '#84cc16', '#22c55e', '#10b981', '#0D9488'];
-const SEVERITY_NAMES = ['Emergency', 'Alert', 'Critical', 'Error', 'Warning', 'Notice', 'Info', 'Debug'];
+// Shared BRANDING §2.3 severity colors/names (see components/charts/palette.ts).
+import { SEVERITY_HEX as SEVERITY_COLORS, SEVERITY_NAMES } from '../components/charts/palette';
 
 interface StatCardProps {
   icon: React.ElementType;
@@ -86,7 +86,8 @@ export default function StatsPage() {
     severity: s.severity,
   })) || [];
 
-  const errorCount = stats?.bySeverity.filter(s => s.severity <= 3).reduce((sum, s) => sum + s.count, 0) || 0;
+  // Time-scoped by the API (bySeverity is all-time and would mislabel the card).
+  const errorCount = stats?.last24HoursErrors ?? 0;
 
   return (
     <div className="min-h-full bg-nog-50 dark:bg-nog-900">
@@ -237,7 +238,7 @@ export default function StatsPage() {
           <div className="card p-4 sm:p-5">
             <div className="mb-3 sm:mb-4">
               <h3 className="font-semibold text-nog-900 dark:text-nog-100 text-sm sm:text-base">Severity Distribution</h3>
-              <p className="text-xs sm:text-sm text-nog-500 dark:text-nog-400">Click to filter by severity</p>
+              <p className="text-xs sm:text-sm text-nog-500 dark:text-nog-400">All time &middot; click to filter by severity</p>
             </div>
             <PieChart
               data={severityData.map(s => ({ name: s.name, value: s.value }))}

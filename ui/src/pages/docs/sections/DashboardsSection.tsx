@@ -138,6 +138,32 @@ export default function DashboardsSection() {
             <CodeBlock code={`search * | stats count by hour(timestamp) day(timestamp)`} />
           </div>
         </div>
+
+        <h3 className="text-lg font-semibold text-nog-900 dark:text-nog-100 mt-6 mb-3">More Visualizations</h3>
+        <p className="text-sm text-nog-600 dark:text-nog-400 mb-4">
+          LogNog ships 15 panel types in total. The rest, at a glance:
+        </p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {[
+            { name: 'Line Chart', desc: 'Unfilled trend lines — cleaner for many overlapping series.', query: 'timechart span=1h count by hostname' },
+            { name: 'Scatter', desc: 'Correlate two numeric values across a category.', query: 'stats avg(response_time), count by hostname' },
+            { name: 'Funnel', desc: 'Stage-by-stage drop-off, widest at the top.', query: 'stats count by stage' },
+            { name: 'Treemap', desc: 'Proportions as nested rectangles — good for many categories.', query: 'stats count by app_name' },
+            { name: 'Radar', desc: 'Compare several dimensions on one shape.', query: 'stats count by severity' },
+            { name: 'Sankey', desc: 'Flow volume between pairs, like source → destination.', query: 'stats count by source_ip, dest_ip' },
+            { name: 'Map (Geo)', desc: 'Values on a world map — pair with GeoIP enrichment.', query: 'stats count by country' },
+            { name: 'Word Cloud', desc: 'Term frequency at a glance.', query: 'top 50 app_name' },
+          ].map((v) => (
+            <div key={v.name} className="card p-3 dark:bg-nog-800">
+              <h4 className="font-semibold text-sm text-nog-900 dark:text-nog-100 flex items-center gap-2 mb-1">
+                <span className="w-2 h-2 bg-honey-500 rounded-full"></span>
+                {v.name}
+              </h4>
+              <p className="text-xs text-nog-600 dark:text-nog-400 mb-2">{v.desc}</p>
+              <code className="code text-xs break-all">search * | {v.query}</code>
+            </div>
+          ))}
+        </div>
       </section>
 
       <section>
@@ -434,30 +460,33 @@ search * | stats count by severity | table severity`} />
 
           <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">Color Guidelines</h3>
+            <p className="text-xs text-nog-500 dark:text-nog-400 mb-2">
+              LogNog charts follow the brand severity palette — use color to mean something:
+            </p>
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-2">
               <div className="flex items-center gap-2 text-sm">
-                <span className="w-3 h-3 bg-green-500 rounded-full"></span>
-                <span className="text-nog-600 dark:text-nog-400">Green: Good, healthy</span>
+                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: '#DC2626' }}></span>
+                <span className="text-nog-600 dark:text-nog-400">Red: Critical</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: '#EA580C' }}></span>
+                <span className="text-nog-600 dark:text-nog-400">Orange: Error</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: '#CA8A04' }}></span>
+                <span className="text-nog-600 dark:text-nog-400">Amber: Warning</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: '#16A34A' }}></span>
+                <span className="text-nog-600 dark:text-nog-400">Green: Healthy</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: '#0D9488' }}></span>
+                <span className="text-nog-600 dark:text-nog-400">Teal: Info</span>
               </div>
               <div className="flex items-center gap-2 text-sm">
                 <span className="w-3 h-3 bg-honey-500 rounded-full"></span>
-                <span className="text-nog-600 dark:text-nog-400">Yellow: Warning</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm">
-                <span className="w-3 h-3 bg-red-500 rounded-full"></span>
-                <span className="text-nog-600 dark:text-nog-400">Red: Error, critical</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm">
-                <span className="w-3 h-3 bg-honey-500 rounded-full"></span>
-                <span className="text-nog-600 dark:text-nog-400">Blue: Information</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm">
-                <span className="w-3 h-3 bg-honey-500 rounded-full"></span>
-                <span className="text-nog-600 dark:text-nog-400">Purple: Distinct</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm">
-                <span className="w-3 h-3 bg-nog-500 rounded-full"></span>
-                <span className="text-nog-600 dark:text-nog-400">Gray: Secondary</span>
+                <span className="text-nog-600 dark:text-nog-400">Honey: Primary series</span>
               </div>
             </div>
           </div>
