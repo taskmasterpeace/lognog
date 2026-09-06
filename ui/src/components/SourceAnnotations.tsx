@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import { X, Edit2, ExternalLink, Info } from 'lucide-react';
 import { Tooltip } from './ui/Tooltip';
 import {
@@ -43,13 +43,21 @@ export function SourceAnnotationProvider({ children }: SourceAnnotationProviderP
   const [annotations, setAnnotations] = useState<Map<string, SourceAnnotation>>(new Map());
   const [activeDetailCard, setActiveDetailCard] = useState<SourceAnnotation | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  // Every key we've ALREADY asked the server about, found or not. The batch
+  // endpoint omits items without an annotation, so deduping against the found
+  // map alone refetched the same (mostly unannotated) keys on every render —
+  // an infinite request loop from LogViewer's effect on any search results.
+  const requestedKeys = useRef(new Set<string>());
 
   const loadAnnotations = useCallback(async (items: Array<{ field: string; value: string }>) => {
     if (items.length === 0) return;
 
-    // Filter out items we already have
-    const newItems = items.filter(item => !annotations.has(`${item.field}:${item.value}`));
+    // Only ask about keys we've never requested (marked up-front so concurrent
+    // calls don't double-fetch; a failed batch is not retried — annotations are
+    // decorative and retrying is what caused the request storm).
+    const newItems = items.filter(item => !requestedKeys.current.has(`${item.field}:${item.value}`));
     if (newItems.length === 0) return;
+    newItems.forEach(item => requestedKeys.current.add(`${item.field}:${item.value}`));
 
     setIsLoading(true);
     try {
@@ -66,7 +74,7 @@ export function SourceAnnotationProvider({ children }: SourceAnnotationProviderP
     } finally {
       setIsLoading(false);
     }
-  }, [annotations]);
+  }, []);
 
   const getAnnotation = useCallback((field: string, value: string) => {
     return annotations.get(`${field}:${value}`);
@@ -83,17 +91,15 @@ export function SourceAnnotationProvider({ children }: SourceAnnotationProviderP
     setActiveDetailCard(null);
   }, []);
 
+  // Stable context value: consumers put this object in effect deps, so a fresh
+  // literal every render re-fired their effects on every provider re-render.
+  const contextValue = useMemo(
+    () => ({ annotations, loadAnnotations, getAnnotation, showDetailCard, hideDetailCard, isLoading }),
+    [annotations, loadAnnotations, getAnnotation, showDetailCard, hideDetailCard, isLoading]
+  );
+
   return (
-    <SourceAnnotationContext.Provider
-      value={{
-        annotations,
-        loadAnnotations,
-        getAnnotation,
-        showDetailCard,
-        hideDetailCard,
-        isLoading,
-      }}
-    >
+    <SourceAnnotationContext.Provider value={contextValue}>
       {children}
       {activeDetailCard && (
         <AnnotationDetailCard

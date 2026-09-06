@@ -76,6 +76,7 @@ import {
   DashboardPanel,
   DashboardPage,
   DashboardVariable as APIDashboardVariable,
+  ChartHint,
 } from '../api/client';
 import { HeatmapChart, HeatmapData } from '../components/charts/HeatmapChart';
 import { MatrixHeatmapChart } from '../components/charts/MatrixHeatmapChart';
@@ -136,7 +137,21 @@ interface PanelData {
   results: Record<string, unknown>[];
   loading: boolean;
   error: string | null;
+  /** `| chart` presentation hint from the query compiler, when present. */
+  chartHint?: ChartHint;
 }
+
+// metadata.chart chartType -> this page's visualization values. Note 'line'
+// here is the filled Area type and 'linechart' the unfilled line (historical
+// naming), so the hint's area/line map accordingly.
+const CHART_HINT_TO_VIZ: Record<string, string> = {
+  bar: 'bar',
+  pie: 'pie',
+  line: 'linechart',
+  area: 'line',
+  scatter: 'scatter',
+  table: 'table',
+};
 
 /**
  * Long-form split-by result (time, splitBy, value) -> wide rows keyed by
@@ -240,7 +255,12 @@ function PanelVisualization({
     color: t.color || THRESHOLD_COLORS[Math.min(i, THRESHOLD_COLORS.length - 1)],
   }));
 
-  switch (panel.visualization) {
+  // `| chart` hint from the compiler: used only when the panel itself doesn't
+  // specify a visualization (legacy/imported panels) — explicit picks win.
+  const hintViz = data.chartHint ? CHART_HINT_TO_VIZ[data.chartHint.chartType] : undefined;
+  const visualization = panel.visualization || hintViz || 'table';
+
+  switch (visualization) {
     case 'bar':
       // Rows came back but the aggregate is empty for every one of them
       // (e.g. sum() over a field that isn't numeric): a chart of zero-width
@@ -342,7 +362,7 @@ function PanelVisualization({
           xAxisKey={labelKey}
           height={200}
           darkMode={isDarkMode}
-          fill={panel.visualization !== 'linechart'}
+          fill={visualization !== 'linechart'}
           stacked={format.stacked}
           yMin={format.yMin}
           yMax={format.yMax}
@@ -1553,7 +1573,12 @@ export default function DashboardViewPage() {
       if (panelFetchSeq.current[panel.id] !== seq) return; // superseded
       setPanelData((prev) => ({
         ...prev,
-        [panel.id]: { results: result.results, loading: false, error: null },
+        [panel.id]: {
+          results: result.results,
+          loading: false,
+          error: null,
+          chartHint: result.metadata?.chart,
+        },
       }));
     } catch (err) {
       if (panelFetchSeq.current[panel.id] !== seq) return; // superseded

@@ -1,6 +1,7 @@
 // Barrel export for search autocomplete components
 
 export { SearchAutocomplete } from './SearchAutocomplete';
+export { SearchChartView } from './SearchChartView';
 export { AutocompleteDropdown } from './AutocompleteDropdown';
 export { SuggestionItem } from './SuggestionItem';
 export { useAutocomplete } from './useAutocomplete';

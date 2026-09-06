@@ -95,6 +95,14 @@ export interface SearchHistogram {
   buckets: HistogramBucket[];
 }
 
+/** Presentation hint attached by the DSL `chart` command. */
+export interface ChartHint {
+  chartType: string; // line | bar | pie | scatter | area | table
+  xField?: string;
+  yField?: string;
+  groupBy?: string;
+}
+
 export interface SearchResult {
   query: string;
   sql: string;
@@ -102,6 +110,12 @@ export interface SearchResult {
   count: number;
   executionTime?: number;
   histogram?: SearchHistogram;
+  /** Compiler presentation hints (e.g. `| chart` → metadata.chart). */
+  metadata?: {
+    chart?: ChartHint;
+    compare?: { offset: string; fields?: string[] };
+    timewrap?: { span: string; series?: 'relative' | 'exact' };
+  };
 }
 
 export interface SavedSearch {

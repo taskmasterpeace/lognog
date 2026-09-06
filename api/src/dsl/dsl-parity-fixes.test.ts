@@ -92,6 +92,12 @@ describe('chart command (was a dead no-op)', () => {
     expect(r.metadata?.chart?.xField).toBe('hostname');
   });
 
+  it('chart limit=N parses (limit is a keyword token) and caps the query', () => {
+    const r = compileDSL(parseToAST('search * | chart type=pie x=severity agg=count limit=5'));
+    expect(r.sql).toContain('LIMIT 5');
+    expect(r.metadata?.chart?.chartType).toBe('pie');
+  });
+
   it('a bare chart (no agg) counts', () => {
     const r = parseAndCompile('search * | chart type=table x=hostname');
     expect(r.sql).toContain('count()');

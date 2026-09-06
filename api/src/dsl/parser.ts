@@ -1219,6 +1219,14 @@ export class Parser {
         groupBy = this.consume(TokenType.IDENTIFIER, 'Expected group by field').value;
         continue;
       }
+      // `limit=<n>` — `limit` lexes as a command keyword, not an identifier, so
+      // handle it explicitly too (documented syntax; previously a parse error).
+      if (this.check(TokenType.LIMIT)) {
+        this.advance();
+        this.consume(TokenType.EQUALS, 'Expected "=" after limit');
+        limit = parseInt(this.consume(TokenType.NUMBER, 'Expected limit number').value, 10);
+        continue;
+      }
       if (this.check(TokenType.IDENTIFIER)) {
         const key = this.peek().value.toLowerCase();
 

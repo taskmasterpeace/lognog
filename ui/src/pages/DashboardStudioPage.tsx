@@ -40,6 +40,17 @@ import {
 // VISUALIZATION_OPTIONS). 'line' renders a filled area ("Area" — legacy value
 // naming), 'linechart' is the plain line; the 'area' alias stays out of the
 // picker to avoid a duplicate pill.
+// metadata.chart chartType -> Studio viz values ('line' = filled Area,
+// 'linechart' = unfilled line, matching DashboardViewPage's naming).
+const CHART_HINT_TO_VIZ: Record<string, PanelVizType> = {
+  bar: 'bar',
+  pie: 'pie',
+  line: 'linechart',
+  area: 'line',
+  scatter: 'scatter',
+  table: 'table',
+};
+
 const ALL_VIZ: PanelVizType[] = [
   'table', 'bar', 'pie', 'line', 'stat', 'heatmap', 'gauge', 'wordcloud',
   'scatter', 'funnel', 'treemap', 'linechart', 'radar', 'sankey', 'map',
@@ -122,7 +133,9 @@ export default function DashboardStudioPage() {
   }, [editingId, toast]);
 
   const suggestions = useMemo(() => suggestVisualizations(results), [results]);
-  const recommended = suggestions[0];
+  // A `| chart` hint from the query beats the shape-based guess.
+  const [hintViz, setHintViz] = useState<PanelVizType | undefined>(undefined);
+  const recommended = hintViz ?? suggestions[0];
 
   const runQueryFor = useCallback(async (q: string) => {
     if (!q.trim()) return;
@@ -133,7 +146,9 @@ export default function DashboardStudioPage() {
       const rows = res.results || [];
       setResults(rows);
       setHasRun(true);
-      setViz(suggestVisualizations(rows)[0]);
+      const hinted = res.metadata?.chart ? CHART_HINT_TO_VIZ[res.metadata.chart.chartType] : undefined;
+      setHintViz(hinted);
+      setViz(hinted ?? suggestVisualizations(rows)[0]);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Query failed');
       setResults([]);

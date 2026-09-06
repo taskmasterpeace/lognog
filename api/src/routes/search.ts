@@ -659,7 +659,7 @@ router.post('/query', authenticate, rateLimit(120, 60000), async (req: Request, 
       histogramPromise || Promise.resolve(null),
     ]);
 
-    const { sql, results: rawResults } = mainResult;
+    const { sql, results: rawResults, metadata } = mainResult;
 
     // Apply field extraction if requested
     let results = rawResults;
@@ -740,6 +740,7 @@ router.post('/query', authenticate, rateLimit(120, 60000), async (req: Request, 
         intervalMs: number;
         buckets: { timestamp: number; count: number }[];
       };
+      metadata?: typeof metadata;
     } = {
       query,
       sql,
@@ -749,6 +750,12 @@ router.post('/query', authenticate, rateLimit(120, 60000), async (req: Request, 
       backend: getBackendInfo().backend,
       executionTime,
     };
+
+    // Presentation hints from the compiler (e.g. `| chart` → metadata.chart) so
+    // the UI can pick a matching visualization.
+    if (metadata) {
+      response.metadata = metadata;
+    }
 
     // Add histogram if available
     if (histogramResult && histogramResult.length > 0) {

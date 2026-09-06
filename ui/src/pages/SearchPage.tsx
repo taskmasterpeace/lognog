@@ -32,6 +32,7 @@ import {
   Zap,
   Terminal,
   Keyboard,
+  BarChart3,
 } from 'lucide-react';
 import { executeSearch, getSavedSearches, createSavedSearch, aiSearch, getAISuggestions, SavedSearchCreateRequest, authFetch } from '../api/client';
 import { useMute } from '../contexts/MuteContext';
@@ -41,7 +42,7 @@ import TimePicker from '../components/TimePicker';
 import FieldSidebar from '../components/FieldSidebar';
 import { TimeSeriesChart } from '../components/charts/TimeSeriesChart';
 import { Tooltip } from '../components/ui/Tooltip';
-import { SearchAutocomplete } from '../components/search';
+import { SearchAutocomplete, SearchChartView } from '../components/search';
 import { SourceAnnotationProvider } from '../components/SourceAnnotations';
 import { InfoIcon } from '../components/ui/InfoTip';
 import NewSourceBanner from '../components/NewSourceBanner';
@@ -172,10 +173,12 @@ export default function SearchPage() {
   const [saveSchedule, setSaveSchedule] = useState('0 * * * *');
   const [searchMode, setSearchMode] = useState<'dsl' | 'ai'>('dsl');
   const [aiQuestion, setAiQuestion] = useState('');
-  const [viewMode, setViewMode] = useState<'log' | 'table' | 'json'>(() => {
+  const [viewMode, setViewMode] = useState<'log' | 'table' | 'json' | 'chart'>(() => {
     const saved = localStorage.getItem('lognog_default_view_mode') as 'log' | 'table' | 'json' | null;
     return saved && ['log', 'table', 'json'].includes(saved) ? saved : 'log';
   });
+  // The view to fall back to when results stop carrying a `| chart` hint.
+  const preChartViewRef = useRef<'log' | 'table' | 'json'>('log');
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     const saved = localStorage.getItem('lognog_sidebar_open');
     return saved !== null ? saved === 'true' : true;
@@ -372,6 +375,21 @@ export default function SearchPage() {
       setQuery(data.query);
     },
   });
+
+  // Auto-activate the chart view when results carry a `| chart` hint, and drop
+  // back to the previous view when a later query doesn't. Manual toggling
+  // between runs is left alone.
+  useEffect(() => {
+    const hint = searchMutation.data?.metadata?.chart;
+    if (hint && hint.chartType !== 'table') {
+      setViewMode((prev) => {
+        if (prev !== 'chart') preChartViewRef.current = prev;
+        return 'chart';
+      });
+    } else if (searchMutation.data) {
+      setViewMode((prev) => (prev === 'chart' ? preChartViewRef.current : prev));
+    }
+  }, [searchMutation.data]);
 
   // Update page title with results count
   useEffect(() => {
@@ -1353,6 +1371,7 @@ export default function SearchPage() {
           const count = searchMutation.data?.count ?? aiSearchMutation.data?.results?.length ?? 0;
           const sql = searchMutation.data?.sql || aiSearchMutation.data?.sql;
           const hasSearched = searchMutation.data !== undefined || aiSearchMutation.data !== undefined;
+          const chartHint = searchMutation.data?.metadata?.chart;
 
           if (hasSearched && (!results || results.length === 0)) {
             return (
@@ -1452,6 +1471,20 @@ export default function SearchPage() {
                       <FileJson className="w-4 h-4" />
                       <span className="hidden sm:inline">JSON</span>
                     </button>
+                    {chartHint && (
+                      <button
+                        onClick={() => setViewMode('chart')}
+                        className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-md text-xs font-medium transition-colors ${
+                          viewMode === 'chart'
+                            ? 'bg-white dark:bg-nog-600 text-nog-900 dark:text-nog-100 shadow-sm'
+                            : 'text-nog-600 dark:text-nog-400 hover:text-nog-900 dark:hover:text-nog-100'
+                        }`}
+                        title="Chart View (from | chart)"
+                      >
+                        <BarChart3 className="w-4 h-4" />
+                        <span className="hidden sm:inline">Chart</span>
+                      </button>
+                    )}
                   </div>
 
                   {sql && (
@@ -1597,7 +1630,13 @@ export default function SearchPage() {
 
               {/* Results View */}
               <SourceAnnotationProvider>
-              {viewMode === 'log' ? (
+              {viewMode === 'chart' && chartHint ? (
+                <SearchChartView
+                  results={results as Record<string, unknown>[]}
+                  hint={chartHint}
+                  darkMode={document.documentElement.classList.contains('dark')}
+                />
+              ) : viewMode === 'log' ? (
                 <div ref={logViewerRef} className="card overflow-hidden" style={{ height: '600px' }}>
                   <LogViewer
                     logs={results as any[]}
@@ -1649,7 +1688,7 @@ export default function SearchPage() {
                     </table>
                   </div>
                 </div>
-              ) : (
+              ) : viewMode === 'json' ? (
                 /* JSON View */
                 <div className="card overflow-hidden bg-nog-900 dark:bg-nog-950 border border-nog-700">
                   <div className="overflow-auto p-4" style={{ maxHeight: '600px' }}>
@@ -1657,6 +1696,17 @@ export default function SearchPage() {
                       {JSON.stringify(results, null, 2)}
                     </pre>
                   </div>
+                </div>
+              ) : (
+                /* 'chart' with no hint (e.g. AI results) — fall back to logs */
+                <div ref={logViewerRef} className="card overflow-hidden" style={{ height: '600px' }}>
+                  <LogViewer
+                    logs={results as any[]}
+                    onAddFilter={handleAddFilter}
+                    onShowContext={handleShowContext}
+                    searchTerms={extractSearchTerms(query)}
+                    isLoading={false}
+                  />
                 </div>
               )}
               </SourceAnnotationProvider>

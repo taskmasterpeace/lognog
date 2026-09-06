@@ -14,7 +14,7 @@ import * as sqliteLogs from './sqlite-logs.js';
 import { parseToAST } from '../dsl/index.js';
 import { expandMacros } from '../services/macros.js';
 import { resolveMacroDefinition } from './sqlite-macros.js';
-import { compileDSL } from '../dsl/compiler.js';
+import { compileDSL, type CompiledQueryWithMeta } from '../dsl/compiler.js';
 import { compileDSLToSQLite } from '../dsl/compiler-sqlite.js';
 import { logQueryExecution } from '../services/internal-logger.js';
 import { applyLookup, getLookupTable, setLookupTable } from '../services/lookup-tables.js';
@@ -25,6 +25,9 @@ import { isLogicGroup } from '../dsl/types.js';
 import { indexScopeSqlClause } from '../auth/index-scope.js';
 
 export type Backend = 'clickhouse' | 'sqlite';
+
+/** Presentation hints (chart/compare/timewrap) attached by the DSL compilers. */
+export type QueryMetadata = CompiledQueryWithMeta['metadata'];
 
 // Index names are constrained to a safe identifier charset. Used to validate
 // caller-supplied `options.index` before it is interpolated into SQL (#37-10).
@@ -177,7 +180,7 @@ export async function executeDSLQuery<T = Record<string, unknown>>(
     user_id?: string;  // For internal logging
     allowedIndexes?: string[];  // Read-side index scoping (Phase 5)
   }
-): Promise<{ sql: string; results: T[] }> {
+): Promise<{ sql: string; results: T[]; metadata?: QueryMetadata }> {
   const startTime = Date.now();
 
   try {
@@ -187,7 +190,7 @@ export async function executeDSLQuery<T = Record<string, unknown>>(
     // Dispatch: append / outputlookup / inputlookup aren't a single SQL query
     // against the logs table; runQueryAST handles them and otherwise compiles +
     // executes normally (including the lookup split).
-    const { sql, results } = await runQueryAST<T>(ast, options);
+    const { sql, results, metadata } = await runQueryAST<T>(ast, options);
 
     // Log query execution
     logQueryExecution({
@@ -197,7 +200,7 @@ export async function executeDSLQuery<T = Record<string, unknown>>(
       user_id: options?.user_id,
     });
 
-    return { sql, results };
+    return { sql, results, metadata };
   } catch (err) {
     // Log failed query execution
     logQueryExecution({
@@ -221,7 +224,7 @@ type DSLExecOptions = { earliest?: string; latest?: string; user_id?: string; al
 async function runQueryAST<T = Record<string, unknown>>(
   ast: QueryAST,
   options?: DSLExecOptions
-): Promise<{ sql: string; results: T[] }> {
+): Promise<{ sql: string; results: T[]; metadata?: QueryMetadata }> {
   const stages = ast.stages;
 
   // append [ subsearch ]: run the pipeline before it, then the subsearch, and
@@ -231,7 +234,7 @@ async function runQueryAST<T = Record<string, unknown>>(
     const appendNode = stages[appendIdx] as AppendNode;
     const main = await runQueryAST<T>({ stages: stages.slice(0, appendIdx) }, options);
     const sub = await runQueryAST<T>(appendNode.subsearch, options);
-    return { sql: main.sql, results: [...main.results, ...sub.results] };
+    return { sql: main.sql, results: [...main.results, ...sub.results], metadata: main.metadata };
   }
 
   // outputlookup <table>: run the pipeline before it, then write the rows to the
@@ -261,7 +264,7 @@ async function runQueryAST<T = Record<string, unknown>>(
 async function compileAndExecute<T = Record<string, unknown>>(
   ast: QueryAST,
   options?: DSLExecOptions
-): Promise<{ sql: string; results: T[] }> {
+): Promise<{ sql: string; results: T[]; metadata?: QueryMetadata }> {
   // Split AST at lookup stages: compile pre-lookup to SQL, post-lookup as in-memory.
   const lookupIndex = ast.stages.findIndex(s => s.type === 'lookup');
   const hasLookup = lookupIndex !== -1;
@@ -281,7 +284,7 @@ async function compileAndExecute<T = Record<string, unknown>>(
     if (hasLookup) {
       results = applyPostLookupStages(results as Record<string, unknown>[], postLookupStages) as T[];
     }
-    return { sql: compiled.sql, results };
+    return { sql: compiled.sql, results, metadata: compiled.metadata };
   }
 
   const compiled = compileDSL(ast, options?.allowedIndexes, {
@@ -292,7 +295,7 @@ async function compileAndExecute<T = Record<string, unknown>>(
   if (hasLookup) {
     results = applyPostLookupStages(results as Record<string, unknown>[], postLookupStages) as T[];
   }
-  return { sql: compiled.sql, results };
+  return { sql: compiled.sql, results, metadata: compiled.metadata };
 }
 
 /** Read a lookup/KV table as data rows (keyField reconstructed from the map key). */
