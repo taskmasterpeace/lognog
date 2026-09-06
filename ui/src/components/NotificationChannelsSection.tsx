@@ -27,6 +27,7 @@ import {
   NotificationChannel,
   NotificationService,
 } from '../api/client';
+import { useConfirm } from './ui/ConfirmDialog';
 
 // Service icons mapping
 const SERVICE_ICONS: Record<string, string> = {
@@ -40,6 +41,7 @@ const SERVICE_ICONS: Record<string, string> = {
 };
 
 export default function NotificationChannelsSection() {
+  const { confirm } = useConfirm();
   const [channels, setChannels] = useState<NotificationChannel[]>([]);
   const [services, setServices] = useState<NotificationService[]>([]);
   const [loading, setLoading] = useState(true);
@@ -142,12 +144,18 @@ export default function NotificationChannelsSection() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this notification channel?')) return;
+  const handleDelete = async (channel: NotificationChannel) => {
+    const ok = await confirm({
+      title: 'Delete Notification Channel',
+      message: `Delete "${channel.name}"? Alerts using this channel will no longer send notifications to it.`,
+      confirmText: 'Delete',
+      variant: 'danger',
+    });
+    if (!ok) return;
 
     try {
-      await deleteNotificationChannel(id);
-      setChannels(channels.filter(c => c.id !== id));
+      await deleteNotificationChannel(channel.id);
+      setChannels(channels.filter(c => c.id !== channel.id));
     } catch (err) {
       setError('Failed to delete channel');
     }
@@ -215,7 +223,7 @@ export default function NotificationChannelsSection() {
   }
 
   return (
-    <section className="bg-white dark:bg-nog-800 rounded-xl shadow-sm border border-nog-200 dark:border-nog-700 p-6">
+    <section className="card p-6">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-nog-900 dark:text-nog-100 flex items-center gap-2">
           <Bell className="w-5 h-5" />
@@ -370,7 +378,7 @@ export default function NotificationChannelsSection() {
 
                   {/* Delete */}
                   <button
-                    onClick={() => handleDelete(channel.id)}
+                    onClick={() => handleDelete(channel)}
                     className="p-2 text-nog-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                     title="Delete"
                   >
@@ -404,8 +412,8 @@ export default function NotificationChannelsSection() {
 
       {/* Add/Edit Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-nog-800 rounded-xl shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+        <div className="modal-overlay p-4">
+          <div className="modal max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-nog-200 dark:border-nog-700">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-nog-900 dark:text-nog-100">

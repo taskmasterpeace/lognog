@@ -27,7 +27,7 @@ const SEVERITY_CONFIG = {
   info: { icon: Info, color: 'text-honey-500', bg: 'bg-honey-100 dark:bg-honey-900/30', border: 'border-honey-200 dark:border-honey-800' },
   low: { icon: AlertCircle, color: 'text-nog-500', bg: 'bg-nog-100 dark:bg-nog-700', border: 'border-nog-200 dark:border-nog-700' },
   medium: { icon: AlertTriangle, color: 'text-yellow-500', bg: 'bg-yellow-100 dark:bg-yellow-900/30', border: 'border-yellow-200 dark:border-yellow-800' },
-  high: { icon: AlertTriangle, color: 'text-honey-500', bg: 'bg-honey-100 dark:bg-honey-900/30', border: 'border-honey-200 dark:border-honey-800' },
+  high: { icon: AlertTriangle, color: 'text-orange-500', bg: 'bg-orange-100 dark:bg-orange-900/30', border: 'border-orange-200 dark:border-orange-800' },
   critical: { icon: Zap, color: 'text-red-500', bg: 'bg-red-100 dark:bg-red-900/30', border: 'border-red-200 dark:border-red-800' },
 };
 
@@ -99,8 +99,8 @@ export default function LoginNotificationsModal({
   }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-nog-800 rounded-xl shadow-xl w-full max-w-lg max-h-[80vh] overflow-hidden flex flex-col">
+    <div className="modal-overlay p-4">
+      <div className="modal max-w-lg max-h-[80vh] flex flex-col">
         {/* Header */}
         <div className="p-4 border-b border-nog-200 dark:border-nog-700 flex items-center justify-between">
           <div className="flex items-center gap-3">

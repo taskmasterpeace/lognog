@@ -120,7 +120,7 @@ export function AnnotationTooltipContent({ annotation, onClick }: AnnotationTool
       <div className="flex items-center gap-2 mb-1">
         {annotation.icon && <span className="text-base">{annotation.icon}</span>}
         {annotation.title && (
-          <span className="font-semibold text-white">{annotation.title}</span>
+          <span className="font-semibold text-nog-100">{annotation.title}</span>
         )}
       </div>
       {annotation.description && (
@@ -246,7 +246,7 @@ export function AnnotationDetailCard({ annotation, onClose, onEdit }: Annotation
               <span className="text-2xl flex-shrink-0">{annotation.icon}</span>
             )}
             <div className="min-w-0">
-              <h2 className="text-lg font-bold text-nog-900 dark:text-white truncate">
+              <h2 className="text-lg font-bold text-nog-900 dark:text-nog-100 truncate">
                 {annotation.title || annotation.field_value}
               </h2>
               <p className="text-sm text-nog-500 dark:text-nog-400">
@@ -282,7 +282,7 @@ export function AnnotationDetailCard({ annotation, onClose, onEdit }: Annotation
               <h3 className="text-sm font-medium text-nog-500 dark:text-nog-400 mb-1">
                 Summary
               </h3>
-              <p className="text-nog-900 dark:text-white">
+              <p className="text-nog-900 dark:text-nog-100">
                 {annotation.description}
               </p>
             </div>
@@ -324,7 +324,7 @@ export function AnnotationDetailCard({ annotation, onClose, onEdit }: Annotation
                         <td className="px-3 py-2 font-medium text-nog-600 dark:text-nog-400 whitespace-nowrap">
                           {key}
                         </td>
-                        <td className="px-3 py-2 text-nog-900 dark:text-white">
+                        <td className="px-3 py-2 text-nog-900 dark:text-nog-100">
                           {String(val)}
                         </td>
                       </tr>

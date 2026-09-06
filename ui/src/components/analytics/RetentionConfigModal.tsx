@@ -34,8 +34,8 @@ export default function RetentionConfigModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white dark:bg-nog-800 rounded-xl shadow-2xl w-full max-w-md">
+    <div className="modal-overlay p-4">
+      <div className="modal">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-nog-200 dark:border-nog-700">
           <div className="flex items-center gap-3">

@@ -59,7 +59,7 @@ export default function HelpBot() {
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          className="fixed bottom-5 right-5 z-40 w-14 h-14 rounded-full bg-honey-500 hover:bg-honey-600 text-white shadow-lg flex items-center justify-center transition-colors"
+          className="fixed bottom-5 right-5 z-40 w-14 h-14 rounded-full bg-honey-500 hover:bg-honey-600 text-nog-900 shadow-lg flex items-center justify-center transition-colors"
           title="Ask the help bot"
           aria-label="Ask the help bot"
         >
@@ -108,7 +108,7 @@ export default function HelpBot() {
                 <div
                   className={`max-w-[85%] rounded-nog px-3 py-2 text-sm ${
                     t.role === 'user'
-                      ? 'bg-honey-500 text-white'
+                      ? 'bg-honey-500 text-nog-900'
                       : 'bg-nog-100 dark:bg-nog-900 text-nog-800 dark:text-nog-200'
                   }`}
                 >
@@ -170,7 +170,7 @@ export default function HelpBot() {
               <button
                 onClick={() => ask(input)}
                 disabled={loading || !input.trim()}
-                className="p-2 rounded-nog bg-honey-500 hover:bg-honey-600 disabled:opacity-40 text-white"
+                className="p-2 rounded-nog bg-honey-500 hover:bg-honey-600 disabled:opacity-40 text-nog-900"
                 aria-label="Send"
               >
                 <Send className="w-4 h-4" />

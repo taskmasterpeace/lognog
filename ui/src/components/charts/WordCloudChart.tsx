@@ -2,6 +2,7 @@ import React from 'react';
 import ReactECharts from 'echarts-for-react';
 import * as echarts from 'echarts';
 import 'echarts-wordcloud';
+import { getChartTheme } from './palette';
 // Word clouds read best in one warm family; the full categorical palette's
 // teal/green "functional" colours look off-brand scattered across random words.
 
@@ -31,6 +32,8 @@ export const WordCloudChart: React.FC<WordCloudChartProps> = ({
   onWordClick,
   maxWords = 100,
 }) => {
+  const theme = getChartTheme(darkMode);
+
   // Limit and sort data
   const processedData = React.useMemo(() => {
     return [...data]
@@ -49,10 +52,10 @@ export const WordCloudChart: React.FC<WordCloudChartProps> = ({
       formatter: (params: any) => {
         return `<strong>${params.name}</strong>: ${params.value.toLocaleString()}`;
       },
-      backgroundColor: darkMode ? 'rgba(45, 31, 19, 0.95)' : 'rgba(255, 255, 255, 0.95)',
-      borderColor: darkMode ? '#5A3F24' : '#E8DFD0',
+      backgroundColor: theme.tooltipBg,
+      borderColor: theme.tooltipBorder,
       textStyle: {
-        color: darkMode ? '#D4C4B0' : '#5A3F24',
+        color: theme.text,
       },
     },
     series: [
@@ -86,7 +89,7 @@ export const WordCloudChart: React.FC<WordCloudChartProps> = ({
         data: processedData,
       },
     ],
-  }), [processedData, darkMode, shape, colorScheme]);
+  }), [processedData, darkMode, shape, colorScheme, theme]);
 
   const handleEvents = React.useMemo(() => ({
     click: (params: any) => {

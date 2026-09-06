@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth, User as UserType } from '../../../contexts/AuthContext';
+import { useConfirm } from '../../../components/ui/ConfirmDialog';
 import {
   Users,
   UserPlus,
@@ -22,6 +23,7 @@ export default function UsersTab() {
     deactivateUser,
     activateUser,
   } = useAuth();
+  const { confirm } = useConfirm();
 
   const [allUsers, setAllUsers] = useState<UserType[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
@@ -97,9 +99,16 @@ export default function UsersTab() {
     }
   };
 
-  const handleToggleUserActive = async (userId: string, isActive: boolean) => {
+  const handleToggleUserActive = async (userId: string, username: string, isActive: boolean) => {
     try {
       if (isActive) {
+        const ok = await confirm({
+          title: 'Deactivate User',
+          message: `Deactivate "${username}"? They will no longer be able to log in.`,
+          confirmText: 'Deactivate',
+          variant: 'danger',
+        });
+        if (!ok) return;
         await deactivateUser(userId);
       } else {
         await activateUser(userId);
@@ -127,7 +136,7 @@ export default function UsersTab() {
   };
 
   return (
-    <section className="bg-white dark:bg-nog-800 rounded-xl shadow-sm border border-nog-200 dark:border-nog-700 p-6">
+    <section className="card p-6">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-lg font-semibold text-nog-900 dark:text-nog-100 flex items-center gap-2">
           <Users className="w-5 h-5" />
@@ -337,7 +346,7 @@ export default function UsersTab() {
 
                       {/* Activate/Deactivate button */}
                       <button
-                        onClick={() => handleToggleUserActive(u.id, u.is_active)}
+                        onClick={() => handleToggleUserActive(u.id, u.username, u.is_active)}
                         className={`p-2 rounded-lg transition-colors ${
                           u.is_active
                             ? 'text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20'

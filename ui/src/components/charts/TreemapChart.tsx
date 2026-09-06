@@ -138,6 +138,17 @@ export const TreemapChart: React.FC<TreemapChartProps> = ({
     };
   }, [onNodeClick]);
 
+  if (!data || data.length === 0) {
+    return (
+      <div
+        className="w-full flex items-center justify-center text-nog-400 dark:text-nog-500"
+        style={{ height: `${height}px` }}
+      >
+        No data to display
+      </div>
+    );
+  }
+
   return (
     <div className="w-full">
       <ReactECharts

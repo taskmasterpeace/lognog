@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { AreaChart, BarChart, PieChart, HeatmapChart, GaugeChart, WordCloudChart, CHART_PALETTE } from '../components/charts';
 import type { HeatmapData } from '../components/charts';
+import { headerTextColor } from '../components/dashboard/DashboardHeader';
 
 const CHART_COLORS = CHART_PALETTE;
 
@@ -193,6 +194,9 @@ export default function PublicDashboardPage() {
   }
 
   const accentColor = dashboard.accent_color || '#C8862B';
+  // A custom header background ignores the theme, so derive a readable title
+  // color from its luminance instead of the theme-based text classes.
+  const titleColor = dashboard.header_color ? headerTextColor(dashboard.header_color) : undefined;
 
   return (
     <div className="min-h-screen bg-nog-50 dark:bg-nog-900">
@@ -206,11 +210,17 @@ export default function PublicDashboardPage() {
             <img src={dashboard.logo_url} alt="" className="h-8" />
           )}
           <div>
-            <h1 className="text-xl font-bold text-nog-900 dark:text-nog-100">
+            <h1
+              className="text-xl font-bold text-nog-900 dark:text-nog-100"
+              style={titleColor ? { color: titleColor } : undefined}
+            >
               {dashboard.name}
             </h1>
             {dashboard.description && (
-              <p className="text-sm text-nog-500 dark:text-nog-400">
+              <p
+                className="text-sm text-nog-500 dark:text-nog-400"
+                style={titleColor ? { color: titleColor, opacity: 0.75 } : undefined}
+              >
                 {dashboard.description}
               </p>
             )}
@@ -304,6 +314,10 @@ function PanelVisualization({
   data: Record<string, unknown>[];
   accentColor: string;
 }) {
+  // The public page has no ThemeContext; the pre-paint script in index.html
+  // sets the `dark` class, so read it directly for theme-aware chart chrome.
+  const darkMode = document.documentElement.classList.contains('dark');
+
   if (!data.length) {
     return (
       <div className="flex items-center justify-center h-full text-nog-400">
@@ -369,6 +383,7 @@ function PanelVisualization({
           height={200}
           horizontal={true}
           barColor={accentColor}
+          darkMode={darkMode}
           showValues={false}
         />
       );
@@ -379,6 +394,7 @@ function PanelVisualization({
           data={data.slice(0, 8).map((d, i) => ({ name: String(d[labelKey] ?? `Item ${i + 1}`), value: Number(d[valueKey]) || 0 }))}
           height={200}
           donut={true}
+          darkMode={darkMode}
           colors={CHART_COLORS}
         />
       );
@@ -391,6 +407,7 @@ function PanelVisualization({
           series={seriesKeys.map((k, i) => ({ name: k, dataKey: k, color: i === 0 ? accentColor : CHART_COLORS[i % CHART_COLORS.length] }))}
           xAxisKey={labelKey}
           height={200}
+          darkMode={darkMode}
           xAxisFormatter={(v) => {
             if (String(v).match(/\d{4}-\d{2}-\d{2}/)) {
               return new Date(v).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -416,7 +433,7 @@ function PanelVisualization({
         const value = Number(item[valueKey]) || Number(item.count) || Number(item.value) || 0;
         return { hour, day, value };
       });
-      return <HeatmapChart data={heatmapData} height={240} />;
+      return <HeatmapChart data={heatmapData} height={240} darkMode={darkMode} />;
     }
 
     case 'gauge': {
@@ -429,7 +446,7 @@ function PanelVisualization({
         : { low: max * 0.33, medium: max * 0.66, high: max };
       return (
         <div className="h-full w-full flex flex-col items-center justify-center">
-          <GaugeChart value={gaugeValue} min={0} max={max} height={200} thresholds={thresholds} unit={options.unit || ''} title={options.subtitle} />
+          <GaugeChart value={gaugeValue} min={0} max={max} height={200} darkMode={darkMode} thresholds={thresholds} unit={options.unit || ''} title={options.subtitle} />
         </div>
       );
     }
@@ -439,7 +456,7 @@ function PanelVisualization({
         name: String(row[labelKey] ?? ''),
         value: Number(row[valueKey]) || 1,
       })).filter((item) => item.name);
-      return <WordCloudChart data={wordCloudData} height={240} />;
+      return <WordCloudChart data={wordCloudData} height={240} darkMode={darkMode} />;
     }
 
     default:

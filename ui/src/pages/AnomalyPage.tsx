@@ -398,7 +398,7 @@ export default function AnomalyPage() {
             value={dashboard?.totalAnomalies || 0}
             subValue="Last 24 hours"
             color="text-honey-600"
-            iconBg="bg-honey-50"
+            iconBg="bg-honey-50 dark:bg-honey-900/20"
           />
           <StatCard
             icon={AlertTriangle}
@@ -406,7 +406,7 @@ export default function AnomalyPage() {
             value={dashboard?.bySeverity?.critical || 0}
             subValue="Requires attention"
             color="text-red-600"
-            iconBg="bg-red-50"
+            iconBg="bg-red-50 dark:bg-red-900/20"
           />
           <StatCard
             icon={Activity}
@@ -414,7 +414,7 @@ export default function AnomalyPage() {
             value={dashboard?.bySeverity?.high || 0}
             subValue="Investigate soon"
             color="text-honey-600"
-            iconBg="bg-honey-50"
+            iconBg="bg-honey-50 dark:bg-honey-900/20"
           />
           <StatCard
             icon={Shield}
@@ -422,7 +422,7 @@ export default function AnomalyPage() {
             value={dashboard?.topEntities?.length || 0}
             subValue="Unique entities"
             color="text-honey-600"
-            iconBg="bg-honey-50"
+            iconBg="bg-honey-50 dark:bg-honey-900/20"
           />
         </div>
 

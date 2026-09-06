@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   BellOff,
@@ -130,7 +130,7 @@ export default function SilencesPage() {
         </div>
         <button
           onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-honey-600 text-nog-900 rounded-lg hover:bg-honey-700"
+          className="flex items-center gap-2 px-4 py-2 bg-honey-500 hover:bg-honey-600 text-nog-900 rounded-lg"
         >
           <Plus className="h-4 w-4" />
           Create Silence
@@ -156,17 +156,16 @@ export default function SilencesPage() {
       )}
 
       {!isLoading && !error && silences && silences.length === 0 && (
-        <div className="bg-white dark:bg-nog-800 rounded-lg shadow p-12 text-center">
-          <BellOff className="h-16 w-16 text-nog-300 dark:text-nog-600 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-nog-900 dark:text-nog-100 mb-2">No active silences</h3>
-          <p className="text-nog-600 dark:text-nog-400 mb-4">
+        <div className="card p-12 text-center">
+          <div className="w-16 h-16 bg-honey-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <BellOff className="w-8 h-8 text-honey-600" />
+          </div>
+          <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">No active silences</h3>
+          <p className="text-sm text-nog-500 mb-4">
             Create a silence to temporarily disable alerts
           </p>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-honey-600 text-nog-900 rounded-lg hover:bg-honey-700"
-          >
-            <Plus className="h-4 w-4" />
+          <button onClick={() => setShowCreateModal(true)} className="btn-primary">
+            <Plus className="w-4 h-4" />
             Create Silence
           </button>
         </div>
@@ -263,9 +262,22 @@ function CreateSilenceModal({ onClose, alerts }: CreateSilenceModalProps) {
     });
   };
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
   return (
     <div className="modal-overlay">
-      <div className="bg-white dark:bg-nog-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Create Silence"
+        className="bg-white dark:bg-nog-800 rounded-lg shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto"
+      >
         <div className="p-6 border-b border-nog-200 dark:border-nog-700">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold text-nog-900 dark:text-nog-100">Create Silence</h2>
@@ -423,7 +435,7 @@ function CreateSilenceModal({ onClose, alerts }: CreateSilenceModalProps) {
             <button
               type="submit"
               disabled={createMutation.isPending || (level !== 'global' && !targetId)}
-              className="flex-1 px-4 py-2 bg-honey-600 text-nog-900 rounded-lg hover:bg-honey-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-2 bg-honey-500 hover:bg-honey-600 text-nog-900 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {createMutation.isPending ? (
                 <span className="flex items-center justify-center gap-2">

@@ -29,6 +29,7 @@ import {
   SourceConfig,
   SourceRoutingRule,
 } from '../../api/client';
+import { useConfirm } from '../ui/ConfirmDialog';
 
 export default function SourceConfigList() {
   const [activeSection, setActiveSection] = useState<'configs' | 'routing'>('configs');
@@ -41,6 +42,7 @@ export default function SourceConfigList() {
   const [testResult, setTestResult] = useState<unknown>(null);
 
   const queryClient = useQueryClient();
+  const { confirm } = useConfirm();
 
   // Fetch source configs
   const { data: configs, isLoading: configsLoading } = useQuery({
@@ -257,8 +259,14 @@ export default function SourceConfigList() {
                         <Edit className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => {
-                          if (confirm('Delete this source config?')) {
+                        onClick={async () => {
+                          const ok = await confirm({
+                            title: 'Delete Source Config',
+                            message: `Delete "${config.name}"? This action cannot be undone.`,
+                            confirmText: 'Delete',
+                            variant: 'danger',
+                          });
+                          if (ok) {
                             deleteConfigMutation.mutate(config.id);
                           }
                         }}
@@ -370,8 +378,14 @@ export default function SourceConfigList() {
                           <Edit className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => {
-                            if (confirm('Delete this routing rule?')) {
+                          onClick={async () => {
+                            const ok = await confirm({
+                              title: 'Delete Routing Rule',
+                              message: `Delete "${rule.name}"? This action cannot be undone.`,
+                              confirmText: 'Delete',
+                              variant: 'danger',
+                            });
+                            if (ok) {
                               deleteRoutingMutation.mutate(rule.id);
                             }
                           }}

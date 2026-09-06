@@ -48,7 +48,7 @@ import {
   Lock,
   Globe,
 } from 'lucide-react';
-import { AreaChart, BarChart, PieChart, ScatterChart, FunnelChart, TreemapChart, StatCard, RadarChart, SankeyChart, GeoMapChart } from '../components/charts';
+import { AreaChart, BarChart, PieChart, ScatterChart, FunnelChart, TreemapChart, StatCard, RadarChart, SankeyChart, GeoMapChart, CHART_PALETTE } from '../components/charts';
 import { readPanelFormat, formatPanelValue, THRESHOLD_COLORS, type PanelFormat } from '../components/dashboard/panelFormat';
 import { readDrilldownConfig, readRefreshSeconds, type DrilldownType } from '../components/dashboard/panelDrilldown';
 import { downloadCsv } from '../components/dashboard/csvExport';
@@ -103,8 +103,8 @@ import PanelCopyModal from '../components/PanelCopyModal';
 import PanelProvenanceModal from '../components/PanelProvenanceModal';
 import { getDefaultDashboard, setDefaultDashboard } from './DashboardsPage';
 
-// LogNog brand colors - honey-gold theme
-const CHART_COLORS = ['#C8862B', '#DCA23E', '#A66A1E', '#E6BB63', '#845117', '#5A3F24', '#8B7355', '#D4C4B0'];
+// Shared LogNog brand chart palette (BRANDING.md §2.4) — aliased to keep usages small.
+const CHART_COLORS = CHART_PALETTE;
 
 const VISUALIZATION_OPTIONS = [
   { value: 'table', label: 'Table', icon: Table2, desc: 'Raw rows across columns — best for details, top-N lists, and results you\'ll scan or export.', example: 'search severity<=3 | table _time host app_name message' },
@@ -913,7 +913,7 @@ interface PanelEditorProps {
   saving: boolean;
 }
 
-const FORMATTABLE_VIZ = new Set(['area', 'line', 'bar', 'stat', 'single']);
+const FORMATTABLE_VIZ = new Set(['area', 'line', 'linechart', 'bar', 'stat', 'single']);
 
 function PanelEditor({ panel, pages = [], defaultPageId = null, onSave, onCancel, saving }: PanelEditorProps) {
   const [title, setTitle] = useState(panel?.title || '');
@@ -1078,14 +1078,16 @@ search error | timechart span=1h count"
               <InfoTip
                 content={
                   <div className="space-y-1 text-xs">
-                    <p><strong>Table:</strong> Display raw results in a tabular format</p>
-                    <p><strong>Bar Chart:</strong> Compare values across categories</p>
-                    <p><strong>Pie Chart:</strong> Show proportions of a whole</p>
-                    <p><strong>Area Chart:</strong> Display trends over time</p>
-                    <p><strong>Single Stat:</strong> Show one key metric prominently</p>
-                    <p><strong>Heatmap:</strong> Visualize patterns in 2D data</p>
-                    <p><strong>Gauge:</strong> Display a metric with min/max range</p>
-                    <p><strong>Word Cloud:</strong> Visualize word frequency from aggregated data</p>
+                    {/* Generated from VISUALIZATION_OPTIONS so every type is
+                        documented; first sentence only to stay terse. */}
+                    {VISUALIZATION_OPTIONS.map((o) => {
+                      const dot = o.desc.indexOf('. ');
+                      return (
+                        <p key={o.value}>
+                          <strong>{o.label}:</strong> {dot === -1 ? o.desc : o.desc.slice(0, dot + 1)}
+                        </p>
+                      );
+                    })}
                   </div>
                 }
                 placement="right"
@@ -1145,9 +1147,9 @@ search error | timechart span=1h count"
               </button>
               {showFormat && (
                 <div className="px-3 pb-3 grid grid-cols-2 gap-3 text-sm">
-                  {(visualization === 'area' || visualization === 'line') && (
+                  {(visualization === 'area' || visualization === 'line' || visualization === 'linechart') && (
                     <label className="flex items-center gap-2 col-span-2">
-                      <input type="checkbox" checked={!!format.stacked} onChange={(e) => setFormat({ ...format, stacked: e.target.checked })} className="w-4 h-4 rounded border-nog-300" />
+                      <input type="checkbox" checked={!!format.stacked} onChange={(e) => setFormat({ ...format, stacked: e.target.checked })} className="w-4 h-4 rounded border-nog-300 accent-honey-500" />
                       <span className="text-nog-700 dark:text-nog-300">Stack series</span>
                     </label>
                   )}
@@ -1167,7 +1169,7 @@ search error | timechart span=1h count"
                       </div>
                     </>
                   )}
-                  {(visualization === 'area' || visualization === 'line') && (
+                  {(visualization === 'area' || visualization === 'line' || visualization === 'linechart') && (
                     <div>
                       <label className="block text-xs text-nog-500 mb-1">Legend</label>
                       <select
@@ -1206,7 +1208,7 @@ search error | timechart span=1h count"
                   </div>
                   {(visualization === 'stat' || visualization === 'single') && (
                     <label className="flex items-center gap-2 col-span-2">
-                      <input type="checkbox" checked={format.showTrend !== false} onChange={(e) => setFormat({ ...format, showTrend: e.target.checked })} className="w-4 h-4 rounded border-nog-300" />
+                      <input type="checkbox" checked={format.showTrend !== false} onChange={(e) => setFormat({ ...format, showTrend: e.target.checked })} className="w-4 h-4 rounded border-nog-300 accent-honey-500" />
                       <span className="text-nog-700 dark:text-nog-300">Show trend + sparkline when the query is a time series (e.g. <code>timechart count</code>)</span>
                     </label>
                   )}
@@ -1254,7 +1256,7 @@ search error | timechart span=1h count"
                     Tokens: <code>$click.value$</code>, <code>$click.field$</code>, <code>$row.&lt;field&gt;$</code>, <code>$earliest$</code>, <code>$latest$</code>.
                   </p>
                   <label className="flex items-center gap-2 mt-2">
-                    <input type="checkbox" checked={drilldownNewTab} onChange={(e) => setDrilldownNewTab(e.target.checked)} className="w-4 h-4 rounded border-nog-300" />
+                    <input type="checkbox" checked={drilldownNewTab} onChange={(e) => setDrilldownNewTab(e.target.checked)} className="w-4 h-4 rounded border-nog-300 accent-honey-500" />
                     <span className="text-nog-700 dark:text-nog-300 text-sm">Open in a new tab</span>
                   </label>
                 </div>
@@ -1683,6 +1685,7 @@ export default function DashboardViewPage() {
       URL.revokeObjectURL(url);
     } catch (err) {
       console.error('Export failed:', err);
+      toast.error('Export Failed', err instanceof Error ? err.message : 'Unknown error');
     }
   };
 
@@ -1766,6 +1769,7 @@ export default function DashboardViewPage() {
       pdf.save(`${dashboard.name.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-${new Date().toISOString().split('T')[0]}.pdf`);
     } catch (err) {
       console.error('PDF export failed:', err);
+      toast.error('PDF Export Failed', err instanceof Error ? err.message : 'Unknown error');
     } finally {
       setIsExportingPdf(false);
     }
@@ -1790,7 +1794,7 @@ export default function DashboardViewPage() {
     return (
       <div className="flex flex-col items-center justify-center h-full">
         <Loader2 className="w-10 h-10 text-honey-500 animate-spin mb-4" />
-        <p className="text-nog-600">Loading dashboard...</p>
+        <p className="text-nog-600 dark:text-nog-400">Loading dashboard...</p>
       </div>
     );
   }
@@ -1798,9 +1802,9 @@ export default function DashboardViewPage() {
   if (error || !dashboard) {
     return (
       <div className="p-8">
-        <div className="card border-red-200 bg-red-50 p-6">
-          <p className="font-semibold text-red-900">Failed to load dashboard</p>
-          <p className="text-sm text-red-700 mt-1">{String(error)}</p>
+        <div className="card border-red-200 bg-red-50 dark:bg-red-900/20 dark:border-red-800 p-6">
+          <p className="font-semibold text-red-900 dark:text-red-200">Failed to load dashboard</p>
+          <p className="text-sm text-red-700 dark:text-red-300 mt-1">{String(error)}</p>
           <Link to="/dashboards" className="mt-4 inline-block text-sm text-honey-600 hover:underline">
             Back to Dashboards
           </Link>
@@ -2222,14 +2226,14 @@ export default function DashboardViewPage() {
 
       {/* Edit Mode Banner */}
       {editMode && (
-        <div className="bg-honey-50 border-b border-honey-200 px-4 py-2 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-honey-800">
+        <div className="bg-honey-50 dark:bg-honey-900/20 border-b border-honey-200 dark:border-honey-800 px-4 py-2 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-honey-800 dark:text-honey-200">
             <Move className="w-4 h-4" />
             <span className="text-sm font-medium">Edit Mode: Drag panels to rearrange, resize from corners</span>
           </div>
           <button
             onClick={() => setEditMode(false)}
-            className="text-sm text-honey-600 hover:text-honey-800 font-medium"
+            className="text-sm text-honey-600 hover:text-honey-800 dark:text-honey-400 dark:hover:text-honey-200 font-medium"
           >
             Done Editing
           </button>
@@ -2238,7 +2242,7 @@ export default function DashboardViewPage() {
 
       {/* AI Insights Panel */}
       {showAIInsights && (
-        <div className="p-4 border-b border-nog-200 bg-white">
+        <div className="p-4 border-b border-nog-200 dark:border-nog-700 bg-white dark:bg-nog-900">
           <AIInsightsPanel dashboardId={id!} timeRange={timeRange} />
         </div>
       )}

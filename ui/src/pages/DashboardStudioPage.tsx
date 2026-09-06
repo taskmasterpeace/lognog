@@ -36,7 +36,14 @@ import {
   type PanelVizType,
 } from '../components/dashboard/PanelChart';
 
-const ALL_VIZ: PanelVizType[] = ['table', 'stat', 'line', 'area', 'bar', 'pie', 'gauge', 'heatmap', 'wordcloud'];
+// All 15 dashboard visualization types (same values as DashboardViewPage's
+// VISUALIZATION_OPTIONS). 'line' renders a filled area ("Area" — legacy value
+// naming), 'linechart' is the plain line; the 'area' alias stays out of the
+// picker to avoid a duplicate pill.
+const ALL_VIZ: PanelVizType[] = [
+  'table', 'bar', 'pie', 'line', 'stat', 'heatmap', 'gauge', 'wordcloud',
+  'scatter', 'funnel', 'treemap', 'linechart', 'radar', 'sankey', 'map',
+];
 
 const STARTERS: { label: string; query: string }[] = [
   { label: 'Events over time', query: 'search * | timechart span=1h count' },
@@ -371,7 +378,7 @@ export default function DashboardStudioPage() {
                     onClick={() => setViz(v)}
                     className={`text-xs px-2.5 py-1 rounded-full border transition-colors flex items-center gap-1 ${
                       active
-                        ? 'bg-honey-500 border-honey-500 text-white'
+                        ? 'bg-honey-500 border-honey-500 text-nog-900'
                         : 'border-nog-300 dark:border-nog-600 text-nog-600 dark:text-nog-300 hover:border-honey-400'
                     }`}
                     title={isRecommended ? 'Recommended for this data' : undefined}

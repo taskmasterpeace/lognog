@@ -51,6 +51,7 @@ import {
   TestExtractionResult,
   SourceAnnotation,
 } from '../api/client';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 
 type Tab = 'extractions' | 'events' | 'tags' | 'lookups' | 'workflows' | 'annotations';
 
@@ -137,6 +138,7 @@ function FieldExtractionsTab() {
     queryFn: getFieldExtractions,
   });
 
+  const { confirm } = useConfirm();
   const deleteMutation = useMutation({
     mutationFn: deleteFieldExtraction,
     onSuccess: () => {
@@ -244,14 +246,22 @@ function FieldExtractionsTab() {
                       </button>
                       <button
                         onClick={() => handleEdit(extraction)}
-                        className="p-2 text-nog-600 hover:bg-nog-100 rounded-lg transition-colors"
+                        className="p-2 text-nog-600 dark:text-nog-400 hover:bg-nog-100 dark:hover:bg-nog-700 rounded-lg transition-colors"
                         title="Edit"
                       >
                         <Edit2 className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => deleteMutation.mutate(extraction.id)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        onClick={async () => {
+                          const ok = await confirm({
+                            title: 'Delete Field Extraction',
+                            message: `Delete the "${extraction.name}" extraction? This action cannot be undone.`,
+                            confirmText: 'Delete',
+                            variant: 'danger',
+                          });
+                          if (ok) deleteMutation.mutate(extraction.id);
+                        }}
+                        className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                         title="Delete"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -474,24 +484,24 @@ function TestPatternModal({
           </div>
 
           {result && (
-            <div className={`p-4 rounded-lg border ${result.success ? 'bg-honey-50 border-honey-200' : 'bg-red-50 border-red-200'}`}>
+            <div className={`p-4 rounded-lg border ${result.success ? 'bg-honey-50 dark:bg-honey-900/20 border-honey-200 dark:border-honey-800' : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'}`}>
               <div className="flex items-start gap-2 mb-2">
                 {result.success ? (
                   <>
-                    <Check className="w-5 h-5 text-honey-600 flex-shrink-0 mt-0.5" />
+                    <Check className="w-5 h-5 text-honey-600 dark:text-honey-400 flex-shrink-0 mt-0.5" />
                     <div>
-                      <h4 className="font-semibold text-honey-900">Match Found</h4>
-                      <p className="text-sm text-honey-700 mt-1">
+                      <h4 className="font-semibold text-honey-900 dark:text-honey-300">Match Found</h4>
+                      <p className="text-sm text-honey-700 dark:text-honey-400 mt-1">
                         {result.matches.length} field(s) extracted
                       </p>
                     </div>
                   </>
                 ) : (
                   <>
-                    <XCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                    <XCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
                     <div>
-                      <h4 className="font-semibold text-red-900">No Match</h4>
-                      <p className="text-sm text-red-700 mt-1">{result.error}</p>
+                      <h4 className="font-semibold text-red-900 dark:text-red-300">No Match</h4>
+                      <p className="text-sm text-red-700 dark:text-red-400 mt-1">{result.error}</p>
                     </div>
                   </>
                 )}
@@ -500,10 +510,10 @@ function TestPatternModal({
               {result.success && result.matches.length > 0 && (
                 <div className="mt-3 space-y-2">
                   {result.matches.map((match, idx) => (
-                    <div key={idx} className="bg-white p-2 rounded border border-honey-200">
+                    <div key={idx} className="bg-white dark:bg-nog-800 p-2 rounded border border-honey-200 dark:border-honey-800">
                       <code className="text-xs">
-                        <span className="text-honey-700 font-semibold">{match.field}:</span>{' '}
-                        <span className="text-nog-700">{match.value}</span>
+                        <span className="text-honey-700 dark:text-honey-400 font-semibold">{match.field}:</span>{' '}
+                        <span className="text-nog-700 dark:text-nog-300">{match.value}</span>
                       </code>
                     </div>
                   ))}
@@ -543,6 +553,7 @@ function EventTypesTab() {
     queryFn: getEventTypes,
   });
 
+  const { confirm } = useConfirm();
   const deleteMutation = useMutation({
     mutationFn: deleteEventType,
     onSuccess: () => {
@@ -594,21 +605,29 @@ function EventTypesTab() {
                     <span className="text-xs text-nog-500">Priority: {eventType.priority}</span>
                   </div>
                   {eventType.description && (
-                    <p className="text-sm text-nog-600 mb-2">{eventType.description}</p>
+                    <p className="text-sm text-nog-600 dark:text-nog-300 mb-2">{eventType.description}</p>
                   )}
                   <code className="code text-xs">{eventType.search_string}</code>
                 </div>
                 <div className="flex items-center gap-2 ml-4">
                   <button
                     onClick={() => handleEdit(eventType)}
-                    className="p-2 text-nog-600 hover:bg-nog-100 rounded-lg transition-colors"
+                    className="p-2 text-nog-600 dark:text-nog-400 hover:bg-nog-100 dark:hover:bg-nog-700 rounded-lg transition-colors"
                     title="Edit"
                   >
                     <Edit2 className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={() => deleteMutation.mutate(eventType.id)}
-                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    onClick={async () => {
+                      const ok = await confirm({
+                        title: 'Delete Event Type',
+                        message: `Delete the "${eventType.name}" event type? This action cannot be undone.`,
+                        confirmText: 'Delete',
+                        variant: 'danger',
+                      });
+                      if (ok) deleteMutation.mutate(eventType.id);
+                    }}
+                    className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                     title="Delete"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -788,6 +807,7 @@ function TagsTab() {
     },
   });
 
+  const { confirm } = useConfirm();
   const deleteMutation = useMutation({
     mutationFn: deleteTag,
     onSuccess: () => {
@@ -893,8 +913,16 @@ function TagsTab() {
                   <td>
                     <div className="flex items-center justify-end">
                       <button
-                        onClick={() => deleteMutation.mutate(tag.id)}
-                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        onClick={async () => {
+                          const ok = await confirm({
+                            title: 'Delete Tag',
+                            message: `Delete the "${tag.tag_name}" tag? This action cannot be undone.`,
+                            confirmText: 'Delete',
+                            variant: 'danger',
+                          });
+                          if (ok) deleteMutation.mutate(tag.id);
+                        }}
+                        className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                         title="Delete"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -933,6 +961,7 @@ function LookupsTab() {
     queryFn: getLookups,
   });
 
+  const { confirm } = useConfirm();
   const deleteMutation = useMutation({
     mutationFn: deleteLookup,
     onSuccess: () => {
@@ -978,7 +1007,7 @@ function LookupsTab() {
                     <h3 className="font-semibold text-nog-900 dark:text-nog-100">{lookup.name}</h3>
                     <span className="badge badge-info">{lookup.lookup_type}</span>
                   </div>
-                  <div className="flex items-center gap-4 text-sm text-nog-600 mb-2">
+                  <div className="flex items-center gap-4 text-sm text-nog-600 dark:text-nog-300 mb-2">
                     <span>
                       <strong>Key:</strong> <code className="code text-xs">{lookup.key_field}</code>
                     </span>
@@ -1000,14 +1029,22 @@ function LookupsTab() {
                 <div className="flex items-center gap-2 ml-4">
                   <button
                     onClick={() => handleEdit(lookup)}
-                    className="p-2 text-nog-600 hover:bg-nog-100 rounded-lg transition-colors"
+                    className="p-2 text-nog-600 dark:text-nog-400 hover:bg-nog-100 dark:hover:bg-nog-700 rounded-lg transition-colors"
                     title="Edit"
                   >
                     <Edit2 className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={() => deleteMutation.mutate(lookup.id)}
-                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    onClick={async () => {
+                      const ok = await confirm({
+                        title: 'Delete Lookup',
+                        message: `Delete the "${lookup.name}" lookup table? This action cannot be undone.`,
+                        confirmText: 'Delete',
+                        variant: 'danger',
+                      });
+                      if (ok) deleteMutation.mutate(lookup.id);
+                    }}
+                    className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                     title="Delete"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -1185,6 +1222,7 @@ function WorkflowActionsTab() {
     queryFn: getWorkflowActions,
   });
 
+  const { confirm } = useConfirm();
   const deleteMutation = useMutation({
     mutationFn: deleteWorkflowAction,
     onSuccess: () => {
@@ -1230,7 +1268,7 @@ function WorkflowActionsTab() {
                     <h3 className="font-semibold text-nog-900 dark:text-nog-100">{action.name}</h3>
                     <span className="badge badge-info">{action.action_type}</span>
                   </div>
-                  <div className="text-sm text-nog-600 space-y-1">
+                  <div className="text-sm text-nog-600 dark:text-nog-300 space-y-1">
                     <p>
                       <strong>Label:</strong> {action.label}
                     </p>
@@ -1245,14 +1283,22 @@ function WorkflowActionsTab() {
                 <div className="flex items-center gap-2 ml-4">
                   <button
                     onClick={() => handleEdit(action)}
-                    className="p-2 text-nog-600 hover:bg-nog-100 rounded-lg transition-colors"
+                    className="p-2 text-nog-600 dark:text-nog-400 hover:bg-nog-100 dark:hover:bg-nog-700 rounded-lg transition-colors"
                     title="Edit"
                   >
                     <Edit2 className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={() => deleteMutation.mutate(action.id)}
-                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    onClick={async () => {
+                      const ok = await confirm({
+                        title: 'Delete Workflow Action',
+                        message: `Delete the "${action.name}" workflow action? This action cannot be undone.`,
+                        confirmText: 'Delete',
+                        variant: 'danger',
+                      });
+                      if (ok) deleteMutation.mutate(action.id);
+                    }}
+                    className="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                     title="Delete"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -1420,6 +1466,7 @@ function SourceAnnotationsTab() {
   const [filterField, setFilterField] = useState<string>('');
 
   const queryClient = useQueryClient();
+  const { confirm } = useConfirm();
 
   const { data: annotations, isLoading } = useQuery({
     queryKey: ['sourceAnnotations', filterField],
@@ -1537,8 +1584,14 @@ function SourceAnnotationsTab() {
                       <Edit2 className="w-4 h-4" />
                     </button>
                     <button
-                      onClick={() => {
-                        if (confirm('Delete this annotation?')) {
+                      onClick={async () => {
+                        const ok = await confirm({
+                          title: 'Delete Annotation',
+                          message: `Delete the annotation for "${annotation.title || annotation.field_value}"? This action cannot be undone.`,
+                          confirmText: 'Delete',
+                          variant: 'danger',
+                        });
+                        if (ok) {
                           deleteMutation.mutate(annotation.id);
                         }
                       }}
@@ -1587,12 +1640,12 @@ function SourceAnnotationsTab() {
           ))}
         </div>
       ) : (
-        <div className="text-center py-12 bg-white dark:bg-nog-800 rounded-lg border border-nog-200 dark:border-nog-700">
-          <MessageSquare className="w-12 h-12 text-nog-300 dark:text-nog-600 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-nog-900 dark:text-nog-100 mb-2">
-            No Annotations Yet
-          </h3>
-          <p className="text-nog-500 dark:text-nog-400 mb-4">
+        <div className="card p-12 text-center">
+          <div className="w-16 h-16 bg-honey-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <MessageSquare className="w-8 h-8 text-honey-600" />
+          </div>
+          <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">No annotations yet</h3>
+          <p className="text-sm text-nog-500 mb-4">
             Add annotations to provide context for your log sources.
           </p>
           <button
@@ -1602,6 +1655,7 @@ function SourceAnnotationsTab() {
             }}
             className="btn-primary"
           >
+            <Plus className="w-4 h-4" />
             Create First Annotation
           </button>
         </div>

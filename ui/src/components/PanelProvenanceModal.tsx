@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { X, GitMerge, Loader2, ExternalLink } from 'lucide-react';
 import { getPanelProvenance } from '../api/client';
@@ -20,9 +21,23 @@ export function PanelProvenanceModal({
     queryFn: () => getPanelProvenance(dashboardId, panelId),
   });
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal animate-slide-up max-w-lg" onClick={(e) => e.stopPropagation()}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Panel Origin"
+        className="modal animate-slide-up max-w-lg"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="modal-header">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">

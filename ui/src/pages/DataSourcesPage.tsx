@@ -596,8 +596,8 @@ export default function DataSourcesPage() {
                     <Link to="/docs" className="text-honey-600 dark:text-honey-400 hover:underline">
                       documentation
                     </Link>{' '}
-                    or ask{' '}
-                    <span className="text-honey-600 dark:text-honey-400">NogChat</span> (bottom right).
+                    or use{' '}
+                    <span className="text-honey-600 dark:text-honey-400">Ask LogNog</span> (bottom right).
                   </p>
                   <button
                     onClick={() => handleTabChange('templates')}

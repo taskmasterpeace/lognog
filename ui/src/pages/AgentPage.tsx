@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { authFetch } from '../api/client';
+import { useConfirm } from '../components/ui/ConfirmDialog';
 import {
   Bot,
   Send,
@@ -63,6 +64,7 @@ const PERSONA_ICONS: Record<string, React.ComponentType<{ className?: string }>>
 };
 
 export function AgentPage() {
+  const { confirm } = useConfirm();
   const [personas, setPersonas] = useState<AgentPersona[]>([]);
   const [selectedPersona, setSelectedPersona] = useState<AgentPersona | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -303,9 +305,17 @@ export function AgentPage() {
                 <MessageSquare className="w-4 h-4 flex-shrink-0" />
                 <span className="flex-1 text-sm truncate">{conv.title}</span>
                 <button
-                  onClick={(e) => {
+                  onClick={async (e) => {
                     e.stopPropagation();
-                    deleteConversation(conv.id);
+                    const ok = await confirm({
+                      title: 'Delete Conversation',
+                      message: `Delete "${conv.title}"? This action cannot be undone.`,
+                      confirmText: 'Delete',
+                      variant: 'danger',
+                    });
+                    if (ok) {
+                      deleteConversation(conv.id);
+                    }
                   }}
                   aria-label={`Delete conversation: ${conv.title}`}
                   className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-all"

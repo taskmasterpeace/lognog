@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { X, Copy, Loader2, ChevronDown, Search } from 'lucide-react';
 import {
@@ -9,6 +9,7 @@ import {
   Project,
   ProjectDashboard,
 } from '../api/client';
+import { useToast } from '../contexts/ToastContext';
 
 export interface PanelCopyModalProps {
   targetDashboardId?: string;
@@ -17,6 +18,7 @@ export interface PanelCopyModalProps {
 }
 
 export function PanelCopyModal({ targetDashboardId, onClose, onSuccess }: PanelCopyModalProps) {
+  const toast = useToast();
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [selectedDashboard, setSelectedDashboard] = useState<ProjectDashboard | null>(null);
@@ -79,7 +81,7 @@ export function PanelCopyModal({ targetDashboardId, onClose, onSuccess }: PanelC
       onClose();
     } catch (error) {
       console.error('Failed to copy panels:', error);
-      alert('Failed to copy panels. Please try again.');
+      toast.error('Copy Failed', 'Failed to copy panels. Please try again.');
     } finally {
       setCopying(false);
     }
@@ -95,9 +97,23 @@ export function PanelCopyModal({ targetDashboardId, onClose, onSuccess }: PanelC
     setSelectedPanels(newSet);
   };
 
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal animate-slide-up max-w-2xl" onClick={(e) => e.stopPropagation()}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="Copy Existing Panel"
+        className="modal animate-slide-up max-w-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="modal-header">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">

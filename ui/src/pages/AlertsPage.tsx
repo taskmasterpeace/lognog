@@ -880,10 +880,12 @@ export default function AlertsPage() {
           })}
         </div>
       ) : (
-        <div className="text-center py-12 bg-white dark:bg-nog-800 rounded-xl">
-          <Bell className="w-12 h-12 text-nog-300 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-nog-900 dark:text-nog-100 mb-2">No alerts configured</h3>
-          <p className="text-nog-500 dark:text-nog-400 mb-4">
+        <div className="card p-12 text-center">
+          <div className="w-16 h-16 bg-honey-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <Bell className="w-8 h-8 text-honey-600" />
+          </div>
+          <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">No alerts configured</h3>
+          <p className="text-sm text-nog-500 mb-4">
             Create your first alert to monitor your logs
           </p>
           <button
@@ -891,7 +893,7 @@ export default function AlertsPage() {
               resetForm();
               setShowCreateModal(true);
             }}
-            className="px-4 py-2 bg-honey-500 hover:bg-honey-600 text-nog-900 rounded-lg inline-flex items-center gap-2"
+            className="btn-primary"
           >
             <Plus className="w-4 h-4" />
             Create Alert
@@ -2063,7 +2065,7 @@ function QuickSilenceModal({ alertId, alertName, onClose }: QuickSilenceModalPro
             <button
               type="submit"
               disabled={silenceMutation.isPending}
-              className="flex-1 px-4 py-2 bg-honey-600 text-nog-900 rounded-lg hover:bg-honey-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 px-4 py-2 bg-honey-500 hover:bg-honey-600 text-nog-900 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {silenceMutation.isPending ? (
                 <span className="flex items-center justify-center gap-2">

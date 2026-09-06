@@ -55,7 +55,7 @@ export default function GeoIPTab() {
   };
 
   return (
-    <section className="bg-white dark:bg-nog-800 rounded-xl shadow-sm border border-nog-200 dark:border-nog-700 p-6">
+    <section className="card p-6">
       <h2 className="text-lg font-semibold text-nog-900 dark:text-nog-100 flex items-center gap-2 mb-4">
         <Globe className="w-5 h-5" />
         GeoIP Lookup

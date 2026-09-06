@@ -90,13 +90,13 @@ export default function FieldBrowserModal({
   const getTypeColor = (type: string): string => {
     switch (type) {
       case 'string':
-        return 'bg-honey-100 text-honey-700 dark:bg-honey-900/30 dark:text-honey-400';
+        return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400';
       case 'number':
         return 'bg-honey-100 text-honey-700 dark:bg-honey-900/30 dark:text-honey-400';
       case 'datetime':
-        return 'bg-honey-100 text-honey-700 dark:bg-honey-900/30 dark:text-honey-400';
+        return 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400';
       case 'boolean':
-        return 'bg-honey-100 text-honey-700 dark:bg-honey-900/30 dark:text-honey-400';
+        return 'bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400';
       default:
         return 'bg-nog-100 text-nog-700 dark:bg-nog-800 dark:text-nog-400';
     }
@@ -237,7 +237,7 @@ export default function FieldBrowserModal({
             </span>
             <button
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-nog-900 bg-honey-600 hover:bg-honey-700 rounded-lg transition-colors"
+              className="px-4 py-2 text-sm font-medium text-nog-900 bg-honey-500 hover:bg-honey-600 rounded-lg transition-colors"
             >
               Done
             </button>

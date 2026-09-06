@@ -34,6 +34,9 @@ export function DashboardBrandingModal({
   const [description, setDescription] = useState(branding.description || '');
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  // Inline "enter URL manually" input (no native prompt() dialogs).
+  const [showUrlInput, setShowUrlInput] = useState(false);
+  const [manualUrl, setManualUrl] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -81,6 +84,12 @@ export function DashboardBrandingModal({
   const handleRemoveLogo = () => {
     setLogoUrl('');
     setUploadError(null);
+  };
+
+  const applyManualUrl = () => {
+    setLogoUrl(manualUrl.trim());
+    setUploadError(null);
+    setShowUrlInput(false);
   };
 
   const isBase64Logo = logoUrl.startsWith('data:image/');
@@ -215,19 +224,37 @@ export function DashboardBrandingModal({
 
             {/* Or use URL */}
             <div className="mt-3">
-              <button
-                type="button"
-                onClick={() => {
-                  const url = prompt('Enter logo URL:', logoUrl);
-                  if (url !== null) {
-                    setLogoUrl(url);
-                    setUploadError(null);
-                  }
-                }}
-                className="text-xs text-nog-500 hover:text-nog-700 dark:text-nog-400 dark:hover:text-nog-300"
-              >
-                Or enter URL manually →
-              </button>
+              {showUrlInput ? (
+                <div className="flex gap-2 items-center">
+                  <input
+                    type="text"
+                    value={manualUrl}
+                    onChange={(e) => setManualUrl(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') applyManualUrl(); }}
+                    placeholder="https://example.com/logo.png"
+                    className="input flex-1 font-mono text-sm"
+                    autoFocus
+                  />
+                  <button
+                    type="button"
+                    onClick={applyManualUrl}
+                    className="btn-secondary text-sm"
+                  >
+                    Apply
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setManualUrl(isBase64Logo ? '' : logoUrl);
+                    setShowUrlInput(true);
+                  }}
+                  className="text-xs text-nog-500 hover:text-nog-700 dark:text-nog-400 dark:hover:text-nog-300"
+                >
+                  Or enter URL manually →
+                </button>
+              )}
             </div>
           </div>
 

@@ -139,23 +139,23 @@ export default function AssetsPage() {
       {/* Stats Cards */}
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-white dark:bg-nog-800 rounded-xl p-4 border border-nog-200 dark:border-nog-700">
+          <div className="card p-4">
             <div className="text-2xl font-bold text-nog-900 dark:text-nog-100">{stats.total}</div>
             <div className="text-sm text-nog-500 dark:text-nog-400">Total Assets</div>
           </div>
-          <div className="bg-white dark:bg-nog-800 rounded-xl p-4 border border-nog-200 dark:border-nog-700">
+          <div className="card p-4">
             <div className="text-2xl font-bold text-honey-600 dark:text-honey-400">
               {stats.by_status?.active || 0}
             </div>
             <div className="text-sm text-nog-500 dark:text-nog-400">Active</div>
           </div>
-          <div className="bg-white dark:bg-nog-800 rounded-xl p-4 border border-nog-200 dark:border-nog-700">
+          <div className="card p-4">
             <div className="text-2xl font-bold text-honey-600 dark:text-honey-400">
               {stats.by_type?.server || 0}
             </div>
             <div className="text-sm text-nog-500 dark:text-nog-400">Servers</div>
           </div>
-          <div className="bg-white dark:bg-nog-800 rounded-xl p-4 border border-nog-200 dark:border-nog-700">
+          <div className="card p-4">
             <div className="text-2xl font-bold text-honey-600 dark:text-honey-400">
               {stats.by_type?.container || 0}
             </div>

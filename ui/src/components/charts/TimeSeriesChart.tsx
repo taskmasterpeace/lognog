@@ -297,6 +297,17 @@ export const TimeSeriesChart: React.FC<TimeSeriesChartProps> = ({
     return Object.keys(events).length > 0 ? events : undefined;
   }, [onBrushEnd, onBarClick, chartType]);
 
+  if (!data || data.length === 0) {
+    return (
+      <div
+        className="w-full flex items-center justify-center text-nog-400 dark:text-nog-500"
+        style={{ height: `${height}px` }}
+      >
+        No data to display
+      </div>
+    );
+  }
+
   return (
     <div className="w-full">
       <ReactECharts

@@ -4,24 +4,40 @@ import {
   PieChart,
   GaugeChart,
   HeatmapChart,
+  MatrixHeatmapChart,
   WordCloudChart,
+  ScatterChart,
+  FunnelChart,
+  TreemapChart,
+  RadarChart,
+  SankeyChart,
+  GeoMapChart,
   type HeatmapData,
 } from '../charts';
 import { CHART_PALETTE } from '../charts';
 
 const CHART_COLORS = CHART_PALETTE;
 
+// Mirrors DashboardViewPage's VISUALIZATION_OPTIONS (plus the 'area'/'single'
+// aliases the dashboard renderer accepts) so Studio previews match saved panels.
 export type PanelVizType =
   | 'table'
   | 'stat'
   | 'single'
   | 'line'
   | 'area'
+  | 'linechart'
   | 'bar'
   | 'pie'
   | 'gauge'
   | 'heatmap'
-  | 'wordcloud';
+  | 'wordcloud'
+  | 'scatter'
+  | 'funnel'
+  | 'treemap'
+  | 'radar'
+  | 'sankey'
+  | 'map';
 
 export interface PanelChartProps {
   visualization: string;
@@ -82,13 +98,22 @@ const VIZ_LABEL: Record<PanelVizType, string> = {
   table: 'Table',
   stat: 'Single value',
   single: 'Single value',
-  line: 'Line',
+  // Legacy naming: the 'line' value renders a FILLED area on dashboards
+  // ("Area Chart" there); 'linechart' is the plain unfilled line.
+  line: 'Area',
   area: 'Area',
+  linechart: 'Line',
   bar: 'Bar',
   pie: 'Pie',
   gauge: 'Gauge',
   heatmap: 'Heatmap',
   wordcloud: 'Word cloud',
+  scatter: 'Scatter',
+  funnel: 'Funnel',
+  treemap: 'Treemap',
+  radar: 'Radar',
+  sankey: 'Sankey',
+  map: 'Map',
 };
 
 export function vizLabel(v: string): string {
@@ -105,7 +130,7 @@ export function PanelChart({ visualization, results, darkMode, height = 220 }: P
     return <div className="flex items-center justify-center h-full text-nog-400 text-sm">No data</div>;
   }
 
-  const { keys, valueKey, labelKey, timeKey, seriesKeys } = analyzeResults(results);
+  const { keys, numericKeys, valueKey, labelKey, timeKey, seriesKeys } = analyzeResults(results);
 
   switch (visualization) {
     case 'stat':
@@ -127,6 +152,7 @@ export function PanelChart({ visualization, results, darkMode, height = 220 }: P
 
     case 'line':
     case 'area':
+    case 'linechart':
       return (
         <AreaChart
           data={results}
@@ -134,6 +160,9 @@ export function PanelChart({ visualization, results, darkMode, height = 220 }: P
           xAxisKey={labelKey}
           height={height}
           darkMode={darkMode}
+          // Match the dashboard renderer: 'line'/'area' draw the filled area,
+          // 'linechart' is the plain unfilled line.
+          fill={visualization !== 'linechart'}
           xAxisFormatter={(v) => {
             if (String(v).match(/\d{4}-\d{2}-\d{2}/)) {
               return new Date(v).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -192,9 +221,21 @@ export function PanelChart({ visualization, results, darkMode, height = 220 }: P
     case 'heatmap': {
       const hasHour = keys.includes('hour') || keys.includes('day') || !!timeKey;
       if (!hasHour) {
+        // Two group-by columns + a value → a category × category matrix
+        // (mirrors the dashboard renderer, e.g. `stats count by host severity`).
+        const dimKeys = keys.filter((k) => k !== valueKey);
+        if (dimKeys.length >= 2) {
+          const [xKey, yKey] = dimKeys;
+          const matrix = results.map((r) => ({
+            x: String(r[xKey] ?? ''),
+            y: String(r[yKey] ?? ''),
+            value: Number(r[valueKey]) || 0,
+          }));
+          return <MatrixHeatmapChart data={matrix} height={Math.max(height, 240)} darkMode={darkMode} xLabel={xKey} yLabel={yKey} />;
+        }
         return (
           <div className="flex items-center justify-center h-full text-nog-400 text-xs text-center px-4">
-            Heatmap needs an hour/day or time field.
+            Heatmap needs an hour/day or time field, or two group-by fields.
           </div>
         );
       }
@@ -221,6 +262,98 @@ export function PanelChart({ visualization, results, darkMode, height = 220 }: P
             })
             .filter((d) => d.name)}
           height={Math.max(height, 240)}
+          darkMode={darkMode}
+        />
+      );
+
+    case 'scatter': {
+      // Two numeric columns become x/y; the first non-numeric column names the point.
+      const xKey = numericKeys[0] || keys[0];
+      const yKey = numericKeys[1] || numericKeys[0] || keys[1] || keys[0];
+      const nameKey = keys.find((k) => !numericKeys.includes(k)) || keys[0];
+      return (
+        <ScatterChart
+          data={results.map((row) => ({
+            x: Number(row[xKey]) || 0,
+            y: Number(row[yKey]) || 0,
+            name: String(row[nameKey] || ''),
+          }))}
+          height={height}
+          darkMode={darkMode}
+          xAxisLabel={xKey}
+          yAxisLabel={yKey}
+        />
+      );
+    }
+
+    case 'funnel':
+      return (
+        <FunnelChart
+          data={results
+            .map((row) => ({ name: String(row[labelKey] || ''), value: Number(row[valueKey]) || 0 }))
+            .filter((d) => d.name)}
+          height={height}
+          darkMode={darkMode}
+        />
+      );
+
+    case 'treemap':
+      return (
+        <TreemapChart
+          data={results
+            .map((row) => ({ name: String(row[labelKey] || ''), value: Number(row[valueKey]) || 0 }))
+            .filter((d) => d.name && d.value > 0)}
+          height={height}
+          darkMode={darkMode}
+        />
+      );
+
+    case 'radar':
+      return (
+        <RadarChart
+          data={results
+            .map((r) => ({ category: String(r[labelKey] ?? ''), value: Number(r[valueKey]) || 0 }))
+            .sort((a, b) => b.value - a.value)
+            .slice(0, 8)}
+          height={Math.max(height, 240)}
+          darkMode={darkMode}
+          seriesName={valueKey}
+        />
+      );
+
+    case 'sankey': {
+      // Two dimension columns + a value: first two non-value keys become
+      // source/target, the value column sets the band width.
+      const catKeys = keys.filter((k) => k !== valueKey);
+      if (catKeys.length < 2) {
+        return (
+          <div className="flex flex-col items-center justify-center h-full px-4 text-center text-nog-400">
+            <p className="text-sm">Sankey needs two categories.</p>
+            <p className="text-xs mt-1">Try <code className="font-mono text-xs">| stats count by field_a field_b</code>.</p>
+          </div>
+        );
+      }
+      const [srcKey, tgtKey] = catKeys;
+      return (
+        <SankeyChart
+          data={results.map((r) => ({
+            source: String(r[srcKey] ?? ''),
+            target: String(r[tgtKey] ?? ''),
+            value: Number(r[valueKey]) || 0,
+          }))}
+          height={Math.max(height, 260)}
+          darkMode={darkMode}
+        />
+      );
+    }
+
+    case 'map':
+      return (
+        <GeoMapChart
+          data={results
+            .map((r) => ({ name: String(r[labelKey] ?? ''), value: Number(r[valueKey]) || 0 }))
+            .filter((d) => d.name)}
+          height={Math.max(height, 260)}
           darkMode={darkMode}
         />
       );

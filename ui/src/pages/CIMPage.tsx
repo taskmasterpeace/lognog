@@ -56,7 +56,7 @@ const categoryColors: Record<string, string> = {
 const fieldTypeColors: Record<string, string> = {
   string: 'text-emerald-600 bg-emerald-50 dark:text-emerald-400 dark:bg-emerald-900/30',
   number: 'text-honey-600 bg-honey-50 dark:text-honey-400 dark:bg-honey-900/30',
-  boolean: 'text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-900/30',
+  boolean: 'text-teal-600 bg-teal-50 dark:text-teal-400 dark:bg-teal-900/30',
   timestamp: 'text-orange-600 bg-orange-50 dark:text-orange-400 dark:bg-orange-900/30',
   ip: 'text-nog-500 bg-nog-100 dark:bg-nog-700 dark:text-nog-400',
   array: 'badge-info',
@@ -141,7 +141,7 @@ export default function CIMPage() {
       {/* Stats Cards */}
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-white dark:bg-nog-800 rounded-xl p-4 border border-nog-200 dark:border-nog-700">
+          <div className="card p-4">
             <div className="flex items-center gap-2">
               <Database className="w-5 h-5 text-honey-500" />
               <div className="text-2xl font-bold text-nog-900 dark:text-nog-100">
@@ -150,7 +150,7 @@ export default function CIMPage() {
             </div>
             <div className="text-sm text-nog-500 dark:text-nog-400">Data Models</div>
           </div>
-          <div className="bg-white dark:bg-nog-800 rounded-xl p-4 border border-nog-200 dark:border-nog-700">
+          <div className="card p-4">
             <div className="flex items-center gap-2">
               <ArrowRightLeft className="w-5 h-5 text-honey-500" />
               <div className="text-2xl font-bold text-nog-900 dark:text-nog-100">
@@ -159,13 +159,13 @@ export default function CIMPage() {
             </div>
             <div className="text-sm text-nog-500 dark:text-nog-400">Field Mappings</div>
           </div>
-          <div className="bg-white dark:bg-nog-800 rounded-xl p-4 border border-nog-200 dark:border-nog-700">
+          <div className="card p-4">
             <div className="text-2xl font-bold text-honey-600 dark:text-honey-400">
               {stats.by_category?.authentication || 0}
             </div>
             <div className="text-sm text-nog-500 dark:text-nog-400">Auth Models</div>
           </div>
-          <div className="bg-white dark:bg-nog-800 rounded-xl p-4 border border-nog-200 dark:border-nog-700">
+          <div className="card p-4">
             <div className="text-2xl font-bold text-honey-600 dark:text-honey-400">
               {Object.keys(stats.mappings_by_source || {}).length}
             </div>

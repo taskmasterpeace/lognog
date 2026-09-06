@@ -109,7 +109,7 @@ export default function PreferencesTab() {
   };
 
   return (
-    <section className="bg-white dark:bg-nog-800 rounded-xl shadow-sm border border-nog-200 dark:border-nog-700 p-4 sm:p-6">
+    <section className="card p-4 sm:p-6">
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-lg font-semibold text-nog-900 dark:text-nog-100 flex items-center gap-2">
           <Palette className="w-5 h-5" />

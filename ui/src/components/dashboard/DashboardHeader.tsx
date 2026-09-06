@@ -1,6 +1,21 @@
 import { ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
+/**
+ * Readable title color for a custom header background: relative luminance of
+ * the hex picks espresso (nog-800) on light backgrounds or cream (nog-50) on
+ * dark ones. Returns undefined for non-hex values so callers keep the theme
+ * default.
+ */
+export function headerTextColor(color: string): string | undefined {
+  const m = color.trim().match(/^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/);
+  if (!m) return undefined;
+  const h = m[1].length === 3 ? m[1].split('').map((c) => c + c).join('') : m[1];
+  const [r, g, b] = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
+  const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return luminance > 0.5 ? '#2D1F13' : '#FAF8F5';
+}
+
 export interface DashboardHeaderProps {
   name: string;
   description?: string;
@@ -27,6 +42,11 @@ export function DashboardHeader({
   const accentStyle = accentColor
     ? { borderColor: accentColor }
     : {};
+
+  // A custom header background ignores the theme, so the theme-based text
+  // classes can't be trusted (near-white on a white header in dark mode).
+  // Derive a readable color from the background's luminance instead.
+  const titleColor = headerColor ? headerTextColor(headerColor) : undefined;
 
   return (
     <div
@@ -55,11 +75,19 @@ export function DashboardHeader({
           )}
 
           <div className="min-w-0">
-            <h1 className="text-xl font-bold text-nog-900 dark:text-nog-100 truncate" title={name}>
+            <h1
+              className="text-xl font-bold text-nog-900 dark:text-nog-100 truncate"
+              style={titleColor ? { color: titleColor } : undefined}
+              title={name}
+            >
               {name}
             </h1>
             {description && (
-              <p className="text-sm text-nog-500 dark:text-nog-400 mt-0.5 truncate" title={description}>
+              <p
+                className="text-sm text-nog-500 dark:text-nog-400 mt-0.5 truncate"
+                style={titleColor ? { color: titleColor, opacity: 0.75 } : undefined}
+                title={description}
+              >
                 {description}
               </p>
             )}

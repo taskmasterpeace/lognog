@@ -157,7 +157,7 @@ export default function AccountTab() {
   return (
     <>
       {/* User Profile Section */}
-      <section className="bg-white dark:bg-nog-800 rounded-xl shadow-sm border border-nog-200 dark:border-nog-700 p-4 sm:p-6 mb-6">
+      <section className="card p-4 sm:p-6 mb-6">
         <h2 className="text-lg font-semibold text-nog-900 dark:text-nog-100 flex items-center gap-2 mb-4">
           <User className="w-5 h-5" />
           Profile
@@ -195,7 +195,7 @@ export default function AccountTab() {
       </section>
 
       {/* Password Change Section */}
-      <section className="bg-white dark:bg-nog-800 rounded-xl shadow-sm border border-nog-200 dark:border-nog-700 p-4 sm:p-6 mb-6">
+      <section className="card p-4 sm:p-6 mb-6">
         <h2 className="text-lg font-semibold text-nog-900 dark:text-nog-100 flex items-center gap-2 mb-4">
           <Lock className="w-5 h-5" />
           Change Password
@@ -280,7 +280,7 @@ export default function AccountTab() {
       </section>
 
       {/* API Keys Section */}
-      <section className="bg-white dark:bg-nog-800 rounded-xl shadow-sm border border-nog-200 dark:border-nog-700 p-4 sm:p-6">
+      <section className="card p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
           <h2 className="text-lg font-semibold text-nog-900 dark:text-nog-100 flex items-center gap-2">
             <Key className="w-5 h-5" />

@@ -125,7 +125,7 @@ export default function AiTab() {
       )}
 
       {/* Ollama Configuration */}
-      <section className="bg-white dark:bg-nog-800 rounded-xl shadow-sm border border-nog-200 dark:border-nog-700 p-6">
+      <section className="card p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-nog-900 dark:text-nog-100 flex items-center gap-2">
             <Bot className="w-5 h-5" />
@@ -253,7 +253,7 @@ export default function AiTab() {
       </section>
 
       {/* OpenRouter Configuration */}
-      <section className="bg-white dark:bg-nog-800 rounded-xl shadow-sm border border-nog-200 dark:border-nog-700 p-6">
+      <section className="card p-6">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-nog-900 dark:text-nog-100 flex items-center gap-2">
             <Zap className="w-5 h-5" />

@@ -138,11 +138,11 @@ export default function IdentitiesPage() {
       {/* Stats Cards */}
       {stats && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-white dark:bg-nog-800 rounded-xl p-4 border border-nog-200 dark:border-nog-700">
+          <div className="card p-4">
             <div className="text-2xl font-bold text-nog-900 dark:text-nog-100">{stats.total}</div>
             <div className="text-sm text-nog-500 dark:text-nog-400">Total Identities</div>
           </div>
-          <div className="bg-white dark:bg-nog-800 rounded-xl p-4 border border-nog-200 dark:border-nog-700">
+          <div className="card p-4">
             <div className="flex items-center gap-2">
               <ShieldAlert className="w-5 h-5 text-honey-500" />
               <div className="text-2xl font-bold text-honey-600 dark:text-honey-400">
@@ -151,13 +151,13 @@ export default function IdentitiesPage() {
             </div>
             <div className="text-sm text-nog-500 dark:text-nog-400">Privileged</div>
           </div>
-          <div className="bg-white dark:bg-nog-800 rounded-xl p-4 border border-nog-200 dark:border-nog-700">
+          <div className="card p-4">
             <div className="text-2xl font-bold text-honey-600 dark:text-honey-400">
               {stats.by_type?.user || 0}
             </div>
             <div className="text-sm text-nog-500 dark:text-nog-400">Users</div>
           </div>
-          <div className="bg-white dark:bg-nog-800 rounded-xl p-4 border border-nog-200 dark:border-nog-700">
+          <div className="card p-4">
             <div className="text-2xl font-bold text-honey-600 dark:text-honey-400">
               {stats.by_type?.service_account || 0}
             </div>

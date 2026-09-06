@@ -48,7 +48,7 @@ export default class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBo
               </svg>
             </div>
             <div>
-              <h2 className="text-xl font-semibold text-nog-900 dark:text-white mb-2">
+              <h2 className="text-xl font-semibold text-nog-900 dark:text-nog-100 mb-2">
                 Something went wrong
               </h2>
               <p className="text-sm text-nog-500 dark:text-nog-400">

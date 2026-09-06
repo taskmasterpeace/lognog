@@ -101,7 +101,7 @@ export function AIInsightsPanel({
   return (
     <div className="bg-white dark:bg-nog-800 border border-nog-200 dark:border-nog-700 rounded-lg overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-nog-200 dark:border-nog-700 bg-honey-50 dark:from-honey-900/20 dark:to-honey-900/20">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-nog-200 dark:border-nog-700 bg-honey-50 dark:bg-honey-900/20">
         <div className="flex items-center gap-2">
           <Sparkles className="w-5 h-5 text-honey-500" />
           <h3 className="font-semibold text-nog-900 dark:text-nog-100">AI Insights</h3>

@@ -277,7 +277,7 @@ export function VariableEditorModal({
                 type="checkbox"
                 checked={multiSelect}
                 onChange={(e) => setMultiSelect(e.target.checked)}
-                className="w-4 h-4 rounded border-nog-300 text-honey-500 focus:ring-honey-500"
+                className="w-4 h-4 rounded border-nog-300 accent-honey-500 text-honey-500 focus:ring-honey-500"
               />
               <span className="text-sm text-nog-700 dark:text-nog-300">Allow multi-select</span>
             </label>
@@ -287,7 +287,7 @@ export function VariableEditorModal({
                 type="checkbox"
                 checked={includeAll}
                 onChange={(e) => setIncludeAll(e.target.checked)}
-                className="w-4 h-4 rounded border-nog-300 text-honey-500 focus:ring-honey-500"
+                className="w-4 h-4 rounded border-nog-300 accent-honey-500 text-honey-500 focus:ring-honey-500"
               />
               <span className="text-sm text-nog-700 dark:text-nog-300">Include "All" option</span>
             </label>
