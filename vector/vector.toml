@@ -598,8 +598,13 @@ batch.timeout_secs = 5
 # Healthcheck
 healthcheck.enabled = true
 
-# Encoding
-encoding.timestamp_format = "unix"
+# Encoding — MUST be rfc3339, not "unix": the logs.timestamp column is
+# DateTime64(3), and ClickHouse reads a bare integer there as MILLISECONDS,
+# so unix-seconds landed every syslog/docker event on 1970-01-21 where the
+# retention TTL deleted it within minutes (silent ingest loss).
+# date_time_best_effort lets ClickHouse parse the RFC3339 'T'/'Z' format.
+encoding.timestamp_format = "rfc3339"
+date_time_best_effort = true
 
 # Console sink for debugging (optional, comment out in production)
 [sinks.console]

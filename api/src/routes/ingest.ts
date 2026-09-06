@@ -1037,9 +1037,14 @@ router.post('/http', authenticateIngestion, async (req, res) => {
       }
 
       // Extract common fields - use custom app name if provided via header
-      const hostname = String(event.hostname || event.host || event.source || 'unknown');
       const appNameFromEvent = String(event.app_name || event.app || event.application || event.program || event.service || '');
       const appName = sanitizeAppName(customAppName || appNameFromEvent, 'generic');
+      // Hostname: fall back to the app's identity rather than a bare "unknown"
+      // (clients that never set hostname, like serverless cron jobs, otherwise
+      // pile every event under one meaningless "unknown" host).
+      const hostname = String(
+        event.hostname || event.host || event.source || (appName !== 'generic' ? appName : 'unknown')
+      );
       const rawMessage = String(event.message || event.msg || event.log || event.text || JSON.stringify(event));
 
       // Apply truncation to large messages
