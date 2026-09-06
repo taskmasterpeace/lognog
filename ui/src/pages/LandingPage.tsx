@@ -5,25 +5,26 @@ import {
   LayoutDashboard,
   Activity,
   Shield,
-  Globe,
   Github,
   ArrowRight,
   Terminal,
   Lock,
   Check,
+  Copy,
   Container,
   HardDrive,
   Home,
   Bot,
 } from 'lucide-react';
+import { useState } from 'react';
 
 const features = [
-  { icon: Search, title: 'A query language you already know', description: 'search, stats, filter, dedup, table, sort — shorthand piping that compiles straight to fast SQL.' },
-  { icon: LayoutDashboard, title: 'Dashboards that tell the story', description: 'Tables, bar, pie, line, area, heatmaps, gauges, single-stats — drag, drop, drill down.' },
-  { icon: Bell, title: 'Alerts that actually reach you', description: 'Threshold and no-data alerts to Slack, Discord, email, webhooks — with silencing and throttling.' },
+  { icon: Search, title: 'A query language you already know', description: 'Pipe-based search with 29 commands — search, stats, timechart, top, lookup, append — plus wildcards (host=web*) that compile straight to fast SQL.' },
+  { icon: LayoutDashboard, title: 'Dashboards that tell the story', description: 'Fifteen visualization types with drag-drop layout, variables, drilldowns, and secure public share links. Import your old Classic XML dashboards.' },
+  { icon: Bell, title: 'Alerts that actually reach you', description: 'Email, Slack, Discord, and 100+ channels — with per-result triggering, throttling, silencing, and scheduled email reports.' },
   { icon: Activity, title: 'Live tail, in real time', description: 'Watch logs stream in as they happen over SSE — pause, resume, filter on the fly.' },
-  { icon: Shield, title: 'File integrity monitoring', description: 'Know the moment a critical file changes, with SHA-256 hashing baked into the agent.' },
-  { icon: Globe, title: 'GeoIP & IP classification', description: 'Automatic geolocation and RFC-compliant categorization on every address you ingest.' },
+  { icon: Shield, title: 'Security analytics built in', description: 'Fields normalize to a common information model (ECS/OCSF), MITRE ATT&CK detection content ships ready to run, and the agent does file-integrity monitoring.' },
+  { icon: Bot, title: 'Built for AI agents', description: 'An llms.txt, an MCP server, and public self-onboarding endpoints — point a coding agent at LogNog and it configures itself, then writes queries for you.' },
 ];
 
 const integrations = [
@@ -36,15 +37,15 @@ const integrations = [
 ];
 
 const shots = [
-  { src: '/shot-search.jpg?v=2', label: 'Search', blurb: 'Pipe a query, watch it resolve in milliseconds.', pos: 'object-top' },
-  { src: '/shot-dashboard.jpg', label: 'Dashboards', blurb: 'Compose panels that update on their own.', pos: 'object-top' },
-  { src: '/shot-alerts.jpg', label: 'Alerts', blurb: 'Get told the moment something goes quiet — or loud.', pos: 'object-top' },
+  { src: '/shot-search.jpg?v=2', label: 'Search', headline: 'Pipe a query, watch it resolve', blurb: 'Millisecond answers across millions of rows — with live tail when you want the firehose.', pos: 'object-top' },
+  { src: '/shot-dashboard.jpg', label: 'Dashboards', headline: 'Panels that update on their own', blurb: 'Fifteen visualization types, drilldowns into anything, secure links for sharing.', pos: 'object-top' },
+  { src: '/shot-alerts.jpg', label: 'Alerts', headline: 'Know the moment it goes loud', blurb: 'Or quiet. Delivered on the channel you actually read, throttled so it never spams.', pos: 'object-top' },
 ];
 
 const comparison = [
   { feature: 'Where your logs live', lognog: 'Your servers, full stop', them: 'Their cloud, their terms' },
   { feature: 'Monthly bill', lognog: '$0 — free forever', them: 'Per-GB, climbing' },
-  { feature: 'Query language', lognog: 'shorthand, familiar', them: 'Proprietary, re-learn it' },
+  { feature: 'Query language', lognog: 'Pipe-based, familiar', them: 'Proprietary, re-learn it' },
   { feature: 'Setup', lognog: 'One Docker command', them: 'Onboarding calls' },
   { feature: 'Data retention', lognog: 'However long you want', them: 'Capped by your plan' },
 ];
@@ -55,12 +56,62 @@ const deploy = [
   { icon: Home, title: 'Your homelab', body: 'Runs happily on a Pi, a NUC, or that old tower in the closet.' },
 ];
 
+const anchors = [
+  { href: '#product', label: 'Product' },
+  { href: '#features', label: 'Features' },
+  { href: '#integrations', label: 'Integrations' },
+  { href: '#compare', label: 'Compare' },
+  { href: '#deploy', label: 'Get started' },
+];
+
+/** Uniform section header — the page's organizational spine. */
+function SectionHead({ n, kicker, title, sub }: { n: string; kicker: string; title: string; sub?: string }) {
+  return (
+    <div className="mb-12 text-center">
+      <div className="font-mono text-xs uppercase tracking-widest text-honey-500">
+        {n} — {kicker}
+      </div>
+      <h2 className="mt-3 font-display text-3xl font-semibold tracking-tight text-nog-50 sm:text-4xl">{title}</h2>
+      {sub && <p className="mx-auto mt-3 max-w-xl text-nog-300">{sub}</p>}
+    </div>
+  );
+}
+
+const QUICKSTART = 'git clone https://github.com/taskmasterpeace/lognog.git && cd lognog && docker compose up -d';
+
+function QuickStart() {
+  const [copied, setCopied] = useState(false);
+  const copy = () => {
+    navigator.clipboard.writeText(QUICKSTART).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }).catch(() => {});
+  };
+  return (
+    <div className="mx-auto mt-10 max-w-3xl overflow-hidden rounded-2xl border border-nog-700/80 bg-nog-900/80 shadow-2xl shadow-black/40">
+      <div className="flex items-center justify-between border-b border-nog-800 px-4 py-3">
+        <span className="flex items-center gap-1.5 text-xs text-nog-400"><Terminal className="h-3.5 w-3.5" /> quick start</span>
+        <button
+          onClick={copy}
+          className="flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs text-nog-300 transition hover:bg-nog-800 hover:text-honey-400"
+          aria-label="Copy quick start command"
+        >
+          {copied ? <Check className="h-3.5 w-3.5 text-honey-400" /> : <Copy className="h-3.5 w-3.5" />}
+          {copied ? 'Copied' : 'Copy'}
+        </button>
+      </div>
+      <pre className="overflow-x-auto px-5 py-4 text-left font-mono text-sm leading-relaxed text-nog-200">
+<span className="text-nog-500">$</span> <span className="text-honey-400">git</span> clone https://github.com/taskmasterpeace/lognog.git{'\n'}<span className="text-nog-500">$</span> <span className="text-honey-400">cd</span> lognog <span className="text-nog-500">&&</span> <span className="text-honey-400">docker</span> compose up -d
+      </pre>
+    </div>
+  );
+}
+
 export default function LandingPage() {
   return (
-    <div className="relative min-h-screen overflow-hidden bg-nog-950 font-sans text-nog-200 antialiased">
+    <div className="relative min-h-screen overflow-hidden scroll-smooth bg-nog-950 font-sans text-nog-200 antialiased">
       <style>{`
         @keyframes lnRise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes lnDrift { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
         .ln-rise { opacity: 0; animation: lnRise .8s cubic-bezier(.22,.61,.36,1) forwards; }
         .ln-grain { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.4'/%3E%3C/svg%3E"); }
       `}</style>
@@ -71,23 +122,32 @@ export default function LandingPage() {
 
       <div className="relative z-10">
         {/* Nav */}
-        <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-6">
-          <div className="flex items-center gap-3">
-            <img src="/lognoglogo.png" alt="LogNog" className="h-9 w-9 rounded-xl ring-1 ring-honey-500/20" />
-            <span className="font-display text-2xl font-semibold tracking-tight text-nog-50">LogNog</span>
-          </div>
-          <nav className="flex items-center gap-2 sm:gap-5">
-            <a href="https://github.com/taskmasterpeace/lognog" target="_blank" rel="noreferrer" className="hidden items-center gap-2 rounded-lg px-3 py-2 text-sm text-nog-300 transition hover:text-nog-50 sm:flex">
-              <Github className="h-4 w-4" /> GitHub
+        <header className="sticky top-0 z-20 border-b border-nog-800/60 bg-nog-950/80 backdrop-blur">
+          <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+            <a href="#" className="flex items-center gap-3">
+              <img src="/lognoglogo.png" alt="LogNog" className="h-9 w-9 rounded-xl ring-1 ring-honey-500/20" />
+              <span className="font-display text-2xl font-semibold tracking-tight text-nog-50">LogNog</span>
             </a>
-            <Link to="/login" className="rounded-lg bg-honey-500 px-4 py-2 text-sm font-medium text-nog-900 transition hover:bg-honey-400">
-              Sign in
-            </Link>
-          </nav>
+            <nav className="hidden items-center gap-1 lg:flex" aria-label="Sections">
+              {anchors.map((a) => (
+                <a key={a.href} href={a.href} className="rounded-lg px-3 py-2 text-sm text-nog-300 transition hover:text-nog-50">
+                  {a.label}
+                </a>
+              ))}
+            </nav>
+            <div className="flex items-center gap-2 sm:gap-4">
+              <a href="https://github.com/taskmasterpeace/lognog" target="_blank" rel="noreferrer" className="hidden items-center gap-2 rounded-lg px-3 py-2 text-sm text-nog-300 transition hover:text-nog-50 sm:flex">
+                <Github className="h-4 w-4" /> GitHub
+              </a>
+              <Link to="/login" className="rounded-lg bg-honey-500 px-4 py-2 text-sm font-medium text-nog-900 transition hover:bg-honey-400">
+                Sign in
+              </Link>
+            </div>
+          </div>
         </header>
 
         {/* Hero */}
-        <section className="mx-auto max-w-6xl px-6 pb-10 pt-16 text-center sm:pt-24">
+        <section className="mx-auto max-w-6xl px-6 pb-4 pt-16 text-center sm:pt-24">
           <div className="ln-rise mx-auto mb-6 inline-flex items-center gap-2 rounded-full border border-honey-500/25 bg-honey-500/5 px-4 py-1.5 text-xs font-medium text-honey-300" style={{ animationDelay: '0ms' }}>
             <span className="relative flex h-1.5 w-1.5"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-honey-400 opacity-75" /><span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-honey-400" /></span>
             Self-hosted · open source · free forever
@@ -108,30 +168,15 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* Hero visual — the real product, warm and lived-in (landscape crop) */}
-        <section className="mx-auto max-w-5xl px-6 pb-6 pt-4">
-          <div className="ln-rise relative mx-auto max-w-4xl" style={{ animationDelay: '300ms' }}>
-            <div className="pointer-events-none absolute -inset-6 -z-10 rounded-[2.5rem] bg-honey-500/10 blur-[90px]" aria-hidden="true" />
-            <div className="aspect-[16/9] overflow-hidden rounded-2xl border border-nog-700/70 shadow-2xl shadow-black/50 ring-1 ring-honey-500/10">
-              <img
-                src="/login-hero.jpg"
-                alt="A LogNog dashboard glowing on a monitor on a warm desk"
-                className="h-full w-full object-cover object-[50%_38%]"
-                loading="lazy"
-              />
-            </div>
-          </div>
-        </section>
-
-        {/* DSL terminal */}
-        <section className="mx-auto max-w-3xl px-6 pb-8 pt-6">
+        {/* Proof: the language, immediately */}
+        <section className="mx-auto max-w-3xl px-6 pb-6 pt-10">
           <div className="ln-rise overflow-hidden rounded-2xl border border-nog-700/80 bg-nog-900/80 shadow-2xl shadow-black/40 backdrop-blur" style={{ animationDelay: '320ms' }}>
             <div className="flex items-center gap-2 border-b border-nog-800 px-4 py-3">
               <span className="h-3 w-3 rounded-full bg-nog-600" /><span className="h-3 w-3 rounded-full bg-nog-600" /><span className="h-3 w-3 rounded-full bg-honey-500" />
               <span className="ml-2 flex items-center gap-1.5 text-xs text-nog-400"><Terminal className="h-3.5 w-3.5" /> lognog · search</span>
             </div>
             <pre className="overflow-x-auto px-5 py-4 text-left font-mono text-sm leading-relaxed">
-<span className="text-honey-400">search</span> <span className="text-nog-200">severity</span><span className="text-nog-500">&lt;=</span><span className="text-honey-300">3</span> <span className="text-nog-500">|</span> <span className="text-honey-400">stats</span> <span className="text-nog-200">count</span> <span className="text-nog-500">by</span> <span className="text-nog-200">hostname</span> <span className="text-nog-500">|</span> <span className="text-honey-400">sort</span> <span className="text-nog-500">desc</span> <span className="text-nog-200">count</span> <span className="text-nog-500">|</span> <span className="text-honey-400">limit</span> <span className="text-honey-300">10</span>
+<span className="text-honey-400">search</span> <span className="text-nog-200">severity</span><span className="text-nog-500">&lt;=</span><span className="text-honey-300">3</span> <span className="text-nog-200">hostname</span><span className="text-nog-500">=</span><span className="text-nog-200">web</span><span className="text-honey-300">*</span> <span className="text-nog-500">|</span> <span className="text-honey-400">stats</span> <span className="text-nog-200">count</span> <span className="text-nog-500">by</span> <span className="text-nog-200">app_name</span> <span className="text-nog-500">|</span> <span className="text-honey-400">sort</span> <span className="text-nog-500">desc</span> <span className="text-nog-200">count</span> <span className="text-nog-500">|</span> <span className="text-honey-400">limit</span> <span className="text-honey-300">10</span>
             </pre>
           </div>
         </section>
@@ -153,18 +198,15 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* Product showcase */}
-        <section className="mx-auto max-w-6xl px-6 py-16">
-          <div className="mb-12 text-center">
-            <h2 className="font-display text-3xl font-semibold tracking-tight text-nog-50 sm:text-4xl">See it pour</h2>
-            <p className="mx-auto mt-3 max-w-xl text-nog-300">Search, dashboards, alerts — the whole pour, running on hardware you own.</p>
-          </div>
+        {/* 01 · Product showcase */}
+        <section id="product" className="mx-auto max-w-6xl scroll-mt-24 px-6 py-16">
+          <SectionHead n="01" kicker="Product" title="See it pour" sub="Search, dashboards, alerts — the whole pour, running on hardware you own." />
           <div className="space-y-16">
             {shots.map((shot, i) => (
               <div key={shot.label} className={`flex flex-col items-center gap-8 lg:flex-row ${i % 2 ? 'lg:flex-row-reverse' : ''}`}>
                 <div className="lg:w-2/5">
-                  <span className="font-mono text-xs uppercase tracking-widest text-honey-500">0{i + 1}</span>
-                  <h3 className="mt-2 font-display text-2xl font-semibold text-nog-50">{shot.label}</h3>
+                  <span className="font-mono text-xs uppercase tracking-widest text-honey-500">{shot.label}</span>
+                  <h3 className="mt-2 font-display text-2xl font-semibold text-nog-50">{shot.headline}</h3>
                   <p className="mt-3 text-nog-300">{shot.blurb}</p>
                 </div>
                 <div className="lg:w-3/5">
@@ -177,12 +219,9 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* Features */}
-        <section className="mx-auto max-w-6xl px-6 py-16">
-          <div className="mb-12 text-center">
-            <h2 className="font-display text-3xl font-semibold tracking-tight text-nog-50 sm:text-4xl">Everything in the cup</h2>
-            <p className="mx-auto mt-3 max-w-xl text-nog-300">A full observability stack, none of the bloat.</p>
-          </div>
+        {/* 02 · Features */}
+        <section id="features" className="mx-auto max-w-6xl scroll-mt-24 px-6 py-16">
+          <SectionHead n="02" kicker="Features" title="Everything in the cup" sub="A full observability stack, none of the bloat." />
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {features.map((f) => (
               <div key={f.title} className="group rounded-2xl border border-nog-800 bg-nog-900/60 p-6 transition hover:border-honey-500/30 hover:bg-nog-900">
@@ -196,12 +235,9 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* Integrations */}
-        <section className="mx-auto max-w-6xl px-6 py-12">
-          <div className="mb-8 text-center">
-            <h2 className="font-display text-2xl font-semibold tracking-tight text-nog-50 sm:text-3xl">Pour from anywhere</h2>
-            <p className="mt-3 text-nog-300">Ship logs over HTTP, OTLP, syslog, or the agent.</p>
-          </div>
+        {/* 03 · Integrations */}
+        <section id="integrations" className="mx-auto max-w-6xl scroll-mt-24 px-6 py-16">
+          <SectionHead n="03" kicker="Integrations" title="Pour from anywhere" sub="Ship logs over HTTP, OTLP, syslog, log drains, or the agent." />
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
             {integrations.map((it) => (
               <div key={it.name} className="rounded-xl border border-nog-800 bg-nog-900/50 px-4 py-4 text-center transition hover:border-nog-700">
@@ -212,12 +248,9 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* Comparison */}
-        <section className="mx-auto max-w-3xl px-6 py-16">
-          <div className="mb-10 text-center">
-            <h2 className="font-display text-3xl font-semibold tracking-tight text-nog-50 sm:text-4xl">Why not just pay for the cloud?</h2>
-            <p className="mx-auto mt-3 max-w-lg text-nog-300">Because your logs are yours. Here's the honest comparison.</p>
-          </div>
+        {/* 04 · Comparison */}
+        <section id="compare" className="mx-auto max-w-3xl scroll-mt-24 px-6 py-16">
+          <SectionHead n="04" kicker="Compare" title="Why not just pay for the cloud?" sub="Because your logs are yours. Here's the honest comparison." />
           <div className="overflow-hidden rounded-2xl border border-nog-800">
             <div className="grid grid-cols-3 bg-nog-900 px-5 py-3 text-xs font-medium uppercase tracking-wider text-nog-400">
               <div />
@@ -234,11 +267,9 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* Deploy */}
-        <section className="mx-auto max-w-6xl px-6 py-16">
-          <div className="mb-12 text-center">
-            <h2 className="font-display text-3xl font-semibold tracking-tight text-nog-50 sm:text-4xl">Brews anywhere</h2>
-          </div>
+        {/* 05 · Deploy + quick start */}
+        <section id="deploy" className="mx-auto max-w-6xl scroll-mt-24 px-6 py-16">
+          <SectionHead n="05" kicker="Get started" title="Up and pouring in ten minutes" sub="Pick your hardware, run one command, send your first log." />
           <div className="grid gap-4 sm:grid-cols-3">
             {deploy.map((d) => (
               <div key={d.title} className="rounded-2xl border border-nog-800 bg-nog-900/60 p-7 text-center">
@@ -250,21 +281,29 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
+          <QuickStart />
         </section>
 
-        {/* Final CTA */}
+        {/* Final CTA — over the warm desk shot */}
         <section className="mx-auto max-w-5xl px-6 py-20">
-          <div className="relative overflow-hidden rounded-3xl border border-honey-500/20 bg-nog-900 px-8 py-16 text-center">
-            <div className="pointer-events-none absolute inset-x-0 -top-24 mx-auto h-64 w-64 rounded-full bg-honey-500/20 blur-[100px]" aria-hidden="true" />
-            <div className="relative">
-              <img src="/lognoglogo.png" alt="" className="mx-auto mb-6 h-14 w-14 rounded-2xl ring-1 ring-honey-500/20" />
+          <div className="relative overflow-hidden rounded-3xl border border-honey-500/20 text-center">
+            <img
+              src="/login-hero.jpg"
+              alt=""
+              aria-hidden="true"
+              className="absolute inset-0 h-full w-full object-cover object-[50%_38%]"
+              loading="lazy"
+            />
+            <div className="absolute inset-0 bg-gradient-to-b from-nog-950/85 via-nog-950/75 to-nog-950/90" aria-hidden="true" />
+            <div className="relative px-8 py-16">
+              <img src="/lognoglogo.png" alt="" className="mx-auto mb-6 h-14 w-14 rounded-2xl ring-1 ring-honey-500/30" />
               <h2 className="font-display text-3xl font-semibold tracking-tight text-nog-50 sm:text-4xl">Take your logs home.</h2>
-              <p className="mx-auto mt-4 max-w-md text-nog-300">Ten minutes from now you could be searching your own logs, on your own hardware, for free.</p>
+              <p className="mx-auto mt-4 max-w-md text-nog-200">Ten minutes from now you could be searching your own logs, on your own hardware, for free.</p>
               <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
                 <Link to="/search" className="inline-flex items-center gap-2 rounded-xl bg-honey-500 px-7 py-3.5 font-medium text-nog-900 transition hover:bg-honey-400">
                   Get started <ArrowRight className="h-4 w-4" />
                 </Link>
-                <a href="https://github.com/taskmasterpeace/lognog" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-xl border border-nog-700 px-7 py-3.5 font-medium text-nog-100 transition hover:bg-nog-800">
+                <a href="https://github.com/taskmasterpeace/lognog" target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-xl border border-nog-500/60 bg-nog-950/40 px-7 py-3.5 font-medium text-nog-100 backdrop-blur transition hover:bg-nog-800/70">
                   <Github className="h-4 w-4" /> Star on GitHub
                 </a>
               </div>
