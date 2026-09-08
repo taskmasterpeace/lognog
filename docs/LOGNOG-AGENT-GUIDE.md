@@ -56,7 +56,7 @@ Set these environment variables (add to `.env.local` / `.env` and your deploy pl
 | `level` | string | no | `debug` \| `info` \| `notice` \| `warning` \| `error` \| `critical`. Mapped to a numeric severity (see below). Prefer this over `severity`. |
 | `severity` | number | no | Syslog severity 0–7 (0=emergency … 7=debug). Use if you don't send `level`. |
 | `app_name` | string | no | Overrides `X-App-Name` per event. |
-| `hostname` | string | no | Host/instance the event came from. |
+| `hostname` | string | no | Host/instance the event came from. **Send a stable identity** — your production domain or service name, not nothing (events without one get filed under the app's name). On Vercel use `process.env.VERCEL_PROJECT_PRODUCTION_URL`. |
 | `source` | string | no | Logical source/component (e.g. `auth`, `checkout`, `worker`). |
 | *(any other keys)* | string/number/bool | no | **Custom structured fields** — stored and searchable (e.g. `user_id`, `route`, `status_code`, `duration_ms`, `error_code`). This is what makes logs useful. |
 
@@ -278,6 +278,8 @@ Send **structured events**, not raw strings. Every event should answer: *what ha
    ```
 
 If nothing shows: check `LOGNOG_URL` has no trailing `/api/...` path, the key is valid (a `401` means it's wrong), the body is a JSON **array**, and events were flushed (the clients flush on interval/shutdown — call `flush()` in short-lived scripts).
+
+> **Serverless/edge gotcha (Vercel, Lambda, Cloudflare Workers):** the runtime **freezes the instant your handler returns** — a "flush after 5 s" timer never fires, and buffered events are silently lost. In serverless handlers, `await flush()` before returning (or pass the flush promise to `ctx.waitUntil()` / `event.waitUntil()`). A batched client that "works locally but drops logs in prod" is almost always this.
 
 ---
 
