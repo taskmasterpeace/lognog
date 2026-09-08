@@ -24,7 +24,7 @@ const features = [
   { icon: Bell, title: 'Alerts that actually reach you', description: 'Email, Slack, Discord, and 100+ channels — with per-result triggering, throttling, silencing, and scheduled email reports.' },
   { icon: Activity, title: 'Live tail, in real time', description: 'Watch logs stream in as they happen over SSE — pause, resume, filter on the fly.' },
   { icon: Shield, title: 'Security analytics built in', description: 'Fields normalize to a common information model (ECS/OCSF), MITRE ATT&CK detection content ships ready to run, and the agent does file-integrity monitoring.' },
-  { icon: Bot, title: 'Built for AI agents', description: 'An llms.txt, an MCP server, and public self-onboarding endpoints — point a coding agent at LogNog and it configures itself, then writes queries for you.' },
+  { icon: Bot, title: 'Built for AI agents', description: 'Point a coding agent at GET /api/ingest/guide and it configures itself — public self-onboarding docs, an llms.txt, and an MCP server. Then it writes queries for you.' },
 ];
 
 const integrations = [
@@ -328,6 +328,24 @@ export default function LandingPage() {
                 className="flex items-center gap-1.5 transition hover:text-honey-400"
               >
                 <Bot className="h-4 w-4" /> For LLMs
+              </a>
+              <a
+                href="/api/ingest/guide"
+                target="_blank"
+                rel="noreferrer"
+                title="GET /api/ingest/guide — public integration guide written for AI coding agents; point an agent here and it configures itself"
+                className="transition hover:text-honey-400"
+              >
+                Agent guide
+              </a>
+              <a
+                href="/api/ingest/schema"
+                target="_blank"
+                rel="noreferrer"
+                title="GET /api/ingest/schema — the ingest contract as machine-readable JSON"
+                className="transition hover:text-honey-400"
+              >
+                Schema
               </a>
               <a href="https://github.com/taskmasterpeace/lognog" target="_blank" rel="noreferrer" className="transition hover:text-nog-100">GitHub</a>
               <span className="flex items-center gap-1.5"><Lock className="h-3.5 w-3.5" /> Self-hosted</span>

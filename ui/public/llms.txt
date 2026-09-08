@@ -8,7 +8,7 @@ LogNog collects logs over syslog, HTTP, OTLP, log drains, and a Windows/Linux ag
 
 - [Ingest guide](https://logs.machinekinglabs.com/api/ingest/guide): full markdown integration guide — endpoints, auth, payload shape, client patterns. Public; no key needed to read.
 - [Ingest schema](https://logs.machinekinglabs.com/api/ingest/schema): the ingest API contract as JSON. Public.
-- [DSL reference](https://logs.machinekinglabs.com/api/dsl/reference): the complete query-language reference, generated from the compiler itself — JSON by default, `?format=markdown` for docs. Public. Focused slices: `/api/dsl/quick` (cheat sheet), `/api/dsl/commands`, `/api/dsl/operators`, `/api/dsl/functions`, `/api/dsl/fields`, `/api/dsl/patterns` (common recipes).
+- [DSL reference](https://logs.machinekinglabs.com/api/dsl/reference): the complete query-language reference, generated from the compiler itself — JSON by default, `?format=markdown` for docs. Focused slices: `/api/dsl/quick` (cheat sheet), `/api/dsl/commands`, `/api/dsl/operators`, `/api/dsl/functions`, `/api/dsl/fields`, `/api/dsl/patterns` (common recipes). No app auth required; note this hosted instance keeps them behind its access wall — the ingest guide and schema above are the two endpoints that are always open, and the guide embeds a DSL cheat-sheet.
 - [Query context](https://logs.machinekinglabs.com/ai/context): machine-readable description of the query surface for building searches (requires an API key).
 - MCP server: Model Context Protocol endpoint at `/mcp/sse` for Claude Desktop and other MCP clients.
 

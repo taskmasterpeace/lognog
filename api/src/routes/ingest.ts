@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { readFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import type { Request, Response } from 'express';
-import { authenticate, requirePermission, authenticateIngestion } from '../auth/middleware.js';
+import { authenticate, requirePermission, authenticateIngestion, rateLimit } from '../auth/middleware.js';
 import { logAuthEvent } from '../auth/auth.js';
 import { firstDisallowedIndex } from '../auth/index-scope.js';
 import { insertLogs, getBackendInfo } from '../db/backend.js';
@@ -12,6 +12,12 @@ import { logIngestionStats } from '../services/internal-logger.js';
 import { processLogs } from '../services/source-processor.js';
 
 const router = Router();
+
+// The ingest router is the internet-reachable surface (the Access wall has a
+// bypass on /api/ingest/*), so cap request rate per client IP. 300/min is far
+// above any legit batch client (they send 1-500 events per request) while
+// stopping anonymous hammering of the key check / validate / doc endpoints.
+router.use(rateLimit(300, 60000));
 
 // ---------------------------------------------------------------------------
 // Public self-service docs (NO auth) — under the /api/ingest carve-out, which is
@@ -2179,7 +2185,10 @@ router.post('/smartthings', authenticateIngestion, async (req, res) => {
  *
  * Authentication: Optional (works without auth for testing)
  */
-router.post('/validate', async (req, res) => {
+// Requires an ingest key like every other ingest POST: this endpoint parses
+// arbitrary caller JSON, and it is publicly reachable (the Access bypass
+// covers /api/ingest/*), so it must not do free work for anonymous callers.
+router.post('/validate', authenticateIngestion, async (req, res) => {
   try {
     const { payload } = req.body;
 
