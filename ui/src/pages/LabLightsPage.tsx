@@ -4,7 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Maximize2, Minimize2, Lightbulb, Loader2, RefreshCw, Cpu, Volume2 } from 'lucide-react';
 import { getLabLights, LabLight } from '../api/client';
 import { toDate } from '../utils/formatDate';
-import { LIGHT_COLORS, appsFromParam, lightSearchUrl, splitWhy } from '../utils/labLights';
+import { LIGHT_COLORS, appsFromParam, lightSearchUrl, shelfOrder, splitWhy } from '../utils/labLights';
 import { ageAgo } from '../utils/sourceStatus';
 
 /**
@@ -216,7 +216,7 @@ export default function LabLightsPage() {
             wall ? 'grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(300px,1fr))]' : 'grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(260px,1fr))]'
           }`}
         >
-          {data.apps.map((l) => (
+          {shelfOrder(data.apps, apps.length > 0).map((l) => (
             <Screen key={l.app} light={l} offline={offline} big={wall} />
           ))}
         </div>

@@ -56,6 +56,18 @@ export function lightSearchUrl(app: string, kind: 'logs' | 'errors' | 'week'): s
   return `/search?${params.toString()}`;
 }
 
+const STATE_RANK: Record<LightState, number> = { red: 0, yellow: 1, green: 2 };
+
+/**
+ * Order of the screens on the shelf. Asked-for apps (?apps=) keep the order
+ * they were asked in, like a shelf someone arranged; the full list puts red
+ * first, then yellow, then green, each by name, so trouble is never below the fold.
+ */
+export function shelfOrder<T extends { state: LightState; label: string }>(lights: T[], asked: boolean): T[] {
+  if (asked) return lights;
+  return [...lights].sort((a, b) => STATE_RANK[a.state] - STATE_RANK[b.state] || a.label.localeCompare(b.label));
+}
+
 /** Parse a ?apps= value from the page URL the same way the API does (trim, drop blanks). */
 export function appsFromParam(raw: string | null): string[] {
   if (!raw) return [];

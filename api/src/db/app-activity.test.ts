@@ -21,6 +21,7 @@ import { getLabLights, WHY_HEADLINES, _labLightsTesting } from '../services/lab-
 interface LabLightsUi {
   lightSearchUrl(app: string, kind: 'logs' | 'errors' | 'week'): string | null;
   splitWhy(why: string, state: 'green' | 'yellow' | 'red'): { headline: string; detail: string };
+  shelfOrder<T extends { state: 'green' | 'yellow' | 'red'; label: string }>(lights: T[], asked: boolean): T[];
 }
 interface SourceStatusUi {
   sourceStatusInfo(status: string | null | undefined): { label: string; dotClass: string };
@@ -210,6 +211,15 @@ describe('lab lights over real Lite rows and real alerts', () => {
       expect(detail.length).toBeGreaterThan(0);
     }
     expect(splitWhy('something odd', 'red')).toEqual({ headline: 'Trouble', detail: 'something odd' });
+  });
+
+  it('the shelf puts red first, then yellow, then green; asked-for apps keep their order', async () => {
+    const { shelfOrder } = (await import(/* @vite-ignore */ ui('labLights.ts'))) as LabLightsUi;
+    const all = (await getLabLights()).apps;
+    expect(shelfOrder(all, false).map((l) => l.state)).toEqual(['red', 'red', 'red', 'yellow', 'green', 'green']);
+    expect(shelfOrder(all, false).map((l) => l.app)).toEqual(['homework-tree', 'hyh', 'knuckle-up', 'uptime', 'directors-palette', 'money-watch']);
+    const asked = (await getLabLights(null, ['uptime', 'hyh'])).apps;
+    expect(shelfOrder(asked, true).map((l) => l.app)).toEqual(['uptime', 'hyh']);
   });
 
   it('the Data Sources page shows the API\'s status word instead of working it out itself', async () => {
