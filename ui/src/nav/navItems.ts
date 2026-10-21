@@ -10,6 +10,7 @@
  */
 import type { ElementType } from 'react';
 import {
+  Home,
   Search,
   LayoutDashboard,
   Activity,
@@ -42,12 +43,7 @@ export interface NavSection {
 
 /** The main group, top to bottom. */
 export const MAIN_NAV: NavItem[] = [
-  // ┌─ HOME SLOT (Builder 2, release 2026-10-21) ─────────────────────────┐
-  // │ When the Needs-you Home page (/home) merges, add its link HERE as   │
-  // │ the first entry:  { to: '/home', label: 'Home', icon: Home },       │
-  // │ (import Home from 'lucide-react'), and add ['Home', '/home'] to the │
-  // │ top of MAIN in e2e/quiet-nav.spec.ts.                               │
-  // └─────────────────────────────────────────────────────────────────────┘
+  { to: '/home', label: 'Home', icon: Home },
   { to: '/search', label: 'Search', icon: Search },
   { to: '/dashboards', label: 'Dashboards', icon: LayoutDashboard },
   { to: '/alerts', label: 'Alerts', icon: Bell },

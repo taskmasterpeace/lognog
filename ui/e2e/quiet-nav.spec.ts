@@ -19,6 +19,7 @@ const USER = process.env.E2E_USER || 'admin';
 const PASSWORD = process.env.E2E_PASSWORD || 'admin';
 
 const MAIN: Array<[string, string]> = [
+  ['Home', '/home'],
   ['Search', '/search'],
   ['Dashboards', '/dashboards'],
   ['Alerts', '/alerts'],
@@ -87,7 +88,7 @@ test.describe('desktop 1440x900', () => {
     await signIn(context);
   });
 
-  test('main group shows only the six daily pages; More is closed with a count', async ({ page }) => {
+  test('main group shows only the seven daily pages; More is closed with a count', async ({ page }) => {
     await open(page, '/search');
     expect(await visibleLinks(page)).toEqual(MAIN);
     await expect(moreButton(page)).toHaveAttribute('aria-expanded', 'false');
@@ -165,7 +166,7 @@ test.describe('phone 390x844', () => {
     await signIn(context);
   });
 
-  test('the phone menu shows the same six, More opens, and a More page closes the menu', async ({ page }) => {
+  test('the phone menu shows the same seven, More opens, and a More page closes the menu', async ({ page }) => {
     await page.goto(`${BASE_URL}/search`, { waitUntil: 'domcontentloaded' });
     await page.getByRole('button', { name: 'Open menu' }).click();
     await expect(sidebar(page)).toBeInViewport();
