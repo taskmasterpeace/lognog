@@ -31,6 +31,7 @@ import { getTemplatesByCategory, getTemplateStats, getActiveSources, SourceTempl
 import AddDataSourceWizard from '../components/AddDataSourceWizard';
 import SourceConfigList from '../components/source-config/SourceConfigList';
 import { useMute } from '../contexts/MuteContext';
+import { searchUrl, sourceLogsQuery, sourceErrorsQuery } from '../utils/sourceDrilldown';
 
 type TabId = 'active' | 'templates' | 'config';
 
@@ -409,6 +410,11 @@ export default function DataSourcesPage() {
                   <tbody className="divide-y divide-nog-100 dark:divide-nog-700">
                     {activeSources.sources.map((source, idx) => {
                       const status = getStatusInfo(source.last_seen);
+                      // Search hides muted indexes and apps, so say so before the click.
+                      const mutedNote =
+                        isMuted('index_name', source.index_name || 'main') || isMuted('app_name', source.app_name)
+                          ? '. Muted: Search hides these until you unmute.'
+                          : '';
                       return (
                         <tr
                           key={`${source.app_name}-${source.index_name}-${idx}`}
@@ -447,15 +453,27 @@ export default function DataSourcesPage() {
                             </span>
                           </td>
                           <td className="px-4 py-3 text-right">
-                            <span className="text-sm font-medium text-nog-900 dark:text-nog-100">
-                              {source.log_count.toLocaleString()}
-                            </span>
+                            {source.log_count > 0 ? (
+                              <Link
+                                to={searchUrl(sourceLogsQuery(source.index_name, source.app_name))}
+                                title={`Open these ${source.log_count.toLocaleString()} logs in Search${mutedNote}`}
+                                className="text-sm font-medium text-nog-900 dark:text-nog-100 underline decoration-dotted decoration-nog-300 dark:decoration-nog-600 underline-offset-4 hover:text-honey-600 dark:hover:text-honey-400 hover:decoration-solid hover:decoration-honey-500 rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-honey-500 transition-colors"
+                              >
+                                {source.log_count.toLocaleString()}
+                              </Link>
+                            ) : (
+                              <span className="text-sm text-nog-400">0</span>
+                            )}
                           </td>
                           <td className="px-4 py-3 text-right">
                             {source.error_count > 0 ? (
-                              <span className="text-sm font-medium text-red-600 dark:text-red-400">
+                              <Link
+                                to={searchUrl(sourceErrorsQuery(source.index_name, source.app_name))}
+                                title={`Open these ${source.error_count.toLocaleString()} error logs in Search (severity error or worse)${mutedNote}`}
+                                className="text-sm font-medium text-red-600 dark:text-red-400 underline decoration-dotted decoration-red-300 dark:decoration-red-700 underline-offset-4 hover:text-red-700 dark:hover:text-red-300 hover:decoration-solid rounded focus:outline-none focus-visible:ring-2 focus-visible:ring-honey-500 transition-colors"
+                              >
                                 {source.error_count.toLocaleString()}
-                              </span>
+                              </Link>
                             ) : (
                               <span className="text-sm text-nog-400">0</span>
                             )}
