@@ -11,6 +11,7 @@ import {
   Database,
   HardDrive,
   BarChart3,
+  RefreshCw,
 } from 'lucide-react';
 import { AreaChart, BarChart, PieChart } from '../components/charts';
 import { getStats, getTimeSeries } from '../api/client';
@@ -61,17 +62,41 @@ export default function StatsPage() {
   const { resolvedTheme } = useTheme();
   const isDarkMode = resolvedTheme === 'dark';
 
-  const { data: stats, isLoading: statsLoading } = useQuery({
+  const {
+    data: stats,
+    isLoading: statsLoading,
+    error: statsError,
+    refetch: refetchStats,
+    isFetching: statsFetching,
+  } = useQuery({
     queryKey: ['stats'],
     queryFn: getStats,
     refetchInterval: 30000,
   });
 
-  const { data: timeSeries, isLoading: timeSeriesLoading } = useQuery({
+  const {
+    data: timeSeries,
+    isLoading: timeSeriesLoading,
+    error: timeSeriesError,
+    refetch: refetchTimeSeries,
+    isFetching: timeSeriesFetching,
+  } = useQuery({
     queryKey: ['timeSeries'],
     queryFn: () => getTimeSeries('1 HOUR', 24),
     refetchInterval: 60000,
   });
+
+  // A failed call must not pass for "0 logs" / "No data". Keep showing data
+  // we already have if only a background refresh failed.
+  const loadError = (statsError && !stats) ? statsError : (timeSeriesError && !timeSeries) ? timeSeriesError : null;
+  const loadErrorReason = loadError
+    ? ((loadError instanceof Error ? loadError.message : String(loadError)).trim().replace(/\.$/, '') || 'the server did not answer')
+    : '';
+  const retrying = statsFetching || timeSeriesFetching;
+  const retryLoad = () => {
+    if (statsError) refetchStats();
+    if (timeSeriesError) refetchTimeSeries();
+  };
 
   // Drill-down handler - navigate to search with pre-filled query
   const handleDrilldown = (field: string, value: string) => {
@@ -149,7 +174,29 @@ export default function StatsPage() {
         </div>
       )}
 
-      {activeTab === 'analytics' && !statsLoading && !timeSeriesLoading && stats?.totalLogs === 0 && (
+      {activeTab === 'analytics' && !statsLoading && !timeSeriesLoading && loadError && (
+        <div className="p-4 sm:p-6">
+          <div
+            role="alert"
+            className="card p-4 sm:p-5 border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 flex flex-col sm:flex-row sm:items-center gap-3"
+          >
+            <div className="flex items-start gap-2 flex-1 min-w-0 text-sm text-red-700 dark:text-red-300">
+              <AlertTriangle className="w-5 h-5 flex-shrink-0" aria-hidden="true" />
+              <p className="min-w-0 break-words">Couldn't load stats: {loadErrorReason}.</p>
+            </div>
+            <button
+              onClick={retryLoad}
+              disabled={retrying}
+              className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-honey-500 hover:bg-honey-600 text-nog-900 text-sm font-medium shadow-sm transition-colors disabled:opacity-60 self-start sm:self-auto"
+            >
+              <RefreshCw className={`w-4 h-4 ${retrying ? 'animate-spin' : ''}`} aria-hidden="true" />
+              {retrying ? 'Trying again...' : 'Try again'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'analytics' && !statsLoading && !timeSeriesLoading && !loadError && stats?.totalLogs === 0 && (
         <div className="flex flex-col items-center justify-center py-16 sm:py-24 px-4 text-center">
           <div className="w-16 h-16 bg-honey-100 dark:bg-honey-900/20 rounded-full flex items-center justify-center mb-4">
             <Database className="w-8 h-8 text-honey-600 dark:text-honey-400" />
@@ -161,7 +208,7 @@ export default function StatsPage() {
         </div>
       )}
 
-      {activeTab === 'analytics' && !statsLoading && !timeSeriesLoading && stats?.totalLogs !== 0 && (
+      {activeTab === 'analytics' && !statsLoading && !timeSeriesLoading && !loadError && stats?.totalLogs !== 0 && (
 
       <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
         {/* Stat Cards */}
