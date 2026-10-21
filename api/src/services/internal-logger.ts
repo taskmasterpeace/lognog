@@ -613,6 +613,20 @@ export function logAlertEvaluated(data: {
 /**
  * Log alert action execution
  */
+/**
+ * What an alert action did, safe for the lognog-internal index (any API key
+ * that can read can search it). Action results can name an e-mail address,
+ * echo a remote error body or carry what a script printed, so only the part
+ * before the first ':' is kept. A webhook's success message already names the
+ * host only. The full message stays in alert history (hidden from non-admin
+ * keys).
+ */
+export function actionLogSummary(actionType: string, success: boolean, message: string): string {
+  if (actionType === 'webhook' && success) return message;
+  if (actionType === 'email' && success) return 'Email sent';
+  return String(message).split(':')[0];
+}
+
 export function logAlertAction(data: {
   alert_id: string;
   alert_name: string;
@@ -620,9 +634,7 @@ export function logAlertAction(data: {
   success: boolean;
   message: string;
 }): void {
-  // Any API key that can read searches the lognog-internal index, so what a
-  // script printed (it can hold anything) stays in alert history only.
-  const message = data.action_type === 'script' ? data.message.split(':')[0] : data.message;
+  const message = actionLogSummary(data.action_type, data.success, data.message);
   logInternalEvent({
     action: 'alert.action_sent',
     category: 'alert',

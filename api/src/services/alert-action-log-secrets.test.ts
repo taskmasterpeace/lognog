@@ -21,7 +21,7 @@ vi.mock('../db/backend.js', () => ({
 }));
 
 import { evaluateAlert, webhookHost } from './alerts.js';
-import { logAlertAction, shutdown } from './internal-logger.js';
+import { logAlertAction, actionLogSummary, shutdown } from './internal-logger.js';
 import { createAlert, getAlertHistory } from '../db/sqlite-alerts.js';
 import { setSystemSetting } from '../db/sqlite-settings.js';
 
@@ -89,5 +89,22 @@ describe('alert action results carry no secrets', () => {
     expect(text).toContain('Script failed with code 2');
     expect(text).not.toContain('kl-printed-secret');
     expect(text).not.toContain('kl-stderr-secret');
+  });
+
+  it('e-mail addresses and remote error text stay out of the internal log too', async () => {
+    mockInsertLogs.mockClear();
+    logAlertAction({ alert_id: 'a2', alert_name: 'kl mail', action_type: 'email', success: true,
+      message: 'Email sent to kl-secret-person@example.com' });
+    logAlertAction({ alert_id: 'a2', alert_name: 'kl apprise', action_type: 'apprise', success: false,
+      message: 'Apprise notification failed: 400 - bad url tgram://kl-secret-bot-token/123' });
+    logAlertAction({ alert_id: 'a2', alert_name: 'kl hook', action_type: 'webhook', success: false,
+      message: 'Webhook failed: kl-secret-error-text' });
+    await shutdown();
+    const text = JSON.stringify(logged());
+    expect(text).toContain('Email sent');
+    expect(text).toContain('Apprise notification failed');
+    expect(text).toContain('Webhook failed');
+    expect(text).not.toContain('kl-secret');
+    expect(actionLogSummary('webhook', true, 'Webhook POST hooks.example.com - 200')).toBe('Webhook POST hooks.example.com - 200');
   });
 });
