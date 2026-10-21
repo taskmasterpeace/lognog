@@ -90,11 +90,11 @@ export function timeColumn(backend: Backend): string {
   return backend === 'clickhouse' ? 'timestamp' : "replace(timestamp, 'T', ' ')";
 }
 
-function stringLiteral(value: string): string {
+export function stringLiteral(value: string): string {
   return `'${value.replace(/\\/g, '\\\\').replace(/'/g, "''")}'`;
 }
 
-function scopeAnd(allowedIndexes?: string[] | null): string {
+export function scopeAnd(allowedIndexes?: string[] | null): string {
   const clause = indexScopeSqlClause(allowedIndexes);
   return clause ? ` AND ${clause}` : '';
 }
@@ -368,7 +368,7 @@ export function formatDuration(ms: number): string {
   return `${Math.floor(ms / DAY)} days`;
 }
 
-function n(v: unknown): number {
+export function n(v: unknown): number {
   const x = Number(v);
   return Number.isFinite(x) ? x : 0;
 }
@@ -562,7 +562,7 @@ export interface AiSpend {
   by_app: AiSpendApp[];
 }
 
-function round2(v: number): number {
+export function round2(v: number): number {
   return Math.round(v * 100) / 100;
 }
 

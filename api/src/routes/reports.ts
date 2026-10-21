@@ -10,6 +10,7 @@ import { rateLimit, authenticate, denyReadonly } from '../auth/middleware.js';
 import { requireOwnerOrAdmin, withOwnership } from '../auth/ownership.js';
 import { getReportTemplates, getTemplateById, getTemplatesByCategory, getTemplateCategories } from '../data/report-templates.js';
 import { getAvailableReportTokens } from '../services/template-engine.js';
+import { getWeeklyReport, WeekError } from '../services/weekly-report.js';
 
 const router = Router();
 
@@ -224,6 +225,23 @@ router.get('/tokens', (_req: Request, res: Response) => {
   } catch (error) {
     console.error('Error fetching tokens:', error);
     return res.status(500).json({ error: 'Failed to fetch tokens' });
+  }
+});
+
+// ==================== The LogNog Weekly ====================
+
+// One ISO week in plain words: ?week=2026-W43 (default: this week), ?tz=America/New_York.
+// Read-only and index-scoped like Home; declared before the /:id routes.
+router.get('/weekly', async (req: Request, res: Response) => {
+  const week = typeof req.query.week === 'string' && req.query.week ? req.query.week : null;
+  const tz = typeof req.query.tz === 'string' && req.query.tz ? req.query.tz : null;
+  try {
+    const report = await getWeeklyReport({ week, tz, allowedIndexes: req.allowedIndexes ?? null });
+    return res.json(report);
+  } catch (error) {
+    if (error instanceof WeekError) return res.status(400).json({ error: error.message, code: error.code });
+    console.error('Error building the weekly report:', error);
+    return res.status(500).json({ error: 'Failed to build the weekly report' });
   }
 });
 
