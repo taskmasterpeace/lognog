@@ -474,4 +474,58 @@ describe('lab lights over real Lite rows and real alerts', () => {
       _labLightsTesting.reset();
     }
   });
+  it('a rule that uses a macro is read after the macro is expanded, as the scheduler runs it', async () => {
+    const db = getSQLiteDB();
+    const logsDb = getSQLiteLogsDB();
+    const row = (app: string, index: string, severity: number) => ({ timestamp: ago(MIN), app_name: app, index_name: index, hostname: 'h', severity, message: app });
+    const lights = async (key: string[] | null) => {
+      _labLightsTesting.reset();
+      return Object.fromEntries((await getLabLights(key, ['shop-worker', 'shop-web'])).apps.map((a) => [a.app, a]));
+    };
+    try {
+      await insertLogs([row('shop-worker', 'shop', 3), row('shop-web', 'shop', 6)]);
+      db.prepare(`INSERT INTO macros (id, name, definition, description) VALUES ('m-k3a', 'shop_worker_err', 'app=shop-worker severity<=3', NULL)`).run();
+      db.prepare(`INSERT INTO macros (id, name, definition, description) VALUES ('m-k3b', 'any_index', 'index=shop OR index=*', NULL)`).run();
+      const q = 'search index=shop `shop_worker_err`';
+      // The scheduler's own path finds the error the rule fires on.
+      const { results } = await executeDSLQuery<{ count: number }>(`${q} | stats count`, { earliest: '-15m' });
+      expect(Number(results[0]?.count ?? 0)).toBe(1);
+      db.prepare(
+        `INSERT INTO alerts (id, name, search_query, severity, enabled, last_run, last_triggered, last_status)
+         VALUES ('al-macro-k3', 'Shop worker via macro', ?, 'high', 1, ?, ?, 'triggered')`,
+      ).run(q, ago(MIN), ago(2 * MIN));
+      for (const key of [null, ['shop']]) {
+        const by = await lights(key);
+        expect(by['shop-worker']).toMatchObject({ state: 'red', why: 'Alert: Shop worker via macro' });
+        expect(by['shop-web'].why).not.toMatch(/^Alert/);
+      }
+      // A macro that opens the rule to every index: a key limited to shop does not see it.
+      db.prepare("UPDATE alerts SET search_query = 'search `any_index` severity<=3' WHERE id = 'al-macro-k3'").run();
+      expect((await lights(['shop']))['shop-worker'].why).not.toMatch(/^Alert/);
+      expect((await lights(null))['shop-worker'].why).toBe('Alert: Shop worker via macro');
+    } finally {
+      db.prepare(`DELETE FROM alerts WHERE id = 'al-macro-k3'`).run();
+      db.prepare(`DELETE FROM macros WHERE id IN ('m-k3a', 'm-k3b')`).run();
+      logsDb.prepare(`DELETE FROM logs WHERE app_name IN ('shop-worker', 'shop-web')`).run();
+      _labLightsTesting.reset();
+    }
+  });
+
+  it('a rename before the index test reads every index: a key limited to shop does not see the rule', async () => {
+    const db = getSQLiteDB();
+    const logsDb = getSQLiteLogsDB();
+    try {
+      await insertLogs([{ timestamp: ago(MIN), app_name: 'shop-worker', index_name: 'shop', hostname: 'h', severity: 6, message: 'w' }]);
+      db.prepare(
+        `INSERT INTO alerts (id, name, search_query, severity, enabled, last_run, last_triggered, last_status)
+         VALUES ('al-rename-k3', 'Rule rename-where', 'search * | rename app_name as index_name | where index_name="shop"', 'high', 1, ?, ?, 'triggered')`,
+      ).run(ago(MIN), ago(2 * MIN));
+      _labLightsTesting.reset();
+      expect((await getLabLights(['shop'], ['shop-worker'])).apps[0].why).not.toMatch(/^Alert/);
+    } finally {
+      db.prepare(`DELETE FROM alerts WHERE id = 'al-rename-k3'`).run();
+      logsDb.prepare(`DELETE FROM logs WHERE app_name = 'shop-worker'`).run();
+      _labLightsTesting.reset();
+    }
+  });
 });

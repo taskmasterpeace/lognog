@@ -358,7 +358,7 @@ export default function LabLightsPage() {
   }
 
   return (
-    // pb-24: room under the last screen so the floating help button never covers it
+    // pb-24: room under the last screen, so it can scroll up clear of the floating help button
     <div className="p-4 pb-24 sm:p-6 sm:pb-24 max-w-7xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-5">
         <div className="min-w-0">

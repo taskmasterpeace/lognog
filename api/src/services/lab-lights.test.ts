@@ -209,6 +209,16 @@ describe('alert targets', () => {
     expect(alertTargets('search index=shop OR index_name=secret')).toEqual({ indexes: ['shop', 'secret'], apps: [], openIndexes: false });
   });
 
+  it('only the leading search / where stages count: after rename, eval or stats a field called index_name may be anything', () => {
+    // Reads every index: rename makes app_name look like index_name.
+    expect(alertTargets('search * | rename app_name as index_name | where index_name="shop"')).toEqual({ indexes: [], apps: [], openIndexes: true });
+    expect(alertTargets('search * | eval index_name="shop" | where index_name="shop"')).toEqual({ indexes: [], apps: [], openIndexes: true });
+    // The leading index still bounds it; an app test after stats is not about the log's app.
+    expect(alertTargets('search index=shop | stats count by app_name | where app_name="x"')).toEqual({ indexes: ['shop'], apps: [], openIndexes: false });
+    // A where straight after the search is still a plain filter.
+    expect(alertTargets('search severity<=3 | where index_name="shop"')).toEqual({ indexes: ['shop'], apps: [], openIndexes: false });
+  });
+
   it('end to end from the rule text: who lights, and which keys see it', () => {
     const rule = (q: string) => alert({ ...alertTargets(q) });
     const worker = { app: 'shop-worker', indexes: ['shop'] };

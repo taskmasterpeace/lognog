@@ -26,6 +26,8 @@
 import { APP_ACTIVITY_WINDOW, getAppActivity, type AppActivity } from '../db/backend.js';
 import { getSQLiteDB } from '../db/sqlite.js';
 import { isIndexAllowed } from '../auth/index-scope.js';
+import { expandMacros } from './macros.js';
+import { resolveMacroDefinition } from '../db/sqlite-macros.js';
 import { parseToAST, FIELD_MAP, isLogicGroup, type Condition, type SimpleCondition } from '../dsl/index.js';
 import { SOURCE_STATUS_MINUTES, sourceStatusFromAge, parseServerTime } from './source-status.js';
 
@@ -103,26 +105,32 @@ export interface FiringAlert {
   apps: string[];
   /**
    * True when the rule may read logs outside the indexes it names: no index,
-   * a wildcard, a NOT, an OR branch with no index, a subsearch, or a query
-   * the DSL can't read. Only a key that can read every index may see it.
+   * an index matched by a wildcard, an OR branch with no index, a subsearch,
+   * or an index test after a stage that can change the fields (rename, eval,
+   * stats...). Only a key that can read every index may see it.
    */
   openIndexes?: boolean;
 }
 
 /**
- * Which indexes / app names a rule's search is about, read with the DSL's own
- * parser (the scheduler runs the same DSL), so the DSL's field names count:
- * `app=`, `program=`, `sourcetype=` and `app_name=` are the app; `index=` and
- * `index_name=` are the index; `IN (...)` lists count too. Search, filter and
- * where stages are all read.
+ * Which indexes / app names a rule's search is about, read the way the
+ * scheduler runs it: `macro` / saved-search references expanded first, then
+ * the DSL's own parser, so the DSL's field names count: `app=`, `program=`,
+ * `sourcetype=` and `app_name=` are the app; `index=` and `index_name=` are the
+ * index; `IN (...)` lists count too. Only the leading search / filter / where
+ * stages are read: after any other stage (rename, eval, stats...) a field
+ * called index_name may no longer be the log's index.
  *
  * indexes / apps: the plain values the rule asks for (`=` or IN, not negated,
  * no wildcard). They decide which apps the rule lights.
  * openIndexes: the rule may read indexes it does not name, so a key limited to
  * some indexes must not see it. That is the case when the rule names no index,
  * when an OR has a branch with no plain index, when an index is matched by a
- * wildcard, `!=` or NOT, when it has a subsearch (append), or when the DSL
- * can't parse it (then it lights nothing at all).
+ * wildcard, `!=` or NOT (a negated index next to a plain one still counts
+ * as bounded by the plain one), when it has a subsearch (append), or when the
+ * index test comes after a stage that can change fields. A rule that can't be
+ * expanded or parsed (the scheduler can't run it either) names nothing, so it
+ * lights nothing at all.
  */
 export function alertTargets(searchQuery: string): { indexes: string[]; apps: string[]; openIndexes: boolean } {
   const column = (field: string) => {
@@ -170,14 +178,15 @@ export function alertTargets(searchQuery: string): { indexes: string[]; apps: st
   };
   let stages: Array<{ type: string; conditions?: Condition[] }>;
   try {
-    stages = parseToAST(searchQuery).stages as Array<{ type: string; conditions?: Condition[] }>;
+    stages = parseToAST(expandMacros(searchQuery, resolveMacroDefinition)).stages as Array<{ type: string; conditions?: Condition[] }>;
   } catch {
     return { indexes: [], apps: [], openIndexes: true };
   }
   let open = stages.some((st) => st.type === 'append' || st.type === 'inputlookup');
   let bounded = false;
   for (const st of stages) {
-    if (st.type !== 'search' && st.type !== 'filter' && st.type !== 'where') continue;
+    // rename / eval / stats ... can turn any field into "index_name" or "app_name": stop reading here.
+    if (st.type !== 'search' && st.type !== 'filter' && st.type !== 'where') break;
     for (const c of st.conditions ?? []) {
       collect(c);
       if (bound(c) !== null) bounded = true;
