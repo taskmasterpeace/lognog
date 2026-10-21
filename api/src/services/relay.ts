@@ -70,7 +70,7 @@ export interface RelayPayload {
 }
 
 export interface RelayReply {
-  /** True only for HTTP 2xx with a JSON body whose ok is not false. */
+  /** True only for HTTP 2xx with a JSON body that says ok: true (the relay's success reply). */
   ok: boolean;
   /** HTTP status, or 0 when the relay could not be reached. */
   status: number;
@@ -154,6 +154,8 @@ export async function postToRelay(
       headers: { 'Content-Type': 'application/json', 'X-Bus-Key': config.key },
       body: JSON.stringify(payload),
       signal: controller.signal,
+      // Never carry X-Bus-Key on to another host.
+      redirect: 'error',
     });
   } catch (err) {
     clearTimeout(timer);
@@ -175,13 +177,14 @@ export async function postToRelay(
 
   const why = Array.isArray(body?.why) ? (body!.why as unknown[]).map(String).filter(Boolean) : [];
   const announce = typeof body?.announce === 'string' ? body.announce : undefined;
-  const ok = response.ok && body !== null && body.ok !== false;
+  const ok = response.ok && body !== null && body.ok === true;
 
   if (!ok && why.length === 0) {
     if (response.status === 403) why.push('the relay did not accept the bus key (check RELAY_BUS_KEY)');
     else if (response.status === 429) why.push('too many wrong keys; the relay is waiting 10 minutes');
     else if (typeof body?.error === 'string') why.push(body.error);
     else if (body === null) why.push(`the relay answered ${response.status} without JSON`);
+    else if (response.ok) why.push(`the relay answered ${response.status} without ok: true (is RELAY_URL the studio relay?)`);
     else why.push(`the relay answered ${response.status}`);
   }
   return { ok, status: response.status, why, ...(announce ? { announce } : {}) };

@@ -176,6 +176,7 @@ export default function RelayActionEditor({ actions, onChange }: Props) {
   const preview = relayPreviewText(draft.project, draft.message, draft.urgent);
   const tooLong = Array.from(preview).length > RELAY_TEXT_MAX;
   const on = telegram || lab;
+  const showFields = configured || on;
 
   return (
     <section
@@ -223,6 +224,8 @@ export default function RelayActionEditor({ actions, onChange }: Props) {
       </div>
       <p className="text-xs text-nog-500 dark:text-nog-400">{RELAY_LAB_NOTE}</p>
 
+      {/* Not set up and nothing on: the fields could never be saved, so they aren't shown. */}
+      {showFields && (<>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label htmlFor={`${uid}-project`} className="block text-xs font-medium text-nog-700 dark:text-nog-300 mb-1">
@@ -252,7 +255,7 @@ export default function RelayActionEditor({ actions, onChange }: Props) {
               onChange={(e) => updateField({ urgent: e.target.checked })}
               className="w-4 h-4 rounded border-nog-300 dark:border-nog-600 text-honey-600 focus:ring-honey-500 flex-shrink-0"
             />
-            Urgent (can wake him overnight)
+            Urgent (can wake him overnight; the studio gets 2 a night)
           </label>
         </div>
       </div>
@@ -288,6 +291,7 @@ export default function RelayActionEditor({ actions, onChange }: Props) {
           {tooLong && ` Cut to ${RELAY_TEXT_MAX} characters.`}
         </p>
       </div>
+      </>)}
     </section>
   );
 }

@@ -27,7 +27,7 @@ const KEY = 'test-bus-key-not-real-0123456789';
 
 interface Seen { path: string; headers: http.IncomingHttpHeaders; body: string }
 let seen: Seen[] = [];
-let reply: { status: number; body: string; delayMs?: number } = { status: 200, body: '{"ok":true,"sent":true}' };
+let reply: { status: number; body: string; delayMs?: number; headers?: Record<string, string> } = { status: 200, body: '{"ok":true,"sent":true}' };
 let server: http.Server;
 let base = '';
 
@@ -38,7 +38,7 @@ beforeAll(async () => {
     req.on('end', () => {
       seen.push({ path: req.url || '', headers: req.headers, body });
       const send = () => {
-        res.writeHead(reply.status, { 'Content-Type': 'application/json' });
+        res.writeHead(reply.status, { 'Content-Type': 'application/json', ...(reply.headers || {}) });
         res.end(reply.body);
       };
       if (reply.delayMs) setTimeout(send, reply.delayMs); else send();
@@ -171,6 +171,27 @@ describe('postToRelay', () => {
     const r = await postToRelay('send', payload, { url: base, key: KEY });
     expect(r.ok).toBe(false);
     expect(describeRelayFailure(r)).toBe('Relay refused: no Glance Tag at the start');
+  });
+
+  it('treats 2xx JSON without ok: true as a failure (wrong service behind RELAY_URL)', async () => {
+    for (const body of ['{}', '[]', '{"sent":false}', '{"ok":"yes"}']) {
+      reply = { status: 200, body };
+      const r = await postToRelay('send', payload, { url: base, key: KEY });
+      expect(r.ok, body).toBe(false);
+      expect(r.why.length, body).toBeGreaterThan(0);
+    }
+    reply = { status: 200, body: '{}' };
+    const r = await postToRelay('send', payload, { url: base, key: KEY });
+    expect(describeRelayFailure(r)).toBe('Relay refused: the relay answered 200 without ok: true (is RELAY_URL the studio relay?)');
+  });
+
+  it('does not follow a redirect (the bus key never goes to another host)', async () => {
+    reply = { status: 302, body: '', headers: { Location: `${base}/elsewhere` } };
+    const before = seen.length;
+    const r = await postToRelay('send', payload, { url: base, key: KEY });
+    expect(r.ok).toBe(false);
+    expect(r.status).toBe(0);
+    expect(seen.slice(before).map((x) => x.path)).toEqual(['/send']);
   });
 
   it('treats 2xx without JSON as a failure', async () => {
