@@ -50,8 +50,8 @@ import {
   getProjects,
 } from '../db/sqlite.js';
 import { authenticate, denyReadonly, rateLimit } from '../auth/middleware.js';
-import { requireOwnerOrAdmin, withOwnership } from '../auth/ownership.js';
-import { apiKeyNeed, keyHasNeed } from '../auth/key-policy.js';
+import { requireOwnerOrAdmin, withOwnership, sharedDashboardLocked } from '../auth/ownership.js';
+import { apiKeyNeed } from '../auth/key-policy.js';
 import { executeDSLQuery } from '../db/backend.js';
 
 const router = Router();
@@ -255,16 +255,13 @@ router.use('/:id', (req: Request, res: Response, next) => {
   if (!requireOwnerOrAdmin(req, res, dashboard, 'dashboard')) return;
   // A dashboard shared by public link runs its panel queries for anyone, on
   // every index. An API key without 'admin' may not change what it shows.
+  const sharedLock = sharedDashboardLocked(req, dashboard);
   if (
-    dashboard.is_public &&
-    req.authMethod === 'apikey' &&
-    !keyHasNeed(req.apiKeyPermissions, 'admin') &&
+    sharedLock &&
     apiKeyNeed(req.method, `/dashboards/${req.params.id}${req.path}`) !== 'read' &&
     !/^\/duplicate\/?$/i.test(req.path) // copies it into a new, unshared dashboard
   ) {
-    return res.status(403).json({
-      error: "This dashboard is shared by a public link, so only an API key with the 'admin' permission can change it",
-    });
+    return res.status(403).json({ error: sharedLock });
   }
   next();
 });
@@ -768,6 +765,13 @@ router.put('/:id/layout', (req: Request, res: Response) => {
     const { layout } = req.body;
     if (!Array.isArray(layout)) {
       return res.status(400).json({ error: 'Layout must be an array' });
+    }
+    // Panels are moved by id alone, so every panel named must be on THIS
+    // dashboard (the owner and share checks above only cover this one).
+    const own = new Set(getDashboardPanels(dashboard.id).map((p) => p.id));
+    const foreign = layout.filter((l: { panelId?: unknown }) => !own.has(String(l?.panelId)));
+    if (foreign.length > 0) {
+      return res.status(404).json({ error: 'Not found on this dashboard', panelIds: foreign.map((l: { panelId?: unknown }) => l?.panelId) });
     }
 
     updatePanelPositions(layout.map((l: { panelId: string; x: number; y: number; w: number; h: number }) => ({

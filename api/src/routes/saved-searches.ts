@@ -21,6 +21,7 @@ import { getSQLiteDB } from '../db/sqlite.js';
 import { v4 as uuidv4 } from 'uuid';
 import { authenticate, optionalAuth, denyReadonly } from '../auth/middleware.js';
 import { scriptActionForbidden, restoreHiddenActions } from '../auth/alert-action-guard.js';
+import { requireOwnerOrAdmin, sharedDashboardLocked } from '../auth/ownership.js';
 import { reseedSavedSearches } from '../data/seed-templates.js';
 import type { SavedSearch } from '../db/sqlite-saved-searches.js';
 
@@ -552,6 +553,12 @@ router.post('/:id/create-panel', authenticate, denyReadonly, (req: Request, res:
     if (!dashboard) {
       return res.status(404).json({ error: 'Dashboard not found' });
     }
+    // Adding a panel changes the target dashboard: same rules as
+    // POST /dashboards/:id/panels (owner or admin; a publicly shared dashboard
+    // only by an admin key, since its share link runs the panel's query).
+    if (!requireOwnerOrAdmin(req, res, dashboard, 'dashboard')) return;
+    const sharedLock = sharedDashboardLocked(req, dashboard);
+    if (sharedLock) return res.status(403).json({ error: sharedLock });
 
     const panel = createDashboardPanel(
       data.dashboard_id,

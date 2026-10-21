@@ -49,7 +49,8 @@ vi.mock('../auth/api-key-cache.js', async (importOriginal) => {
 
 import express, { Express, Router } from 'express';
 import type { Server } from 'node:http';
-import request from 'supertest';
+import supertest from 'supertest';
+import http from 'node:http';
 import { createUser, createApiKey, generateTokenPair, getApiKeys } from '../auth/auth.js';
 import { apiKeyGate } from '../auth/api-key-gate.js';
 import { requireAdmin } from '../auth/middleware.js';
@@ -174,6 +175,24 @@ const isRead = (r: RouteRow) =>
 // ---------------------------------------------------------------------------
 // Keys and apps.
 // ---------------------------------------------------------------------------
+// This file sends thousands of requests. superagent opens a new connection for
+// each one by default, and on macOS the closed ones sit in TIME_WAIT until the
+// ~16k ephemeral ports run out (ETIMEDOUT, seen as a 1-in-10 flake when other
+// test runs share the machine). Every request here goes through one keep-alive
+// agent instead.
+const keepAlive = new http.Agent({ keepAlive: true, maxSockets: 8 });
+const request = (app: Parameters<typeof supertest>[0]): ReturnType<typeof supertest> =>
+  new Proxy(supertest(app), {
+    get(target, prop, receiver) {
+      const value = Reflect.get(target, prop, receiver);
+      if (typeof value !== 'function') return value;
+      return (...args: unknown[]) => {
+        const out = value.apply(target, args);
+        return out && typeof out.agent === 'function' ? out.agent(keepAlive) : out;
+      };
+    },
+  });
+
 const K: Record<string, string> = {};
 let jwtAdmin = '';
 let gateApp: Express; // the gate in front of a stub that answers 299
@@ -194,8 +213,13 @@ beforeAll(async () => {
   K.read = await mk('read only', ['read']);
   K.readScoped = await mk('board numbers', ['read'], ['uptime', 'directors-palette']);
   K.search = await mk('dp style', ['write', 'search', 'read']);
-  K.alerts = await mk('alerts writer', ['alerts:write']);
-  K.dashboards = await mk('dashboards writer', ['dashboards:write']);
+  // alerts:write / dashboards:write only count together with read (an alert or
+  // panel runs searches and sends or shows the rows), so the working keys are
+  // read + X, and the X-only keys are refused everywhere.
+  K.alerts = await mk('alerts writer', ['read', 'alerts:write']);
+  K.dashboards = await mk('dashboards writer', ['read', 'dashboards:write']);
+  K.alertsOnly = await mk('alerts write only', ['alerts:write']);
+  K.dashboardsOnly = await mk('dashboards write only', ['dashboards:write']);
   K.admin = await mk('admin key', ['admin']);
   K.alertsRw = await mk('alerts reader-writer', ['read', 'alerts:write']);
   K.star = await mk('star key', ['*']);
@@ -217,6 +241,9 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  keepAlive.destroy();
+  gateSrv.closeAllConnections();
+  realSrv.closeAllConnections();
   await new Promise((r) => gateSrv.close(r));
   await new Promise((r) => realSrv.close(r));
   closeDatabase();
@@ -295,14 +322,21 @@ describe('key lock: every route x every kind of key', () => {
     expect(mismatches(m, (r) => !isPublic(r) && !isIngest(r) && !isRead(r))).toEqual([]);
   });
 
-  it('an alerts:write key changes alerts and silences only', async () => {
+  it('a read + alerts:write key reads and changes alerts and silences only', async () => {
     const m = await refusedMap(K.alerts);
-    expect(mismatches(m, (r) => !isPublic(r) && !isAlertChange(r))).toEqual([]);
+    expect(mismatches(m, (r) => !isPublic(r) && !isAlertChange(r) && !isRead(r))).toEqual([]);
   });
 
-  it('a dashboards:write key changes dashboards only', async () => {
+  it('a read + dashboards:write key reads and changes dashboards only', async () => {
     const m = await refusedMap(K.dashboards);
-    expect(mismatches(m, (r) => !isPublic(r) && !isDashboardChange(r))).toEqual([]);
+    expect(mismatches(m, (r) => !isPublic(r) && !isDashboardChange(r) && !isRead(r))).toEqual([]);
+  });
+
+  it('alerts:write or dashboards:write WITHOUT read is refused everywhere (an alert or panel would send it any index)', async () => {
+    for (const k of [K.alertsOnly, K.dashboardsOnly]) {
+      const m = await refusedMap(k);
+      expect(mismatches(m, (r) => !isPublic(r))).toEqual([]);
+    }
   });
 
   it('an admin key does everything except send logs (unchanged: ingest needs write)', async () => {
@@ -398,10 +432,12 @@ describe('key lock on the real routers', () => {
 
   it('a browser admin session still does everything it did', async () => {
     const h = { Authorization: `Bearer ${jwtAdmin}` };
-    expect((await request(realSrv).get('/alerts').set(h)).status).toBe(200);
+    const list = await request(realSrv).get('/alerts').set(h);
+    expect(list.status, list.text).toBe(200);
     const made = await request(realSrv).post('/alerts').set(h).send({ name: 'jwt rule', search_query: 'search *' });
-    expect(made.status).toBe(201);
-    expect((await request(realSrv).get('/auth/api-keys').set(h)).status).toBe(200);
+    expect(made.status, made.text).toBe(201);
+    const keys = await request(realSrv).get('/auth/api-keys').set(h);
+    expect(keys.status, keys.text).toBe(200);
   });
 
   it('the MCP stream needs an unscoped admin key (header or query param)', async () => {
@@ -802,6 +838,36 @@ describe('round 3: public share links and dashboard parts', () => {
     const ann = (await request(realSrv).get(`/dashboards/${theirs.id}/annotations`).set(jwt())).body as Array<{ id: string }>;
     expect(ann.map((x) => x.id)).toContain(a.id);
   });
+
+  it("a layout change can only move this dashboard's own panels", async () => {
+    const theirs = (await request(realSrv).post('/dashboards').set(jwt()).send({ name: 'kl layout theirs' })).body;
+    const p = (await request(realSrv).post(`/dashboards/${theirs.id}/panels`).set(jwt()).send({ title: 'theirs', query: 'search *' })).body;
+    expect((await request(realSrv).post(`/dashboards/${theirs.id}/share`).set(jwt()).send({})).status).toBe(200);
+    const before = (await request(realSrv).get(`/dashboards/${theirs.id}`).set(jwt())).body.panels[0];
+    const mine = (await request(realSrv).post('/dashboards').set(dk()).send({ name: 'kl layout mine' })).body;
+    const mp = (await request(realSrv).post(`/dashboards/${mine.id}/panels`).set(dk()).send({ title: 'mine', query: 'search *' })).body;
+    const move = [{ panelId: p.id, x: 99, y: 99, w: 1, h: 1 }];
+    const res = await request(realSrv).put(`/dashboards/${mine.id}/layout`).set(dk()).send({ layout: move });
+    expect(res.status, res.text).toBe(404);
+    const after = (await request(realSrv).get(`/dashboards/${theirs.id}`).set(jwt())).body.panels[0];
+    expect([after.position_x, after.position_y, after.width, after.height]).toEqual([before.position_x, before.position_y, before.width, before.height]);
+    // its own panels still move
+    const ok = await request(realSrv).put(`/dashboards/${mine.id}/layout`).set(dk()).send({ layout: [{ panelId: mp.id, x: 2, y: 3, w: 4, h: 5 }] });
+    expect(ok.status, ok.text).toBe(200);
+    const moved = (await request(realSrv).get(`/dashboards/${mine.id}`).set(jwt())).body.panels[0];
+    expect([moved.position_x, moved.position_y, moved.width, moved.height]).toEqual([2, 3, 4, 5]);
+  });
+
+  it('a change under a dashboard that does not exist answers 404, even where no child id is checked', async () => {
+    for (const [m, path, body] of [
+      ['put', '/dashboards/kl-no-such-dashboard/pages/reorder', { pageIds: [] }],
+      ['put', '/dashboards/kl-no-such-dashboard/logos/reorder', { logoIds: [] }],
+      ['post', '/dashboards/kl-no-such-dashboard/variables/kl-none/options', {}],
+    ] as const) {
+      const res = await request(realSrv)[m](path).set(jwt()).send(body);
+      expect(res.status, `${m} ${path}: ${res.text}`).toBe(404);
+    }
+  });
 });
 
 describe('round 3: the gate fails closed, and alert pop-ups need an unscoped key', () => {
@@ -827,5 +893,68 @@ describe('round 3: the gate fails closed, and alert pop-ups need an unscoped key
     expect((await request(realSrv).get('/ingest/notifications?hostname=kl-host').set('X-API-Key', K.ingestScoped)).status).toBe(403);
     const b = await request(realSrv).get('/ingest/notifications?hostname=kl-host').set('Authorization', `ApiKey ${K.ingest}`);
     expect(b.status).toBe(200);
+  });
+});
+
+describe('round 3: no side door from a write permission to reading every index', () => {
+  const jwt = () => ({ Authorization: `Bearer ${jwtAdmin}` });
+
+  it('alerts:write without read cannot make an alert (it would send it the rows of any index)', async () => {
+    const a = { Authorization: `ApiKey ${K.alertsOnly}` };
+    const hook = [{ type: 'webhook', config: { url: 'http://127.0.0.1:9/kl-exfil', method: 'POST' } }];
+    const body = { name: 'kl exfil', search_query: 'search index=money', actions: hook };
+    const before = (await request(realSrv).get('/alerts').set(jwt())).body as unknown[];
+    for (const [m, p] of [['post', '/alerts'], ['post', '/agent/alerts']] as const) {
+      const res = await request(realSrv)[m](p).set(a).send(body);
+      expect(res.status, `${m} ${p}`).toBe(403);
+      expect(res.body.needed).toBe('alerts:write');
+      expect(res.body.message).toContain("together with 'read'");
+    }
+    expect(((await request(realSrv).get('/alerts').set(jwt())).body as unknown[]).length).toBe(before.length);
+    // the read + alerts:write key (the MONEY recipe's) still works
+    const ok = await request(realSrv).post('/alerts').set('Authorization', `ApiKey ${K.alerts}`).send(body);
+    expect(ok.status).toBe(201);
+    await request(realSrv).delete(`/alerts/${ok.body.id}`).set(jwt());
+  });
+
+  it('dashboards:write without read cannot make a panel', async () => {
+    const res = await request(realSrv).post('/dashboards').set('Authorization', `ApiKey ${K.dashboardsOnly}`).send({ name: 'kl x' });
+    expect(res.status).toBe(403);
+    expect(res.body.message).toContain("together with 'read'");
+  });
+
+  it('saved-search create-panel obeys the shared-dashboard and owner rules', async () => {
+    const dk = { Authorization: `ApiKey ${K.dashboards}` };
+    const ss = (await request(realSrv).post('/saved-searches').set(jwt()).send({ name: 'kl all', query: 'search *' })).body;
+    const shared = (await request(realSrv).post('/dashboards').set(jwt()).send({ name: 'kl shared 2' })).body;
+    expect((await request(realSrv).post(`/dashboards/${shared.id}/share`).set(jwt()).send({})).status).toBe(200);
+
+    const no = await request(realSrv).post(`/saved-searches/${ss.id}/create-panel`).set(dk).send({ dashboard_id: shared.id });
+    expect(no.status, no.text).toBe(403);
+    let panels = (await request(realSrv).get(`/dashboards/${shared.id}`).set(jwt())).body.panels as unknown[];
+    expect(panels).toHaveLength(0);
+    // an admin key and a browser admin may; so may a dashboards key on an unshared dashboard
+    expect((await request(realSrv).post(`/saved-searches/${ss.id}/create-panel`).set('Authorization', `ApiKey ${K.admin}`)
+      .send({ dashboard_id: shared.id })).status).toBe(201);
+    const own = (await request(realSrv).post('/dashboards').set(dk).send({ name: 'kl own' })).body;
+    expect((await request(realSrv).post(`/saved-searches/${ss.id}/create-panel`).set(dk).send({ dashboard_id: own.id })).status).toBe(201);
+
+    // a signed-in non-admin user cannot add a panel to someone else's dashboard
+    const u = await createUser('kl-user3', 'kl-user3@example.invalid', 'kl-user3-test-pass-1', 'user');
+    const uj = { Authorization: `Bearer ${(await generateTokenPair(u)).accessToken}` };
+    const theirs = (await request(realSrv).post('/dashboards').set(jwt()).send({ name: 'kl theirs 2' })).body;
+    const uss = (await request(realSrv).post('/saved-searches').set(uj).send({ name: 'kl u', query: 'search *' })).body;
+    expect(uss.id).toBeTruthy();
+    const ux = await request(realSrv).post(`/saved-searches/${uss.id}/create-panel`).set(uj).send({ dashboard_id: theirs.id });
+    expect(ux.status, ux.text).toBe(403);
+    panels = (await request(realSrv).get(`/dashboards/${theirs.id}`).set(jwt())).body.panels as unknown[];
+    expect(panels).toHaveLength(0);
+  });
+
+  it('sibling-branch reads that filter to the key indexes stay open to a scoped read key', () => {
+    for (const p of ['/stats/home', '/status/lights', '/reports/weekly']) {
+      expect(decideApiKey('GET', p, ['read'], ['uptime']).allowed, p).toBe(true);
+    }
+    expect(decideApiKey('GET', '/reports/kl-none', ['read'], ['uptime']).allowed).toBe(false);
   });
 });

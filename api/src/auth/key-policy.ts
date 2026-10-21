@@ -9,8 +9,8 @@
  * Permission strings a key can hold:
  *   'write'             send logs (the ingest endpoints). Nothing else.
  *   'read' / 'search'   read: search, stats, dashboards, alerts list...
- *   'alerts:write'      create / change / delete alerts and silences
- *   'dashboards:write'  create / change / delete dashboards and panels
+ *   'alerts:write'      create / change / delete alerts and silences (only together with 'read')
+ *   'dashboards:write'  create / change / delete dashboards and panels (only together with 'read')
  *   'admin'             everything except sending logs (settings, keys, users...)
  *   '*'                 everything
  *
@@ -34,10 +34,23 @@ export const KEY_GRANTS: Record<Exclude<KeyNeed, 'none'>, readonly string[]> = {
 /** Every permission string the key lock understands (for the UI and docs). */
 export const KNOWN_KEY_PERMISSIONS = ['read', 'search', 'write', 'alerts:write', 'dashboards:write', 'admin', '*'] as const;
 
+/**
+ * Alerts and dashboard panels run searches over every index and send or show
+ * the results (webhooks, e-mail, pop-ups, panels). So 'alerts:write' and
+ * 'dashboards:write' only count on a key that may also read ('read' or
+ * 'search'); otherwise a write-only key could read any index by making an
+ * alert or panel that sends it the rows. 'admin' and '*' cover both.
+ */
+const WRITES_THAT_READ: ReadonlySet<KeyNeed> = new Set<KeyNeed>(['alerts:write', 'dashboards:write']);
+
 export function keyHasNeed(permissions: readonly string[] | null | undefined, need: KeyNeed): boolean {
   if (need === 'none') return true;
   const perms = permissions ?? [];
-  return KEY_GRANTS[need].some((p) => perms.includes(p));
+  if (!KEY_GRANTS[need].some((p) => perms.includes(p))) return false;
+  if (WRITES_THAT_READ.has(need) && !KEY_GRANTS.admin.some((p) => perms.includes(p))) {
+    return KEY_GRANTS.read.some((p) => perms.includes(p));
+  }
+  return true;
 }
 
 type Rule = { methods: '*' | readonly string[]; path: RegExp; need: KeyNeed };
@@ -127,11 +140,13 @@ const SCOPE_AWARE_READS: readonly RegExp[] = [
   /^\/agent(\/(search|summary|indexes|fields))?$/,
   /^\/auth\/me$/,
   /^\/reports\/generate$/,
-  // Added by sibling branches in the 2026-10-21 release; both filter to the
+  // Added by sibling branches in the 2026-10-21 release; all filter to the
   // key's indexes (services/home-summary.ts hides alerts from scoped keys;
-  // services/lab-lights.ts keeps only alerts on allowed indexes).
+  // services/lab-lights.ts keeps only alerts on allowed indexes;
+  // services/weekly-report.ts scopes every query and hides alerts).
   /^\/stats\/home$/,
   /^\/status\/lights$/,
+  /^\/reports\/weekly$/,
 ];
 
 /**
@@ -187,7 +202,9 @@ export function decideApiKey(
     return {
       allowed: false,
       need,
-      reason: `This API key can't do that: it needs the '${need}' permission (it has ${JSON.stringify(permissions ?? [])}).`,
+      reason: WRITES_THAT_READ.has(need)
+        ? `This API key can't do that: it needs the '${need}' permission together with 'read' (it has ${JSON.stringify(permissions ?? [])}).`
+        : `This API key can't do that: it needs the '${need}' permission (it has ${JSON.stringify(permissions ?? [])}).`,
     };
   }
 

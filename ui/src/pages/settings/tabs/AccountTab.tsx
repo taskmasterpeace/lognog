@@ -12,8 +12,8 @@ import { useConfirm } from '../../../components/ui/ConfirmDialog';
 const API_KEY_PERMISSIONS: { value: string; label: string; hint: string }[] = [
   { value: 'write', label: 'send logs', hint: 'Send logs to the ingest endpoints. Nothing else.' },
   { value: 'read', label: 'read', hint: 'Search logs and view stats, dashboards and alerts (webhook addresses stay hidden). Changes nothing.' },
-  { value: 'alerts:write', label: 'alerts:write', hint: 'Create, change and delete alerts and silences. Cannot add or run script actions; that needs admin.' },
-  { value: 'dashboards:write', label: 'dashboards:write', hint: 'Create, change and delete dashboards and panels. Cannot share a public link or change a shared dashboard; that needs admin.' },
+  { value: 'alerts:write', label: 'alerts:write', hint: 'Create, change and delete alerts and silences. Comes with read (alerts send search results). Cannot add or run script actions; that needs admin.' },
+  { value: 'dashboards:write', label: 'dashboards:write', hint: 'Create, change and delete dashboards and panels. Comes with read. Cannot share a public link or change a shared dashboard; that needs admin.' },
   { value: 'admin', label: 'admin', hint: 'Everything except sending logs: settings, users, API keys, AI, script actions, public links.' },
 ];
 
@@ -161,10 +161,18 @@ export default function AccountTab() {
     return new Date(dateStr).toLocaleString();
   };
 
+  // alerts:write and dashboards:write only work together with read (an alert
+  // or panel runs searches), so picking one adds read and dropping read drops them.
+  const NEEDS_READ = ['alerts:write', 'dashboards:write'];
   const togglePermission = (perm: string) => {
-    setNewKeyPermissions((prev) =>
-      prev.includes(perm) ? prev.filter((p) => p !== perm) : [...prev, perm]
-    );
+    setNewKeyPermissions((prev) => {
+      if (prev.includes(perm)) {
+        const left = prev.filter((p) => p !== perm);
+        return perm === 'read' ? left.filter((p) => !NEEDS_READ.includes(p)) : left;
+      }
+      const next = [...prev, perm];
+      return NEEDS_READ.includes(perm) && !next.includes('read') ? [...next, 'read'] : next;
+    });
   };
 
   return (
