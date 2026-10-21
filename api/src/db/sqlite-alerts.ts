@@ -7,7 +7,7 @@ export type AlertSeverity = 'info' | 'low' | 'medium' | 'high' | 'critical';
 export type AlertScheduleType = 'cron' | 'realtime';
 
 export interface AlertAction {
-  type: 'email' | 'webhook' | 'log' | 'script' | 'apprise' | 'show_on_login';
+  type: 'email' | 'webhook' | 'log' | 'script' | 'apprise' | 'show_on_login' | 'relay';
   config: {
     // Email
     to?: string;
@@ -29,6 +29,11 @@ export interface AlertAction {
     // Show on login
     user_id?: string;        // Specific user, or null for all users
     expires_in?: string;     // Auto-expire after duration (e.g., "24h", "7d")
+    // Studio relay (message is shared with Apprise above). Server URL + key come from env only.
+    project?: string;        // GAME, MONEY, STUDIO, ... (PROJECT label on the relay)
+    telegram?: boolean;      // Text Robert on Telegram
+    lab?: boolean;           // Also say it in the lab (only together with telegram)
+    urgent?: boolean;        // 🚨: may break the overnight text hold
   };
 }
 

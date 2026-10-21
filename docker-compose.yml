@@ -102,6 +102,9 @@ services:
       OPENROUTER_MODEL: ${OPENROUTER_MODEL:-anthropic/claude-3.5-sonnet}
       LLAMAINDEX_PERSIST_DIR: /data/llamaindex
       APPRISE_URL: http://apprise:8000
+      # Studio relay alert action (Telegram + lab speaker); empty = not set up.
+      RELAY_URL: ${RELAY_URL:-}
+      RELAY_BUS_KEY: ${RELAY_BUS_KEY:-}
     volumes:
       - ./data:/data
       - ./backups:/backups

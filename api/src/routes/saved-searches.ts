@@ -97,7 +97,7 @@ const createAlertSchema = z.object({
   severity: z.enum(['critical', 'high', 'medium', 'low', 'info']).optional(),
   cron_expression: z.string().optional(),
   actions: z.array(z.object({
-    type: z.enum(['email', 'webhook', 'log', 'script', 'apprise', 'show_on_login']),
+    type: z.enum(['email', 'webhook', 'log', 'script', 'apprise', 'show_on_login', 'relay']),
     config: z.record(z.unknown()),
   })).optional(),
 });

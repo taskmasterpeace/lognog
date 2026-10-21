@@ -25,6 +25,7 @@ import {
 import { executeDSLQuery, getBackend, filterRowsByDslCondition } from '../db/backend.js';
 import { processTemplate, generateAISummary, TemplateContext } from './template-engine.js';
 import { logAlertEvaluated, logAlertAction } from './internal-logger.js';
+import { executeRelayAction } from './relay.js';
 
 // Parse time range string like "-5m", "-1h", "-24h" to milliseconds
 function parseTimeRange(timeRange: string): number {
@@ -756,6 +757,9 @@ async function executeActions(
         break;
       case 'show_on_login':
         result = await executeShowOnLoginAction(alert, action, resultCount, sampleResults);
+        break;
+      case 'relay':
+        result = await executeRelayAction(alert, action, resultCount, sampleResults);
         break;
       default:
         result = { success: false, message: `Unknown action type: ${action.type}` };

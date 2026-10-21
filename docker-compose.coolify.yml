@@ -87,6 +87,10 @@ services:
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
       SMTP_FROM: ${SMTP_FROM:-}
+      # Studio relay alert action (Telegram + lab speaker). Both empty = the
+      # switches show "not set up". The key stays on the server.
+      RELAY_URL: ${RELAY_URL:-}
+      RELAY_BUS_KEY: ${RELAY_BUS_KEY:-}
       LLAMAINDEX_PERSIST_DIR: /data/llamaindex
     volumes:
       - lognog-data:/data

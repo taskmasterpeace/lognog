@@ -357,6 +357,42 @@ Environment variables available to scripts:
 - `LOGNOG_ALERT_QUERY`
 - `LOGNOG_ALERT_RESULTS_JSON`
 
+### Studio relay (Telegram + lab speaker)
+
+Sends the alert to Robert through the studio relay: as the LogNog logo photo on
+Telegram with the text as its caption, and optionally read out on the lab speaker.
+In the alert editor this is the **Studio relay** block at the top of Actions, with
+the switches "Text Robert on Telegram" and "Say it in the lab".
+
+```json
+{
+  "type": "relay",
+  "config": {
+    "project": "STUDIO",
+    "message": "{{alert_name}}: {{result_count}} errors on {{hostname}}",
+    "telegram": true,
+    "lab": true,
+    "urgent": false
+  }
+}
+```
+
+- Text sent = `<Glance Tag> <PROJECT> · <message>`; the message supports the same
+  `{{variables}}` as the other actions. Tag: 🚨 when urgent, 💰 for MONEY, 🎮 for GAME,
+  🚧 for everything else. Cut to 1000 characters (the relay's caption limit).
+- `project` is one of GAME, DIRECTORS PALETTE, STUDIO, PARTNERS, MONEY, PRESIDIUM,
+  FIRST HUDDLE, HOMEWORK TREE.
+- `lab` only works together with `telegram`: the relay has no speaker-only path, the
+  lab copy rides along with the Telegram text. Lab-only rules are rejected (400).
+- `urgent` may break the relay's overnight (11 PM-8 AM) text hold. Without it, an
+  alert at night is refused by the relay ("Relay refused: overnight ...") and the
+  history shows that reason; the lab copy can still be queued (the speaker keeps
+  its own quiet hours).
+- Server setup (environment only, never in rules): `RELAY_URL` (base URL, LogNog
+  POSTs to `<RELAY_URL>/send`) and `RELAY_BUS_KEY` (sent as the `X-Bus-Key` header).
+  `GET /api/alerts/relay/status` tells the editor `{configured, projects}`; it never
+  returns the URL or key. Timeout 10 seconds.
+
 ### Log
 
 Write to console/log for debugging.

@@ -28,6 +28,7 @@ import { validateDslCondition } from '../db/backend.js';
 import { requireOwnerOrAdmin, withOwnership } from '../auth/ownership.js';
 import { ALERT_TEMPLATES } from '../data/alert-templates.js';
 import { authenticate, denyReadonly } from '../auth/middleware.js';
+import { isRelayConfigured, invalidRelayActions, RELAY_PROJECTS } from '../services/relay.js';
 
 const router = Router();
 
@@ -118,6 +119,12 @@ router.get('/templates', (_req: Request, res: Response) => {
     console.error('Error getting alert templates:', error);
     res.status(500).json({ error: 'Failed to get alert templates' });
   }
+});
+
+// Studio relay status for the alert editor. Says only whether RELAY_URL and
+// RELAY_BUS_KEY are set; the URL and key never leave the server.
+router.get('/relay/status', (_req: Request, res: Response) => {
+  res.json({ configured: isRelayConfigured(), projects: [...RELAY_PROJECTS] });
 });
 
 // Get alert history (all alerts)
@@ -281,6 +288,10 @@ router.post('/', (req: Request, res: Response) => {
     if (forbidden) {
       return res.status(403).json({ error: forbidden });
     }
+    const badRelay = invalidRelayActions(actions);
+    if (badRelay) {
+      return res.status(400).json({ error: badRelay });
+    }
 
     const alert = createAlert(name, search_query, {
       description,
@@ -379,6 +390,10 @@ router.put('/:id', (req: Request, res: Response) => {
     const forbidden = scriptActionForbidden(req, actions);
     if (forbidden) {
       return res.status(403).json({ error: forbidden });
+    }
+    const badRelay = invalidRelayActions(actions);
+    if (badRelay) {
+      return res.status(400).json({ error: badRelay });
     }
 
     const alert = updateAlert(req.params.id, {
