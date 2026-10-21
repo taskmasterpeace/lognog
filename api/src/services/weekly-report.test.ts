@@ -38,6 +38,7 @@ import {
   buildWeeklyGapsSql,
   buildWeeklyErrorGroupsSql,
   buildMoneyDaysSql,
+  buildWeeklyTotalsSql,
   assessWeeklyApp,
   judgeFiring,
   alertTile,
@@ -120,6 +121,19 @@ describe('ISO weeks in the report time zone', () => {
   });
 });
 
+describe('last week\'s cut-off across a clock change', () => {
+  it('uses the same local wall-clock time 7 days back, not the same elapsed hours', () => {
+    // Sun Nov 1 2026, 12 PM EST (clocks went back at 2 AM). The same time last
+    // Sunday was 12 PM EDT = 16:00 UTC; an elapsed-time cut-off would say 17:00 UTC.
+    const b = resolveWeek({ tz: NY, nowMs: utc(2026, 11, 1, 17) });
+    expect(b.week).toBe('2026-W44');
+    expect(new Date(b.prevEndMs).toISOString()).toBe('2026-10-25T16:00:00.000Z');
+    // An ordinary week is unchanged: Friday 9 AM back to last Friday 9 AM.
+    const f = resolveWeek({ tz: NY, nowMs: NOW });
+    expect(new Date(f.prevEndMs).toISOString()).toBe('2026-10-16T13:00:00.000Z');
+  });
+});
+
 describe('ClickHouse SQL builders (live backend)', () => {
   const s = weekSpans(resolveWeek({ tz: NY, nowMs: NOW }));
   const t = (ms: number) => `fromUnixTimestamp64Milli(toInt64(${ms}))`;
@@ -152,6 +166,15 @@ describe('ClickHouse SQL builders (live backend)', () => {
     expect(sql).toContain(`groupUniqArrayIf(toUnixTimestamp(toStartOfMinute(timestamp)), timestamp >= ${t(s.startMs)})) AS mins_this`);
   });
 
+  it('counts the tiles over every app, not just the 200 the app list shows', () => {
+    const sql = buildWeeklyTotalsSql('clickhouse', s, ['hyh']);
+    expect(sql).toContain(`countIf(timestamp >= ${t(s.startMs)} AND severity <= 3) AS errors_this`);
+    expect(sql).toContain(`countIf(timestamp < ${t(s.prevEndMs)}) AS logs_prev`);
+    expect(sql).toContain("AND index_name IN ('hyh')");
+    expect(sql).not.toMatch(/LIMIT|GROUP BY/);
+    expect(buildWeeklyTotalsSql('sqlite', s)).not.toMatch(/LIMIT|GROUP BY/);
+  });
+
   it('groups errors by exact message', () => {
     const sql = buildWeeklyErrorGroupsSql('clickhouse', s);
     expect(sql).toContain('GROUP BY app_name, index_name, message');
@@ -177,6 +200,7 @@ describe('ClickHouse SQL builders (live backend)', () => {
       apps: buildWeeklyAppsSql('clickhouse', s, ['hyh']),
       gaps: buildWeeklyGapsSql('clickhouse', s, ['hyh']),
       errors: buildWeeklyErrorGroupsSql('clickhouse', s, ['hyh']),
+      totals: buildWeeklyTotalsSql('clickhouse', s, ['hyh']),
       money: buildMoneyDaysSql('clickhouse', ['2026-10-19'], s.prevStartMs, NOW),
     };
     for (const [name, sql] of Object.entries(sqls)) {
@@ -271,7 +295,7 @@ describe('judging an app\'s week', () => {
   it('no logs all week is silent; no logs before Monday is new; under a day of history is new', () => {
     const silent = assessWeeklyApp(row({ logs_this: 0, first_this: null, last_this: null }), undefined, b, th);
     expect(silent.state).toBe('silent');
-    expect(silent.words).toBe(`Silent all week (last log ${formatWhen(b.startMs - 5 * MINUTE, NY)})`);
+    expect(silent.words).toBe(`Silent all week (last log ${formatWhen(b.startMs - 5 * MINUTE, NY, true)})`);
     expect(assessWeeklyApp(row({ logs_prev_full: 0, logs_prev: 0, last_prev: null }), undefined, b, th).words).toBe(
       'New this week · 1,000 logs',
     );
@@ -451,6 +475,12 @@ describe('The LogNog Weekly on the lite (SQLite) backend', () => {
     for (const t of [utc(2026, 10, 22, 8), utc(2026, 10, 22, 20)]) fire.run(randomUUID(), hyh, at(t), failed);
     // a login-banner-only firing: nowhere to send
     fire.run(randomUUID(), banner, at(utc(2026, 10, 23, 10)), local);
+    // Old trouble: fired last Tue + Wed only, so it was fixed in last week's paper, not this one.
+    const old = rule('Old trouble', 'LogNog Alerts');
+    for (const t of [utc(2026, 10, 13, 10), utc(2026, 10, 14, 10)]) fire.run(randomUUID(), old, at(t), ok);
+    // Weekend blip: fired last Saturday morning; its 48 h of quiet ended this Monday = fixed this week.
+    const blip = rule('Weekend blip', 'LogNog Alerts');
+    fire.run(randomUUID(), blip, at(utc(2026, 10, 17, 12)), ok);
     // a firing next week and one three weeks ago don't count
     fire.run(randomUUID(), knuckle, at(utc(2026, 10, 27)), ok);
     fire.run(randomUUID(), knuckle, at(utc(2026, 10, 1)), ok);
@@ -496,7 +526,7 @@ describe('The LogNog Weekly on the lite (SQLite) backend', () => {
     ]);
     expect(by.shaky.words).toBe('Shaky · 12 errors, none in the same days last week');
     expect(by['went-quiet'].words).toBe('Went quiet · 36 h, Tue 7 AM – Wed 8 PM');
-    expect(by.gone.words).toBe('Silent all week (last log Fri 3 PM)');
+    expect(by.gone.words).toBe('Silent all week (last log Fri, Oct 16, 3 PM)');
     expect(by.newbie.words).toMatch(/^New this week · \d+ logs$/);
     expect(by.steady.words).toMatch(/^Fine · [\d,]+ logs \(.+ last week\), 4 errors$/);
     expect(by.steady.errors_prev).toBe(4);
@@ -508,7 +538,7 @@ describe('The LogNog Weekly on the lite (SQLite) backend', () => {
     expect(r.broke[0]).toMatchObject({ app_name: 'shaky', top_message: 'worker crashed: out of memory', top_count: 12 });
     expect(r.broke[0].words).toBe('shaky: 12 errors, none the same days last week. Most were "worker crashed: out of memory" (12)');
     expect(r.broke[1].words).toBe('went-quiet: went quiet for 36 h, Tue 7 AM – Wed 8 PM');
-    expect(r.broke[2].words).toBe('gone: silent all week (last log Fri 3 PM)');
+    expect(r.broke[2].words).toBe('gone: silent all week (last log Fri, Oct 16, 3 PM)');
     expect(r.broke.slice(3).map(i => i.words)).toEqual([
       'Alert "HYH Logging Dead" fired 2 times; 2 never reached you. Last Thu 4 PM',
       'Alert "Knuckle Up box overloaded" fired 6 times; every one reached you. Last Fri 8 AM',
@@ -516,14 +546,24 @@ describe('The LogNog Weekly on the lite (SQLite) backend', () => {
     ]);
     expect(r.fixed.map(i => i.words)).toEqual([
       'Money watch errors: fired 3 times, quiet since Mon 6 AM',
-      `hyh: errors stopped. ${r.fixed[1].kind === 'app_errors_stopped' ? r.fixed[1].errors_before : '?'} errors before, none since Tue 7 AM`,
+      'Weekend blip: fired 1 time, quiet since Sat, Oct 17, 8 AM',
+      `hyh: errors stopped. ${r.fixed[2].kind === 'app_errors_stopped' ? r.fixed[2].errors_before : '?'} errors before, none since Tue 7 AM`,
     ]);
-    expect(r.fixed[1]).toMatchObject({ kind: 'app_errors_stopped', app_name: 'hyh' });
+    expect(r.fixed[2]).toMatchObject({ kind: 'app_errors_stopped', app_name: 'hyh' });
+  });
+
+  it('lists a fix in one paper only: the week its 48 h of quiet ended', async () => {
+    const lastWeek = await getWeeklyReport({ nowMs: NOW, tz: NY, week: '2026-W42' });
+    expect(lastWeek.fixed.map(i => i.words)).toContain('Old trouble: fired 2 times, quiet since Wed 6 AM');
+    expect(lastWeek.broke.map(i => i.words)).toContain('Alert "Weekend blip" fired 1 time; every one reached you. Last Sat 8 AM');
+    const thisWeek = await getWeeklyReport({ nowMs: NOW, tz: NY });
+    expect(thisWeek.fixed.map(i => i.words).join('\n')).not.toContain('Old trouble');
+    expect(thisWeek.broke.map(i => i.words).join('\n')).not.toContain('Old trouble');
   });
 
   it('counts the tiles: logs, errors, and alerts that reached Robert', async () => {
     const r = await getWeeklyReport({ nowMs: NOW, tz: NY });
-    expect(r.tiles.alerts).toEqual({ fired: 10, reached: 7, lost: 2, no_route: 1, fired_prev: 2 });
+    expect(r.tiles.alerts).toEqual({ fired: 10, reached: 7, lost: 2, no_route: 1, fired_prev: 4 });
     expect(r.tiles.errors.this_week).toBe(r.apps.reduce((s, a) => s + a.errors_this, 0));
     expect(r.tiles.logs.this_week).toBe(r.apps.reduce((s, a) => s + a.logs_this, 0));
     expect(r.tiles.logs.this_week).toBeGreaterThan(1000);

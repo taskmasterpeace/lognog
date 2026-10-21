@@ -135,6 +135,12 @@ export function zonedMidnight(y: number, m: number, d: number, tz: string): numb
   return wall - tzOffsetMs(first, tz);
 }
 
+/** The UTC instant of a local wall-clock time in `tz` (wall time given as if it were UTC ms). */
+export function zonedWallToUtc(wall: number, tz: string): number {
+  const first = wall - tzOffsetMs(wall, tz);
+  return wall - tzOffsetMs(first, tz);
+}
+
 /** A calendar date as 'YYYY-MM-DD' (from a UTC-midnight date value). */
 function dateKey(dateMs: number): string {
   return new Date(dateMs).toISOString().slice(0, 10);
@@ -216,7 +222,9 @@ export function resolveWeek(opts: { week?: string | null; tz: string; nowMs: num
   const prevStartMs = zonedMidnight(...ymd(monday - 7 * DAY), tz);
   const complete = nextStartMs <= nowMs;
   const endMs = complete ? nextStartMs : nowMs;
-  const prevEndMs = complete ? startMs : Math.min(startMs, prevStartMs + (endMs - startMs));
+  // Last week's like-for-like cut-off is the same local wall-clock time 7 days
+  // ago, so a week with a clock change still compares Monday 00:00 to the same hour.
+  const prevEndMs = complete ? startMs : Math.min(startMs, zonedWallToUtc(endMs + tzOffsetMs(endMs, tz) - 7 * DAY, tz));
   const lastDay = localDate(endMs - 1, tz);
   const dayCount = Math.min(7, Math.round((lastDay - monday) / DAY) + 1);
   const days: string[] = [];
@@ -246,11 +254,14 @@ export function resolveWeek(opts: { week?: string | null; tz: string; nowMs: num
 
 const whenFormatters = new Map<string, Intl.DateTimeFormat>();
 /** "Tue 3 PM" in the report's zone. */
-export function formatWhen(ms: number, tz: string): string {
-  let f = whenFormatters.get(tz);
+export function formatWhen(ms: number, tz: string, withDate = false): string {
+  const k = `${tz}\u0000${withDate}`;
+  let f = whenFormatters.get(k);
   if (!f) {
-    f = new Intl.DateTimeFormat('en-US', { timeZone: tz, weekday: 'short', hour: 'numeric' });
-    whenFormatters.set(tz, f);
+    f = new Intl.DateTimeFormat('en-US', withDate
+      ? { timeZone: tz, weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric' }
+      : { timeZone: tz, weekday: 'short', hour: 'numeric' });
+    whenFormatters.set(k, f);
   }
   return f.format(new Date(ms)).replace(/\s+/g, ' ');
 }
@@ -476,6 +487,42 @@ ORDER BY SUM(CASE WHEN ${ts} >= ${start} THEN 1 ELSE 0 END) + SUM(CASE WHEN ${ts
 LIMIT 100`;
 }
 
+export interface WeeklyTotalsRow {
+  logs_this: number | string;
+  errors_this: number | string;
+  logs_prev: number | string;
+  errors_prev: number | string;
+}
+
+/**
+ * The tiles' totals over every app, with no per-app LIMIT (the app list stops
+ * at 200 rows; the tiles must not).
+ */
+export function buildWeeklyTotalsSql(backend: Backend, s: WeekSpans, allowedIndexes?: string[] | null): string {
+  const prevStart = timeLiteral(backend, s.prevStartMs);
+  const prevEnd = timeLiteral(backend, s.prevEndMs);
+  const start = timeLiteral(backend, s.startMs);
+  const end = timeLiteral(backend, s.endMs);
+  const scope = scopeAnd(allowedIndexes);
+  if (backend === 'clickhouse') {
+    return `SELECT
+  countIf(timestamp >= ${start}) AS logs_this,
+  countIf(timestamp >= ${start} AND severity <= 3) AS errors_this,
+  countIf(timestamp < ${prevEnd}) AS logs_prev,
+  countIf(timestamp < ${prevEnd} AND severity <= 3) AS errors_prev
+FROM lognog.logs
+WHERE timestamp >= ${prevStart} AND timestamp < ${end}${scope}`;
+  }
+  const ts = timeColumn(backend);
+  return `SELECT
+  COALESCE(SUM(CASE WHEN ${ts} >= ${start} THEN 1 ELSE 0 END), 0) AS logs_this,
+  COALESCE(SUM(CASE WHEN ${ts} >= ${start} AND severity <= 3 THEN 1 ELSE 0 END), 0) AS errors_this,
+  COALESCE(SUM(CASE WHEN ${ts} < ${prevEnd} THEN 1 ELSE 0 END), 0) AS logs_prev,
+  COALESCE(SUM(CASE WHEN ${ts} < ${prevEnd} AND severity <= 3 THEN 1 ELSE 0 END), 0) AS errors_prev
+FROM logs
+WHERE ${ts} >= ${prevStart} AND ${ts} < ${end}${scope}`;
+}
+
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
@@ -596,7 +643,7 @@ export function assessWeeklyApp(
   };
 
   if (logsThis === 0) {
-    const when = lastPrev ? ` (last log ${formatWhen(lastPrev, b.tz)})` : '';
+    const when = lastPrev ? ` (last log ${formatWhen(lastPrev, b.tz, lastPrev < b.startMs)})` : '';
     return { ...base, state: 'silent', words: `Silent all week${when}` };
   }
   if (logsPrevFull === 0) {
@@ -856,19 +903,25 @@ export function judgeWeek(input: {
     list.push(f);
     byAlert.set(f.alert_id, list);
   }
+  // Something counts as fixed in this paper only when its 48 h of quiet ended
+  // inside this week (last trouble at or after Monday minus 48 h). Older ones
+  // were already fixed in last week's paper.
+  const fixedHere = (lastMs: number) => lastMs >= s.startMs - FIXED_QUIET_MS;
+  const when = (ms: number) => formatWhen(ms, b.tz, ms < s.startMs);
   for (const [alertId, list] of byAlert) {
     const recent = list.filter(f => f.at >= s.recentMs);
     const before = list.filter(f => f.at < s.recentMs);
     const thisWeek = list.filter(f => f.at >= s.startMs);
     const last = list[list.length - 1];
     if (recent.length === 0 && before.length > 0) {
+      if (!fixedHere(last.at)) continue;
       fixed.push({
         kind: 'alert_quiet',
         alert_id: alertId,
         alert_name: last.alert_name,
         fired_before: before.length,
         last_at: new Date(last.at).toISOString(),
-        words: `${last.alert_name}: fired ${plural(before.length, 'time')}, quiet since ${formatWhen(last.at, b.tz)}`,
+        words: `${last.alert_name}: fired ${plural(before.length, 'time')}, quiet since ${when(last.at)}`,
       });
     } else if (thisWeek.length > 0) {
       const reached = thisWeek.filter(f => f.reached).length;
@@ -900,7 +953,7 @@ export function judgeWeek(input: {
   const stoppedApps = new Set<string>();
   for (const r of appRows) {
     const lastError = ms0(r.last_error);
-    if (n(r.errors_before) >= t.minErrors && n(r.errors_recent) === 0 && n(r.logs_recent) > 0 && lastError !== null) {
+    if (n(r.errors_before) >= t.minErrors && n(r.errors_recent) === 0 && n(r.logs_recent) > 0 && lastError !== null && fixedHere(lastError)) {
       stoppedApps.add(key(r.app_name, r.index_name));
       fixed.push({
         kind: 'app_errors_stopped',
@@ -908,7 +961,7 @@ export function judgeWeek(input: {
         index_name: r.index_name,
         errors_before: n(r.errors_before),
         last_error: new Date(lastError).toISOString(),
-        words: `${r.app_name}: errors stopped. ${plural(n(r.errors_before), 'error')} before, none since ${formatWhen(lastError, b.tz)}`,
+        words: `${r.app_name}: errors stopped. ${plural(n(r.errors_before), 'error')} before, none since ${when(lastError)}`,
       });
     }
   }
@@ -917,7 +970,7 @@ export function judgeWeek(input: {
     const k = key(g.app_name, g.index_name);
     const row = rowsByApp.get(k);
     const lastAt = ms0(g.last_at);
-    if (stoppedApps.has(k) || !row || lastAt === null) continue;
+    if (stoppedApps.has(k) || !row || lastAt === null || !fixedHere(lastAt)) continue;
     if (n(g.errors_before) >= t.minErrors && n(g.errors_recent) === 0 && n(row.logs_recent) > 0) {
       fixed.push({
         kind: 'error_stopped',
@@ -926,7 +979,7 @@ export function judgeWeek(input: {
         message: g.message,
         errors_before: n(g.errors_before),
         last_at: new Date(lastAt).toISOString(),
-        words: `${g.app_name}: "${shortMessage(g.message)}" stopped. ${plural(n(g.errors_before), 'time')} before, none since ${formatWhen(lastAt, b.tz)}`,
+        words: `${g.app_name}: "${shortMessage(g.message)}" stopped. ${plural(n(g.errors_before), 'time')} before, none since ${when(lastAt)}`,
       });
     }
   }
@@ -1148,10 +1201,11 @@ export async function getWeeklyReport(opts: {
   const backend = getBackend();
   const t = weeklyThresholds();
 
-  const [appRows, gapRows, groups, bank, aiThis, aiPrev, home] = await Promise.all([
+  const [appRows, gapRows, groups, totalRows, bank, aiThis, aiPrev, home] = await Promise.all([
     executeRawQuery<WeeklyAppRow>(buildWeeklyAppsSql(backend, s, allowed)),
     executeRawQuery<WeeklyGapRow>(buildWeeklyGapsSql(backend, s, allowed)),
     executeRawQuery<WeeklyErrorGroupRow>(buildWeeklyErrorGroupsSql(backend, s, allowed)),
+    executeRawQuery<WeeklyTotalsRow>(buildWeeklyTotalsSql(backend, s, allowed)),
     loadWeeklyBank(b, nowMs, allowed),
     loadAiSpend(s.startMs, s.endMs, s.startMs, allowed),
     loadAiSpend(s.prevStartMs, s.prevEndMs, s.prevStartMs, allowed),
@@ -1164,10 +1218,11 @@ export async function getWeeklyReport(opts: {
   const firings = scoped ? [] : loadAlertFirings(s.prevStartMs, s.endMs);
   const { broke, fixed } = judgeWeek({ bounds: b, apps, appRows, groups, firings, thresholds: t });
 
-  const logsThis = appRows.reduce((sum, r) => sum + n(r.logs_this), 0);
-  const logsPrev = appRows.reduce((sum, r) => sum + n(r.logs_prev), 0);
-  const errorsThis = appRows.reduce((sum, r) => sum + n(r.errors_this), 0);
-  const errorsPrev = appRows.reduce((sum, r) => sum + n(r.errors_prev), 0);
+  const totals = totalRows[0];
+  const logsThis = n(totals?.logs_this);
+  const logsPrev = n(totals?.logs_prev);
+  const errorsThis = n(totals?.errors_this);
+  const errorsPrev = n(totals?.errors_prev);
 
   const report: Omit<WeeklyReport, 'spoken'> = {
     week: b.week,
