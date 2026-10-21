@@ -1,31 +1,19 @@
 import { BrowserRouter, Routes, Route, Link, useLocation, Navigate } from 'react-router-dom';
 import { useState, useEffect, useCallback } from 'react';
 import {
-  Search,
-  LayoutDashboard,
-  Activity,
   Database,
-  FileText,
-  FileBarChart,
   ChevronRight,
   ChevronDown,
-  BookOpen,
   Settings,
   LogOut,
   User,
   Github,
   ExternalLink,
-  Bell,
   Menu,
   X,
-  Radar,
-  Server,
-  Users,
-  Layers,
-  Bot,
-  Sparkles,
-  Bookmark,
+  MoreHorizontal,
 } from 'lucide-react';
+import { MAIN_NAV, MORE_NAV, MORE_ITEMS, MORE_STORAGE_KEY, isNavActive, readStoredBool, writeStoredBool } from './nav/navItems';
 import { useQuery } from '@tanstack/react-query';
 import { getHealth } from './api/client';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -111,12 +99,13 @@ interface NavLinkProps {
 
 function NavLink({ to, icon: Icon, children, onClick }: NavLinkProps) {
   const location = useLocation();
-  const isActive = location.pathname === to || location.pathname.startsWith(to + '/');
+  const isActive = isNavActive(location.pathname, to);
 
   return (
     <Link
       to={to}
       onClick={onClick}
+      aria-current={isActive ? 'page' : undefined}
       className={`group flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 ${
         isActive
           ? 'bg-gradient-to-r from-honey-500 to-honey-600 text-nog-900 shadow-md shadow-honey-500/25'
@@ -130,47 +119,68 @@ function NavLink({ to, icon: Icon, children, onClick }: NavLinkProps) {
   );
 }
 
-// Collapsible navigation group component
-interface NavGroupProps {
-  title: string;
-  storageKey: string;
-  defaultExpanded?: boolean;
-  children: React.ReactNode;
-}
-
-function NavGroup({ title, storageKey, defaultExpanded = true, children }: NavGroupProps) {
-  const [isExpanded, setIsExpanded] = useState(() => {
-    const stored = localStorage.getItem(`nav-group-${storageKey}`);
-    return stored !== null ? stored === 'true' : defaultExpanded;
-  });
+/**
+ * Quiet mode's "More" group: every page that isn't used daily (see
+ * nav/navItems.ts). Collapsed by default; open/closed is remembered per
+ * browser (storage errors are ignored). While collapsed, the page you are
+ * on still shows under the header so you never lose your place.
+ */
+function MoreGroup({ onNavigate }: { onNavigate: () => void }) {
+  const location = useLocation();
+  const [isExpanded, setIsExpanded] = useState(() => readStoredBool(MORE_STORAGE_KEY, false));
 
   const toggleExpanded = useCallback(() => {
     setIsExpanded(prev => {
-      const newValue = !prev;
-      localStorage.setItem(`nav-group-${storageKey}`, String(newValue));
-      return newValue;
+      const next = !prev;
+      writeStoredBool(MORE_STORAGE_KEY, next);
+      return next;
     });
-  }, [storageKey]);
+  }, []);
+
+  const activeHere = MORE_ITEMS.filter(item => isNavActive(location.pathname, item.to));
 
   return (
-    <div className="mb-2">
+    <div className="mt-3 pt-3 border-t border-nog-100 dark:border-nog-700" data-testid="nav-more">
       <button
+        type="button"
         onClick={toggleExpanded}
         aria-expanded={isExpanded}
-        className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-nog-400 dark:text-nog-500 uppercase tracking-wider hover:text-nog-600 dark:hover:text-nog-300 transition-colors group"
+        aria-controls="nav-more-items"
+        title={isExpanded ? 'Hide the other pages' : 'Show the other pages'}
+        className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold text-nog-500 dark:text-nog-400 uppercase tracking-wider hover:bg-nog-100 hover:text-nog-700 dark:hover:bg-nog-700/60 dark:hover:text-nog-200 transition-colors"
       >
         <span className="transition-transform duration-200" style={{ transform: isExpanded ? 'rotate(0deg)' : 'rotate(-90deg)' }}>
           <ChevronDown className="w-3.5 h-3.5" />
         </span>
-        <span>{title}</span>
+        <MoreHorizontal className="w-4 h-4" />
+        <span>More</span>
+        <span className="ml-auto min-w-[1.5rem] px-1.5 py-0.5 rounded-full bg-honey-100 text-honey-800 dark:bg-honey-900/40 dark:text-honey-300 text-[11px] font-semibold normal-case tracking-normal text-center">
+          {MORE_ITEMS.length}
+        </span>
       </button>
-      <div
-        className={`space-y-1 overflow-hidden transition-all duration-200 ease-in-out ${
-          isExpanded ? 'max-h-[1000px] opacity-100' : 'max-h-0 opacity-0'
-        }`}
-      >
-        {children}
-      </div>
+
+      {isExpanded ? (
+        <div id="nav-more-items" className="mt-1 space-y-3">
+          {MORE_NAV.map(section => (
+            <div key={section.title}>
+              <p className="px-3 pt-1 pb-1 text-[11px] font-medium text-nog-400 dark:text-nog-500">{section.title}</p>
+              <div className="space-y-1">
+                {section.items.map(item => (
+                  <NavLink key={item.to} to={item.to} icon={item.icon} onClick={onNavigate}>{item.label}</NavLink>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        activeHere.length > 0 && (
+          <div id="nav-more-items" className="mt-1 space-y-1">
+            {activeHere.map(item => (
+              <NavLink key={item.to} to={item.to} icon={item.icon} onClick={onNavigate}>{item.label}</NavLink>
+            ))}
+          </div>
+        )
+      )}
     </div>
   );
 }
@@ -292,38 +302,16 @@ function Layout({ children }: { children: React.ReactNode }) {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4 overflow-y-auto">
-          <NavGroup title="Explore" storageKey="explore" defaultExpanded={true}>
-            <NavLink to="/search" icon={Search} onClick={closeSidebar}>Search</NavLink>
-            <NavLink to="/saved-searches" icon={Bookmark} onClick={closeSidebar}>Saved Searches</NavLink>
-            <NavLink to="/dashboards" icon={LayoutDashboard} onClick={closeSidebar}>Dashboards</NavLink>
-          </NavGroup>
+        <nav className="flex-1 p-4 overflow-y-auto" aria-label="Main">
+          {/* Main group (quiet mode). HOME SLOT for Builder 2's /home: add it
+              as the first entry of MAIN_NAV in nav/navItems.ts. */}
+          <div className="space-y-1" data-testid="nav-main">
+            {MAIN_NAV.map(item => (
+              <NavLink key={item.to} to={item.to} icon={item.icon} onClick={closeSidebar}>{item.label}</NavLink>
+            ))}
+          </div>
 
-          <NavGroup title="Monitor" storageKey="monitor" defaultExpanded={true}>
-            <NavLink to="/alerts" icon={Bell} onClick={closeSidebar}>Alerts</NavLink>
-            <NavLink to="/anomaly" icon={Radar} onClick={closeSidebar}>Anomaly Detection</NavLink>
-            <NavLink to="/synthetic" icon={Activity} onClick={closeSidebar}>Synthetic</NavLink>
-          </NavGroup>
-
-          <NavGroup title="Analyze" storageKey="analyze" defaultExpanded={true}>
-            <NavLink to="/stats" icon={Activity} onClick={closeSidebar}>Analytics</NavLink>
-            <NavLink to="/reports" icon={FileBarChart} onClick={closeSidebar}>Reports</NavLink>
-          </NavGroup>
-
-          <NavGroup title="Configure" storageKey="configure" defaultExpanded={false}>
-            <NavLink to="/data-sources" icon={Database} onClick={closeSidebar}>Data Sources</NavLink>
-            <NavLink to="/cim" icon={Layers} onClick={closeSidebar}>Data Models</NavLink>
-            <NavLink to="/knowledge" icon={BookOpen} onClick={closeSidebar}>Knowledge</NavLink>
-            <NavLink to="/assets" icon={Server} onClick={closeSidebar}>Assets</NavLink>
-            <NavLink to="/identities" icon={Users} onClick={closeSidebar}>Identities</NavLink>
-          </NavGroup>
-
-          <NavGroup title="Tools" storageKey="tools" defaultExpanded={false}>
-            <NavLink to="/agent" icon={Bot} onClick={closeSidebar}>AI Agent</NavLink>
-            <NavLink to="/onboarding" icon={Sparkles} onClick={closeSidebar}>AI Onboarding</NavLink>
-            <NavLink to="/guide" icon={BookOpen} onClick={closeSidebar}>User Guide</NavLink>
-            <NavLink to="/docs" icon={FileText} onClick={closeSidebar}>Documentation</NavLink>
-          </NavGroup>
+          <MoreGroup onNavigate={closeSidebar} />
         </nav>
 
         {/* Backend info + theme toggle - hide on small screens to save space */}
