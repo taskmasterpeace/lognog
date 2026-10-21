@@ -6,16 +6,27 @@
 import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import { randomUUID } from 'node:crypto';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 
 process.env.LOGNOG_BACKEND = 'sqlite';
 const tag = `${process.env.VITEST_WORKER_ID ?? '0'}-${randomUUID()}`;
 process.env.LOGS_DB_PATH = join(tmpdir(), `lognog-lights-logs-${tag}.db`);
 process.env.SQLITE_PATH = join(tmpdir(), `lognog-lights-main-${tag}.db`);
 
-import { appActivitySql, getAppActivity, getActiveSources, insertLogs } from './backend';
+import { appActivitySql, executeDSLQuery, getAppActivity, getActiveSources, insertLogs } from './backend';
 import { getSQLiteDB } from './sqlite';
-import { getLabLights, _labLightsTesting } from '../services/lab-lights';
+import { getLabLights, WHY_HEADLINES, _labLightsTesting } from '../services/lab-lights';
+
+// UI modules, loaded by path so the API's tsc program never includes UI files.
+interface LabLightsUi {
+  lightSearchUrl(app: string, kind: 'logs' | 'errors' | 'week'): string | null;
+  splitWhy(why: string, state: 'green' | 'yellow' | 'red'): { headline: string; detail: string };
+}
+interface SourceStatusUi {
+  sourceStatusInfo(status: string | null | undefined): { label: string; dotClass: string };
+  ageAgo(ageSeconds: number | null | undefined): string;
+}
+const ui = (file: string) => resolve(__dirname, '../../../ui/src/utils', file);
 
 const MIN = 60_000;
 const HOUR = 60 * MIN;
@@ -156,14 +167,14 @@ describe('lab lights over real Lite rows and real alerts', () => {
   it('?apps keeps the asked order, matches an index name too, and says plainly when an app has no logs', async () => {
     const { apps } = await getLabLights(null, ['Knuckle-Up', 'money', 'nope']);
     expect(apps.map((a) => a.app)).toEqual(['knuckle-up', 'money-watch', 'nope']);
-    expect(apps[2]).toMatchObject({ state: 'red', why: 'No logs in the last 7 days', logs_last_15m: 0, last_seen: null });
+    expect(apps[2]).toMatchObject({ state: 'red', why: 'Gone quiet: no logs in 7 days', logs_last_15m: 0, last_seen: null });
   });
 
   it('a key scoped to one index sees only that app; others read as having no logs', async () => {
     const all = await getLabLights(['hyh']);
     expect(all.apps.map((a) => a.app)).toEqual(['hyh']);
     const asked = await getLabLights(['hyh'], ['knuckle-up']);
-    expect(asked.apps[0]).toMatchObject({ app: 'knuckle-up', state: 'red', why: 'No logs in the last 7 days', errors_last_15m: 0 });
+    expect(asked.apps[0]).toMatchObject({ app: 'knuckle-up', state: 'red', why: 'Gone quiet: no logs in 7 days', errors_last_15m: 0 });
   });
 
   it('Data Sources rows now carry the status word from the same rule', async () => {
@@ -173,5 +184,42 @@ describe('lab lights over real Lite rows and real alerts', () => {
     expect(by.uptime.status).toBe('recent');
     expect(by['homework-tree'].status).toBe('inactive');
     expect(by.uptime.age_seconds).toBeGreaterThanOrEqual(40 * 60 - 5);
+  });
+
+  it('every number on a light opens a Search that finds exactly that many logs', async () => {
+    const { lightSearchUrl } = (await import(/* @vite-ignore */ ui('labLights.ts'))) as LabLightsUi;
+    const { apps } = await getLabLights();
+    const countOf = async (url: string) => {
+      const p = new URLSearchParams(url.split('?')[1]);
+      const { results } = await executeDSLQuery<{ count: number }>(`${p.get('q')} | stats count`, { earliest: p.get('earliest')! });
+      return Number(results[0]?.count ?? 0);
+    };
+    for (const l of apps) {
+      expect(await countOf(lightSearchUrl(l.app, 'logs')!)).toBe(l.logs_last_15m);
+      expect(await countOf(lightSearchUrl(l.app, 'errors')!)).toBe(l.errors_last_15m);
+    }
+    expect(lightSearchUrl('unknown', 'logs')).toBeNull();
+  });
+
+  it('the screen splits every why into its big headline and small detail', async () => {
+    const { splitWhy } = (await import(/* @vite-ignore */ ui('labLights.ts'))) as LabLightsUi;
+    for (const l of (await getLabLights()).apps) {
+      const { headline, detail } = splitWhy(l.why, l.state);
+      expect(WHY_HEADLINES as readonly string[]).toContain(headline);
+      expect(detail.length).toBeGreaterThan(0);
+    }
+    expect(splitWhy('something odd', 'red')).toEqual({ headline: 'Trouble', detail: 'something odd' });
+  });
+
+  it('the Data Sources page shows the API\'s status word instead of working it out itself', async () => {
+    const { sourceStatusInfo, ageAgo } = (await import(/* @vite-ignore */ ui('sourceStatus.ts'))) as SourceStatusUi;
+    const { sources } = await getActiveSources();
+    const uptime = sources.find((s) => s.app_name === 'uptime')!;
+    expect(sourceStatusInfo(uptime.status).label).toBe('Recent');
+    expect(ageAgo(uptime.age_seconds)).toBe('40m ago');
+    expect(sourceStatusInfo('active').label).toBe('Active');
+    expect(sourceStatusInfo('inactive').label).toBe('Inactive');
+    expect(sourceStatusInfo(undefined).label).toBe('Stale');
+    expect(ageAgo(3 * 86400)).toBe('3d ago');
   });
 });

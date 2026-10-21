@@ -30,7 +30,11 @@ export interface AppLight {
   /** Display name for a screen: "directors-palette" -> "Directors Palette", "hyh" -> "HYH". */
   label: string;
   state: LightState;
-  /** One short line in plain words. */
+  /**
+   * One short line in plain words, always "<Headline>: <detail>" so a small
+   * screen can show the headline big (see WHY_HEADLINES), e.g.
+   * "Error spike: 47 in 15 min, 4x normal".
+   */
   why: string;
   /** ISO time this state began, as far as this server has seen (resets when the API restarts). */
   since: string | null;
@@ -66,6 +70,9 @@ export const LIGHTS_RULES = {
   /** Longest `why` sent to a screen. */
   maxWhyChars: 80,
 } as const;
+
+/** Every `why` starts with one of these, then ": ". */
+export const WHY_HEADLINES = ['Fine', 'Alert', 'Gone quiet', 'Error spike', 'Quiet', 'Errors up'] as const;
 
 const RED_ALERT = new Set(['critical', 'high']);
 const YELLOW_ALERT = new Set(['medium', 'warning', 'low']);
@@ -231,7 +238,7 @@ export function decideLight(activity: AppActivity, alerts: FiringAlert[]): Decis
   // RED
   if (red.length) return { state: 'red', why: clip(alertWhy(red)), since_hint: red[0].fired_at, reason: `alert:${red[0].id}` };
   if (lastSeenMs === null || !Number.isFinite(activity.age_seconds)) {
-    return { state: 'red', why: 'No logs in the last 7 days', since_hint: null, reason: 'quiet' };
+    return { state: 'red', why: 'Gone quiet: no logs in 7 days', since_hint: null, reason: 'quiet' };
   }
   if (freshness === 'inactive' || freshness === 'stale') {
     return {
@@ -364,7 +371,7 @@ async function cachedLights(allowedIndexes?: string[] | null) {
 /**
  * Lights for every app the key can see (7-day list, minus rows with no app
  * name), or for the asked-for apps in the order asked. An asked-for app with
- * no logs the key can read is red "No logs in the last 7 days" (the same
+ * no logs the key can read is red "Gone quiet: no logs in 7 days" (the same
  * answer whether it doesn't exist or the key can't see it).
  */
 export async function getLabLights(
@@ -384,7 +391,7 @@ export async function getLabLights(
         app: wanted,
         label: displayLabel(wanted),
         state: 'red' as const,
-        why: 'No logs in the last 7 days',
+        why: 'Gone quiet: no logs in 7 days',
         since: null,
         logs_last_15m: 0,
         errors_last_15m: 0,

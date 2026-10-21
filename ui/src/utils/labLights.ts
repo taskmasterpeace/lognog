@@ -1,0 +1,71 @@
+/**
+ * Words, colours and drill-down links for the Lab lights page (/lights).
+ *
+ * The light itself comes from GET /status/lights (api/src/services/lab-lights.ts).
+ * Its `why` is always "<Headline>: <detail>"; the round screen shows the
+ * headline big and the detail small, the same way the ESP32 firmware does
+ * (hardware/lab-lights/src/main.cpp).
+ *
+ * Kept free of React/browser imports so the API test suite can import it and
+ * check the links against the real counts (api/src/db/app-activity.test.ts).
+ */
+import { canDrillDown } from './sourceDrilldown';
+
+export type LightState = 'green' | 'yellow' | 'red';
+
+/** The 15-minute window the light's numbers count. */
+export const LIGHTS_EARLIEST = '-15m';
+
+/** Errors are severity 0-3, as everywhere else in LogNog. */
+export const LIGHTS_ERROR_CONDITION = 'severity<=3';
+
+/** Ring and word colours, matching the firmware's (RGB565 there). */
+export const LIGHT_COLORS: Record<LightState | 'offline', { ring: string; glow: string; word: string }> = {
+  green: { ring: '#16A34A', glow: 'rgba(22,163,74,0.45)', word: '#22C55E' },
+  yellow: { ring: '#E08A00', glow: 'rgba(224,138,0,0.45)', word: '#F59E0B' },
+  red: { ring: '#DC2626', glow: 'rgba(220,38,38,0.5)', word: '#EF4444' },
+  offline: { ring: '#6B6259', glow: 'rgba(0,0,0,0)', word: '#A8A29E' },
+};
+
+export const STATE_WORD: Record<LightState, string> = { green: 'Fine', yellow: 'Warning', red: 'Trouble' };
+
+/** "Error spike: 47 in 15 min, 4x normal" -> { headline: 'Error spike', detail: '47 in 15 min, 4x normal' }. */
+export function splitWhy(why: string, state: LightState): { headline: string; detail: string } {
+  const at = why.indexOf(': ');
+  if (at > 0 && at <= 20) return { headline: why.slice(0, at), detail: why.slice(at + 2) };
+  return { headline: STATE_WORD[state], detail: why };
+}
+
+function quote(value: string): string {
+  return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
+}
+
+export function lightLogsQuery(app: string): string {
+  return `search app_name=${quote(app)}`;
+}
+
+export function lightErrorsQuery(app: string): string {
+  return `${lightLogsQuery(app)} ${LIGHTS_ERROR_CONDITION}`;
+}
+
+/** Search link for one number on a light, or null when there is nothing to search by. */
+export function lightSearchUrl(app: string, kind: 'logs' | 'errors' | 'week'): string | null {
+  if (!canDrillDown(app)) return null;
+  const q = kind === 'errors' ? lightErrorsQuery(app) : lightLogsQuery(app);
+  const params = new URLSearchParams({ q, earliest: kind === 'week' ? '-7d' : LIGHTS_EARLIEST });
+  return `/search?${params.toString()}`;
+}
+
+/** Parse a ?apps= value from the page URL the same way the API does (trim, drop blanks). */
+export function appsFromParam(raw: string | null): string[] {
+  if (!raw) return [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const part of raw.split(',')) {
+    const name = part.trim();
+    if (!name || seen.has(name.toLowerCase())) continue;
+    seen.add(name.toLowerCase());
+    out.push(name);
+  }
+  return out;
+}

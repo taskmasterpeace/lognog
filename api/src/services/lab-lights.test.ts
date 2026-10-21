@@ -12,6 +12,7 @@ import {
   isFiring,
   normalErrorsPer15m,
   plainAge,
+  WHY_HEADLINES,
   type FiringAlert,
 } from './lab-lights.js';
 import { ageSecondsFrom, parseServerTime, sourceStatusFromAge } from './source-status.js';
@@ -114,10 +115,10 @@ describe('decideLight', () => {
     expect(d.since_hint).toBe(new Date(NOW - 40 * 60_000 + 15 * 60_000).toISOString());
   });
 
-  it('is red "No logs in the last 7 days" when there is no newest log at all', () => {
+  it('is red "Gone quiet: no logs in 7 days" when there is no newest log at all', () => {
     expect(decideLight(activity({ last_seen: null, age_seconds: Number.POSITIVE_INFINITY }), [])).toMatchObject({
       state: 'red',
-      why: 'No logs in the last 7 days',
+      why: 'Gone quiet: no logs in 7 days',
     });
   });
 
@@ -144,6 +145,25 @@ describe('decideLight', () => {
     const d = decideLight(activity(), [alert({ name: 'x'.repeat(200) })]);
     expect(d.why.length).toBeLessThanOrEqual(80);
     expect(d.why.endsWith('…')).toBe(true);
+  });
+});
+
+describe('why always starts with a headline', () => {
+  it('so the screen can show it big', () => {
+    const cases = [
+      decideLight(activity(), []),
+      decideLight(activity({ errors_15m: 50 }), []),
+      decideLight(activity({ errors_15m: 5 }), []),
+      decideLight(activity({ age_seconds: 40 * MIN }), []),
+      decideLight(activity({ age_seconds: 5 * 3600 }), []),
+      decideLight(activity({ last_seen: null, age_seconds: Number.POSITIVE_INFINITY }), []),
+      decideLight(activity(), [alert()]),
+      decideLight(activity(), [alert({ severity: 'low' })]),
+    ];
+    for (const d of cases) {
+      const head = d.why.split(': ')[0];
+      expect(WHY_HEADLINES as readonly string[]).toContain(head);
+    }
   });
 });
 

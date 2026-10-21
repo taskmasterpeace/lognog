@@ -25,6 +25,7 @@ import {
   Bot,
   Sparkles,
   Bookmark,
+  Lightbulb,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { getHealth } from './api/client';
@@ -91,6 +92,7 @@ import SettingsPage from './pages/SettingsPage';
 import AlertsPage from './pages/AlertsPage';
 import SilencesPage from './pages/SilencesPage';
 import DataSourcesPage from './pages/DataSourcesPage';
+import LabLightsPage from './pages/LabLightsPage';
 import AnomalyPage from './pages/AnomalyPage';
 import AssetsPage from './pages/AssetsPage';
 import IdentitiesPage from './pages/IdentitiesPage';
@@ -303,6 +305,7 @@ function Layout({ children }: { children: React.ReactNode }) {
             <NavLink to="/alerts" icon={Bell} onClick={closeSidebar}>Alerts</NavLink>
             <NavLink to="/anomaly" icon={Radar} onClick={closeSidebar}>Anomaly Detection</NavLink>
             <NavLink to="/synthetic" icon={Activity} onClick={closeSidebar}>Synthetic</NavLink>
+            <NavLink to="/lights" icon={Lightbulb} onClick={closeSidebar}>Lab Lights</NavLink>
           </NavGroup>
 
           <NavGroup title="Analyze" storageKey="analyze" defaultExpanded={true}>
@@ -601,6 +604,18 @@ function AppRoutes() {
             <Layout>
               <AnimatedPage>
                 <SilencesPage />
+              </AnimatedPage>
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/lights"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <AnimatedPage>
+                <LabLightsPage />
               </AnimatedPage>
             </Layout>
           </ProtectedRoute>

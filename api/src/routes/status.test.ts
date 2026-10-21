@@ -90,7 +90,7 @@ describe('GET /status/lights', () => {
     const all = await request(app).get('/status/lights').set('Authorization', `ApiKey ${scopedKey}`);
     expect(all.body.apps.map((a: { app: string }) => a.app)).toEqual(['hyh']);
     const asked = await request(app).get('/status/lights?apps=knuckle-up').set('Authorization', `ApiKey ${scopedKey}`);
-    expect(asked.body.apps[0]).toMatchObject({ app: 'knuckle-up', state: 'red', why: 'No logs in the last 7 days', errors_last_15m: 0, indexes: [] });
+    expect(asked.body.apps[0]).toMatchObject({ app: 'knuckle-up', state: 'red', why: 'Gone quiet: no logs in 7 days', errors_last_15m: 0, indexes: [] });
   });
 
   it('turns away a bad ?apps= list with a plain reason', async () => {
