@@ -498,6 +498,14 @@ function readMinutes(text: string): number {
 
 // ---------------------------------------------------------------- the paper
 
+/** "4 fine, 2 new, 2 need a look": the app pills counted, in the same words. */
+function leadCounts(r: WeeklyReport): string {
+  const fine = r.apps.filter(a => a.state === 'fine').length;
+  const fresh = r.apps.filter(a => a.state === 'new').length;
+  const look = r.apps.length - fine - fresh;
+  return [`${fine} fine`, fresh ? `${fresh} new` : '', look ? `${look} ${look === 1 ? 'needs' : 'need'} a look` : ''].filter(Boolean).join(', ');
+}
+
 function Lead({ r }: { r: WeeklyReport }) {
   const top = r.broke[0];
   return (
@@ -505,9 +513,17 @@ function Lead({ r }: { r: WeeklyReport }) {
       <h2 className="font-display text-[1.65rem] font-bold leading-tight tracking-tight text-nog-900 dark:text-nog-50 sm:text-[2rem]">
         {r.headline}
       </h2>
-      {top ? (
+      {top && r.apps.length > 0 ? (
         <p className="mt-2 text-[0.95rem] leading-relaxed text-nog-700 dark:text-nog-200">
-          {top.words}. {brokeLink(top, r)}
+          {plural(r.apps.length, 'app')} sent{' '}
+          <NumLink to={spanUrl(allLogsQuery(), r.range)} className="font-semibold">{plural(r.tiles.logs.this_week, 'log')}</NumLink>
+          {'; '}
+          {leadCounts(r)}.{' '}
+          {plural(r.broke.length, 'thing')} under What broke.
+        </p>
+      ) : top ? (
+        <p className="mt-2 text-[0.95rem] leading-relaxed text-nog-700 dark:text-nog-200">
+          No app sent a log{r.complete ? ' this week' : ' yet this week'}; {plural(r.broke.length, 'thing')} under What broke.
         </p>
       ) : r.apps.length === 0 ? (
         <p className="mt-2 text-[0.95rem] leading-relaxed text-nog-700 dark:text-nog-200">
