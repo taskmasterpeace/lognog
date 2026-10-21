@@ -204,6 +204,16 @@ describe('alert targets', () => {
     expect(alertsForApp({ app: 'shop-worker', indexes: ['shop'] }, [rule], ['shop'])).toHaveLength(0);
   });
 
+  it('an index-only rule over two indexes is hidden from a key that can read only one of them', () => {
+    const rule = alert({ indexes: ['shop', 'secret'], apps: [] });
+    const shop = { app: 'shop-worker', indexes: ['shop'] };
+    expect(alertsForApp(shop, [rule])).toHaveLength(1);
+    expect(alertsForApp(shop, [rule], ['shop'])).toHaveLength(0);
+    expect(alertsForApp(shop, [rule], ['shop', 'secret'])).toHaveLength(1);
+    // A scoped key still sees a rule over just its own index.
+    expect(alertsForApp(shop, [alert({ indexes: ['shop'], apps: [] })], ['shop'])).toHaveLength(1);
+  });
+
   it('an alert that names neither an index nor an app lights nothing', () => {
     const rule = alert({ indexes: [], apps: [] });
     expect(alertsForApp({ app: 'shop-worker', indexes: ['shop'] }, [rule])).toHaveLength(0);
@@ -258,6 +268,14 @@ describe('isFiring', () => {
     expect(latestRunStillMet(row({ trigger_type: 'custom_condition', last_value: 0 }))).toBeNull();
   });
 
+  it('a "Logging Dead" rule (count less_than 1) clears once logs come back, inside the window', () => {
+    const dead = { last_status: 'ok', throttle_enabled: 1, throttle_window_seconds: 300, trigger_condition: 'less_than', trigger_threshold: 1 };
+    expect(isFiring(row({ ...dead, last_value: 0 }), NOW)).toBe(true);
+    expect(isFiring(row({ ...dead, last_value: 5 }), NOW)).toBe(false);
+    expect(latestRunStillMet(row({ trigger_condition: 'equal_to', trigger_threshold: 2, last_value: 2 }))).toBe(true);
+    expect(latestRunStillMet(row({ trigger_condition: 'not_equal_to', trigger_threshold: 2, last_value: 2 }))).toBe(false);
+  });
+
   it('a silenced rule is not firing', () => {
     expect(isFiring(row({ silenced: 1 }), NOW)).toBe(false);
   });
@@ -283,6 +301,10 @@ describe('words on the screen', () => {
     // Syslog-style names lose their punctuation.
     expect(displayLabel('kernel:')).toBe('Kernel');
     expect(displayLabel('rsyslogd:')).toBe('Rsyslogd');
+    // ...and their process id.
+    expect(displayLabel('sshd[123]:')).toBe('Sshd');
+    expect(displayLabel('rsyslogd[12]:')).toBe('Rsyslogd');
+    expect(displayLabel('cron-job[9]')).toBe('Cron Job');
   });
 
   it('says ages in plain words', () => {

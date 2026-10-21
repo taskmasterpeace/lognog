@@ -195,7 +195,8 @@ export function loadFiringAlerts(nowMs: number = Date.now()): FiringAlert[] {
               (SELECT h.acknowledged FROM alert_history h
                  WHERE h.alert_id = a.id ORDER BY h.triggered_at DESC LIMIT 1) AS last_ack,
               EXISTS (SELECT 1 FROM alert_silences s
-                       WHERE (s.ends_at IS NULL OR s.ends_at > datetime('now'))
+                       WHERE julianday(s.starts_at) <= julianday('now')
+                         AND (s.ends_at IS NULL OR julianday(s.ends_at) > julianday('now'))
                          AND (s.level = 'global' OR (s.level = 'alert' AND s.target_id = a.id))) AS silenced
          FROM alerts a
         WHERE a.enabled = 1 AND a.last_triggered IS NOT NULL`,
@@ -214,9 +215,13 @@ export function loadFiringAlerts(nowMs: number = Date.now()): FiringAlert[] {
 
 /**
  * Alerts about this app. A rule that names apps (app_name=...) is about those
- * apps only, never their neighbours in the same index, and only counts when
- * the caller's key may read every index the rule names. A rule that names no
- * app is about every app in the indexes it searches.
+ * apps only, never their neighbours in the same index. A rule that names no
+ * app is about every app in the indexes it searches. Either way it only counts
+ * when the caller's key may read every index the rule names, so a key scoped
+ * to one index never sees the name of a rule that also watches another.
+ *
+ * Silences: alert-level and global silences darken a rule (loadFiringAlerts).
+ * Host-level silences are not applied here: a light is per app, not per host.
  */
 export function alertsForApp(
   activity: Pick<AppActivity, 'app' | 'indexes'>,
@@ -233,7 +238,7 @@ export function alertsForApp(
       if (a.indexes.length === 0) return isUnscoped(allowedIndexes);
       return a.indexes.every((i) => isIndexAllowed(allowedIndexes, i));
     }
-    return a.indexes.some((i) => idx.has(i));
+    return a.indexes.some((i) => idx.has(i)) && a.indexes.every((i) => isIndexAllowed(allowedIndexes, i));
   });
 }
 
@@ -269,8 +274,8 @@ function errorsVsNormal(errors: number, errorsPrev24h: number): string {
 }
 
 export function displayLabel(app: string): string {
-  // Syslog-style names carry punctuation ("kernel:", "rsyslogd[12]:"): drop it at the ends.
-  const trimmed = app.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '') || app;
+  // Syslog-style names carry a process id and punctuation ("kernel:", "sshd[123]:"): drop both.
+  const trimmed = app.replace(/\[[^\]]*\]/g, '').replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '') || app;
   const words = trimmed.split(/[-_\s.:]+/).filter(Boolean);
   if (words.length === 0) return app;
   if (words.length === 1 && words[0].length <= 3) return words[0].toUpperCase();
