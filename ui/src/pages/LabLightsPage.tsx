@@ -5,6 +5,7 @@ import { Maximize2, Minimize2, Lightbulb, Loader2, RefreshCw, Cpu, Volume2 } fro
 import { getLabLights, LabLight } from '../api/client';
 import { toDate } from '../utils/formatDate';
 import { LIGHT_COLORS, appsFromParam, lightSearchUrl, splitWhy } from '../utils/labLights';
+import { ageAgo } from '../utils/sourceStatus';
 
 /**
  * Lab lights (/lights): one round screen per app, drawn the way the ESP32
@@ -20,6 +21,20 @@ function sinceText(since: string | null): string {
   const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
   const sameDay = d.toDateString() === new Date().toDateString();
   return sameDay ? `since ${time}` : `since ${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} ${time}`;
+}
+
+/**
+ * The stand plate: when the light took its colour, if the server knows; else
+ * when the app last sent a log (a light already this colour when the server
+ * started watching has no known start).
+ */
+function plateText(light: LabLight): string {
+  const since = sinceText(light.since);
+  if (since) return since;
+  if (!light.last_seen) return 'no logs in 7 days';
+  const seen = toDate(light.last_seen).getTime();
+  if (isNaN(seen)) return '';
+  return `last log ${ageAgo((Date.now() - seen) / 1000)}`;
 }
 
 function NumberLink({ app, kind, children }: { app: string; kind: 'logs' | 'errors'; children: React.ReactNode }) {
@@ -62,7 +77,7 @@ function Screen({ light, offline, big }: { light: LabLight; offline: boolean; bi
           role="img"
           aria-label={`${light.label}: ${headline}. ${detail}`}
         >
-          <img src="/logo.png" alt="" className="w-4 h-4 sm:w-5 sm:h-5 rounded opacity-80 mb-1 sm:mb-2" />
+          <img src="/logo.png" alt="" className="w-5 h-5 sm:w-7 sm:h-7 rounded opacity-90 mb-1 sm:mb-2" />
           <div
             className={`font-bold text-white leading-tight tracking-tight line-clamp-2 ${big ? 'text-lg sm:text-2xl' : 'text-sm sm:text-xl'}`}
             title={light.app}
@@ -82,7 +97,7 @@ function Screen({ light, offline, big }: { light: LabLight; offline: boolean; bi
       </div>
       {/* stand */}
       <div className="mt-3 h-6 px-3 min-w-[64px] rounded-md bg-[#3a2a1b] text-[10px] sm:text-xs text-nog-300 flex items-center justify-center whitespace-nowrap">
-        {offline ? 'last answer kept' : sinceText(light.since) || ' '}
+        {offline ? 'last answer kept' : plateText(light) || ' '}
       </div>
       {/* the numbers behind the light, each opens its logs */}
       <div className="mt-2 text-[11px] sm:text-xs text-nog-300 text-center leading-relaxed">

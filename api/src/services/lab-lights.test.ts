@@ -90,6 +90,10 @@ describe('decideLight', () => {
     expect(decideLight(activity({ errors_15m: 12, errors_prev_24h: 0 }), []).why).toBe(
       'Error spike: 12 in 15 min, usually none',
     );
+    // A few a day: say the daily count, not "usually none" and not a silly "94x".
+    expect(decideLight(activity({ errors_15m: 47, errors_prev_24h: 46 }), []).why).toBe(
+      'Error spike: 47 in 15 min, usually 46 a day',
+    );
   });
 
   it('is not red when a busy app has its usual error count', () => {

@@ -201,8 +201,15 @@ export function normalErrorsPer15m(errorsPrev24h: number): number {
   return (errorsPrev24h * 15) / (24 * 60 - 15);
 }
 
-function errorsVsNormal(errors: number, normal: number): string {
-  if (normal < 0.5) return 'usually none';
+/**
+ * How far above normal, in words: "4x normal" when the app usually has errors
+ * every 15 minutes, "usually 46 a day" when it has a few a day (a ratio would
+ * read as a silly "94x"), "usually none" only when there were none at all.
+ */
+function errorsVsNormal(errors: number, errorsPrev24h: number): string {
+  if (errorsPrev24h <= 0) return 'usually none';
+  const normal = normalErrorsPer15m(errorsPrev24h);
+  if (normal < 0.5) return `usually ${errorsPrev24h.toLocaleString('en-US')} a day`;
   return `${Math.round(errors / normal)}x normal`;
 }
 
@@ -255,7 +262,7 @@ export function decideLight(activity: AppActivity, alerts: FiringAlert[]): Decis
   if (errors >= LIGHTS_RULES.spikeMinErrors && errors >= LIGHTS_RULES.spikeRatio * normal) {
     return {
       state: 'red',
-      why: `Error spike: ${errors} in 15 min, ${errorsVsNormal(errors, normal)}`,
+      why: `Error spike: ${errors} in 15 min, ${errorsVsNormal(errors, activity.errors_prev_24h)}`,
       since_hint: null,
       reason: 'spike',
     };
@@ -274,7 +281,7 @@ export function decideLight(activity: AppActivity, alerts: FiringAlert[]): Decis
   if (errors >= LIGHTS_RULES.warnMinErrors && errors >= LIGHTS_RULES.warnRatio * normal) {
     return {
       state: 'yellow',
-      why: `Errors up: ${errors} in 15 min, ${errorsVsNormal(errors, normal)}`,
+      why: `Errors up: ${errors} in 15 min, ${errorsVsNormal(errors, activity.errors_prev_24h)}`,
       since_hint: null,
       reason: 'errors-up',
     };
