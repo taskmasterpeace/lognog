@@ -10,7 +10,7 @@
 #define LIGHT_APP "knuckle-up"
 
 // The lights endpoint. https:// for the real LogNog; http:// works for a LogNog on your own network.
-#define LOGNOG_LIGHTS_URL "https://logs.machinekinglabs.com/api/status/lights"
+#define LOGNOG_LIGHTS_URL "https://lognog.machinekinglabs.com/api/status/lights"
 
 // A read-only LogNog API key. Placeholder only: paste yours into secrets.h, not here.
 #define LOGNOG_API_KEY "paste-a-read-only-key-here"

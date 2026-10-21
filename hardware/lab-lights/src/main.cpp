@@ -184,12 +184,22 @@ static void drawScreen(const String &label, const String &headline, const String
   gfx->flush();
 }
 
+static bool knownState(const String &state) {
+  return state == "green" || state == "yellow" || state == "red";
+}
+
 static void drawLight() {
-  if (fails >= FAILS_BEFORE_OFFLINE || !haveLight) {
+  if (fails >= FAILS_BEFORE_OFFLINE) {
     drawScreen(haveLight ? current.label : String(LIGHT_APP), "Offline", offlineDetail, COL_OFFLINE);
     return;
   }
-  const LightColors &col = current.state == "green" ? COL_GREEN : current.state == "yellow" ? COL_YELLOW : COL_RED;
+  if (!haveLight) {  // just started, one blip so far: still asking, not "Offline" yet
+    drawScreen(LIGHT_APP, "Hello", "asking LogNog...", COL_OFFLINE);
+    return;
+  }
+  // Only "red" is ever drawn red; fetchLight() refuses any other word, so this is belt and braces.
+  const LightColors &col = current.state == "green" ? COL_GREEN : current.state == "yellow" ? COL_YELLOW
+                         : current.state == "red" ? COL_RED : COL_OFFLINE;
   drawScreen(current.label, current.headline, current.detail, col);
 }
 
@@ -261,9 +271,10 @@ static bool fetchLight(Light &out) {
   JsonDocument doc;
   DeserializationError err = deserializeJson(doc, body, DeserializationOption::Filter(filter));
   JsonObject a = doc["apps"][0];
-  if (err || a.isNull() || !a["state"].is<const char *>() || !a["why"].is<const char *>()) {
+  if (err || a.isNull() || !a["state"].is<const char *>() || !a["why"].is<const char *>() ||
+      !knownState(String((const char *)a["state"]))) {
     offlineDetail = "odd answer from LogNog";
-    Serial.printf("[light] bad JSON: %s\n", err ? err.c_str() : "no apps[0]");
+    Serial.printf("[light] bad JSON: %s\n", err ? err.c_str() : "no apps[0], or a colour it doesn't know");
     return false;
   }
   out.label = a["label"] | LIGHT_APP;

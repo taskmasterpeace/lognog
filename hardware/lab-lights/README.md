@@ -74,23 +74,31 @@ within a few seconds.
 
 ## How it talks to LogNog
 
-- It asks `GET https://logs.machinekinglabs.com/api/status/lights?apps=<app>`
+- It asks `GET https://lognog.machinekinglabs.com/api/status/lights?apps=<app>`
   with the header `Authorization: ApiKey <key>`, every 30 seconds. LogNog
   answers from a 15-second cache, so a whole shelf of screens costs it at most
   one log query every 15 seconds.
 - It checks LogNog's HTTPS certificate against the root certificates in
-  `include/certs.h` (Google Trust Services, GlobalSign and Let's Encrypt
-  roots). If LogNog's certificate chain ever changes, run `./make-certs.sh` on
-  the Mac and flash again.
+  `include/certs.h` (Let's Encrypt roots, plus Google Trust Services and
+  GlobalSign in case LogNog moves). If LogNog's certificate chain ever changes,
+  run `./make-certs.sh` on the Mac and flash again.
+- Use `lognog.machinekinglabs.com`, not `logs.machinekinglabs.com`: the `logs.`
+  address sits behind a Cloudflare login, so a screen asking it only gets a
+  login page and turns grey with "LogNog answered 302".
 - A LogNog on your own network can be reached with plain `http://`.
 - One failed ask retries after 5 seconds; two in a row turn the ring grey.
+  Just after switching on, it says "Hello / asking LogNog..." until the first
+  answer comes, so one blip at start doesn't show "Offline".
+- An answer it doesn't understand (a colour other than green, yellow or red)
+  turns the ring grey with "odd answer from LogNog"; it is never drawn red.
 
 ## Build size (checked 2026-10-21)
 
 `pio run` with espressif32 6.9.0 (Arduino core 2.0.17), GFX Library for
 Arduino 1.4.9, ArduinoJson 7.2.1 and U8g2 2.35.30:
 
-- Program: 936,717 bytes of flash (14.3% of the Waveshare board's app space).
+- Program: 937,889 bytes of flash (14.3% of the Waveshare board's app space;
+  28.1% on a plain DevKitC's smaller app space).
 - Memory: 45,652 bytes of RAM at start. The 240x240 drawing buffer (115 KB)
   is taken from the heap when the screen starts.
 
