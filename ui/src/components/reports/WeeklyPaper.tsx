@@ -392,7 +392,7 @@ function needsLine(item: HomeNeedsYouItem): { text: string; link: React.ReactNod
   }
   const a = item.app;
   if (item.kind === 'error_spike') {
-    return { text: `${a.app_name}: ${plural(a.errors_today, 'error')} in the last 24 hours. ${a.detail}`, link: <MoreLink to={appErrorsUrl(a.index_name, a.app_name)}>Open the errors</MoreLink> };
+    return { text: `${a.app_name}: ${a.detail}`, link: <MoreLink to={appErrorsUrl(a.index_name, a.app_name)}>Open the errors</MoreLink> };
   }
   return { text: `${a.app_name} has gone quiet. ${a.detail}`, link: <MoreLink to={appLogsUrl(a.index_name, a.app_name, WINDOW_EARLIEST)}>Open its last logs</MoreLink> };
 }
