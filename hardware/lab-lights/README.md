@@ -54,10 +54,11 @@ fits both.
 2. In LogNog, make an API key with **only the "read" permission**, and limit
    its index list to the index this app logs to (the Data Sources page shows
    it). The key sits in the screen's memory, so keep it as small as it can be:
-   it can't change anything, and it can't read any other app's logs. One key
-   per screen; a lost screen then only costs one key. If the screen turns grey
-   with "LogNog refused the key", LogNog does not yet let index-limited keys
-   read the lights (see the release's deploy notes).
+   it can't change anything, and it can't read logs in any other index. Apps
+   that log to the same index can still be seen with it, so give an app its
+   own index if that matters. One key per screen; a lost screen then only
+   costs one key. If the screen turns grey with "LogNog refused the key",
+   check the key has the "read" permission and has not been deleted.
 3. Copy `include/secrets.example.h` to `include/secrets.h` and fill in:
    - your Wi-Fi name and password,
    - `LIGHT_APP`, the app name as LogNog's Data Sources page shows it (for example `knuckle-up`),

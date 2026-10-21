@@ -1,7 +1,8 @@
 // Copy this file to include/secrets.h and fill it in. secrets.h is git-ignored:
 // never commit it. Use a LogNog API key with ONLY the "read" permission
 // (Settings -> API keys -> New key -> tick "read"), limited to the index this
-// app logs to (Data Sources shows it), so the key can't read any other app's logs.
+// app logs to (Data Sources shows it), so the key can't read logs in any other
+// index (apps that share that index can still be seen).
 #pragma once
 
 #define WIFI_SSID "your-wifi-name"
