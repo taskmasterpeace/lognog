@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { AnnotatedValue, useSourceAnnotationsOptional } from './SourceAnnotations';
 import { useDateFormat } from '../contexts/DateFormatContext';
+import { toDate } from '../utils/formatDate';
 import { getFullMessage, getLogContext, LogContextResponse, diagnoseError, ErrorDiagnosisResponse } from '../api/client';
 
 // Types
@@ -64,7 +65,8 @@ const getLogKey = (log: LogEntry, fallbackIndex: number): string => {
 const getRelativeTime = (timestamp: string): string => {
   try {
     const now = new Date();
-    const then = new Date(timestamp);
+    // Same reading as the shown time: a zone-less server time is UTC.
+    const then = toDate(timestamp);
     const diffMs = now.getTime() - then.getTime();
     const diffSec = Math.floor(diffMs / 1000);
     const diffMin = Math.floor(diffSec / 60);

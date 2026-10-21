@@ -5,14 +5,22 @@
  * shape ("2026-10-07 03:47:12.235"). The UI formatter (ui/src/utils/formatDate.ts)
  * now reads a zone-less date-time as UTC.
  */
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { resolve } from 'node:path';
 
 type Fmt = (d: Date | string | number | null | undefined, f?: string, tz?: string) => string;
 interface FormatModule { formatTimestamp: Fmt; formatTimeOnly: Fmt; formatDateOnly: Fmt; toDate(d: Date | string | number): Date }
 const UI_MODULE = resolve(__dirname, '../../../ui/src/utils/formatDate.ts');
 let m: FormatModule;
-beforeAll(async () => { m = (await import(UI_MODULE)) as FormatModule; });
+// Pin the machine's zone: on a UTC machine the old bug (zone-less read as local) can't show.
+const savedTZ = process.env.TZ;
+beforeAll(async () => {
+  process.env.TZ = 'America/New_York';
+  m = (await import(UI_MODULE)) as FormatModule;
+});
+afterAll(() => {
+  if (savedTZ === undefined) delete process.env.TZ; else process.env.TZ = savedTZ;
+});
 
 const NY = 'America/New_York';
 
@@ -30,6 +38,7 @@ describe('server timestamps without a zone are UTC', () => {
     expect(m.toDate('2026-10-21T07:43:18.783').toISOString()).toBe('2026-10-21T07:43:18.783Z');
     expect(m.toDate('2026-10-21 08:19').toISOString()).toBe('2026-10-21T08:19:00.000Z');
     expect(m.formatTimeOnly('2026-10-21 08:19:54', '24-hour', NY)).toBe('04:19:54');
+    expect(m.formatTimeOnly('2026-10-07 03:47:12.235', '24-hour', NY)).toBe('23:47:12');
   });
 
   it('leaves times that carry a zone, numbers, Dates and date-only strings alone', () => {
