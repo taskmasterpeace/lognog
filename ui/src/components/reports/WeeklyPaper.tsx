@@ -31,7 +31,7 @@ import {
   sourceErrorsQuery,
   sourceLogsQuery,
   aiSpendQuery,
-  ALERT_HISTORY_URL,
+  alertHistoryUrl,
   Span,
 } from '../../utils/weeklyDrilldown';
 import { alertFixUrl, appErrorsUrl, appLogsUrl, searchUrlBetween, MONEY_INDEX, WINDOW_EARLIEST } from '../../utils/homeDrilldown';
@@ -123,7 +123,7 @@ function MoneyStory({ r }: { r: WeeklyReport }) {
         {bank.last_week !== null ? (
           <>
             {' '}(last week had{' '}
-            <NumLink to={spanUrl(moneyDaysQuery(), r.prev_range)}>{usd.format(bank.last_week)}</NumLink>)
+            <NumLink to={spanUrl(moneyDaysQuery(bank.prev_days), bank.span)}>{usd.format(bank.last_week)}</NumLink>)
           </>
         ) : null}
         .
@@ -133,14 +133,14 @@ function MoneyStory({ r }: { r: WeeklyReport }) {
     const pct = bank.change_pct;
     bankPart = (
       <p className="text-[0.95rem] leading-relaxed text-nog-800 dark:text-nog-100">
-        <NumLink to={spanUrl(moneyDaysQuery(), r.range)} className="font-semibold text-nog-900 dark:text-nog-50" title="Opens the day totals money-watch sent">
+        <NumLink to={spanUrl(moneyDaysQuery(bank.days.map(d => d.day)), bank.span)} className="font-semibold text-nog-900 dark:text-nog-50" title="Opens the day totals this adds up">
           {usd.format(bank.this_week)}
         </NumLink>{' '}
         went out of the bank over {plural(bank.days_counted, 'day')}
         {bank.last_week !== null ? (
           <>
             , against{' '}
-            <NumLink to={spanUrl(moneyDaysQuery(), r.prev_range)}>{usd.format(bank.last_week)}</NumLink> the same days last week
+            <NumLink to={spanUrl(moneyDaysQuery(bank.prev_days), bank.span)}>{usd.format(bank.last_week)}</NumLink> the same days last week
             {pct !== null && pct !== 0 ? (
               <span className={pct > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-700 dark:text-green-400'}>
                 {' '}({pct > 0 ? 'up' : 'down'} {Math.abs(pct)}%)
@@ -154,7 +154,7 @@ function MoneyStory({ r }: { r: WeeklyReport }) {
         {bank.biggest_day ? (
           <>
             {' '}The biggest day was {fmtDay(bank.biggest_day.day)}, at{' '}
-            <NumLink to={spanUrl(moneyDaysQuery(), r.range)}>{usd.format(bank.biggest_day.out)}</NumLink>.
+            <NumLink to={spanUrl(moneyDaysQuery([bank.biggest_day.day]), bank.span)}>{usd.format(bank.biggest_day.out)}</NumLink>.
           </>
         ) : null}
       </p>
@@ -221,7 +221,7 @@ function Tiles({ r }: { r: WeeklyReport }) {
   } else if (a.fired === 0) {
     alertTile = (
       <Tile label="Alerts that reached you" foot={<span className="text-xs text-nog-500 dark:text-nog-400">no alert fired{a.fired_prev ? ` (${a.fired_prev} last week)` : ''}</span>}>
-        <NumLink to={ALERT_HISTORY_URL}>0</NumLink>
+        <NumLink to={alertHistoryUrl(r.range)}>0</NumLink>
       </Tile>
     );
   } else {
@@ -235,7 +235,7 @@ function Tiles({ r }: { r: WeeklyReport }) {
           </span>
         }
       >
-        <NumLink to={ALERT_HISTORY_URL} title="Opens every firing and whether it was delivered">
+        <NumLink to={alertHistoryUrl(r.range)} title="Opens this week's firings and whether each was delivered">
           {a.reached.toLocaleString()} of {a.fired.toLocaleString()}
         </NumLink>
       </Tile>
@@ -268,6 +268,44 @@ const STATE_PILL: Record<WeeklyApp['state'], { label: string; cls: string; dot: 
   new: { label: 'New', cls: 'bg-nog-100 text-nog-700 dark:bg-nog-700 dark:text-nog-200', dot: 'bg-nog-400' },
 };
 
+/**
+ * An app's line with its counts as links: "N logs" and "N errors" open this
+ * week's rows, "up from N" opens the same days last week's errors.
+ */
+function AppDetail({ text, a, r }: { text: string; a: WeeklyApp; r: WeeklyReport }) {
+  const marks: Array<{ re: RegExp; to: string }> = [];
+  if (a.logs_this > 0) marks.push({ re: new RegExp(`\\b${esc(plural(a.logs_this, 'log'))}\\b`), to: spanUrl(sourceLogsQuery(a.index_name, a.app_name), r.range) });
+  if (a.errors_this > 0) marks.push({ re: new RegExp(`\\b${esc(plural(a.errors_this, 'error'))}\\b`), to: spanUrl(sourceErrorsQuery(a.index_name, a.app_name), r.range) });
+  if (a.errors_prev > 0) {
+    marks.push({ re: new RegExp(`(?<=up from )${esc(a.errors_prev.toLocaleString('en-US'))}(?= last week)`), to: spanUrl(sourceErrorsQuery(a.index_name, a.app_name), r.prev_range) });
+  }
+  const found = marks
+    .map(m => {
+      const hit = m.re.exec(text);
+      return hit ? { at: hit.index, len: hit[0].length, to: m.to } : null;
+    })
+    .filter((m): m is { at: number; len: number; to: string } => m !== null)
+    .sort((x, y) => x.at - y.at);
+  const parts: React.ReactNode[] = [];
+  let pos = 0;
+  for (const m of found) {
+    if (m.at < pos) continue;
+    parts.push(text.slice(pos, m.at));
+    parts.push(
+      <NumLink key={m.at} to={m.to}>
+        {text.slice(m.at, m.at + m.len)}
+      </NumLink>,
+    );
+    pos = m.at + m.len;
+  }
+  parts.push(text.slice(pos));
+  return <>{parts}</>;
+}
+
+function esc(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 function Apps({ r }: { r: WeeklyReport }) {
   return (
     <section>
@@ -292,7 +330,9 @@ function Apps({ r }: { r: WeeklyReport }) {
                   <NumLink to={spanUrl(sourceLogsQuery(a.index_name, a.app_name), r.range)} className="font-medium text-nog-900 dark:text-nog-50">
                     {a.app_name}
                   </NumLink>
-                  <span className="block break-words text-xs text-nog-600 dark:text-nog-300">{detail}</span>
+                  <span className="block break-words text-xs text-nog-600 dark:text-nog-300">
+                    <AppDetail text={detail} a={a} r={r} />
+                  </span>
                 </span>
               </li>
             );
@@ -326,7 +366,7 @@ function brokeLink(item: WeeklyBrokeItem, r: WeeklyReport): React.ReactNode {
       return item.lost > 0 ? (
         <MoreLink to={alertFixUrl(item.alert_id)}>Fix the alert</MoreLink>
       ) : (
-        <MoreLink to={ALERT_HISTORY_URL}>See the firings</MoreLink>
+        <MoreLink to={alertHistoryUrl(r.range, item.alert_id)}>See the {plural(item.fired, 'firing')}</MoreLink>
       );
   }
 }
@@ -342,7 +382,7 @@ function fixedLink(item: WeeklyFixedItem, r: WeeklyReport): React.ReactNode {
         </MoreLink>
       );
     case 'alert_quiet':
-      return <MoreLink to={ALERT_HISTORY_URL}>See the firings</MoreLink>;
+      return <MoreLink to={alertHistoryUrl(bothWeeks(r), item.alert_id)}>See the {plural(item.fired_before, 'firing')}</MoreLink>;
   }
 }
 

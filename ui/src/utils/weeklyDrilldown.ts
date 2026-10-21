@@ -34,16 +34,27 @@ export function errorMessageQuery(indexName: string, appName: string, message: s
   return `${sourceErrorsQuery(indexName, appName)} message=${quote(message)}`;
 }
 
-/** money-watch's per-day totals the bank story is added up from. */
-export function moneyDaysQuery(): string {
-  return `search index=${quote(MONEY_INDEX)} kind="day"`;
+/**
+ * money-watch's per-day totals. With `days`, exactly the rows the bank story
+ * adds up: those dates only, newest row per date (money-watch re-sends days).
+ * Use it with the bank's own `span`.
+ */
+export function moneyDaysQuery(days?: string[]): string {
+  const base = `search index=${quote(MONEY_INDEX)} kind="day"`;
+  if (!days || days.length === 0) return base;
+  return `${base} day IN (${days.map(quote).join(', ')}) | dedup day`;
 }
 
 export function spanUrl(query: string, span: Span): string {
   return searchUrlBetween(query, span.earliest, span.latest);
 }
 
-/** The Alerts page with its history open (every firing and whether it was delivered). */
-export const ALERT_HISTORY_URL = '/alerts?history=all';
+/**
+ * The Alerts page with its history open on one span: every alert's firings,
+ * or one alert's, and whether each was delivered.
+ */
+export function alertHistoryUrl(span: Span, alertId?: string): string {
+  return `/alerts?${new URLSearchParams({ history: alertId ?? 'all', from: span.earliest, to: span.latest }).toString()}`;
+}
 
 export { sourceLogsQuery, sourceErrorsQuery, aiSpendQuery };

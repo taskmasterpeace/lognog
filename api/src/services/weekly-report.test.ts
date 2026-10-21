@@ -346,12 +346,12 @@ interface WeeklyDrill {
   allLogsQuery(): string;
   allErrorsQuery(): string;
   errorMessageQuery(i: string, a: string, m: string): string;
-  moneyDaysQuery(): string;
+  moneyDaysQuery(days?: string[]): string;
   sourceLogsQuery(i: string, a: string): string;
   sourceErrorsQuery(i: string, a: string): string;
   aiSpendQuery(i?: string, a?: string): string;
   spanUrl(q: string, span: { earliest: string; latest: string }): string;
-  ALERT_HISTORY_URL: string;
+  alertHistoryUrl(span: { earliest: string; latest: string }, alertId?: string): string;
 }
 const UI_MODULE = resolve(__dirname, '../../../ui/src/utils/weeklyDrilldown.ts');
 
@@ -584,12 +584,32 @@ describe('The LogNog Weekly on the lite (SQLite) backend', () => {
     if (top.kind !== 'app_errors' || !top.top_message) throw new Error('expected the shaky app first');
     expect(await countIn(ui.errorMessageQuery(top.index_name, top.app_name, top.top_message), r.range)).toBe(top.top_count);
     expect(await countIn(ui.aiSpendQuery(), r.range)).toBe(r.money.ai.events);
-    // the day-total rows the bank story is added from (one re-sent day = one extra row)
-    expect(await countIn(ui.moneyDaysQuery(), r.range)).toBe(r.money.bank.days_counted + 1);
+    // the bank links open exactly the day rows each sum is added from: those
+    // dates, newest row per date (Oct 20 was re-sent; only the 22 counts)
+    const bank = r.money.bank;
+    const dayRows = async (days: string[]) => {
+      const { results } = await executeDSLQuery<{ structured_data?: unknown }>(ui.moneyDaysQuery(days), { ...bank.span });
+      return results.map(row => {
+        const sd = typeof row.structured_data === 'string' ? JSON.parse(row.structured_data) : row.structured_data;
+        return sd as { day: string; out: number };
+      });
+    };
+    const thisRows = await dayRows(bank.days.map(d => d.day));
+    expect(thisRows.length).toBe(bank.days_counted);
+    expect(thisRows.reduce((t, d) => t + Number(d.out), 0)).toBeCloseTo(bank.this_week!, 2);
+    expect(thisRows.find(d => d.day === '2026-10-20')?.out).toBe(22);
+    const prevRows = await dayRows(bank.prev_days);
+    expect(prevRows.length).toBe(bank.days_prev_counted);
+    expect(prevRows.reduce((t, d) => t + Number(d.out), 0)).toBeCloseTo(bank.last_week!, 2);
+    const big = await dayRows([bank.biggest_day!.day]);
+    expect(big.map(d => Number(d.out))).toEqual([bank.biggest_day!.out]);
     expect(ui.spanUrl(ui.allErrorsQuery(), r.range)).toBe(
       '/search?q=search+severity%3C%3D3&earliest=2026-10-19T04%3A00%3A00.000Z&latest=2026-10-23T12%3A59%3A59.999Z',
     );
-    expect(ui.ALERT_HISTORY_URL).toBe('/alerts?history=all');
+    expect(ui.alertHistoryUrl(r.range)).toBe(
+      '/alerts?history=all&from=2026-10-19T04%3A00%3A00.000Z&to=2026-10-23T12%3A59%3A59.999Z',
+    );
+    expect(ui.alertHistoryUrl(r.range, 'abc')).toContain('history=abc&');
   });
 
   it('a row stored exactly at Monday 00:00 is inside the drill (lite absolute bounds drop the Z)', async () => {

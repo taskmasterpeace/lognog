@@ -1000,6 +1000,10 @@ export interface WeeklyBank {
   days_counted: number;
   days_prev_counted: number;
   days: Array<{ day: string; out: number }>;
+  /** Last week's same days that had a total (the "last week" figure is their sum). */
+  prev_days: string[];
+  /** The time span the day totals were read from (the drill-down uses it with `dedup day`). */
+  span: { earliest: string; latest: string };
   biggest_day: { day: string; out: number } | null;
 }
 
@@ -1013,6 +1017,8 @@ export async function loadWeeklyBank(b: WeekBounds, nowMs: number, allowedIndexe
     days_counted: 0,
     days_prev_counted: 0,
     days: [],
+    prev_days: [],
+    span: { earliest: new Date(b.prevStartMs - DAY).toISOString(), latest: new Date(nowMs).toISOString() },
     biggest_day: null,
   };
   if (!isIndexAllowed(allowedIndexes, MONEY_INDEX)) return { ...empty, status: 'not_visible' };
@@ -1021,7 +1027,8 @@ export async function loadWeeklyBank(b: WeekBounds, nowMs: number, allowedIndexe
   );
   const byDay = new Map(rows.map(r => [String(r.day), round2(n(r.out))]));
   const days = b.days.filter(d => byDay.has(d)).map(d => ({ day: d, out: byDay.get(d)! }));
-  const prev = b.prevDays.filter(d => byDay.has(d)).map(d => byDay.get(d)!);
+  const prevDays = b.prevDays.filter(d => byDay.has(d));
+  const prev = prevDays.map(d => byDay.get(d)!);
   if (days.length === 0 && prev.length === 0) return empty;
   const thisWeek = days.length ? round2(days.reduce((sum, d) => sum + d.out, 0)) : null;
   const lastWeek = prev.length ? round2(prev.reduce((sum, v) => sum + v, 0)) : null;
@@ -1035,6 +1042,7 @@ export async function loadWeeklyBank(b: WeekBounds, nowMs: number, allowedIndexe
     days_counted: days.length,
     days_prev_counted: prev.length,
     days,
+    prev_days: prevDays,
     biggest_day: biggest,
   };
 }

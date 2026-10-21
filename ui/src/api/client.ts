@@ -840,6 +840,8 @@ export interface WeeklyBank {
   change_pct: number | null;
   days_counted: number;
   days_prev_counted: number;
+  prev_days: string[];
+  span: { earliest: string; latest: string };
   days: { day: string; out: number }[];
   biggest_day: { day: string; out: number } | null;
 }
