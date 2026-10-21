@@ -32,6 +32,7 @@ import AddDataSourceWizard from '../components/AddDataSourceWizard';
 import SourceConfigList from '../components/source-config/SourceConfigList';
 import { useMute } from '../contexts/MuteContext';
 import { canDrillDown, searchUrl, sourceLogsQuery, sourceErrorsQuery } from '../utils/sourceDrilldown';
+import { getStatusInfo, formatRelativeTime } from '../utils/sourceStatus';
 
 type TabId = 'active' | 'templates' | 'config';
 
@@ -50,38 +51,6 @@ const CATEGORY_COLORS = {
   system: 'text-honey-500 bg-honey-100 dark:bg-honey-900/30',
   application: 'text-honey-500 bg-honey-100 dark:bg-honey-900/30',
 };
-
-// Helper to get status color based on last_seen time
-function getStatusInfo(lastSeen: string): { color: string; label: string; dotClass: string } {
-  const now = new Date();
-  const last = new Date(lastSeen);
-  const diffMinutes = (now.getTime() - last.getTime()) / (1000 * 60);
-
-  if (diffMinutes < 15) {
-    return { color: 'text-green-500', label: 'Active', dotClass: 'bg-green-500' };
-  } else if (diffMinutes < 60) {
-    return { color: 'text-yellow-500', label: 'Recent', dotClass: 'bg-yellow-500' };
-  } else if (diffMinutes < 60 * 24) {
-    return { color: 'text-honey-500', label: 'Inactive', dotClass: 'bg-honey-500' };
-  } else {
-    return { color: 'text-nog-400', label: 'Stale', dotClass: 'bg-nog-400' };
-  }
-}
-
-// Format relative time
-function formatRelativeTime(dateStr: string): string {
-  const now = new Date();
-  const date = new Date(dateStr);
-  const diffMs = now.getTime() - date.getTime();
-  const diffMinutes = Math.floor(diffMs / (1000 * 60));
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-  if (diffMinutes < 1) return 'just now';
-  if (diffMinutes < 60) return `${diffMinutes}m ago`;
-  if (diffHours < 24) return `${diffHours}h ago`;
-  return `${diffDays}d ago`;
-}
 
 export default function DataSourcesPage() {
   const navigate = useNavigate();

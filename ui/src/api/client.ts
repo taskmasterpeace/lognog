@@ -724,6 +724,71 @@ export async function getActiveSources(): Promise<ActiveSourcesResult> {
   return request('/stats/sources');
 }
 
+// Home ("Needs you") API: GET /stats/home (api/src/services/home-summary.ts)
+export type HomeAppState = 'errors' | 'quiet' | 'fine' | 'new';
+
+export interface HomeApp {
+  app_name: string;
+  index_name: string;
+  state: HomeAppState;
+  label: string;
+  detail: string;
+  logs_today: number;
+  errors_today: number;
+  logs_window: number;
+  baseline_errors_per_day: number | null;
+  baseline_days: number;
+  error_ratio: number | null;
+  last_seen: string | null;
+  silent_ms: number | null;
+  longest_gap_ms: number | null;
+  quiet_after_ms: number | null;
+}
+
+export interface HomeBankSpend {
+  index: string;
+  status: 'ok' | 'no_events' | 'no_snapshot' | 'not_visible';
+  as_of: string | null;
+  out_24h: number | null;
+  out_7d: number | null;
+  events: number;
+  last_event_at: string | null;
+}
+
+export interface HomeAiSpend {
+  field: string;
+  status: 'ok' | 'none';
+  today: number;
+  week: number;
+  events: number;
+  by_app: { app_name: string; index_name: string; spend_recent: number; spend_total: number; events: number }[];
+}
+
+export type HomeNeedsYouItem =
+  | { kind: 'alert_unreachable'; alert_id: string; alert_name: string; problems: string[] }
+  | { kind: 'error_spike'; app: HomeApp }
+  | { kind: 'quiet'; app: HomeApp };
+
+export interface HomeSummary {
+  generated_at: string;
+  backend: 'clickhouse' | 'sqlite';
+  thresholds: {
+    spikeMultiplier: number;
+    spikeMinErrors: number;
+    quietMultiplier: number;
+    quietFloorMs: number;
+    quietMinActiveMinutes: number;
+  };
+  money: { bank: HomeBankSpend; ai: HomeAiSpend };
+  needs_you: HomeNeedsYouItem[];
+  apps: HomeApp[];
+  scoped: boolean;
+}
+
+export async function getHomeSummary(): Promise<HomeSummary> {
+  return request('/stats/home');
+}
+
 // Reports API
 export interface ScheduledReport {
   id: string;

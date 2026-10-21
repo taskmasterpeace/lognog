@@ -445,6 +445,22 @@ export default function AlertsPage() {
     setShowCreateModal(true);
   };
 
+  // ?edit=<alert id> (Home's "Fix the alert"): open that alert's editor once the list is in.
+  const editParam = searchParams.get('edit');
+  useEffect(() => {
+    if (!editParam || !alerts) return;
+    const target = alerts.find((a) => a.id === editParam);
+    if (target) {
+      handleEdit(target);
+    } else {
+      toast.error('Alert not found', 'That alert is not in this list. It may be deleted or outside the app filter.');
+    }
+    const next = new URLSearchParams(searchParams);
+    next.delete('edit');
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editParam, alerts]);
+
   const handleTest = async () => {
     setTesting(true);
     try {

@@ -77,6 +77,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import WelcomeWizard from './components/onboarding/WelcomeWizard';
 import { useOnboarding } from './hooks/useOnboarding';
 import SearchPage from './pages/SearchPage';
+import HomePage from './pages/HomePage';
 import DashboardsPage from './pages/DashboardsPage';
 import DashboardViewPage from './pages/DashboardViewPage';
 import DashboardStudioPage from './pages/DashboardStudioPage';
@@ -422,12 +423,12 @@ function AppRoutes() {
 
   return (
     <Routes>
-      {/* Landing page - public, redirects to search if authenticated */}
+      {/* Landing page - public, redirects to Home if authenticated */}
       <Route
         path="/"
         element={
           isAuthenticated && !setupRequired ? (
-            <Navigate to="/search" replace />
+            <Navigate to="/home" replace />
           ) : (
             <LandingPage />
           )
@@ -439,7 +440,7 @@ function AppRoutes() {
         path="/login"
         element={
           isAuthenticated && !setupRequired ? (
-            <Navigate to="/search" replace />
+            <Navigate to="/home" replace />
           ) : (
             <LoginPage />
           )
@@ -450,6 +451,18 @@ function AppRoutes() {
       <Route path="/public/dashboard/:token" element={<PublicDashboardPage />} />
 
       {/* Protected routes */}
+      <Route
+        path="/home"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <AnimatedPage>
+                <HomePage />
+              </AnimatedPage>
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/search"
         element={
