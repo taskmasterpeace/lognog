@@ -78,6 +78,13 @@ export function numberSearchUrl(app: string, kind: LightLinkKind, count: number)
 const QUIET_HEADLINES = new Set(['Gone quiet', 'Quiet']);
 
 /**
+ * The small line of an app with no logs at all in the last 7 days (the API's
+ * "Gone quiet: no logs in 7 days"). Every Search for it is empty, so neither
+ * the screen nor its plate links anywhere.
+ */
+export const NO_LOGS_DETAIL = 'no logs in 7 days';
+
+/**
  * Where the round screen itself leads: the logs behind its big word and the
  * numbers in its small line. An alert opens the Alerts page (named in the
  * title: Alerts has no link to one rule); quiet opens the last 7 days (newest
@@ -85,6 +92,7 @@ const QUIET_HEADLINES = new Set(['Gone quiet', 'Quiet']);
  * 15-min errors; fine opens the 15-min logs.
  */
 export function screenLink(app: string, headline: string, detail = ''): { url: string; title: string } | null {
+  if (detail === NO_LOGS_DETAIL) return null;
   if (headline === 'Alert') {
     return { url: '/alerts', title: detail ? `Open Alerts; the rule firing is "${detail}"` : 'Open Alerts to see the rule that is firing' };
   }
@@ -105,14 +113,17 @@ export function screenLink(app: string, headline: string, detail = ''): { url: s
  * The stand plate's link. "since 6:38 PM" opens the app's logs from 15
  * minutes before 6:38 PM until now, so the change is in view. A quiet light,
  * or a plate that shows "last log N ago", opens the last 7 days instead: the
- * newest log there is the last one the app sent.
+ * newest log there is the last one the app sent. An app with no logs in 7
+ * days (detail NO_LOGS_DETAIL) has nothing to open: no link.
  */
 export function plateLink(
   app: string,
   headline: string,
   since: string | null,
   nowMs: number = Date.now(),
+  detail = '',
 ): { url: string; title: string } | null {
+  if (detail === NO_LOGS_DETAIL) return null;
   const sinceMs = since ? Date.parse(since) : NaN;
   if (QUIET_HEADLINES.has(headline) || !Number.isFinite(sinceMs)) {
     const url = lightSearchUrl(app, 'week');
@@ -144,7 +155,7 @@ const STATE_RANK: Record<LightState, number> = { red: 0, yellow: 1, green: 2 };
 /**
  * Order of the screens on the shelf. Asked-for apps (?apps=) keep the order
  * they were asked in, like a shelf someone arranged; the full list puts red
- * first, then yellow, then green, each by name, so trouble is never below the fold.
+ * first, then yellow, then green, each by name, so trouble comes first.
  */
 export function shelfOrder<T extends { state: LightState; label: string }>(lights: T[], asked: boolean): T[] {
   if (asked) return lights;

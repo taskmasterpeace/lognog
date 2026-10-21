@@ -43,7 +43,7 @@ function sinceText(since: string | null): string {
 function plateText(light: LabLight): string {
   const since = sinceText(light.since);
   if (since) return since;
-  if (!light.last_seen) return 'no logs in 7 days';
+  if (!light.last_seen) return light.why.endsWith('no recent logs') ? 'no recent logs' : 'no logs in 7 days';
   const seen = toDate(light.last_seen).getTime();
   if (isNaN(seen)) return '';
   return `last log ${ageAgo((Date.now() - seen) / 1000)}`;
@@ -113,7 +113,7 @@ function Screen({ light, offline, big }: { light: LabLight; offline: boolean; bi
   const lead = offline ? null : screenLink(light.app, headline, detail);
   const showUsual = !offline && (headline === 'Error spike' || headline === 'Errors up');
   const plate = offline ? 'last answer kept' : plateText(light);
-  const plateTo = offline || !plate ? null : plateLink(light.app, headline, light.since);
+  const plateTo = offline || !plate ? null : plateLink(light.app, headline, light.since, Date.now(), detail);
   const bezel = (
       <div
         className="rounded-full p-[6px] sm:p-[9px]"
@@ -162,7 +162,7 @@ function Screen({ light, offline, big }: { light: LabLight; offline: boolean; bi
       ) : (
         bezel
       )}
-      {/* stand: when the light took its colour, or when the app last sent; opens its last 7 days */}
+      {/* stand: when the light took its colour, or when the app last sent; opens the logs around it (plateLink) */}
       <div className="mt-3 h-6 px-3 min-w-[64px] rounded-md bg-[#3a2a1b] text-[10px] sm:text-xs text-nog-300 flex items-center justify-center whitespace-nowrap">
         {plateTo ? (
           <Link
@@ -358,7 +358,8 @@ export default function LabLightsPage() {
   }
 
   return (
-    <div className="p-4 sm:p-6 max-w-7xl mx-auto">
+    // pb-24: room under the last screen so the floating help button never covers it
+    <div className="p-4 pb-24 sm:p-6 sm:pb-24 max-w-7xl mx-auto">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-5">
         <div className="min-w-0">
           <h1 className="font-display text-2xl sm:text-3xl font-semibold tracking-tight text-nog-900 dark:text-nog-100">Lab lights</h1>
