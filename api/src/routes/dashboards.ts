@@ -239,7 +239,15 @@ router.use(denyReadonly);
 // open to every authenticated user. Legacy dashboards with no owner stay
 // editable by everyone.
 router.use('/:id', (req: Request, res: Response, next) => {
-  if (req.method === 'GET') return next();
+  if (req.method === 'GET') {
+    // A private dashboard and everything under it (variables, pages,
+    // annotations, logos, panel provenance) 404s for anyone who may not read
+    // it, the same answer GET /:id gives. Ids that are not dashboards (e.g.
+    // /templates, /app-scopes) fall through to their own routes.
+    const d = getDashboard(req.params.id);
+    if (d && !canReadDashboard(req, d)) return res.status(404).json({ error: 'Dashboard not found' });
+    return next();
+  }
   // Collection-level POSTs (e.g. /from-wizard, /import) are not dashboard ids.
   const dashboard = getDashboard(req.params.id);
   if (!dashboard) {
@@ -644,9 +652,11 @@ router.post('/:id/panels/copy', (req: Request, res: Response) => {
       return res.status(400).json({ error: 'sourcePanelId is required' });
     }
 
-    // Verify source panel exists
+    // Verify source panel exists, on a dashboard the caller may read (a copy
+    // carries the panel's title, query and options).
     const sourcePanel = getDashboardPanel(sourcePanelId);
-    if (!sourcePanel) {
+    const sourceDashboard = sourcePanel ? getDashboard(sourcePanel.dashboard_id) : undefined;
+    if (!sourcePanel || !sourceDashboard || !canReadDashboard(req, sourceDashboard)) {
       return res.status(404).json({ error: 'Source panel not found' });
     }
 
@@ -677,11 +687,21 @@ router.post('/:id/panels/copy', (req: Request, res: Response) => {
 router.get('/:id/panels/:panelId/provenance', (req: Request, res: Response) => {
   try {
     const panel = getDashboardPanel(req.params.panelId);
-    if (!panel) {
+    if (!panel || panel.dashboard_id !== req.params.id) {
       return res.status(404).json({ error: 'Panel not found' });
     }
 
     const provenance = getPanelProvenance(req.params.panelId);
+    // Don't name a source panel or dashboard the caller may not read.
+    const readable = (dashboardId: string | undefined | null) => {
+      if (!dashboardId) return true;
+      const d = getDashboard(dashboardId);
+      return !!d && canReadDashboard(req, d);
+    };
+    const sourcePanelDashboard = provenance?.sourcePanel ? getDashboardPanel(provenance.sourcePanel.id)?.dashboard_id : null;
+    if (provenance && (!readable(provenance.sourceDashboard?.id) || !readable(sourcePanelDashboard))) {
+      return res.json({ ...provenance, sourcePanel: null, sourceDashboard: null, sourceProject: null });
+    }
     return res.json(provenance);
   } catch (error) {
     console.error('Error fetching panel provenance:', error);

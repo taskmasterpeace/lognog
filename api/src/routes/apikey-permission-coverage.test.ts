@@ -54,7 +54,7 @@ import http from 'node:http';
 import { createUser, createApiKey, generateTokenPair, getApiKeys } from '../auth/auth.js';
 import { apiKeyGate } from '../auth/api-key-gate.js';
 import { requireAdmin } from '../auth/middleware.js';
-import { apiKeyNeed, decideApiKey } from '../auth/key-policy.js';
+import { apiKeyNeed, decideApiKey, keyHasNeed } from '../auth/key-policy.js';
 import { API_ROUTERS, mountApiRoutes } from './mount.js';
 import { closeDatabase } from '../db/sqlite.js';
 import { createAlertHistoryEntry } from '../db/sqlite-alerts.js';
@@ -222,6 +222,8 @@ beforeAll(async () => {
   K.dashboardsOnly = await mk('dashboards write only', ['dashboards:write']);
   K.admin = await mk('admin key', ['admin']);
   K.alertsRw = await mk('alerts reader-writer', ['read', 'alerts:write']);
+  K.searchAlerts = await mk('search + alerts writer', ['search', 'alerts:write']);
+  K.searchDashboards = await mk('search + dashboards writer', ['search', 'dashboards:write']);
   K.star = await mk('star key', ['*']);
   jwtAdmin = (await generateTokenPair(admin)).accessToken;
 
@@ -238,6 +240,13 @@ beforeAll(async () => {
 
   gateSrv = gateApp.listen(0, '127.0.0.1');
   realSrv = realApp.listen(0, '127.0.0.1');
+  // Node closes an idle keep-alive socket after 5 s; a request sent on it at
+  // that moment fails with "socket hang up" (ECONNRESET). Some tests pause
+  // longer than that (password hashing), so keep idle sockets open for the run.
+  for (const s of [gateSrv, realSrv]) {
+    s.keepAliveTimeout = 10 * 60_000;
+    s.headersTimeout = 10 * 60_000 + 1_000;
+  }
 });
 
 afterAll(async () => {
@@ -858,6 +867,80 @@ describe('round 3: public share links and dashboard parts', () => {
     expect([moved.position_x, moved.position_y, moved.width, moved.height]).toEqual([2, 3, 4, 5]);
   });
 
+  // One private dashboard (owned by the browser admin) with a panel and every
+  // kind of part, a copy of its panel on a dashboard everyone can read, and a
+  // non-admin user with a browser session and a read + dashboards:write key.
+  describe("a private dashboard stays private (each fix has its own test)", () => {
+    const c = {} as {
+      uj: Record<string, string>; uk: Record<string, string>;
+      priv: { id: string }; p: { id: string }; shared: { id: string }; mine: { id: string }; copyId: string;
+    };
+    beforeAll(async () => {
+      const u = await createUser('kl-user4', 'kl-user4@example.invalid', 'kl-user4-test-pass-1', 'user');
+      c.uj = { Authorization: `Bearer ${(await generateTokenPair(u)).accessToken}` };
+      c.uk = { Authorization: `ApiKey ${(await createApiKey(u.id, 'kl user4 key', ['read', 'dashboards:write'])).apiKey}` };
+      c.priv = (await request(realSrv).post('/dashboards').set(jwt()).send({ name: 'kl private' })).body;
+      expect((await request(realSrv).put(`/dashboards/${c.priv.id}`).set(jwt()).send({ visibility: 'private' })).status).toBe(200);
+      c.p = (await request(realSrv).post(`/dashboards/${c.priv.id}/panels`).set(jwt()).send({ title: 'kl-private-panel', query: 'search index=money kl-private-query' })).body;
+      expect((await request(realSrv).post(`/dashboards/${c.priv.id}/variables`).set(jwt()).send({ name: 'kl_private_var', type: 'custom', custom_values: 'kl-private-a,b' })).status).toBe(201);
+      expect((await request(realSrv).post(`/dashboards/${c.priv.id}/pages`).set(jwt()).send({ name: 'kl-private-page' })).status).toBe(201);
+      expect((await request(realSrv).post(`/dashboards/${c.priv.id}/annotations`).set(jwt()).send({ timestamp: new Date().toISOString(), title: 'kl-private-note' })).status).toBe(201);
+      expect((await request(realSrv).post(`/dashboards/${c.priv.id}/logos`).set(jwt()).send({ logo_url: 'https://example.invalid/kl-private-logo.png', label: 'kl-private-logo' })).status).toBeLessThan(300);
+      // the admin's own copy of the panel onto a readable dashboard, so its provenance points at the private one
+      c.shared = (await request(realSrv).post('/dashboards').set(jwt()).send({ name: 'kl shared target' })).body;
+      const adminCopy = await request(realSrv).post(`/dashboards/${c.shared.id}/panels/copy`).set(jwt()).send({ sourcePanelId: c.p.id });
+      expect(adminCopy.status, adminCopy.text).toBe(201);
+      c.copyId = adminCopy.body.panel.id;
+      c.mine = (await request(realSrv).post('/dashboards').set(c.uj).send({ name: 'kl user4 own' })).body;
+    });
+
+    it("its variables, pages, annotations and logos answer 404 to a user who cannot open it", async () => {
+      for (const who of [c.uj, c.uk]) {
+        for (const sub of ['', '/variables', '/pages', '/annotations', '/logos', `/panels/${c.p.id}/provenance`]) {
+          const res = await request(realSrv).get(`/dashboards/${c.priv.id}${sub}`).set(who);
+          expect(res.status, `GET ${sub}: ${res.text}`).toBe(404);
+          expect(res.text).not.toContain('kl-private');
+        }
+      }
+    });
+
+    it('its panels cannot be copied by a user who cannot open it', async () => {
+      for (const who of [c.uj, c.uk]) {
+        const copy = await request(realSrv).post(`/dashboards/${c.mine.id}/panels/copy`).set(who).send({ sourcePanelId: c.p.id });
+        expect(copy.status, copy.text).toBe(404);
+        expect(copy.text).not.toContain('kl-private');
+      }
+      const userPanels = (await request(realSrv).get(`/dashboards/${c.mine.id}`).set(c.uj)).body.panels as unknown[];
+      expect(userPanels).toHaveLength(0);
+    });
+
+    it("a copy's provenance does not name it, and provenance needs the panel to be on the dashboard in the URL", async () => {
+      for (const who of [c.uj, c.uk]) {
+        // the admin's copy sits on a dashboard this user CAN read
+        const prov = await request(realSrv).get(`/dashboards/${c.shared.id}/panels/${c.copyId}/provenance`).set(who);
+        expect(prov.status, prov.text).toBe(200);
+        expect(prov.body.sourceDashboard).toBeNull();
+        expect(prov.body.sourcePanel).toBeNull();
+        expect(prov.text).not.toContain('kl-private');
+        expect(prov.text).not.toContain('kl private');
+      }
+      expect((await request(realSrv).get(`/dashboards/${c.mine.id}/panels/${c.copyId}/provenance`).set(c.uj)).status).toBe(404);
+    });
+
+    it('the owner (browser admin) still sees, copies and traces everything', async () => {
+      for (const sub of ['/variables', '/pages', '/annotations', '/logos']) {
+        const res = await request(realSrv).get(`/dashboards/${c.priv.id}${sub}`).set(jwt());
+        expect(res.status).toBe(200);
+        expect(res.text).toContain('kl');
+      }
+      const prov = await request(realSrv).get(`/dashboards/${c.shared.id}/panels/${c.copyId}/provenance`).set(jwt());
+      expect(prov.body.sourceDashboard?.id).toBe(c.priv.id);
+      expect(prov.body.sourcePanel?.id).toBe(c.p.id);
+      const again = await request(realSrv).post(`/dashboards/${c.shared.id}/panels/copy`).set(jwt()).send({ sourcePanelId: c.p.id });
+      expect(again.status, again.text).toBe(201);
+    });
+  });
+
   it('a change under a dashboard that does not exist answers 404, even where no child id is checked', async () => {
     for (const [m, path, body] of [
       ['put', '/dashboards/kl-no-such-dashboard/pages/reorder', { pageIds: [] }],
@@ -887,12 +970,12 @@ describe('round 3: the gate fails closed, and alert pop-ups need an unscoped key
     // The desktop agent sends Authorization: ApiKey (agent/src/lognog_in/shipper.py).
     const scoped = { Authorization: `ApiKey ${K.ingestScoped}` };
     const a = await request(realSrv).get('/ingest/notifications?hostname=kl-host').set(scoped);
-    expect(a.status).toBe(403);
+    expect(a.status, JSON.stringify(a.body)).toBe(403);
     expect((await request(realSrv).post('/ingest/notifications/kl-none/ack').set(scoped).send({})).status).toBe(403);
     expect((await request(realSrv).get('/INGEST//notifications?hostname=kl-host').set(scoped)).status).toBe(403);
     expect((await request(realSrv).get('/ingest/notifications?hostname=kl-host').set('X-API-Key', K.ingestScoped)).status).toBe(403);
     const b = await request(realSrv).get('/ingest/notifications?hostname=kl-host').set('Authorization', `ApiKey ${K.ingest}`);
-    expect(b.status).toBe(200);
+    expect(b.status, JSON.stringify(b.body)).toBe(200);
   });
 });
 
@@ -949,6 +1032,16 @@ describe('round 3: no side door from a write permission to reading every index',
     expect(ux.status, ux.text).toBe(403);
     panels = (await request(realSrv).get(`/dashboards/${theirs.id}`).set(jwt())).body.panels as unknown[];
     expect(panels).toHaveLength(0);
+  });
+
+  it("'search' counts as read for the write permissions (Directors Palette / HYH style keys)", async () => {
+    const a = await request(realSrv).post('/alerts').set('Authorization', `ApiKey ${K.searchAlerts}`).send({ name: 'kl search alerts', search_query: 'search *' });
+    expect(a.status, a.text).toBe(201);
+    const d = await request(realSrv).post('/dashboards').set('Authorization', `ApiKey ${K.searchDashboards}`).send({ name: 'kl search dashboards' });
+    expect(d.status, d.text).toBe(201);
+    expect(keyHasNeed(['search', 'alerts:write'], 'alerts:write')).toBe(true);
+    expect(keyHasNeed(['search', 'dashboards:write'], 'dashboards:write')).toBe(true);
+    expect(keyHasNeed(['write', 'alerts:write'], 'alerts:write')).toBe(false);
   });
 
   it('sibling-branch reads that filter to the key indexes stay open to a scoped read key', () => {
