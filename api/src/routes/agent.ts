@@ -25,6 +25,7 @@ import {
 } from '../db/sqlite.js';
 import type { AlertAction } from '../db/sqlite.js';
 import { safeJsonParse } from '../utils/json.js';
+import { KEY_GRANTS } from '../auth/key-policy.js';
 import { normalizeTriggerType, testAlert, evaluateAlert } from '../services/alerts.js';
 
 const router = Router();
@@ -43,8 +44,11 @@ router.use((req, _res, next) => {
 router.use(authenticate);
 router.use(rateLimit(120, 60000));
 
-const READ = requirePermission('read', 'write', 'admin', '*');
-const WRITE = requirePermission('write', 'admin', '*');
+// Same grants as the key lock (auth/key-policy.ts KEY_GRANTS): an ingest-only
+// 'write' key can no longer read or change alerts here; the API-key gate in
+// front of every router enforces this too.
+const READ = requirePermission(...KEY_GRANTS.read);
+const WRITE = requirePermission(...KEY_GRANTS['alerts:write']);
 
 function firstCount(results: unknown[]): number {
   const row = (results?.[0] || {}) as Record<string, unknown>;

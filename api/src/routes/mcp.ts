@@ -10,6 +10,7 @@ import { Router, Request, Response } from 'express';
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
 import { createMCPServer } from '../mcp/server.js';
 import { validateApiKey } from '../auth/auth.js';
+import { decideApiKey } from '../auth/key-policy.js';
 
 const router = Router();
 
@@ -36,6 +37,14 @@ router.get('/sse', async (req: Request, res: Response) => {
     const keyInfo = await validateApiKey(apiKey);
     if (!keyInfo) {
       res.status(401).json({ error: 'Invalid API key' });
+      return;
+    }
+    // The MCP tools create dashboards and alerts and search every index, so the
+    // stream needs an unscoped admin key (the key lock; the API-key gate checks
+    // this too, but the key can arrive here by header or query param).
+    const mcpDecision = decideApiKey('GET', '/mcp/sse', keyInfo.permissions, keyInfo.allowedIndexes);
+    if (!mcpDecision.allowed) {
+      res.status(403).json({ error: 'API key lacks required permissions', needed: 'admin', message: mcpDecision.reason });
       return;
     }
 

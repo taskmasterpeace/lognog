@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
-import { verifyAccessToken, validateApiKey, getUserById, JwtPayload, logAuthEvent } from './auth.js';
+import { verifyAccessToken, getUserById, JwtPayload, logAuthEvent } from './auth.js';
+import { resolveApiKeyCached } from './api-key-cache.js';
+import { keyHasNeed } from './key-policy.js';
 
 // Extend Express Request to include auth info
 declare global {
@@ -54,7 +56,7 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
     const apiKey = authHeader.slice(7);
 
     try {
-      const result = await validateApiKey(apiKey);
+      const result = await resolveApiKeyCached(req, apiKey);
       if (!result) {
         res.status(401).json({ error: 'Invalid API key' });
         return;
@@ -117,7 +119,7 @@ export async function optionalAuth(req: Request, res: Response, next: NextFuncti
     const apiKey = authHeader.slice(7);
 
     try {
-      const result = await validateApiKey(apiKey);
+      const result = await resolveApiKeyCached(req, apiKey);
       if (result) {
         const user = getUserById(result.userId);
         if (user && user.is_active) {
@@ -179,6 +181,17 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction): v
       path: req.path,
     });
     res.status(403).json({ error: 'Admin access required' });
+    return;
+  }
+
+  // Every API key belongs to a user (today, the admin), so the role check above
+  // alone let ANY key through. A key must also carry 'admin' (or '*') itself.
+  if (req.authMethod === 'apikey' && !keyHasNeed(req.apiKeyPermissions, 'admin')) {
+    logAuthEvent(req.user.id, 'admin_access_denied', req.ip, req.get('user-agent'), {
+      path: req.path,
+      apiKeyPermissions: req.apiKeyPermissions,
+    });
+    res.status(403).json({ error: 'API key lacks required permissions', needed: 'admin' });
     return;
   }
 
@@ -277,7 +290,7 @@ export function requirePermission(...permissions: string[]) {
       }
 
       // ...AND a read-only role must never write, even with a write-scoped key.
-      const needsWrite = permissions.some((p) => p === 'write' || p === 'admin');
+      const needsWrite = permissions.some((p) => p === 'write' || p === 'admin' || p.endsWith(':write'));
       if (needsWrite && isReadonlyRole(req.user.role)) {
         logAuthEvent(req.user.id, 'permission_denied', req.ip, req.get('user-agent'), {
           requiredPermissions: permissions,
@@ -476,7 +489,7 @@ export async function authenticateIngestion(req: Request, res: Response, next: N
 
   // Validate API key
   try {
-    const result = await validateApiKey(apiKey);
+    const result = await resolveApiKeyCached(req, apiKey);
 
     if (!result) {
       if (requireAuth) {
