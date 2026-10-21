@@ -13,6 +13,21 @@ export const DATE_FORMAT_OPTIONS = [
   { value: 'short', label: 'Short', example: '12/28/25 2:30 PM' },
 ] as const;
 
+// "2026-10-07 04:00:01" (SQLite datetime('now'), alert history) and
+// "2026-10-07 03:47:12.235" (ClickHouse log rows) carry no zone but are UTC.
+// new Date() would read them as local time and show 4:00 AM for a run that
+// happened at midnight Eastern, so a zone-less date-time is read as UTC here.
+const ZONELESS_DATE_TIME = /^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?)$/;
+
+/** Parse a server timestamp; zone-less date-times are UTC. */
+export function toDate(date: Date | string | number): Date {
+  if (typeof date === 'string') {
+    const m = ZONELESS_DATE_TIME.exec(date.trim());
+    return new Date(m ? `${m[1]}T${m[2]}Z` : date);
+  }
+  return typeof date === 'number' ? new Date(date) : date;
+}
+
 /**
  * Format a timestamp according to the specified format
  * @param date - Date object, ISO string, or timestamp number
@@ -27,9 +42,7 @@ export function formatTimestamp(
 ): string {
   if (date == null) return '-';
 
-  const d = typeof date === 'string' || typeof date === 'number'
-    ? new Date(date)
-    : date;
+  const d = toDate(date);
 
   if (isNaN(d.getTime())) return '-';
 
@@ -113,9 +126,7 @@ export function formatDateOnly(
 ): string {
   if (date == null) return '-';
 
-  const d = typeof date === 'string' || typeof date === 'number'
-    ? new Date(date)
-    : date;
+  const d = toDate(date);
 
   if (isNaN(d.getTime())) return '-';
 
@@ -171,9 +182,7 @@ export function formatTimeOnly(
 ): string {
   if (date == null) return '-';
 
-  const d = typeof date === 'string' || typeof date === 'number'
-    ? new Date(date)
-    : date;
+  const d = toDate(date);
 
   if (isNaN(d.getTime())) return '-';
 
