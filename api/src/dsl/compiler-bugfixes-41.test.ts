@@ -67,6 +67,18 @@ describe('#41-4 SQLite relative time normalizes the T separator', () => {
     // And demonstrate the OLD behavior would have failed:
     expect(rowIsoWithT <= nowIso).toBe(false);
   });
+
+  it('an absolute ISO bound drops its trailing Z, so a row stored exactly at that instant matches', () => {
+    // Lite stores UTC without the Z (ingest strips it). '...04:00:00.000Z' sorts after
+    // the stored '...04:00:00.000', so an absolute earliest used to skip that row.
+    const result = compileDSLToSQLite(parseToAST('search *'), undefined, {
+      earliest: '2026-10-19T04:00:00.000Z',
+      latest: '2026-10-26T03:59:59.999Z',
+    });
+    expect(result.sql).toContain("'2026-10-19 04:00:00.000'");
+    expect(result.sql).toContain("'2026-10-26 03:59:59.999'");
+    expect(result.sql).not.toMatch(/\d{3}Z'/);
+  });
 });
 
 describe('#41-5 SQLite bare count aliases to `count`', () => {

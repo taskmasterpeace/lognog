@@ -1251,9 +1251,12 @@ export function parseRelativeTimeSQLite(timeStr: string): string | null {
 
   // If it looks like an absolute datetime, use it directly. Normalize any 'T'
   // separator to a space so it lexicographically compares against the (also
-  // space-normalized) timestamp column (#41-4).
+  // space-normalized) timestamp column (#41-4). Lite stores UTC without a
+  // trailing 'Z' (ingest strips it), so drop it here too, as the ClickHouse
+  // compiler does: '...04:00:00.000Z' sorts after a row stored at exactly
+  // '...04:00:00.000', which made an absolute `earliest` skip that row.
   if (/^\d{4}-\d{2}-\d{2}/.test(timeStr)) {
-    return `'${timeStr.replace(/'/g, "''").replace('T', ' ')}'`;
+    return `'${timeStr.replace(/'/g, "''").replace('T', ' ').replace(/Z$/i, '')}'`;
   }
 
   return null;
