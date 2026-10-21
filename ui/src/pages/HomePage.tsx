@@ -34,6 +34,7 @@ import {
   WINDOW_EARLIEST,
 } from '../utils/homeDrilldown';
 import { getStatusInfo, formatRelativeTime } from '../utils/sourceStatus';
+import { canDrillDown } from '../utils/sourceDrilldown';
 import { toDate } from '../utils/formatDate';
 
 const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' });
@@ -50,8 +51,16 @@ function clock(iso: string): string {
 }
 
 /** A number that opens the logs behind it. */
+/** Same rule as Data Sources: logs with no app name can't be opened one app at a time. */
+const NO_APP_TITLE = "These logs have no app name, so they can't be opened as one app";
+
+function appTitle(name: string): string {
+  return name.trim() === '' ? '(no app name)' : name;
+}
+
 function NumLink({ to, children, tone = 'plain', title }: {
-  to: string;
+  /** null = show the number without a link (see NO_APP_TITLE). */
+  to: string | null;
   children: React.ReactNode;
   tone?: 'plain' | 'bad';
   title?: string;
@@ -59,6 +68,9 @@ function NumLink({ to, children, tone = 'plain', title }: {
   const color = tone === 'bad'
     ? 'text-red-600 dark:text-red-400 decoration-red-300 dark:decoration-red-700'
     : 'text-nog-900 dark:text-nog-50 decoration-nog-300 dark:decoration-nog-600';
+  if (to === null) {
+    return <strong title={title ?? NO_APP_TITLE} className={`font-semibold tabular-nums ${color}`}>{children}</strong>;
+  }
   return (
     <Link
       to={to}
@@ -89,13 +101,21 @@ function Pill({ tone, children }: { tone: 'green' | 'red' | 'amber' | 'grey'; ch
 function stateTone(state: HomeApp['state']): 'green' | 'red' | 'amber' | 'grey' {
   if (state === 'errors') return 'red';
   if (state === 'quiet') return 'amber';
-  if (state === 'new') return 'grey';
+  if (state === 'new' || state === 'sparse') return 'grey';
   return 'green';
 }
 
 // ---------------------------------------------------------------- money strip
 
 function BankPart({ bank, now }: { bank: HomeBankSpend; now: Date }) {
+  if (bank.status === 'failed') {
+    return (
+      <span className="text-nog-600 dark:text-nog-300">
+        Bank: <strong className="text-red-600 dark:text-red-400">couldn't check just now</strong> · the money query failed; the rest of Home is current.{' '}
+        <NumLink to={searchUrl(moneySnapshotQuery(), WINDOW_EARLIEST)} title="Opens the money-watch snapshots">Open the snapshots</NumLink>
+      </span>
+    );
+  }
   if (bank.status === 'not_visible') {
     return (
       <span className="text-nog-600 dark:text-nog-300">
@@ -147,6 +167,14 @@ function BankPart({ bank, now }: { bank: HomeBankSpend; now: Date }) {
 }
 
 function AiPart({ ai }: { ai: HomeAiSpend }) {
+  if (ai.status === 'failed') {
+    return (
+      <span className="text-nog-600 dark:text-nog-300">
+        AI spend: <strong className="text-red-600 dark:text-red-400">couldn't check just now</strong> · the AI spend query failed.{' '}
+        <NumLink to={searchUrl(aiSpendQuery(), WEEK_EARLIEST)}>Open this week's AI spend logs</NumLink>
+      </span>
+    );
+  }
   if (ai.status === 'none') {
     return (
       <span className="text-nog-600 dark:text-nog-300">
@@ -212,23 +240,24 @@ function NeedsYouRow({ item }: { item: HomeNeedsYouItem }) {
     const a = item.app;
     icon = <AlertTriangle className="h-5 w-5 text-red-500" />;
     const ratio = a.error_ratio !== null ? `, about ${Math.round(a.error_ratio)}× a normal day` : ', and a normal day has none';
-    title = `${a.app_name}: ${a.errors_today.toLocaleString()} errors today${ratio}`;
-    detail = a.detail;
-    action = (
+    title = `${appTitle(a.app_name)}: ${a.errors_today.toLocaleString()} errors today${ratio}`;
+    // A quiet app's detail is about the silence; this row is about the errors.
+    detail = a.spike_detail ?? a.detail;
+    action = canDrillDown(a.app_name) ? (
       <Link to={appErrorsUrl(a.index_name, a.app_name)} className={`${btn} ${outline}`}>
         Open the {a.errors_today.toLocaleString()} errors
       </Link>
-    );
+    ) : null;
   } else {
     const a = item.app;
     icon = <MoonStar className="h-5 w-5 text-amber-500" />;
-    title = `${a.app_name} has gone quiet`;
+    title = `${appTitle(a.app_name)} has gone quiet`;
     detail = a.detail;
-    action = (
+    action = canDrillDown(a.app_name) ? (
       <Link to={appLogsUrl(a.index_name, a.app_name, WINDOW_EARLIEST)} className={`${btn} ${outline}`}>
         Open its last logs
       </Link>
-    );
+    ) : null;
   }
 
   return (
@@ -246,7 +275,7 @@ function NeedsYouRow({ item }: { item: HomeNeedsYouItem }) {
   );
 }
 
-function NeedsYou({ items, alertsHidden }: { items: HomeNeedsYouItem[]; alertsHidden: boolean }) {
+function NeedsYou({ items, alertsHidden, appsFailed }: { items: HomeNeedsYouItem[]; alertsHidden: boolean; appsFailed: boolean }) {
   return (
     <section aria-labelledby="needs-you-heading">
       <h2 id="needs-you-heading" className="mb-2 flex items-center gap-2 text-lg font-bold tracking-tight text-nog-900 dark:text-nog-50">
@@ -257,7 +286,12 @@ function NeedsYou({ items, alertsHidden }: { items: HomeNeedsYouItem[]; alertsHi
           </span>
         )}
       </h2>
-      {items.length === 0 ? (
+      {appsFailed && (
+        <p className="mb-2 text-sm text-red-700 dark:text-red-300">
+          Couldn't check your apps just now, so this list only covers alerts. It tries again every minute.
+        </p>
+      )}
+      {items.length === 0 && appsFailed ? null : items.length === 0 ? (
         <div className="flex items-center gap-3 rounded-[0.625rem] border border-nog-200 dark:border-nog-700 bg-white dark:bg-nog-800 px-4 py-3">
           <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-green-50 dark:bg-green-900/30">
             <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
@@ -300,10 +334,13 @@ function AppCard({ app, now }: { app: HomeApp; now: Date }) {
       </div>
       <div className="mt-3 flex flex-wrap items-baseline gap-x-4 gap-y-1 text-sm text-nog-500 dark:text-nog-400">
         <span>
-          <NumLink to={appLogsUrl(app.index_name, app.app_name)}>{app.logs_today.toLocaleString()}</NumLink> logs today
+          <NumLink to={canDrillDown(app.app_name) ? appLogsUrl(app.index_name, app.app_name) : null}>{app.logs_today.toLocaleString()}</NumLink> logs today
         </span>
         <span>
-          <NumLink to={appErrorsUrl(app.index_name, app.app_name)} tone={app.state === 'errors' ? 'bad' : 'plain'}>
+          <NumLink
+            to={canDrillDown(app.app_name) ? appErrorsUrl(app.index_name, app.app_name) : null}
+            tone={app.error_spike ? 'bad' : 'plain'}
+          >
             {app.errors_today.toLocaleString()}
           </NumLink>{' '}
           errors
@@ -320,11 +357,16 @@ function AppCard({ app, now }: { app: HomeApp; now: Date }) {
   );
 }
 
-function Apps({ apps, now, scopeIndexes }: { apps: HomeApp[]; now: Date; scopeIndexes: string[] | null }) {
+function Apps({ apps, now, scopeIndexes, failed }: { apps: HomeApp[]; now: Date; scopeIndexes: string[] | null; failed: boolean }) {
   return (
     <section aria-labelledby="apps-heading">
       <h2 id="apps-heading" className="mb-2 text-lg font-bold tracking-tight text-nog-900 dark:text-nog-50">Apps</h2>
-      {apps.length === 0 ? (
+      {failed ? (
+        <div className="rounded-[0.625rem] border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-700 dark:text-red-300">
+          Couldn't load your apps just now: the app query failed. Money above is current; this tries again every minute.{' '}
+          <Link to="/data-sources" className="font-semibold underline">Open Data Sources</Link>
+        </div>
+      ) : apps.length === 0 ? (
         <div className="flex flex-col items-center gap-3 rounded-[0.625rem] border border-dashed border-nog-300 dark:border-nog-600 bg-white dark:bg-nog-800 px-6 py-10 text-center">
           <span className="flex h-14 w-14 items-center justify-center rounded-full bg-honey-50 dark:bg-honey-900/30">
             <Database className="h-8 w-8 text-honey-500" />
@@ -395,8 +437,8 @@ export default function HomePage() {
               Home shows just those, and no alert rules.
             </p>
           )}
-          <NeedsYou items={data.needs_you} alertsHidden={data.alerts_hidden} />
-          <Apps apps={data.apps} now={now} scopeIndexes={data.scope_indexes} />
+          <NeedsYou items={data.needs_you} alertsHidden={data.alerts_hidden} appsFailed={(data.failed ?? []).includes('apps')} />
+          <Apps apps={data.apps} now={now} scopeIndexes={data.scope_indexes} failed={(data.failed ?? []).includes('apps')} />
         </div>
       )}
     </div>

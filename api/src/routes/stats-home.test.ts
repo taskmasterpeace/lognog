@@ -67,6 +67,8 @@ describe('GET /stats/home', () => {
     expect(res.body.scoped).toBe(false);
     expect(res.body.alerts_hidden).toBe(false);
     expect(res.body.needs_you.map((i: { kind: string }) => i.kind)).toContain('alert_unreachable');
+    // nothing failed, and the field is there for the page to read
+    expect(res.body.failed).toEqual([]);
   });
 
   it('a key scoped to uptime sees only uptime, and money says it is not visible', async () => {

@@ -32,13 +32,13 @@ export const AI_COST_FIELD = 'cost_usd';
 
 /** How far back an app still counts as one of "your apps". */
 export const ACTIVITY_WINDOW_MS = 14 * DAY;
-/** Today's errors are compared with the average day in the 7 days before. */
 /**
  * An app's normal silence is its 3rd-longest gap in 14 days (or its shortest
  * gap when it has fewer): a nightly sleep repeats, so it stays; one or two
  * outages don't, so they can't stretch "normal" and hide the next one.
  */
 export const NORMAL_GAP_RANK = 3;
+/** Today's errors are compared with the average day in the 7 days before. */
 export const BASELINE_DAYS = 7;
 
 export interface HomeThresholds {
@@ -46,7 +46,7 @@ export interface HomeThresholds {
   spikeMultiplier: number;
   /** ... and at least this many errors, so 2 errors vs 0 isn't a spike. */
   spikeMinErrors: number;
-  /** Quiet = silent longer than this many times the app's longest gap in the window ... */
+  /** Quiet = silent longer than this many times the app's normal gap (NORMAL_GAP_RANK) in the window ... */
   quietMultiplier: number;
   /** ... and never sooner than this. */
   quietFloorMs: number;
@@ -326,7 +326,11 @@ LIMIT 50`;
 // Judging apps
 // ---------------------------------------------------------------------------
 
-export type AppState = 'errors' | 'quiet' | 'fine' | 'new';
+/**
+ * 'sparse' = older than a day but too few active minutes in the window to know
+ * its rhythm, so it can't be judged quiet (not "new").
+ */
+export type AppState = 'errors' | 'quiet' | 'fine' | 'new' | 'sparse';
 
 export interface AppSummary {
   app_name: string;
@@ -338,6 +342,10 @@ export interface AppSummary {
   detail: string;
   logs_today: number;
   errors_today: number;
+  /** Errors today are a spike, whatever the state (a quiet app can have one: errors, then silence). */
+  error_spike: boolean;
+  /** The error sentence when error_spike (also used on a quiet app's spike row); else null. */
+  spike_detail: string | null;
   logs_window: number;
   /** Average errors per day over the baseline days, null when there is less than a day of history. */
   baseline_errors_per_day: number | null;
@@ -352,11 +360,12 @@ export interface AppSummary {
 }
 
 export function formatDuration(ms: number): string {
-  const m = Math.max(0, Math.round(ms / MINUTE));
+  // Rounds down, like formatRelativeTime's "last seen 3h ago" next to it.
+  const m = Math.max(0, Math.floor(ms / MINUTE));
   if (m < 60) return `${m} min`;
-  const h = ms / HOUR;
-  if (h < 48) return `${Math.round(h)} h`;
-  return `${Math.round(ms / DAY)} days`;
+  const h = Math.floor(ms / HOUR);
+  if (h < 48) return `${h} h`;
+  return `${Math.floor(ms / DAY)} days`;
 }
 
 function n(v: unknown): number {
@@ -398,11 +407,21 @@ export function assessApp(row: AppActivityRow, nowMs: number, t: HomeThresholds)
   const quietAfterMs = canJudgeQuiet ? Math.max(t.quietMultiplier * normalGapMs, t.quietFloorMs) : null;
   const quiet = silentMs !== null && quietAfterMs !== null && silentMs > quietAfterMs;
 
+  const errorsWord = (k: number) => `${k} error${k === 1 ? '' : 's'}`;
+  const normal =
+    baselinePerDay === 0
+      ? 'a normal day has none'
+      : `a normal day has about ${Math.max(1, Math.round(baselinePerDay ?? 0))}`;
+
+  const spikeDetail = spike ? `${errorsWord(errorsToday)} in the last 24 h; ${normal}.` : null;
+
   const base = {
     app_name: row.app_name,
     index_name: row.index_name,
     logs_today: logsToday,
     errors_today: errorsToday,
+    error_spike: spike,
+    spike_detail: spikeDetail,
     logs_window: n(row.logs_window),
     baseline_errors_per_day: baselinePerDay === null ? null : Math.round(baselinePerDay * 10) / 10,
     baseline_days: Math.round(baselineDays * 10) / 10,
@@ -414,8 +433,6 @@ export function assessApp(row: AppActivityRow, nowMs: number, t: HomeThresholds)
     quiet_after_ms: quietAfterMs,
   };
 
-  const errorsWord = (k: number) => `${k} error${k === 1 ? '' : 's'}`;
-
   if (quiet && silentMs !== null) {
     return {
       ...base,
@@ -425,19 +442,27 @@ export function assessApp(row: AppActivityRow, nowMs: number, t: HomeThresholds)
         `No logs for ${formatDuration(silentMs)}. ` +
         (normalGapMs > 0
           ? `Normally it is never silent for more than about ${formatDuration(normalGapMs)}.`
-          : `It usually logs every minute.`),
+          : `It usually logs every minute.`) +
+        (spikeDetail ? ` Before that: ${spikeDetail}` : ''),
     };
   }
   if (spike) {
-    const normal =
-      baselinePerDay === 0
-        ? 'a normal day has none'
-        : `a normal day has about ${Math.max(1, Math.round(baselinePerDay ?? 0))}`;
     return {
       ...base,
       state: 'errors',
       label: errorRatio === null ? `Errors, ${errorsToday} today` : `Errors ${Math.round(errorRatio)}× normal`,
-      detail: `${errorsWord(errorsToday)} in the last 24 h; ${normal}.`,
+      detail: spikeDetail as string,
+    };
+  }
+  if (hasDay && !canJudgeQuiet) {
+    const seen = silentMs === null ? '' : ` Last log ${formatDuration(silentMs)} ago.`;
+    return {
+      ...base,
+      state: 'sparse',
+      label: 'Few logs',
+      detail:
+        `${logsToday} logs in the last 24 h. Only ${activeMinutes} active minute${activeMinutes === 1 ? '' : 's'} ` +
+        `in 14 days, too few to tell if it has gone quiet.${seen}`,
     };
   }
   if (baselinePerDay === null || !canJudgeQuiet) {
@@ -459,7 +484,7 @@ export function assessApp(row: AppActivityRow, nowMs: number, t: HomeThresholds)
   };
 }
 
-const STATE_ORDER: Record<AppState, number> = { errors: 0, quiet: 1, new: 2, fine: 3 };
+const STATE_ORDER: Record<AppState, number> = { errors: 0, quiet: 1, new: 2, sparse: 2, fine: 3 };
 
 /** Worst first: error spikes, then quiet apps, then the rest by how much they log. */
 export function sortApps(apps: AppSummary[]): AppSummary[] {
@@ -511,8 +536,8 @@ export function findUnreachableAlerts(): UnreachableAlert[] {
 
 export interface BankSpend {
   index: string;
-  /** 'ok' | no money events at all | events but no snapshot | the caller's key can't see the index */
-  status: 'ok' | 'no_events' | 'no_snapshot' | 'not_visible';
+  /** 'ok' | no money events at all | events but no snapshot | the caller's key can't see the index | the query failed */
+  status: 'ok' | 'no_events' | 'no_snapshot' | 'not_visible' | 'failed';
   as_of: string | null;
   out_24h: number | null;
   out_7d: number | null;
@@ -530,7 +555,7 @@ export interface AiSpendApp {
 
 export interface AiSpend {
   field: string;
-  status: 'ok' | 'none';
+  status: 'ok' | 'none' | 'failed';
   today: number;
   week: number;
   events: number;
@@ -636,7 +661,11 @@ export interface HomeSummary {
   alerts_hidden: boolean;
   /** The indexes a scoped key can read (null when it reads all). */
   scope_indexes: string[] | null;
+  /** Parts whose query failed; the rest of Home is still current. */
+  failed: HomePart[];
 }
+
+export type HomePart = 'apps' | 'bank' | 'ai';
 
 export async function loadApps(nowMs: number, allowedIndexes?: string[] | null): Promise<AppSummary[]> {
   const rows = await executeRawQuery<AppActivityRow>(buildAppActivitySql(getBackend(), nowMs, allowedIndexes));
@@ -647,7 +676,8 @@ export async function loadApps(nowMs: number, allowedIndexes?: string[] | null):
 export function needsYouFrom(apps: AppSummary[], unreachable: UnreachableAlert[]): NeedsYouItem[] {
   const items: NeedsYouItem[] = unreachable.map(a => ({ kind: 'alert_unreachable' as const, ...a }));
   for (const app of apps) {
-    if (app.state === 'errors') items.push({ kind: 'error_spike', app });
+    // A quiet app that spiked first gets both rows: errors then silence is how a crash looks.
+    if (app.error_spike) items.push({ kind: 'error_spike', app });
     if (app.state === 'quiet') items.push({ kind: 'quiet', app });
   }
   return items;
@@ -659,11 +689,25 @@ export async function getHomeSummary(opts: {
 }): Promise<HomeSummary> {
   const nowMs = opts.nowMs ?? Date.now();
   const allowed = opts.allowedIndexes ?? null;
-  const [apps, bank, ai] = await Promise.all([
+  // Each part loads on its own: Home is the first page after login, so one bad
+  // query must not blank the rest of it.
+  const [appsR, bankR, aiR] = await Promise.allSettled([
     loadApps(nowMs, allowed),
     loadBankSpend(nowMs, allowed),
     loadAiSpend(nowMs - 7 * DAY, nowMs + 1, nowMs - DAY, allowed),
   ]);
+  const failed: HomePart[] = [];
+  const settle = <T>(r: PromiseSettledResult<T>, part: HomePart, fallback: T): T => {
+    if (r.status === 'fulfilled') return r.value;
+    failed.push(part);
+    console.error(`Home: the ${part} query failed:`, r.reason);
+    return fallback;
+  };
+  const apps = settle(appsR, 'apps', [] as AppSummary[]);
+  const bank = settle<BankSpend>(bankR, 'bank', {
+    index: MONEY_INDEX, status: 'failed', as_of: null, out_24h: null, out_7d: null, events: 0, last_event_at: null,
+  });
+  const ai = settle<AiSpend>(aiR, 'ai', { field: AI_COST_FIELD, status: 'failed', today: 0, week: 0, events: 0, by_app: [] });
   const scoped = Array.isArray(allowed) && allowed.length > 0;
   const unreachable = scoped ? [] : findUnreachableAlerts();
   return {
@@ -676,5 +720,6 @@ export async function getHomeSummary(opts: {
     scoped,
     alerts_hidden: scoped,
     scope_indexes: scoped ? [...(allowed as string[])] : null,
+    failed,
   };
 }

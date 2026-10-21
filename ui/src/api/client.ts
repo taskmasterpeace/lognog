@@ -725,7 +725,8 @@ export async function getActiveSources(): Promise<ActiveSourcesResult> {
 }
 
 // Home ("Needs you") API: GET /stats/home (api/src/services/home-summary.ts)
-export type HomeAppState = 'errors' | 'quiet' | 'fine' | 'new';
+/** 'sparse' = older than a day but too few logs in 14 days to judge quiet. */
+export type HomeAppState = 'errors' | 'quiet' | 'fine' | 'new' | 'sparse';
 
 export interface HomeApp {
   app_name: string;
@@ -735,6 +736,10 @@ export interface HomeApp {
   detail: string;
   logs_today: number;
   errors_today: number;
+  /** Today's errors are a spike, whatever the state (a quiet app can have one). */
+  error_spike: boolean;
+  /** The error sentence when error_spike, else null. */
+  spike_detail: string | null;
   logs_window: number;
   baseline_errors_per_day: number | null;
   baseline_days: number;
@@ -749,7 +754,7 @@ export interface HomeApp {
 
 export interface HomeBankSpend {
   index: string;
-  status: 'ok' | 'no_events' | 'no_snapshot' | 'not_visible';
+  status: 'ok' | 'no_events' | 'no_snapshot' | 'not_visible' | 'failed';
   as_of: string | null;
   out_24h: number | null;
   out_7d: number | null;
@@ -759,7 +764,7 @@ export interface HomeBankSpend {
 
 export interface HomeAiSpend {
   field: string;
-  status: 'ok' | 'none';
+  status: 'ok' | 'none' | 'failed';
   today: number;
   week: number;
   events: number;
@@ -789,6 +794,8 @@ export interface HomeSummary {
   scope_indexes: string[] | null;
   /** True for a scoped login: alert rules aren't tied to an index, so none are shown. */
   alerts_hidden: boolean;
+  /** Parts whose query failed; the rest of Home is still current. */
+  failed: Array<'apps' | 'bank' | 'ai'>;
 }
 
 export async function getHomeSummary(): Promise<HomeSummary> {

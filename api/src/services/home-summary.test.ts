@@ -32,6 +32,8 @@ import {
   getHomeSummary,
   parseServerTime,
   homeThresholds,
+  formatDuration,
+  needsYouFrom,
   DAY,
   HOUR,
   MINUTE,
@@ -189,6 +191,56 @@ describe('judging an app against its own history', () => {
     expect(a.quiet_after_ms).toBeNull();
   });
 
+  it('a quiet app that spiked first keeps the spike, in words and in Needs you (critic 10-21 r2 #1)', () => {
+    // 47 errors (12/day normal), then silent 3 h: a crash looks like this
+    const a = assessApp(
+      row({ errors_today: 47, errors_baseline: 84, last_seen: NOW - 3 * HOUR, longest_gap_s: 3600, normal_gap_s: 3600 }),
+      NOW,
+      t,
+    );
+    expect(a.state).toBe('quiet');
+    expect(a.error_spike).toBe(true);
+    expect(a.detail).toBe(
+      'No logs for 3 h. Normally it is never silent for more than about 1 h. ' +
+        'Before that: 47 errors in the last 24 h; a normal day has about 12.',
+    );
+    expect(needsYouFrom([a], []).map(i => i.kind)).toEqual(['error_spike', 'quiet']);
+    // the spike row gets the error sentence, not the silence
+    expect(a.spike_detail).toBe('47 errors in the last 24 h; a normal day has about 12.');
+    // a plain spike is one row, a plain quiet app is one row
+    const spike = assessApp(row({ errors_today: 47, errors_baseline: 84 }), NOW, t);
+    expect(needsYouFrom([spike], []).map(i => i.kind)).toEqual(['error_spike']);
+    const quiet = assessApp(row({ last_seen: NOW - 3 * HOUR, normal_gap_s: 3600 }), NOW, t);
+    expect(quiet.error_spike).toBe(false);
+    expect(quiet.spike_detail).toBeNull();
+    expect(needsYouFrom([quiet], []).map(i => i.kind)).toEqual(['quiet']);
+  });
+
+  it('an old app with too few active minutes is "Few logs", not "New" (critic 10-21 r2 #2)', () => {
+    // 10 days old, 2 active minutes in 14 days: not new, but no rhythm to judge quiet by
+    const a = assessApp(
+      row({ first_seen: NOW - 10 * DAY, last_seen: NOW - 5 * HOUR, logs_today: 2, active_minutes: 2 }),
+      NOW,
+      t,
+    );
+    expect(a.state).toBe('sparse');
+    expect(a.label).toBe('Few logs');
+    expect(a.detail).toBe(
+      '2 logs in the last 24 h. Only 2 active minutes in 14 days, too few to tell if it has gone quiet. Last log 5 h ago.',
+    );
+    expect(a.quiet_after_ms).toBeNull();
+    // still flags an error spike
+    expect(assessApp(row({ first_seen: NOW - 10 * DAY, active_minutes: 2, errors_today: 9 }), NOW, t).state).toBe('errors');
+  });
+
+  it('durations round down, like "last seen" beside them (critic 10-21 r2 #5)', () => {
+    expect(formatDuration(3 * HOUR + 59 * MINUTE)).toBe('3 h');
+    expect(formatDuration(59 * MINUTE + 59_000)).toBe('59 min');
+    expect(formatDuration(47 * HOUR + 59 * MINUTE)).toBe('47 h');
+    expect(formatDuration(3 * DAY + 23 * HOUR)).toBe('3 days');
+    expect(formatDuration(-5)).toBe('0 min');
+  });
+
   it('sorts worst first', () => {
     const apps: AppSummary[] = [
       assessApp(row({ app_name: 'fine-a', logs_today: 5 }), NOW, t),
@@ -305,7 +357,7 @@ describe('Home summary on the lite (SQLite) backend', () => {
   it('judges each app and puts the worst first', async () => {
     const home = await getHomeSummary({ nowMs: now });
     const byName = Object.fromEntries(home.apps.map(a => [a.app_name, a]));
-    expect(home.apps.map(a => a.state)).toEqual(['errors', 'quiet', 'quiet', 'new', 'new', 'fine']);
+    expect(home.apps.map(a => a.state)).toEqual(['errors', 'quiet', 'quiet', 'new', 'sparse', 'fine']);
     expect(home.apps[0].app_name).toBe('spiky');
     expect(byName.spiky.state).toBe('errors');
     expect(byName.spiky.errors_today).toBe(20);
@@ -320,6 +372,9 @@ describe('Home summary on the lite (SQLite) backend', () => {
     expect(byName.relapsed.label).toBe('Quiet 3 days');
     // three hours old: no rhythm yet, so not quiet
     expect(byName.fresh.state).toBe('new');
+    // money-watch: a day old but only 2 active minutes, so too few logs to judge, not "New"
+    expect(byName['money-watch'].state).toBe('sparse');
+    expect(byName['money-watch'].label).toBe('Few logs');
   });
 
   it('lists what needs you: the broken alert, the spike and the quiet app', async () => {
