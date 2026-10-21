@@ -1,7 +1,6 @@
 // Copy this file to include/secrets.h and fill it in. secrets.h is git-ignored:
 // never commit it. Use a LogNog API key with ONLY the "read" permission
-// (Settings -> API keys -> New key -> tick "read"), ideally limited to the
-// one index this screen shows.
+// (Settings -> API keys -> New key -> tick "read"), with no index limit.
 #pragma once
 
 #define WIFI_SSID "your-wifi-name"

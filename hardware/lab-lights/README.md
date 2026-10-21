@@ -51,9 +51,9 @@ fits both.
 
 1. Install PlatformIO. On the lab Mac it is already in
    `~/octavia/tools/platformio-venv/bin/pio`.
-2. In LogNog, make an API key with **only the "read" permission**. If you can,
-   limit it to the one app's index. One key per screen is best; a lost screen
-   then only costs one key.
+2. In LogNog, make an API key with **only the "read" permission**, and leave
+   its index list empty. One key per screen is best; a lost screen then only
+   costs one key, and a read key can't change anything.
 3. Copy `include/secrets.example.h` to `include/secrets.h` and fill in:
    - your Wi-Fi name and password,
    - `LIGHT_APP`, the app name as LogNog's Data Sources page shows it (for example `knuckle-up`),
