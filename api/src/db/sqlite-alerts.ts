@@ -385,15 +385,18 @@ export function deleteAlert(id: string): boolean {
 }
 
 // Alert History
+// triggered_at only has 1-second resolution, so several runs in the same second
+// tie. rowid (alert_history is a rowid table) follows insertion order, so it
+// breaks the tie and keeps "newest first" true within a second.
 export function getAlertHistory(alertId?: string, limit: number = 100): AlertHistory[] {
   const database = getSQLiteDB();
   if (alertId) {
     return database.prepare(
-      'SELECT * FROM alert_history WHERE alert_id = ? ORDER BY triggered_at DESC LIMIT ?'
+      'SELECT * FROM alert_history WHERE alert_id = ? ORDER BY triggered_at DESC, rowid DESC LIMIT ?'
     ).all(alertId, limit) as AlertHistory[];
   }
   return database.prepare(
-    'SELECT * FROM alert_history ORDER BY triggered_at DESC LIMIT ?'
+    'SELECT * FROM alert_history ORDER BY triggered_at DESC, rowid DESC LIMIT ?'
   ).all(limit) as AlertHistory[];
 }
 
@@ -453,7 +456,7 @@ export function getRecentAlertTrigger(alertId: string, windowSeconds: number): A
     SELECT * FROM alert_history
     WHERE alert_id = ?
     AND triggered_at > datetime('now', '-' || ? || ' seconds')
-    ORDER BY triggered_at DESC
+    ORDER BY triggered_at DESC, rowid DESC
     LIMIT 1
   `).get(alertId, windowSeconds) as AlertHistory | undefined;
 }
