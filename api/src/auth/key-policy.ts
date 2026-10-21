@@ -53,7 +53,12 @@ const ANY = '*' as const;
 const RULES: readonly Rule[] = [
   // --- Public or self-authenticated routes: the key is irrelevant here. ---
   { methods: ANY, path: /^\/auth\/(setup-required|setup|login|refresh)$/, need: 'none' },
-  { methods: ANY, path: /^\/dashboards\/public\//, need: 'none' },
+  // Only the two share-link routes are public. Anything deeper under
+  // /dashboards/public/... is a normal dashboard route whose ":id" happens to
+  // be "public" (e.g. DELETE /dashboards/public/variables/<id>) and must be
+  // checked like any other dashboard change.
+  { methods: ['GET'], path: /^\/dashboards\/public\/[^/]+$/, need: 'none' },
+  { methods: ['POST'], path: /^\/dashboards\/public\/[^/]+\/query$/, need: 'none' },
   { methods: ['GET'], path: /^\/ingest\/(guide|schema|health)$/, need: 'none' },
   { methods: ['GET'], path: /^\/search\/(ai\/suggestions|backend|lookup-tables)$/, need: 'none' },
   { methods: ['POST'], path: /^\/search\/validate$/, need: 'none' },
@@ -76,11 +81,12 @@ const RULES: readonly Rule[] = [
   { methods: ANY, path: /^\/pull-collectors(\/|$)/, need: 'admin' },
   { methods: ANY, path: /^\/demo(\/|$)/, need: 'admin' }, // export dumps every index
   { methods: ANY, path: /^\/ai(\/|$)/, need: 'admin' }, // LLM spend, unscoped context
+  { methods: ANY, path: /^\/search\/ai$/, need: 'admin' }, // LLM spend, same as /ai/*
   { methods: ANY, path: /^\/mcp\/sse$/, need: 'admin' }, // MCP tools create alerts/dashboards, unscoped
   { methods: ANY, path: /^\/geoip\/cache(\/|$)/, need: 'admin' },
 
   // --- POSTs that only read. ---
-  { methods: ['POST'], path: /^\/search\/(query|parse|ai)$/, need: 'read' },
+  { methods: ['POST'], path: /^\/search\/(query|parse)$/, need: 'read' },
   { methods: ['POST'], path: /^\/agent\/(search|alerts\/test)$/, need: 'read' },
   { methods: ['POST'], path: /^\/alerts\/test$/, need: 'read' },
   { methods: ['POST'], path: /^\/dashboards\/[^/]+\/(export|variables\/preview-options|variables\/[^/]+\/options)$/, need: 'read' },
@@ -110,16 +116,27 @@ const RULES: readonly Rule[] = [
  * the log store at all.
  */
 const SCOPE_AWARE_READS: readonly RegExp[] = [
-  /^\/search\/(query|parse|ai|fields|fields\/discover|fields\/[^/]+\/values|logs\/[^/]+\/(full-message|context))$/,
+  /^\/search\/(query|parse|fields|fields\/discover|fields\/[^/]+\/values|logs\/[^/]+\/(full-message|context))$/,
   /^\/stats\/(overview|timeseries|severity|indexes|indexes\/details|indexes\/[^/]+\/fields|sources|storage)$/,
   /^\/agent(\/(search|summary|indexes|fields))?$/,
   /^\/auth\/me$/,
   /^\/reports\/generate$/,
+  // Added by sibling branches in the 2026-10-21 release; both filter to the
+  // key's indexes (services/home-summary.ts hides alerts from scoped keys;
+  // services/lab-lights.ts keeps only alerts on allowed indexes).
+  /^\/stats\/home$/,
+  /^\/status\/lights$/,
 ];
 
-/** Strip a trailing slash (but keep "/") so "/alerts/" and "/alerts" match alike. */
+/**
+ * Put a path in the one form the rules are written for, the way Express will
+ * route it: Express matches paths case-insensitively and tolerates repeated
+ * slashes and a trailing slash, so "/AUTH//API-KEYS/" reaches the same
+ * handler as "/auth/api-keys" and must get the same decision.
+ */
 export function normalizeKeyPath(path: string): string {
-  return path.length > 1 && path.endsWith('/') ? path.replace(/\/+$/, '') || '/' : path;
+  const p = path.toLowerCase().replace(/\/{2,}/g, '/');
+  return p.length > 1 && p.endsWith('/') ? p.replace(/\/+$/, '') || '/' : p;
 }
 
 /** What permission a request with an API key needs on this method + path. */

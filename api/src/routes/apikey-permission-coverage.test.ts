@@ -116,7 +116,7 @@ const INGEST = new Set([
 
 /** POSTs that only read, so a read key may call them. */
 const READ_POSTS = new Set([
-  'POST /search/query', 'POST /search/parse', 'POST /search/ai',
+  'POST /search/query', 'POST /search/parse',
   'POST /agent/search', 'POST /agent/alerts/test', 'POST /alerts/test',
   'POST /dashboards/kl-none/export', 'POST /dashboards/kl-none/variables/preview-options',
   'POST /dashboards/kl-none/variables/kl-none/options',
@@ -134,7 +134,7 @@ const ADMIN_GET_PREFIXES = [
 
 /** Reads an index-scoped key may make (each filters to the key's indexes). */
 const SCOPED_READS = new Set([
-  'POST /search/query', 'POST /search/parse', 'POST /search/ai', 'GET /search/fields', 'GET /search/fields/discover',
+  'POST /search/query', 'POST /search/parse', 'GET /search/fields', 'GET /search/fields/discover',
   'GET /search/fields/kl-none/values', 'GET /search/logs/kl-none/full-message', 'GET /search/logs/kl-none/context',
   'GET /stats/overview', 'GET /stats/timeseries', 'GET /stats/severity', 'GET /stats/indexes',
   'GET /stats/indexes/details', 'GET /stats/indexes/kl-none/fields', 'GET /stats/sources', 'GET /stats/storage',
@@ -395,6 +395,131 @@ describe('key lock on the real routers', () => {
     expect(decideApiKey('GET', '/mcp/sse', ['read'], null).allowed).toBe(false);
     expect(decideApiKey('GET', '/mcp/sse', ['admin'], ['money']).allowed).toBe(false);
     expect(decideApiKey('GET', '/mcp/sse', ['admin'], null).allowed).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Path tricks (critic round 1 on 50495d9). Express routes paths
+// case-insensitively and tolerates repeated slashes, and a dashboard route's
+// ":id" can be the word "public". Each spelling must get the same answer as
+// the plain one.
+// ---------------------------------------------------------------------------
+const variants = (p: string) => ({
+  upper: p.toUpperCase(),
+  doubled: p.replace(/\//g, '//'),
+  trailing: p + '/',
+  mixed: p.split('/').map((seg, i) => (i % 2 ? seg.toUpperCase() : seg)).join('/'),
+});
+
+describe('key lock: other spellings of every route get the same answer', () => {
+  for (const kind of ['read', 'ingest', 'readScoped'] as const) {
+    it(`${kind} key: UPPER-case, doubled slashes, trailing slash and MiXeD case`, async () => {
+      const plain = await refusedMap(K[kind]);
+      const wrong: string[] = [];
+      for (const r of ROUTES) {
+        if (r.path === '/') continue;
+        for (const [name, path] of Object.entries(variants(r.path))) {
+          const res = await hit(gateSrv, { method: r.method, path }, { Authorization: `ApiKey ${K[kind]}` });
+          const refused = res.status === 403 && res.body.error === REFUSED;
+          if (refused !== plain.get(key(r))) wrong.push(`${r.method} ${path} (${name}) -> ${refused ? 'refused' : 'allowed'}`);
+        }
+      }
+      expect(wrong).toEqual([]);
+    });
+  }
+
+  it('every dashboard change is checked the same when its id is the word "public"', async () => {
+    const dashRoutes = ROUTES.filter((r) => r.path.startsWith('/dashboards/kl-none/'));
+    expect(dashRoutes.length).toBeGreaterThan(20);
+    const wrong: string[] = [];
+    for (const kind of ['read', 'ingest', 'dashboards'] as const) {
+      for (const r of dashRoutes) {
+        const pub = { method: r.method, path: r.path.replace('/dashboards/kl-none/', '/dashboards/public/') };
+        // GET /dashboards/public/<one word> and POST .../<one word>/query are the
+        // share link itself: Express sends them to the share handlers (registered
+        // first in dashboards.ts), never to /:id/... (proven on the real router below).
+        if ((pub.method === 'GET' && /^\/dashboards\/public\/[^/]+$/.test(pub.path))
+          || (pub.method === 'POST' && /^\/dashboards\/public\/[^/]+\/query$/.test(pub.path))) continue;
+        const h = { Authorization: `ApiKey ${K[kind]}` };
+        const a = await hit(gateSrv, r, h);
+        const b = await hit(gateSrv, pub, h);
+        if ((a.status === 403) !== (b.status === 403)) wrong.push(`${kind}: ${key(pub)} -> ${b.status}, ${key(r)} -> ${a.status}`);
+      }
+    }
+    expect(wrong).toEqual([]);
+  });
+});
+
+describe('path tricks on the real routers', () => {
+  it('upper-case and doubled-slash admin reads are refused to a read key (and do reach the handler for an admin key)', async () => {
+    const asRead = { Authorization: `ApiKey ${K.read}` };
+    const asSearch = { Authorization: `ApiKey ${K.search}` };
+    for (const p of ['/AUTH/API-KEYS', '/Auth/Api-Keys', '/auth//api-keys', '//auth/api-keys', '/SYNTHETIC/TESTS',
+      '/NOTIFICATIONS/CHANNELS', '/DEMO/STATS', '/DEMO/export', '/SETTINGS/SYSTEM']) {
+      const a = await request(realSrv).get(p).set(asRead);
+      expect(a.status, `read ${p}`).toBe(403);
+      expect(a.body.error, p).toBe(REFUSED);
+      expect((await request(realSrv).get(p).set(asSearch)).status, `dp-style ${p}`).toBe(403);
+    }
+    expect((await request(realSrv).head('/AUTH/API-KEYS').set(asRead)).status).toBe(403);
+    // Proof the trick is real: Express sends these spellings to the handler.
+    expect((await request(realSrv).get('/AUTH/API-KEYS').set('Authorization', `ApiKey ${K.admin}`)).status).toBe(200);
+  });
+
+  it('read and ingest keys cannot change dashboard parts through /dashboards/public/...', async () => {
+    const jwt = { Authorization: `Bearer ${jwtAdmin}` };
+    const dash = (await request(realSrv).post('/dashboards').set(jwt).send({ name: 'kl public trick' })).body;
+    const v = await request(realSrv).post(`/dashboards/${dash.id}/variables`).set(jwt).send({ name: 'host', type: 'custom', custom_values: 'a,b' });
+    expect(v.status).toBe(201);
+    const pg = await request(realSrv).post(`/dashboards/${dash.id}/pages`).set(jwt).send({ name: 'Page two' });
+    expect(pg.status).toBe(201);
+
+    const tries: Array<[string, 'put' | 'delete', string]> = [
+      [K.read, 'delete', `/dashboards/public/variables/${v.body.id}`],
+      [K.read, 'put', `/dashboards/public/variables/${v.body.id}`],
+      [K.ingest, 'put', `/dashboards/public/pages/${pg.body.id}`],
+      [K.ingestScoped, 'delete', `/dashboards/public/pages/${pg.body.id}`],
+      [K.search, 'delete', `/DASHBOARDS/PUBLIC/pages/${pg.body.id}`],
+    ];
+    for (const [k, m, p] of tries) {
+      const res = await request(realSrv)[m](p).set('Authorization', `ApiKey ${k}`).send({ name: 'renamed' });
+      expect(res.status, `${m.toUpperCase()} ${p}`).toBe(403);
+    }
+    const vars = (await request(realSrv).get(`/dashboards/${dash.id}/variables`).set(jwt)).body as Array<{ id: string }>;
+    const pages = (await request(realSrv).get(`/dashboards/${dash.id}/pages`).set(jwt)).body as Array<{ id: string; name: string }>;
+    expect(vars.map((x) => x.id)).toContain(v.body.id);
+    expect(pages.find((x) => x.id === pg.body.id)?.name).toBe('Page two');
+  });
+
+  it('GET /dashboards/public/<word> is the share-link lookup, not a dashboard read', async () => {
+    const jwt = { Authorization: `Bearer ${jwtAdmin}` };
+    const dash = (await request(realSrv).post('/dashboards').set(jwt).send({ name: 'kl share route' })).body;
+    expect((await request(realSrv).post(`/dashboards/${dash.id}/pages`).set(jwt).send({ name: 'P' })).status).toBe(201);
+    for (const word of ['variables', 'pages', 'annotations', 'logos']) {
+      const res = await request(realSrv).get(`/dashboards/public/${word}`).set('Authorization', `ApiKey ${K.ingest}`);
+      expect(res.status, word).toBe(404); // no share token called "${word}"
+      expect(Array.isArray(res.body), word).toBe(false);
+    }
+  });
+
+  it('the share link stays public for every method it has (and only those)', () => {
+    expect(apiKeyNeed('GET', '/dashboards/public/abc123')).toBe('none');
+    expect(apiKeyNeed('POST', '/dashboards/public/abc123/query')).toBe('none');
+    expect(apiKeyNeed('DELETE', '/dashboards/public/abc123')).toBe('dashboards:write');
+    expect(apiKeyNeed('PUT', '/dashboards/public/pages/p1')).toBe('dashboards:write');
+    expect(apiKeyNeed('GET', '/dashboards/public/variables/v1')).toBe('read');
+  });
+
+  it('AI search (spends LLM money) needs an admin key, like /ai/*', async () => {
+    const res = await request(realSrv).post('/search/ai').set('Authorization', `ApiKey ${K.read}`).send({ prompt: 'errors' });
+    expect(res.status).toBe(403);
+    expect(res.body.needed).toBe('admin');
+    expect(decideApiKey('POST', '/search/ai', ['read'], ['uptime']).allowed).toBe(false);
+  });
+
+  it('the MCP stream key check also holds for /MCP/SSE', async () => {
+    const res = await request(realSrv).get(`/MCP/SSE?api_key=${encodeURIComponent(K.read)}`);
+    expect(res.status).toBe(403);
   });
 });
 

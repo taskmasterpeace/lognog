@@ -19,7 +19,7 @@
  */
 import type { Request, Response, NextFunction } from 'express';
 import { getUserById, logAuthEvent } from './auth.js';
-import { decideApiKey, apiKeyNeed } from './key-policy.js';
+import { decideApiKey, apiKeyNeed, normalizeKeyPath } from './key-policy.js';
 import { resolveApiKeyCached } from './api-key-cache.js';
 
 /** The API key this request presents, if any (never logged). */
@@ -30,7 +30,7 @@ export function presentedApiKey(req: Request): string | undefined {
   }
   const header = req.headers['x-api-key'];
   if (header) return Array.isArray(header) ? header[0] : header;
-  if (req.path === '/mcp/sse' && typeof req.query.api_key === 'string') return req.query.api_key;
+  if (normalizeKeyPath(req.path) === '/mcp/sse' && typeof req.query.api_key === 'string') return req.query.api_key;
   return undefined;
 }
 
