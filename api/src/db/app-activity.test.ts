@@ -20,7 +20,11 @@ import { getLabLights, WHY_HEADLINES, _labLightsTesting } from '../services/lab-
 // UI modules, loaded by path so the API's tsc program never includes UI files.
 interface LabLightsUi {
   lightSearchUrl(app: string, kind: 'logs' | 'errors' | 'usual' | 'week'): string | null;
-  screenLink(app: string, headline: string): { url: string; title: string } | null;
+  screenLink(app: string, headline: string, detail?: string): { url: string; title: string } | null;
+  numberSearchUrl(app: string, kind: 'logs' | 'errors' | 'usual' | 'week', count: number): string | null;
+  plateLink(app: string, headline: string, since: string | null, nowMs?: number): { url: string; title: string } | null;
+  onlyState<T extends { state: 'green' | 'yellow' | 'red' }>(lights: T[], only: 'green' | 'yellow' | 'red' | null): T[];
+  shelfGridClass(wall: boolean): string;
   splitWhy(why: string, state: 'green' | 'yellow' | 'red'): { headline: string; detail: string };
   shelfOrder<T extends { state: 'green' | 'yellow' | 'red'; label: string }>(lights: T[], asked: boolean): T[];
 }
@@ -241,11 +245,54 @@ describe('lab lights over real Lite rows and real alerts', () => {
     expect(lightSearchUrl('unknown', 'logs')).toBeNull();
   });
 
+  it('a 0 opens nothing (it would be an empty Search); every other number opens its own logs', async () => {
+    const { numberSearchUrl, lightSearchUrl } = (await import(/* @vite-ignore */ ui('labLights.ts'))) as LabLightsUi;
+    const { apps } = await getLabLights();
+    const quiet = apps.find((a) => a.app === 'homework-tree')!;
+    expect(quiet.logs_last_15m).toBe(0);
+    expect(numberSearchUrl(quiet.app, 'logs', quiet.logs_last_15m)).toBeNull();
+    for (const l of apps) {
+      for (const [kind, n] of [['logs', l.logs_last_15m], ['errors', l.errors_last_15m], ['usual', l.errors_usual_24h]] as const) {
+        expect(numberSearchUrl(l.app, kind, n)).toBe(n > 0 ? lightSearchUrl(l.app, kind) : null);
+      }
+    }
+  });
+
+  it('the stand plate: "since T" opens the logs from 15 min before T; quiet or unknown opens the week', async () => {
+    const { plateLink } = (await import(/* @vite-ignore */ ui('labLights.ts'))) as LabLightsUi;
+    const now = Date.now();
+    const since = new Date(now - 60 * MIN).toISOString();
+    const red = new URLSearchParams(plateLink('knuckle-up', 'Error spike', since, now)!.url.split('?')[1]);
+    expect(red.get('earliest')).toBe('-75m');
+    expect(red.get('q')).toBe('search app_name="knuckle-up"');
+    // The window holds every log from the change on: at least the last 15 minutes' logs.
+    const { results } = await executeDSLQuery<{ count: number }>(`${red.get('q')} | stats count`, { earliest: '-75m' });
+    const ku = (await getLabLights()).apps.find((a) => a.app === 'knuckle-up')!;
+    expect(Number(results[0]?.count)).toBeGreaterThanOrEqual(ku.logs_last_15m);
+    expect(new URLSearchParams(plateLink('uptime', 'Quiet', since, now)!.url.split('?')[1]).get('earliest')).toBe('-7d');
+    expect(new URLSearchParams(plateLink('hyh', 'Alert', null, now)!.url.split('?')[1]).get('earliest')).toBe('-7d');
+    expect(plateLink('unknown', 'Alert', since, now)).toBeNull();
+  });
+
+  it('the colour filter shows only that colour; the wall view is one screen per row on a phone', async () => {
+    const { onlyState, shelfGridClass } = (await import(/* @vite-ignore */ ui('labLights.ts'))) as LabLightsUi;
+    const { apps } = await getLabLights();
+    const reds = onlyState(apps, 'red');
+    expect(reds.length).toBe(apps.filter((a) => a.state === 'red').length);
+    expect(reds.length).toBeGreaterThan(0);
+    expect(reds.every((a) => a.state === 'red')).toBe(true);
+    expect(onlyState(apps, null)).toHaveLength(apps.length);
+    // Tailwind: the unprefixed grid-cols-N is the phone layout (sm: starts at 640 px).
+    expect(shelfGridClass(true).split(' ')[0]).toBe('grid-cols-1');
+    expect(shelfGridClass(false).split(' ')[0]).toBe('grid-cols-2');
+  });
+
   it('the round screen opens what its word is about; quiet opens the last 7 days, where the newest log is', async () => {
     const { screenLink } = (await import(/* @vite-ignore */ ui('labLights.ts'))) as LabLightsUi;
     const { apps } = await getLabLights();
     const by = Object.fromEntries(apps.map((a) => [a.app, a]));
     expect(screenLink('hyh', 'Alert')!.url).toBe('/alerts');
+    expect(screenLink('hyh', 'Alert', 'HYH checkout errors')!.title).toContain('"HYH checkout errors"');
     expect(screenLink('knuckle-up', 'Error spike')!.url).toContain('severity%3C%3D3');
     const quiet = new URLSearchParams(screenLink('homework-tree', 'Gone quiet')!.url.split('?')[1]);
     expect(quiet.get('earliest')).toBe('-7d');
@@ -289,6 +336,7 @@ describe('lab lights over real Lite rows and real alerts', () => {
     const db = getSQLiteDB();
     db.prepare(`INSERT INTO alert_silences (id, level, target_id, ends_at) VALUES ('sil-hyh', 'alert', 'al-hyh', datetime('now', '+1 hour'))`).run();
     try {
+      _labLightsTesting.reset();
       const hyh = (await getLabLights(null, ['hyh'])).apps[0];
       expect(hyh.why).not.toBe('Alert: HYH checkout errors');
     } finally {
@@ -308,6 +356,41 @@ describe('lab lights over real Lite rows and real alerts', () => {
       expect((await getLabLights(null, ['hyh'])).apps[0]).toMatchObject({ state: 'red', why: 'Alert: HYH checkout errors' });
     } finally {
       db.prepare(`UPDATE alerts SET last_status = 'triggered', throttle_enabled = 0, last_value = NULL WHERE id = 'al-hyh'`).run();
+    }
+  });
+
+  it('silences: global darkens every alert, another alert\'s silence does not, an ended or not-yet-started one does not (ISO times as the silence service writes them)', async () => {
+    const db = getSQLiteDB();
+    const iso = (ms: number) => new Date(Date.now() + ms).toISOString();
+    const hyhWhy = async () => {
+      _labLightsTesting.reset();
+      return (await getLabLights(null, ['hyh'])).apps[0].why;
+    };
+    const FIRING = 'Alert: HYH checkout errors';
+    const add = db.prepare(`INSERT INTO alert_silences (id, level, target_id, starts_at, ends_at) VALUES (?, ?, ?, ?, ?)`);
+    const clear = () => db.prepare(`DELETE FROM alert_silences WHERE id LIKE 'sil-t-%'`).run();
+    try {
+      expect(await hyhWhy()).toBe(FIRING);
+      add.run('sil-t-global', 'global', null, iso(-60_000), iso(3_600_000));
+      expect(await hyhWhy()).not.toBe(FIRING);
+      clear();
+      add.run('sil-t-other', 'alert', 'al-money', iso(-60_000), iso(3_600_000));
+      expect(await hyhWhy()).toBe(FIRING);
+      clear();
+      // Ended a minute ago, written as ISO text: no longer silences anything.
+      add.run('sil-t-ended', 'alert', 'al-hyh', iso(-3_600_000), iso(-60_000));
+      expect(await hyhWhy()).toBe(FIRING);
+      clear();
+      // Starts in an hour: not yet.
+      add.run('sil-t-later', 'alert', 'al-hyh', iso(3_600_000), null);
+      expect(await hyhWhy()).toBe(FIRING);
+      clear();
+      // A host-level silence is about a host, not an app: the light stays (documented in alertsForApp).
+      add.run('sil-t-host', 'host', 'hyh-box', iso(-60_000), null);
+      expect(await hyhWhy()).toBe(FIRING);
+    } finally {
+      clear();
+      _labLightsTesting.reset();
     }
   });
 });

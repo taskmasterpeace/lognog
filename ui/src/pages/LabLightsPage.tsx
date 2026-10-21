@@ -4,7 +4,18 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Maximize2, Minimize2, Lightbulb, Loader2, RefreshCw, Cpu, Volume2 } from 'lucide-react';
 import { getLabLights, LabLight } from '../api/client';
 import { toDate } from '../utils/formatDate';
-import { LIGHT_COLORS, appsFromParam, lightSearchUrl, screenLink, shelfOrder, splitWhy, type LightLinkKind } from '../utils/labLights';
+import {
+  LIGHT_COLORS,
+  appsFromParam,
+  numberSearchUrl,
+  onlyState,
+  plateLink,
+  screenLink,
+  shelfGridClass,
+  shelfOrder,
+  splitWhy,
+  type LightLinkKind,
+} from '../utils/labLights';
 import { ageAgo } from '../utils/sourceStatus';
 import { useMute } from '../contexts/MuteContext';
 
@@ -53,9 +64,28 @@ const LINK_WHAT: Record<LightLinkKind, (app: string) => string> = {
   week: (app) => `Open ${app}'s logs from the last 7 days in Search (the newest is the last one it sent)`,
 };
 
-function NumberLink({ app, kind, muted, children }: { app: string; kind: LightLinkKind; muted: boolean; children: React.ReactNode }) {
-  const url = lightSearchUrl(app, kind);
-  if (!url) return <span>{children}</span>;
+const LINK_NONE: Record<LightLinkKind, string> = {
+  logs: 'No logs in the last 15 minutes, so there is nothing to open',
+  errors: 'No errors in the last 15 minutes, so there is nothing to open',
+  usual: 'No errors in the 24 hours before, so there is nothing to open',
+  week: 'No logs in the last 7 days, so there is nothing to open',
+};
+
+function NumberLink({
+  app,
+  kind,
+  count,
+  muted,
+  children,
+}: {
+  app: string;
+  kind: LightLinkKind;
+  count: number;
+  muted: boolean;
+  children: React.ReactNode;
+}) {
+  const url = numberSearchUrl(app, kind, count);
+  if (!url) return <span title={count > 0 ? undefined : LINK_NONE[kind]}>{children}</span>;
   const what = LINK_WHAT[kind](app);
   return (
     <Link
@@ -80,9 +110,10 @@ function Screen({ light, offline, big }: { light: LabLight; offline: boolean; bi
   const usual = light.errors_usual_24h ?? 0;
   const muted = useAppMuted(light);
   // The screen itself opens the logs behind its word and small line.
-  const lead = offline ? null : screenLink(light.app, headline);
+  const lead = offline ? null : screenLink(light.app, headline, detail);
   const showUsual = !offline && (headline === 'Error spike' || headline === 'Errors up');
   const plate = offline ? 'last answer kept' : plateText(light);
+  const plateTo = offline || !plate ? null : plateLink(light.app, headline, light.since);
   const bezel = (
       <div
         className="rounded-full p-[6px] sm:p-[9px]"
@@ -133,21 +164,25 @@ function Screen({ light, offline, big }: { light: LabLight; offline: boolean; bi
       )}
       {/* stand: when the light took its colour, or when the app last sent; opens its last 7 days */}
       <div className="mt-3 h-6 px-3 min-w-[64px] rounded-md bg-[#3a2a1b] text-[10px] sm:text-xs text-nog-300 flex items-center justify-center whitespace-nowrap">
-        {!offline && plate && lightSearchUrl(light.app, 'week') ? (
-          <NumberLink app={light.app} kind="week" muted={muted}>
+        {plateTo ? (
+          <Link
+            to={plateTo.url}
+            title={muted ? plateTo.title + MUTED_NOTE : plateTo.title}
+            className="underline decoration-honey-500/50 underline-offset-2 hover:text-honey-300 hover:decoration-honey-300 transition-colors"
+          >
             {plate}
-          </NumberLink>
+          </Link>
         ) : (
           plate || ' '
         )}
       </div>
       {/* the numbers behind the light, each opens its logs */}
       <div className="mt-2 text-[11px] sm:text-xs text-nog-300 text-center leading-relaxed">
-        <NumberLink app={light.app} kind="logs" muted={muted}>
+        <NumberLink app={light.app} kind="logs" count={light.logs_last_15m} muted={muted}>
           {light.logs_last_15m.toLocaleString()} log{light.logs_last_15m === 1 ? '' : 's'}
         </NumberLink>
         {' · '}
-        <NumberLink app={light.app} kind="errors" muted={muted}>
+        <NumberLink app={light.app} kind="errors" count={errors} muted={muted}>
           <span className={errors > 0 ? 'text-red-300' : undefined}>
             {errors.toLocaleString()} error{errors === 1 ? '' : 's'}
           </span>
@@ -156,7 +191,7 @@ function Screen({ light, offline, big }: { light: LabLight; offline: boolean; bi
         {showUsual && (
           <div className="text-nog-400">
             usual:{' '}
-            <NumberLink app={light.app} kind="usual" muted={muted}>
+            <NumberLink app={light.app} kind="usual" count={usual} muted={muted}>
               {usual.toLocaleString()} error{usual === 1 ? '' : 's'}
             </NumberLink>{' '}
             in the 24 h before
@@ -226,7 +261,7 @@ export default function LabLightsPage() {
 
   const counts = { red: 0, yellow: 0, green: 0 };
   for (const l of data?.apps ?? []) counts[l.state] += 1;
-  const shown = data ? shelfOrder(data.apps, apps.length > 0).filter((l) => !only || l.state === only) : [];
+  const shown = data ? onlyState(shelfOrder(data.apps, apps.length > 0), only) : [];
 
   const showOnly = (state: 'red' | 'yellow' | 'green') => {
     const next = new URLSearchParams(params);
@@ -290,9 +325,7 @@ export default function LabLightsPage() {
 
       {data && shown.length > 0 && (
         <div
-          className={`grid gap-x-2 gap-y-8 sm:gap-x-6 justify-items-center ${
-            wall ? 'grid-cols-1 sm:grid-cols-[repeat(auto-fit,minmax(300px,1fr))]' : 'grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(260px,1fr))]'
-          }`}
+          className={`grid gap-x-2 gap-y-8 sm:gap-x-6 justify-items-center ${shelfGridClass(wall)}`}
         >
           {shown.map((l) => (
             <Screen key={l.app} light={l} offline={offline} big={wall} />
@@ -305,10 +338,10 @@ export default function LabLightsPage() {
   if (wall) {
     return (
       <div className="fixed inset-0 z-[60] overflow-auto" style={{ background: '#140E09' }}>
-        <div className="flex items-center justify-between gap-3 px-4 sm:px-8 pt-4">
-          <div className="text-nog-300 text-sm min-w-0 truncate">
-            <span className="font-display font-semibold text-nog-100 text-lg mr-3">Lab lights</span>
-            {offline ? "Can't reach LogNog; showing the last answer" : updated}
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4 sm:px-8 pt-4">
+          <div className="text-nog-300 text-sm min-w-0 flex flex-wrap items-baseline gap-x-3">
+            <span className="font-display font-semibold text-nog-100 text-lg">Lab lights</span>
+            <span>{offline ? "Can't reach LogNog; showing the last answer" : updated}</span>
           </div>
           <button
             onClick={toggleWall}

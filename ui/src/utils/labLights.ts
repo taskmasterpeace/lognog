@@ -67,16 +67,29 @@ export function lightSearchUrl(app: string, kind: LightLinkKind): string | null 
 }
 
 /**
- * Where the round screen itself leads: the logs behind its big word and the
- * numbers in its small line. An alert opens the Alerts page (the rule that is
- * firing); quiet opens the last 7 days (newest first, so the last log it sent
- * is on top); a spike or errors up opens the 15-min errors; fine opens the
- * 15-min logs.
+ * A number's link: null when it is 0 (it would open an empty Search) or the
+ * app can't be searched. Every number above 0 opens exactly the logs it counts.
  */
-export function screenLink(app: string, headline: string): { url: string; title: string } | null {
-  if (headline === 'Alert') return { url: '/alerts', title: 'Open Alerts to see the rule that is firing' };
+export function numberSearchUrl(app: string, kind: LightLinkKind, count: number): string | null {
+  if (!(count > 0)) return null;
+  return lightSearchUrl(app, kind);
+}
+
+const QUIET_HEADLINES = new Set(['Gone quiet', 'Quiet']);
+
+/**
+ * Where the round screen itself leads: the logs behind its big word and the
+ * numbers in its small line. An alert opens the Alerts page (named in the
+ * title: Alerts has no link to one rule); quiet opens the last 7 days (newest
+ * first, so the last log it sent is on top); a spike or errors up opens the
+ * 15-min errors; fine opens the 15-min logs.
+ */
+export function screenLink(app: string, headline: string, detail = ''): { url: string; title: string } | null {
+  if (headline === 'Alert') {
+    return { url: '/alerts', title: detail ? `Open Alerts; the rule firing is "${detail}"` : 'Open Alerts to see the rule that is firing' };
+  }
   const kind: LightLinkKind =
-    headline === 'Gone quiet' || headline === 'Quiet' ? 'week' : headline === 'Error spike' || headline === 'Errors up' ? 'errors' : 'logs';
+    QUIET_HEADLINES.has(headline) ? 'week' : headline === 'Error spike' || headline === 'Errors up' ? 'errors' : 'logs';
   const url = lightSearchUrl(app, kind);
   if (!url) return null;
   const what = {
@@ -86,6 +99,44 @@ export function screenLink(app: string, headline: string): { url: string; title:
     usual: '',
   }[kind];
   return { url, title: what };
+}
+
+/**
+ * The stand plate's link. "since 6:38 PM" opens the app's logs from 15
+ * minutes before 6:38 PM until now, so the change is in view. A quiet light,
+ * or a plate that shows "last log N ago", opens the last 7 days instead: the
+ * newest log there is the last one the app sent.
+ */
+export function plateLink(
+  app: string,
+  headline: string,
+  since: string | null,
+  nowMs: number = Date.now(),
+): { url: string; title: string } | null {
+  const sinceMs = since ? Date.parse(since) : NaN;
+  if (QUIET_HEADLINES.has(headline) || !Number.isFinite(sinceMs)) {
+    const url = lightSearchUrl(app, 'week');
+    return url ? { url, title: `Open ${app}'s logs from the last 7 days (the newest is the last one it sent)` } : null;
+  }
+  if (!canDrillDown(app)) return null;
+  const minutes = Math.max(0, Math.ceil((nowMs - sinceMs) / 60_000)) + 15;
+  const params = new URLSearchParams({ q: lightLogsQuery(app), earliest: `-${minutes}m` });
+  return { url: `/search?${params.toString()}`, title: `Open ${app}'s logs from 15 minutes before the light took this colour until now` };
+}
+
+/** The ?state= filter on the page: only the lights of that colour, or all of them. */
+export function onlyState<T extends { state: LightState }>(lights: T[], only: LightState | null): T[] {
+  return only ? lights.filter((l) => l.state === only) : lights;
+}
+
+/**
+ * The grid of screens. The wall view's screens are big (200 px on a phone),
+ * so a phone shows one per row; the page's smaller ones fit two per row.
+ */
+export function shelfGridClass(wall: boolean): string {
+  return wall
+    ? 'grid-cols-1 sm:grid-cols-[repeat(auto-fit,minmax(300px,1fr))]'
+    : 'grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(260px,1fr))]';
 }
 
 const STATE_RANK: Record<LightState, number> = { red: 0, yellow: 1, green: 2 };
