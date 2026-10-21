@@ -739,6 +739,8 @@ export interface LabLight {
   since: string | null;
   logs_last_15m: number;
   errors_last_15m: number;
+  /** Errors in the 24 h before the last 15 min (what "usual" means on the screen). */
+  errors_usual_24h: number;
   last_seen: string | null;
   indexes: string[];
 }

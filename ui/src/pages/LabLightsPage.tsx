@@ -4,7 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { Maximize2, Minimize2, Lightbulb, Loader2, RefreshCw, Cpu, Volume2 } from 'lucide-react';
 import { getLabLights, LabLight } from '../api/client';
 import { toDate } from '../utils/formatDate';
-import { LIGHT_COLORS, appsFromParam, lightSearchUrl, shelfOrder, splitWhy } from '../utils/labLights';
+import { LIGHT_COLORS, appsFromParam, lightSearchUrl, screenLink, shelfOrder, splitWhy, type LightLinkKind } from '../utils/labLights';
 import { ageAgo } from '../utils/sourceStatus';
 import { useMute } from '../contexts/MuteContext';
 
@@ -46,10 +46,17 @@ function useAppMuted(light: LabLight): boolean {
 
 const MUTED_NOTE = '. Muted: Search hides these until you unmute.';
 
-function NumberLink({ app, kind, muted, children }: { app: string; kind: 'logs' | 'errors'; muted: boolean; children: React.ReactNode }) {
+const LINK_WHAT: Record<LightLinkKind, (app: string) => string> = {
+  logs: (app) => `Open ${app}'s logs from the last 15 minutes in Search`,
+  errors: (app) => `Open ${app}'s errors from the last 15 minutes in Search`,
+  usual: (app) => `Open ${app}'s errors from the 24 hours before the last 15 minutes in Search`,
+  week: (app) => `Open ${app}'s logs from the last 7 days in Search (the newest is the last one it sent)`,
+};
+
+function NumberLink({ app, kind, muted, children }: { app: string; kind: LightLinkKind; muted: boolean; children: React.ReactNode }) {
   const url = lightSearchUrl(app, kind);
   if (!url) return <span>{children}</span>;
-  const what = kind === 'errors' ? `Open ${app}'s errors from the last 15 minutes in Search` : `Open ${app}'s logs from the last 15 minutes in Search`;
+  const what = LINK_WHAT[kind](app);
   return (
     <Link
       to={url}
@@ -70,10 +77,13 @@ function Screen({ light, offline, big }: { light: LabLight; offline: boolean; bi
     ? 'w-[200px] h-[200px] sm:w-[280px] sm:h-[280px]'
     : 'w-[150px] h-[150px] sm:w-[240px] sm:h-[240px]';
   const errors = light.errors_last_15m;
+  const usual = light.errors_usual_24h ?? 0;
   const muted = useAppMuted(light);
-  return (
-    <div className="flex flex-col items-center min-w-0" data-testid="lab-light" data-state={offline ? 'offline' : light.state}>
-      {/* bezel */}
+  // The screen itself opens the logs behind its word and small line.
+  const lead = offline ? null : screenLink(light.app, headline);
+  const showUsual = !offline && (headline === 'Error spike' || headline === 'Errors up');
+  const plate = offline ? 'last answer kept' : plateText(light);
+  const bezel = (
       <div
         className="rounded-full p-[6px] sm:p-[9px]"
         style={{
@@ -106,9 +116,30 @@ function Screen({ light, offline, big }: { light: LabLight; offline: boolean; bi
           </div>
         </div>
       </div>
-      {/* stand */}
+  );
+  return (
+    <div className="flex flex-col items-center min-w-0" data-testid="lab-light" data-state={offline ? 'offline' : light.state}>
+      {lead ? (
+        <Link
+          to={lead.url}
+          title={muted ? lead.title + MUTED_NOTE : lead.title}
+          aria-label={`${light.label}: ${headline}. ${detail}. ${lead.title}`}
+          className="block rounded-full transition-transform duration-200 hover:scale-[1.02] focus-visible:outline focus-visible:outline-2 focus-visible:outline-honey-400"
+        >
+          {bezel}
+        </Link>
+      ) : (
+        bezel
+      )}
+      {/* stand: when the light took its colour, or when the app last sent; opens its last 7 days */}
       <div className="mt-3 h-6 px-3 min-w-[64px] rounded-md bg-[#3a2a1b] text-[10px] sm:text-xs text-nog-300 flex items-center justify-center whitespace-nowrap">
-        {offline ? 'last answer kept' : plateText(light) || ' '}
+        {!offline && plate && lightSearchUrl(light.app, 'week') ? (
+          <NumberLink app={light.app} kind="week" muted={muted}>
+            {plate}
+          </NumberLink>
+        ) : (
+          plate || ' '
+        )}
       </div>
       {/* the numbers behind the light, each opens its logs */}
       <div className="mt-2 text-[11px] sm:text-xs text-nog-300 text-center leading-relaxed">
@@ -122,6 +153,15 @@ function Screen({ light, offline, big }: { light: LabLight; offline: boolean; bi
           </span>
         </NumberLink>
         <div className="text-nog-400">in the last 15 min</div>
+        {showUsual && (
+          <div className="text-nog-400">
+            usual:{' '}
+            <NumberLink app={light.app} kind="usual" muted={muted}>
+              {usual.toLocaleString()} error{usual === 1 ? '' : 's'}
+            </NumberLink>{' '}
+            in the 24 h before
+          </div>
+        )}
         {muted && (
           <div className="text-honey-300" title="You muted this app or its index. Search hides its logs until you unmute it on the Data Sources page.">
             muted in Search
@@ -154,6 +194,8 @@ export default function LabLightsPage() {
   const [params, setParams] = useSearchParams();
   const wall = params.get('wall') === '1';
   const apps = appsFromParam(params.get('apps'));
+  const stateParam = params.get('state');
+  const only = stateParam === 'red' || stateParam === 'yellow' || stateParam === 'green' ? stateParam : null;
   const [, setTick] = useState(0);
 
   const { data, error, isLoading, isFetching, dataUpdatedAt, refetch } = useQuery({
@@ -184,6 +226,14 @@ export default function LabLightsPage() {
 
   const counts = { red: 0, yellow: 0, green: 0 };
   for (const l of data?.apps ?? []) counts[l.state] += 1;
+  const shown = data ? shelfOrder(data.apps, apps.length > 0).filter((l) => !only || l.state === only) : [];
+
+  const showOnly = (state: 'red' | 'yellow' | 'green') => {
+    const next = new URLSearchParams(params);
+    if (only === state) next.delete('state');
+    else next.set('state', state);
+    setParams(next, { replace: true });
+  };
 
   const body = (
     <>
@@ -226,13 +276,25 @@ export default function LabLightsPage() {
         </div>
       )}
 
-      {data && data.apps.length > 0 && (
+      {data && data.apps.length > 0 && shown.length === 0 && only && (
+        <div className="text-center py-16 px-4 text-nog-200">
+          <p className="text-lg font-semibold">No {only} lights right now</p>
+          <button
+            onClick={() => showOnly(only)}
+            className="mt-3 text-sm font-medium text-honey-400 hover:text-honey-300 underline underline-offset-2 transition-colors"
+          >
+            Show all {data.apps.length} lights
+          </button>
+        </div>
+      )}
+
+      {data && shown.length > 0 && (
         <div
           className={`grid gap-x-2 gap-y-8 sm:gap-x-6 justify-items-center ${
-            wall ? 'grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(300px,1fr))]' : 'grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(260px,1fr))]'
+            wall ? 'grid-cols-1 sm:grid-cols-[repeat(auto-fit,minmax(300px,1fr))]' : 'grid-cols-2 sm:grid-cols-[repeat(auto-fit,minmax(260px,1fr))]'
           }`}
         >
-          {shelfOrder(data.apps, apps.length > 0).map((l) => (
+          {shown.map((l) => (
             <Screen key={l.app} light={l} offline={offline} big={wall} />
           ))}
         </div>
@@ -287,9 +349,24 @@ export default function LabLightsPage() {
 
       {data && data.apps.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-4 text-xs font-medium">
-          <span className="px-2.5 py-1 rounded-full bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300">{counts.red} red</span>
-          <span className="px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300">{counts.yellow} yellow</span>
-          <span className="px-2.5 py-1 rounded-full bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300">{counts.green} green</span>
+          {(
+            [
+              ['red', 'bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-300 hover:bg-red-100 ring-red-400'],
+              ['yellow', 'bg-amber-50 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 hover:bg-amber-100 ring-amber-400'],
+              ['green', 'bg-green-50 text-green-700 dark:bg-green-900/30 dark:text-green-300 hover:bg-green-100 ring-green-400'],
+            ] as const
+          ).map(([state, cls]) => (
+            <button
+              key={state}
+              onClick={() => showOnly(state)}
+              aria-pressed={only === state}
+              title={only === state ? 'Show every light again' : `Show only the ${state} lights`}
+              className={`px-2.5 py-1 rounded-full transition-colors ${cls} ${only === state ? 'ring-2' : ''}`}
+            >
+              {counts[state]} {state}
+              {only === state ? ' · show all' : ''}
+            </button>
+          ))}
           {apps.length > 0 && (
             <button
               onClick={() => {

@@ -48,12 +48,44 @@ export function lightErrorsQuery(app: string): string {
   return `${lightLogsQuery(app)} ${LIGHTS_ERROR_CONDITION}`;
 }
 
+/**
+ * What a link on a light opens:
+ *   logs    the app's logs in the last 15 min (the "N logs" number)
+ *   errors  its errors in the last 15 min (the "N errors" number, "47 in 15 min")
+ *   usual   its errors in the 24 h before that ("usually N a day", the "4x normal" base)
+ *   week    its logs in the last 7 days (newest first: when it last sent, how long it's been quiet)
+ */
+export type LightLinkKind = 'logs' | 'errors' | 'usual' | 'week';
+
 /** Search link for one number on a light, or null when there is nothing to search by. */
-export function lightSearchUrl(app: string, kind: 'logs' | 'errors' | 'week'): string | null {
+export function lightSearchUrl(app: string, kind: LightLinkKind): string | null {
   if (!canDrillDown(app)) return null;
-  const q = kind === 'errors' ? lightErrorsQuery(app) : lightLogsQuery(app);
-  const params = new URLSearchParams({ q, earliest: kind === 'week' ? '-7d' : LIGHTS_EARLIEST });
+  const q = kind === 'errors' || kind === 'usual' ? lightErrorsQuery(app) : lightLogsQuery(app);
+  const params = new URLSearchParams({ q, earliest: kind === 'week' ? '-7d' : kind === 'usual' ? '-24h' : LIGHTS_EARLIEST });
+  if (kind === 'usual') params.set('latest', LIGHTS_EARLIEST);
   return `/search?${params.toString()}`;
+}
+
+/**
+ * Where the round screen itself leads: the logs behind its big word and the
+ * numbers in its small line. An alert opens the Alerts page (the rule that is
+ * firing); quiet opens the last 7 days (newest first, so the last log it sent
+ * is on top); a spike or errors up opens the 15-min errors; fine opens the
+ * 15-min logs.
+ */
+export function screenLink(app: string, headline: string): { url: string; title: string } | null {
+  if (headline === 'Alert') return { url: '/alerts', title: 'Open Alerts to see the rule that is firing' };
+  const kind: LightLinkKind =
+    headline === 'Gone quiet' || headline === 'Quiet' ? 'week' : headline === 'Error spike' || headline === 'Errors up' ? 'errors' : 'logs';
+  const url = lightSearchUrl(app, kind);
+  if (!url) return null;
+  const what = {
+    week: `Open ${app}'s logs from the last 7 days (the newest is the last one it sent)`,
+    errors: `Open ${app}'s errors from the last 15 minutes`,
+    logs: `Open ${app}'s logs from the last 15 minutes`,
+    usual: '',
+  }[kind];
+  return { url, title: what };
 }
 
 const STATE_RANK: Record<LightState, number> = { red: 0, yellow: 1, green: 2 };
