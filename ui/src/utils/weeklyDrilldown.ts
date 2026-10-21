@@ -42,7 +42,8 @@ export function errorMessageQuery(indexName: string, appName: string, message: s
 export function moneyDaysQuery(days?: string[]): string {
   const base = `search index=${quote(MONEY_INDEX)} kind="day"`;
   if (!days || days.length === 0) return base;
-  return `${base} day IN (${days.map(quote).join(', ')}) | dedup day`;
+  // out=* skips day rows without a total, as the paper's sum does
+  return `${base} day IN (${days.map(quote).join(', ')}) out=* | dedup day`;
 }
 
 export function spanUrl(query: string, span: Span): string {

@@ -891,6 +891,8 @@ export interface WeeklyReport {
   fixed: WeeklyFixedItem[];
   needs_you: HomeNeedsYouItem[];
   needs_you_as_of: string;
+  /** Home's app check failed, so the list can't say an app needs you. */
+  needs_you_apps_failed?: boolean;
   headline: string;
   spoken: string;
 }

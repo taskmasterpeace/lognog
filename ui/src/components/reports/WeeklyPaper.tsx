@@ -432,7 +432,7 @@ function needsLine(item: HomeNeedsYouItem): { text: string; link: React.ReactNod
   }
   const a = item.app;
   if (item.kind === 'error_spike') {
-    return { text: `${a.app_name}: ${a.detail}`, link: <MoreLink to={appErrorsUrl(a.index_name, a.app_name)}>Open the errors</MoreLink> };
+    return { text: `${a.app_name}: ${a.spike_detail ?? a.detail}`, link: <MoreLink to={appErrorsUrl(a.index_name, a.app_name)}>Open the errors</MoreLink> };
   }
   return { text: `${a.app_name} has gone quiet. ${a.detail}`, link: <MoreLink to={appLogsUrl(a.index_name, a.app_name, WINDOW_EARLIEST)}>Open its last logs</MoreLink> };
 }
@@ -443,7 +443,10 @@ function NeedsYou({ r }: { r: WeeklyReport }) {
     <section>
       <SectionHead>Needs you next week</SectionHead>
       <p className="-mt-1 mb-2 text-xs text-nog-500 dark:text-nog-400">As of now ({asOf}), the same list as Home</p>
-      {r.needs_you.length === 0 ? (
+      {r.needs_you_apps_failed && (
+        <p className="mb-2 text-sm text-red-600 dark:text-red-400">The app check failed just now, so this list may be missing apps. Home shows the apps once it loads.</p>
+      )}
+      {r.needs_you.length === 0 && r.needs_you_apps_failed ? null : r.needs_you.length === 0 ? (
         <Empty>Nothing needs you right now{r.alerts_hidden ? ' (alerts aren\'t checked for this login)' : ''}.</Empty>
       ) : (
         <ul className="list-disc space-y-1.5 pl-5 text-sm leading-relaxed text-nog-800 marker:text-nog-400 dark:text-nog-100">

@@ -1093,6 +1093,8 @@ export interface WeeklyReport {
   fixed: FixedItem[];
   needs_you: NeedsYouItem[];
   needs_you_as_of: string;
+  /** Home's app check failed, so the list can't say an app needs you. */
+  needs_you_apps_failed: boolean;
   /** The paper's lead headline, built from the first thing that broke (or the lack of one). */
   headline: string;
   spoken: string;
@@ -1191,7 +1193,8 @@ export function spokenText(r: Omit<WeeklyReport, 'spoken'>): string {
           : `${item.app.app_name} has gone quiet`,
     );
     parts.push(`Needs you next week: ${words.join('; ')}.`);
-  } else parts.push('Nothing needs you right now.');
+  } else if (!r.needs_you_apps_failed) parts.push('Nothing needs you right now.');
+  if (r.needs_you_apps_failed) parts.push("The app check for Needs you failed, so open Home to see the apps.");
   return parts.join(' ').replace(/\.\./g, '.');
 }
 
@@ -1272,6 +1275,7 @@ export async function getWeeklyReport(opts: {
     fixed,
     needs_you: home.needs_you,
     needs_you_as_of: home.generated_at,
+    needs_you_apps_failed: home.failed.includes('apps'),
     headline: '',
   };
   report.headline = headlineFor(report);

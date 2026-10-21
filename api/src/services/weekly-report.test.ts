@@ -38,6 +38,7 @@ import {
   buildWeeklyGapsSql,
   buildWeeklyErrorGroupsSql,
   buildMoneyDaysSql,
+  spokenText,
   buildWeeklyTotalsSql,
   assessWeeklyApp,
   judgeFiring,
@@ -436,6 +437,8 @@ describe('The LogNog Weekly on the lite (SQLite) backend', () => {
     for (let i = 0; i < 4; i++) {
       add('money', 'money-watch', 6, utc(2026, 10, 20 + i, 5), 'money day total', { kind: 'day', day: `2026-10-${19 + i}`, out: thisOut[i] });
     }
+    // a later Oct 21 row with no total: the paper skips it, so its link must too
+    add('money', 'money-watch', 6, utc(2026, 10, 22, 7), 'money day total', { kind: 'day', day: '2026-10-21' });
     // AI spend: 0.50 + 1.25 this week (and a zero that doesn't count), 3.00 in last week's same days
     add('apps', 'steady', 6, utc(2026, 10, 20, 15), 'image generated', { cost_usd: 0.5 });
     add('apps', 'steady', 6, utc(2026, 10, 22, 15), 'image generated', { cost_usd: 1.25 });
@@ -598,6 +601,7 @@ describe('The LogNog Weekly on the lite (SQLite) backend', () => {
     expect(thisRows.length).toBe(bank.days_counted);
     expect(thisRows.reduce((t, d) => t + Number(d.out), 0)).toBeCloseTo(bank.this_week!, 2);
     expect(thisRows.find(d => d.day === '2026-10-20')?.out).toBe(22);
+    expect(thisRows.find(d => d.day === '2026-10-21')?.out).toBe(33);
     const prevRows = await dayRows(bank.prev_days);
     expect(prevRows.length).toBe(bank.days_prev_counted);
     expect(prevRows.reduce((t, d) => t + Number(d.out), 0)).toBeCloseTo(bank.last_week!, 2);
@@ -637,6 +641,16 @@ describe('The LogNog Weekly on the lite (SQLite) backend', () => {
     expect(r.spoken).toContain('10 alerts fired, 7 reached you, 3 did not.');
     expect(r.spoken).toContain('Apps: 3 of 7 fine.');
     expect(r.spoken).not.toContain('..');
+  });
+
+  it('when Home\'s app check failed, it never says nothing needs you', async () => {
+    const r = await getWeeklyReport({ nowMs: NOW, tz: NY });
+    expect(r.needs_you_apps_failed).toBe(false);
+    const { spoken: _s, ...rest } = r;
+    const failed = spokenText({ ...rest, needs_you: [], needs_you_apps_failed: true });
+    expect(failed).not.toContain('Nothing needs you');
+    expect(failed).toContain('The app check for Needs you failed, so open Home to see the apps.');
+    expect(spokenText({ ...rest, needs_you: [], needs_you_apps_failed: false })).toContain('Nothing needs you right now.');
   });
 
   it('a finished week: the app that stopped on Friday went quiet, still quiet', async () => {
