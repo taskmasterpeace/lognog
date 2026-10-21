@@ -36,7 +36,11 @@ export interface AppLight {
    * "Error spike: 47 in 15 min, 4x normal".
    */
   why: string;
-  /** ISO time this state began, as far as this server has seen (resets when the API restarts). */
+  /**
+   * ISO time this colour began: an alert's fire time, the minute the logs ran out,
+   * or when this server saw the colour change. Null when it was already this
+   * colour when the server started watching (the memory resets on API restart).
+   */
   since: string | null;
   logs_last_15m: number;
   errors_last_15m: number;
@@ -297,7 +301,7 @@ interface CacheEntry {
 
 const cache = new Map<string, CacheEntry>();
 /** When each app entered its current state: `${scope}|${app}` -> state + reason + since. */
-const transitions = new Map<string, { state: LightState; reason: string; since: string }>();
+const transitions = new Map<string, { state: LightState; reason: string; since: string | null }>();
 let logQueries = 0;
 let clock: () => number = () => Date.now();
 
@@ -306,13 +310,20 @@ function scopeKey(allowedIndexes?: string[] | null): string {
   return [...new Set(allowedIndexes.map((i) => i.toLowerCase()))].sort().join(',');
 }
 
+/**
+ * When the light took its colour. A rule that knows its own start (an alert's
+ * fire time, the minute the logs ran out) gives it directly. Otherwise it is the
+ * moment this server saw the colour change; a light that was already this colour
+ * when the server started watching has no known start (null), rather than
+ * pretending it began at the API's start-up.
+ */
 function sinceFor(key: string, d: Decision, nowIso: string): string | null {
   const prev = transitions.get(key);
-  let since: string;
+  let since: string | null;
   if (d.since_hint) since = d.since_hint;
-  else if (prev && prev.state === d.state && prev.reason === d.reason) since = prev.since;
-  else if (prev && prev.state === d.state) since = prev.since; // same colour, new wording: keep the start
-  else since = nowIso;
+  else if (!prev) since = null; // first look: it was already like this, start unknown
+  else if (prev.state === d.state) since = prev.since; // same colour (maybe new wording): keep the start
+  else since = nowIso; // the colour changed while we watched
   transitions.set(key, { state: d.state, reason: d.reason, since });
   return since;
 }
@@ -419,4 +430,5 @@ export const _labLightsTesting = {
   setClock(fn: () => number): void {
     clock = fn;
   },
+  sinceFor,
 };

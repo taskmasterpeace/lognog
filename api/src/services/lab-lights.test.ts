@@ -13,6 +13,7 @@ import {
   normalErrorsPer15m,
   plainAge,
   WHY_HEADLINES,
+  _labLightsTesting,
   type FiringAlert,
 } from './lab-lights.js';
 import { ageSecondsFrom, parseServerTime, sourceStatusFromAge } from './source-status.js';
@@ -243,5 +244,31 @@ describe('words on the screen', () => {
   it('measures normal against the 24 h before the last 15 min', () => {
     expect(normalErrorsPer15m(1425)).toBeCloseTo(15, 5);
     expect(normalErrorsPer15m(0)).toBe(0);
+  });
+});
+
+describe('since (when the light took its colour)', () => {
+  const T1 = '2026-10-21T10:00:00.000Z';
+  const T2 = '2026-10-21T10:05:00.000Z';
+  const T3 = '2026-10-21T10:10:00.000Z';
+  const d = (state: 'green' | 'yellow' | 'red', reason: string, since_hint: string | null = null) => ({ state, why: 'x: y', since_hint, reason });
+
+  it('is unknown (null) on the first look, not the moment the API started', () => {
+    _labLightsTesting.reset();
+    expect(_labLightsTesting.sinceFor('*|a', d('green', 'fine'), T1)).toBeNull();
+    expect(_labLightsTesting.sinceFor('*|a', d('green', 'fine'), T2)).toBeNull();
+  });
+
+  it('starts when the colour changes while watched, and holds through new wording', () => {
+    _labLightsTesting.reset();
+    _labLightsTesting.sinceFor('*|a', d('green', 'fine'), T1);
+    expect(_labLightsTesting.sinceFor('*|a', d('red', 'spike'), T2)).toBe(T2);
+    expect(_labLightsTesting.sinceFor('*|a', d('red', 'quiet-ish'), T3)).toBe(T2);
+    expect(_labLightsTesting.sinceFor('*|a', d('green', 'fine'), T3)).toBe(T3);
+  });
+
+  it('a rule that knows its own start wins, even on the first look', () => {
+    _labLightsTesting.reset();
+    expect(_labLightsTesting.sinceFor('*|b', d('red', 'alert:1', T1), T3)).toBe(T1);
   });
 });

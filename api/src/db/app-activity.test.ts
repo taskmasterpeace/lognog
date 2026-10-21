@@ -131,7 +131,7 @@ describe('lab lights over real Lite rows and real alerts', () => {
     expect(by['money-watch']).toMatchObject({ state: 'green' });
   });
 
-  it('since: alert red starts when it fired, quiet red when the hour ran out, others when first seen', async () => {
+  it('since: alert red starts when it fired, quiet red when the hour ran out, others unknown until they change', async () => {
     const t0 = Date.now();
     _labLightsTesting.setClock(() => t0);
     const first = Object.fromEntries((await getLabLights()).apps.map((a) => [a.app, a]));
@@ -139,13 +139,14 @@ describe('lab lights over real Lite rows and real alerts', () => {
     expect(first.hyh.since).toBe(new Date(hyhFired.last_triggered).toISOString());
     const lastSeen = Date.parse(first['homework-tree'].last_seen!);
     expect(first['homework-tree'].since).toBe(new Date(lastSeen + HOUR).toISOString());
-    expect(first['knuckle-up'].since).toBe(new Date(t0).toISOString());
+    expect(first['knuckle-up'].since).toBeNull();
 
     // 20 s later (past the 15 s cache), same states: the start time holds.
     _labLightsTesting.setClock(() => t0 + 20_000);
     const again = Object.fromEntries((await getLabLights()).apps.map((a) => [a.app, a]));
     expect(_labLightsTesting.queries()).toBe(2);
-    expect(again['knuckle-up'].since).toBe(new Date(t0).toISOString());
+    expect(again['knuckle-up'].since).toBeNull();
+    expect(again.hyh.since).toBe(first.hyh.since);
   });
 
   it('runs one log query per key scope at most every 15 s, however many screens ask', async () => {
