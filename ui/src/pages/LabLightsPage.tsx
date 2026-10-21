@@ -440,7 +440,7 @@ export default function LabLightsPage() {
             <span className="w-2.5 h-2.5 rounded-full" style={{ background: LIGHT_COLORS.green.ring }} /> Green
           </div>
           <p className="text-nog-600 dark:text-nog-400">
-            Logs arrived in the last 15 minutes (Data Sources says Active) and errors are at their usual rate. Acknowledged alerts stop counting.
+            Logs arrived in the last 15 minutes (Data Sources says Active) and errors are at their usual rate. Acknowledged or silenced alerts stop counting.
           </p>
         </div>
       </div>
