@@ -491,16 +491,19 @@ export function buildMoneyDaysSql(backend: Backend, days: string[], fromMs: numb
   const now = timeLiteral(backend, nowMs);
   const idx = stringLiteral(MONEY_INDEX);
   if (backend === 'clickhouse') {
-    return `SELECT day, argMax(out, timestamp) AS out
+    // The inner column is day_out, not out: ClickHouse swaps an alias in for a
+    // same-named column, so `argMax(out, ...) AS out` plus `WHERE out ...` puts an
+    // aggregate inside WHERE (ILLEGAL_AGGREGATION) and argMax inside itself.
+    return `SELECT day, argMax(day_out, timestamp) AS out
 FROM (
   SELECT JSONExtractString(structured_data, 'day') AS day,
-    toFloat64OrNull(if(JSONType(structured_data, 'out') = 'String', JSONExtractString(structured_data, 'out'), JSONExtractRaw(structured_data, 'out'))) AS out,
+    toFloat64OrNull(if(JSONType(structured_data, 'out') = 'String', JSONExtractString(structured_data, 'out'), JSONExtractRaw(structured_data, 'out'))) AS day_out,
     timestamp
   FROM lognog.logs
   WHERE index_name = ${idx} AND timestamp >= ${from} AND timestamp <= ${now}
     AND JSONExtractString(structured_data, 'kind') = 'day'
 )
-WHERE day IN (${list}) AND out IS NOT NULL
+WHERE day IN (${list}) AND day_out IS NOT NULL
 GROUP BY day
 ORDER BY day`;
   }

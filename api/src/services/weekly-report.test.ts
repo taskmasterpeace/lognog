@@ -160,12 +160,38 @@ describe('ClickHouse SQL builders (live backend)', () => {
 
   it('reads money-watch day totals, newest row per day, and refuses odd days', () => {
     const sql = buildMoneyDaysSql('clickhouse', ['2026-10-19', '2026-10-20'], s.prevStartMs, NOW);
-    expect(sql).toContain('argMax(out, timestamp) AS out');
+    expect(sql).toContain('argMax(day_out, timestamp) AS out');
     expect(sql).toContain("WHERE index_name = 'money'");
     expect(sql).toContain("JSONExtractString(structured_data, 'kind') = 'day'");
-    expect(sql).toContain("WHERE day IN ('2026-10-19', '2026-10-20') AND out IS NOT NULL");
+    expect(sql).toContain("WHERE day IN ('2026-10-19', '2026-10-20') AND day_out IS NOT NULL");
     expect(() => buildMoneyDaysSql('clickhouse', ["2026-10-19'; DROP"], 0, NOW)).toThrow();
     expect(() => buildMoneyDaysSql('clickhouse', [], 0, NOW)).toThrow();
+  });
+
+  // ClickHouse replaces a column with a same-named alias everywhere in the
+  // query level, so an aggregate alias that shares a name used in its own
+  // argument or in a WHERE turns into ILLEGAL_AGGREGATION / a cyclic alias.
+  it('never names an aggregate after something its own expression or a WHERE reads', () => {
+    const AGG = /\b(count|countIf|sum|sumIf|min|minIf|max|maxIf|argMax|groupUniqArray|groupUniqArrayIf)\(/;
+    const sqls = {
+      apps: buildWeeklyAppsSql('clickhouse', s, ['hyh']),
+      gaps: buildWeeklyGapsSql('clickhouse', s, ['hyh']),
+      errors: buildWeeklyErrorGroupsSql('clickhouse', s, ['hyh']),
+      money: buildMoneyDaysSql('clickhouse', ['2026-10-19'], s.prevStartMs, NOW),
+    };
+    for (const [name, sql] of Object.entries(sqls)) {
+      const wheres = [...sql.matchAll(/\bWHERE\b([\s\S]*?)(?=\bGROUP BY\b|\bORDER BY\b|\bLIMIT\b|\)\s*$|$)/g)].map(m => m[1]);
+      let aggregates = 0;
+      for (const line of sql.split('\n')) {
+        const m = line.match(/^(.*)\bAS (\w+),?\s*$/);
+        if (!m || !AGG.test(m[1])) continue;
+        aggregates++;
+        const alias = new RegExp(`\\b${m[2]}\\b`);
+        expect(alias.test(m[1]), `${name}: ${m[2]} reads itself`).toBe(false);
+        for (const w of wheres) expect(alias.test(w), `${name}: ${m[2]} used in a WHERE`).toBe(false);
+      }
+      expect(aggregates, `${name} has aggregates to check`).toBeGreaterThan(0);
+    }
   });
 });
 
