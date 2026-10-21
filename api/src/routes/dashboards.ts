@@ -51,6 +51,7 @@ import {
 } from '../db/sqlite.js';
 import { authenticate, denyReadonly, rateLimit } from '../auth/middleware.js';
 import { requireOwnerOrAdmin, withOwnership } from '../auth/ownership.js';
+import { apiKeyNeed, keyHasNeed } from '../auth/key-policy.js';
 import { executeDSLQuery } from '../db/backend.js';
 
 const router = Router();
@@ -241,8 +242,50 @@ router.use('/:id', (req: Request, res: Response, next) => {
   if (req.method === 'GET') return next();
   // Collection-level POSTs (e.g. /from-wizard, /import) are not dashboard ids.
   const dashboard = getDashboard(req.params.id);
-  if (!dashboard) return next();
+  if (!dashboard) {
+    // A change UNDER a dashboard that does not exist (e.g. DELETE
+    // /dashboards/<nothing>/variables/<someone else's variable>) used to skip
+    // the owner check and act on the child id alone. The only collection
+    // routes with a deeper path are /templates/:templateId/create.
+    if (req.path !== '/' && req.params.id.toLowerCase() !== 'templates') {
+      return res.status(404).json({ error: 'Dashboard not found' });
+    }
+    return next();
+  }
   if (!requireOwnerOrAdmin(req, res, dashboard, 'dashboard')) return;
+  // A dashboard shared by public link runs its panel queries for anyone, on
+  // every index. An API key without 'admin' may not change what it shows.
+  if (
+    dashboard.is_public &&
+    req.authMethod === 'apikey' &&
+    !keyHasNeed(req.apiKeyPermissions, 'admin') &&
+    apiKeyNeed(req.method, `/dashboards/${req.params.id}${req.path}`) !== 'read' &&
+    !/^\/duplicate\/?$/i.test(req.path) // copies it into a new, unshared dashboard
+  ) {
+    return res.status(403).json({
+      error: "This dashboard is shared by a public link, so only an API key with the 'admin' permission can change it",
+    });
+  }
+  next();
+});
+
+// Every change to a panel, variable, page, annotation or logo must name the
+// dashboard it really belongs to; the handlers below act on the child id.
+const CHILD_LISTS: Record<string, (dashboardId: string) => Array<{ id: string }>> = {
+  panels: getDashboardPanels,
+  variables: getDashboardVariables,
+  pages: getDashboardPages,
+  annotations: getDashboardAnnotations,
+  logos: getDashboardLogos,
+};
+const COLLECTION_WORDS = new Set(['copy', 'reorder', 'preview-options']);
+router.use('/:id/:kind/:childId', (req: Request, res: Response, next) => {
+  if (req.method === 'GET') return next();
+  const list = CHILD_LISTS[req.params.kind.toLowerCase()];
+  if (!list || COLLECTION_WORDS.has(req.params.childId.toLowerCase())) return next();
+  if (!list(req.params.id).some((c) => c.id === req.params.childId)) {
+    return res.status(404).json({ error: `Not found on this dashboard` });
+  }
   next();
 });
 

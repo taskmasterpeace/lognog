@@ -11,10 +11,10 @@ import { useConfirm } from '../../../components/ui/ConfirmDialog';
  */
 const API_KEY_PERMISSIONS: { value: string; label: string; hint: string }[] = [
   { value: 'write', label: 'send logs', hint: 'Send logs to the ingest endpoints. Nothing else.' },
-  { value: 'read', label: 'read', hint: 'Search logs and view stats, dashboards and alerts. Changes nothing.' },
-  { value: 'alerts:write', label: 'alerts:write', hint: 'Create, change and delete alerts and silences.' },
-  { value: 'dashboards:write', label: 'dashboards:write', hint: 'Create, change and delete dashboards and panels.' },
-  { value: 'admin', label: 'admin', hint: 'Everything except sending logs: settings, users, API keys, AI.' },
+  { value: 'read', label: 'read', hint: 'Search logs and view stats, dashboards and alerts (webhook addresses stay hidden). Changes nothing.' },
+  { value: 'alerts:write', label: 'alerts:write', hint: 'Create, change and delete alerts and silences. Cannot add or run script actions; that needs admin.' },
+  { value: 'dashboards:write', label: 'dashboards:write', hint: 'Create, change and delete dashboards and panels. Cannot share a public link or change a shared dashboard; that needs admin.' },
+  { value: 'admin', label: 'admin', hint: 'Everything except sending logs: settings, users, API keys, AI, script actions, public links.' },
 ];
 
 export default function AccountTab() {

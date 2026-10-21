@@ -620,16 +620,19 @@ export function logAlertAction(data: {
   success: boolean;
   message: string;
 }): void {
+  // Any API key that can read searches the lognog-internal index, so what a
+  // script printed (it can hold anything) stays in alert history only.
+  const message = data.action_type === 'script' ? data.message.split(':')[0] : data.message;
   logInternalEvent({
     action: 'alert.action_sent',
     category: 'alert',
-    message: `Alert "${data.alert_name}" action ${data.action_type}: ${data.message}`,
+    message: `Alert "${data.alert_name}" action ${data.action_type}: ${message}`,
     success: data.success,
     details: {
       alert_id: data.alert_id,
       alert_name: data.alert_name,
       action_type: data.action_type,
-      result: data.message,
+      result: message,
     },
     severity: data.success ? SEVERITY.INFO : SEVERITY.WARNING,
   }).catch(() => {});

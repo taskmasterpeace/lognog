@@ -20,6 +20,7 @@ import { createDashboardPanel, getDashboard } from '../db/sqlite.js';
 import { getSQLiteDB } from '../db/sqlite.js';
 import { v4 as uuidv4 } from 'uuid';
 import { authenticate, optionalAuth, denyReadonly } from '../auth/middleware.js';
+import { scriptActionForbidden, restoreHiddenActions } from '../auth/alert-action-guard.js';
 import { reseedSavedSearches } from '../data/seed-templates.js';
 import type { SavedSearch } from '../db/sqlite-saved-searches.js';
 
@@ -496,6 +497,16 @@ router.post('/:id/create-alert', authenticate, denyReadonly, (req: Request, res:
     if (!enforceOwnership(req, res, search, true)) return;
 
     const data = createAlertSchema.parse(req.body || {});
+    // Script actions run commands on the server: admins only (and, for an
+    // API key, only a key that carries 'admin'). This route used to skip it.
+    const forbidden = scriptActionForbidden(req, data.actions);
+    if (forbidden) {
+      return res.status(403).json({ error: forbidden });
+    }
+    const restored = restoreHiddenActions(data.actions, null);
+    if ('error' in restored) {
+      return res.status(400).json({ error: restored.error });
+    }
 
     const alert = createAlert(`Alert: ${search.name}`, search.query, {
       description: `Created from saved search: ${search.name}`,

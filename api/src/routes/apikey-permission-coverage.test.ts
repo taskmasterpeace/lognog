@@ -39,6 +39,8 @@ vi.mock('../auth/api-key-cache.js', async (importOriginal) => {
   const memo = new Map<string, ReturnType<typeof real.resolveApiKeyCached>>();
   return {
     resolveApiKeyCached: (req: Parameters<typeof real.resolveApiKeyCached>[0], k: string) => {
+      // Stands in for a database error while the key is looked up.
+      if (k === 'lnog_kl_db_down_000000000000000000000000000000') return Promise.reject(new Error('database is locked'));
       if (!memo.has(k)) memo.set(k, real.resolveApiKeyCached(req, k));
       return memo.get(k)!;
     },
@@ -54,6 +56,7 @@ import { requireAdmin } from '../auth/middleware.js';
 import { apiKeyNeed, decideApiKey } from '../auth/key-policy.js';
 import { API_ROUTERS, mountApiRoutes } from './mount.js';
 import { closeDatabase } from '../db/sqlite.js';
+import { createAlertHistoryEntry } from '../db/sqlite-alerts.js';
 
 // ---------------------------------------------------------------------------
 // Route table, read from the real routers.
@@ -142,16 +145,27 @@ const SCOPED_READS = new Set([
   'GET /auth/me', 'POST /reports/generate',
 ]);
 
+/** Changes that need an admin key even though they sit under /alerts or /dashboards. */
+const ADMIN_CHANGES = new Set([
+  'POST /alerts/evaluate-all', // runs every user's alerts, script actions included
+  'POST /dashboards/kl-none/share', 'PUT /dashboards/kl-none/share', 'DELETE /dashboards/kl-none/share', // public link
+]);
+
+/** Ingest routes an index-scoped key may not use (alert pop-ups carry any index). */
+const INGEST_UNSCOPED = new Set(['GET /ingest/notifications', 'POST /ingest/notifications/kl-none/ack']);
+
 const isPublic = (r: RouteRow) => PUBLIC.has(key(r));
 const isIngest = (r: RouteRow) => INGEST.has(key(r));
 const isAlertChange = (r: RouteRow) =>
   r.method !== 'GET' &&
   !READ_POSTS.has(key(r)) &&
+  !ADMIN_CHANGES.has(key(r)) &&
   (/^\/(alerts|silences)(\/|$)/.test(r.path) || /^\/agent\/alerts(\/|$)/.test(r.path) ||
     /^\/saved-searches\/[^/]+\/create-alert$/.test(r.path));
 const isDashboardChange = (r: RouteRow) =>
   r.method !== 'GET' &&
   !READ_POSTS.has(key(r)) &&
+  !ADMIN_CHANGES.has(key(r)) &&
   ((/^\/dashboards(\/|$)/.test(r.path) && !isPublic(r)) || /^\/saved-searches\/[^/]+\/create-panel$/.test(r.path));
 const isRead = (r: RouteRow) =>
   !isPublic(r) && !isIngest(r) &&
@@ -183,6 +197,7 @@ beforeAll(async () => {
   K.alerts = await mk('alerts writer', ['alerts:write']);
   K.dashboards = await mk('dashboards writer', ['dashboards:write']);
   K.admin = await mk('admin key', ['admin']);
+  K.alertsRw = await mk('alerts reader-writer', ['read', 'alerts:write']);
   K.star = await mk('star key', ['*']);
   jwtAdmin = (await generateTokenPair(admin)).accessToken;
 
@@ -250,7 +265,7 @@ describe('route table', () => {
     expect(notPublic).toEqual([]);
     // and the hand list names only routes that exist
     for (const k of PUBLIC) expect(ROUTES.some((r) => key(r) === k), k).toBe(true);
-    for (const k of [...INGEST, ...READ_POSTS, ...SCOPED_READS]) expect(ROUTES.some((r) => key(r) === k), k).toBe(true);
+    for (const k of [...INGEST, ...READ_POSTS, ...SCOPED_READS, ...ADMIN_CHANGES, ...INGEST_UNSCOPED]) expect(ROUTES.some((r) => key(r) === k), k).toBe(true);
   });
 });
 
@@ -260,9 +275,9 @@ describe('key lock: every route x every kind of key', () => {
     expect(mismatches(m, (r) => !isPublic(r) && !isIngest(r))).toEqual([]);
   });
 
-  it('an index-scoped ingest key can only ingest', async () => {
+  it('an index-scoped ingest key can only ingest (and gets no alert pop-ups)', async () => {
     const m = await refusedMap(K.ingestScoped);
-    expect(mismatches(m, (r) => !isPublic(r) && !isIngest(r))).toEqual([]);
+    expect(mismatches(m, (r) => !isPublic(r) && (!isIngest(r) || INGEST_UNSCOPED.has(key(r))))).toEqual([]);
   });
 
   it('a read-only key can read but change nothing and send no logs', async () => {
@@ -548,5 +563,269 @@ describe('policy defaults', () => {
     expect(apiKeyNeed('POST', '/something-new')).toBe('admin');
     expect(apiKeyNeed('DELETE', '/something-new/1')).toBe('admin');
     expect(apiKeyNeed('GET', '/something-new')).toBe('read');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Critic round 2 on 7ca2889: script actions, public share links, action
+// secrets, a gate that failed open, and alert pop-ups for scoped keys.
+// ---------------------------------------------------------------------------
+describe('round 3: script actions need an admin key on every route that writes actions', () => {
+  const script = [{ type: 'script', config: { command: 'echo kl' } }];
+  let scriptAlertId = '';
+  let userJwt = '';
+
+  beforeAll(async () => {
+    const made = await request(realSrv)
+      .post('/alerts')
+      .set('Authorization', `ApiKey ${K.admin}`)
+      .send({ name: 'kl script alert', search_query: 'search *', actions: script, enabled: false });
+    expect(made.status).toBe(201);
+    scriptAlertId = made.body.id;
+    const u = await createUser('kl-user', 'kl-user@example.invalid', 'kl-user-test-pass-1', 'user');
+    userJwt = (await generateTokenPair(u)).accessToken;
+  });
+
+  it('an alerts:write key cannot attach a script anywhere; an admin key and a browser admin can', async () => {
+    const a = { Authorization: `ApiKey ${K.alerts}` };
+    const body = { name: 'kl s', search_query: 'search *', actions: script };
+    const plain = (await request(realSrv).post('/alerts').set(a).send({ name: 'kl plain', search_query: 'search *' })).body;
+    const ss = (await request(realSrv).post('/saved-searches').set('Authorization', `Bearer ${jwtAdmin}`)
+      .send({ name: 'kl saved', query: 'search *' })).body;
+    expect(ss.id).toBeTruthy();
+
+    const tries = [
+      await request(realSrv).post('/alerts').set(a).send(body),
+      await request(realSrv).put(`/alerts/${plain.id}`).set(a).send({ actions: script }),
+      await request(realSrv).post('/agent/alerts').set(a).send(body),
+      await request(realSrv).patch(`/agent/alerts/${plain.id}`).set(a).send({ actions: script }),
+      await request(realSrv).post(`/saved-searches/${ss.id}/create-alert`).set(a).send({ actions: script }),
+    ];
+    for (const t of tries) {
+      expect(t.status, t.text).toBe(403);
+      expect(t.body.error).toMatch(/admin/);
+    }
+    const stored = (await request(realSrv).get(`/alerts/${plain.id}`).set('Authorization', `Bearer ${jwtAdmin}`)).body;
+    expect(stored.actions).toEqual([]);
+
+    expect((await request(realSrv).post('/agent/alerts').set('Authorization', `ApiKey ${K.admin}`).send(body)).status).toBe(201);
+    expect((await request(realSrv).post('/alerts').set('Authorization', `Bearer ${jwtAdmin}`).send(body)).status).toBe(201);
+  });
+
+  it('a non-admin browser user cannot attach a script through a saved search either', async () => {
+    const ss = (await request(realSrv).post('/saved-searches').set('Authorization', `Bearer ${userJwt}`)
+      .send({ name: 'kl user saved', query: 'search *' })).body;
+    expect(ss.id).toBeTruthy();
+    const res = await request(realSrv).post(`/saved-searches/${ss.id}/create-alert`)
+      .set('Authorization', `Bearer ${userJwt}`).send({ actions: script });
+    expect(res.status).toBe(403);
+  });
+
+  it('an alert that already runs a script cannot be changed, run, switched or deleted by an alerts:write key', async () => {
+    const a = { Authorization: `ApiKey ${K.alerts}` };
+    const tries = [
+      await request(realSrv).put(`/alerts/${scriptAlertId}`).set(a).send({ name: 'renamed' }),
+      await request(realSrv).post(`/alerts/${scriptAlertId}/toggle`).set(a).send({}),
+      await request(realSrv).post(`/alerts/${scriptAlertId}/evaluate`).set(a).send({}),
+      await request(realSrv).delete(`/alerts/${scriptAlertId}`).set(a),
+      await request(realSrv).patch(`/agent/alerts/${scriptAlertId}`).set(a).send({ name: 'renamed' }),
+      await request(realSrv).post(`/agent/alerts/${scriptAlertId}/evaluate`).set(a).send({}),
+      await request(realSrv).delete(`/agent/alerts/${scriptAlertId}`).set(a),
+    ];
+    for (const t of tries) expect(t.status, t.text).toBe(403);
+    const stored = (await request(realSrv).get(`/alerts/${scriptAlertId}`).set('Authorization', `Bearer ${jwtAdmin}`)).body;
+    expect(stored.name).toBe('kl script alert');
+    expect(stored.enabled).toBeFalsy();
+    // the admin key still can
+    expect((await request(realSrv).post(`/alerts/${scriptAlertId}/toggle`).set('Authorization', `ApiKey ${K.admin}`).send({})).status).toBe(200);
+    expect((await request(realSrv).post(`/alerts/${scriptAlertId}/toggle`).set('Authorization', `ApiKey ${K.admin}`).send({})).status).toBe(200);
+  });
+
+  it('running every alert at once needs an admin key', async () => {
+    const res = await request(realSrv).post('/alerts/evaluate-all').set('Authorization', `ApiKey ${K.alerts}`).send({});
+    expect(res.status).toBe(403);
+    expect(res.body.needed).toBe('admin');
+  });
+});
+
+describe('round 3: action secrets are hidden from keys without admin', () => {
+  const URL_ = 'https://hooks.example.invalid/services/kl-secret-path';
+  const HEADERS = { Authorization: 'Bearer kl-secret-header' };
+  let id = '';
+  const jwt = () => ({ Authorization: `Bearer ${jwtAdmin}` });
+
+  beforeAll(async () => {
+    const made = await request(realSrv).post('/alerts').set(jwt()).send({
+      name: 'kl webhook alert', search_query: 'search *', enabled: false,
+      actions: [{ type: 'webhook', config: { url: URL_, method: 'POST', headers: HEADERS } }],
+    });
+    expect(made.status).toBe(201);
+    id = made.body.id;
+    createAlertHistoryEntry(id, 1, 'high', {
+      actions_executed: [{ type: 'webhook', success: true, message: `Webhook POST ${URL_} - 200` }],
+    });
+  });
+
+  it('read, read+alerts:write and DP-style keys see [hidden]; admin keys and browsers see the values', async () => {
+    for (const k of [K.read, K.alertsRw, K.search]) {
+      const h = { Authorization: `ApiKey ${k}` };
+      const bodies = [
+        (await request(realSrv).get('/alerts').set(h)).body,
+        (await request(realSrv).get(`/alerts/${id}`).set(h)).body,
+        (await request(realSrv).get('/agent/alerts').set(h)).body,
+        (await request(realSrv).get(`/agent/alerts/${id}`).set(h)).body,
+        (await request(realSrv).get('/alerts/history').set(h)).body,
+        (await request(realSrv).get(`/alerts/${id}/history`).set(h)).body,
+      ];
+      const text = JSON.stringify(bodies);
+      expect(text).not.toContain('kl-secret');
+      expect(text).toContain('[hidden]');
+      const one = (await request(realSrv).get(`/alerts/${id}`).set(h)).body;
+      expect(one.actions[0].config).toEqual({ url: '[hidden]', method: 'POST', headers: '[hidden]' });
+    }
+    for (const h of [jwt(), { Authorization: `ApiKey ${K.admin}` }]) {
+      const one = (await request(realSrv).get(`/alerts/${id}`).set(h)).body;
+      expect(one.actions[0].config.url).toBe(URL_);
+      const hist = (await request(realSrv).get(`/alerts/${id}/history`).set(h)).body;
+      expect(JSON.stringify(hist)).toContain('kl-secret-path');
+    }
+  });
+
+  it('sending a hidden alert back keeps the stored secrets', async () => {
+    const h = { Authorization: `ApiKey ${K.alertsRw}` };
+    const got = (await request(realSrv).get(`/alerts/${id}`).set(h)).body;
+    const put = await request(realSrv).put(`/alerts/${id}`).set(h).send({ name: 'kl webhook alert 2', actions: got.actions });
+    expect(put.status, put.text).toBe(200);
+    expect(JSON.stringify(put.body)).not.toContain('kl-secret');
+    const patch = await request(realSrv).patch(`/agent/alerts/${id}`).set(h).send({ actions: got.actions });
+    expect(patch.status, patch.text).toBe(200);
+    const stored = (await request(realSrv).get(`/alerts/${id}`).set(jwt())).body;
+    expect(stored.name).toBe('kl webhook alert 2');
+    expect(stored.actions[0].config).toEqual({ url: URL_, method: 'POST', headers: HEADERS });
+  });
+
+  it('a key cannot keep the hidden headers while pointing the webhook somewhere else', async () => {
+    const h = { Authorization: `ApiKey ${K.alertsRw}` };
+    const evil = [{ type: 'webhook', config: { url: 'https://evil.example.invalid/', method: 'POST', headers: '[hidden]' } }];
+    for (const t of [
+      await request(realSrv).put(`/alerts/${id}`).set(h).send({ actions: evil }),
+      await request(realSrv).patch(`/agent/alerts/${id}`).set(h).send({ actions: evil }),
+      // a hidden value in a NEW place has nothing to keep
+      await request(realSrv).put(`/alerts/${id}`).set(h).send({ actions: [{ type: 'log', config: {} }, ...evil] }),
+      await request(realSrv).post('/alerts').set(h).send({ name: 'kl copy', search_query: 'search *', actions: evil }),
+      await request(realSrv).post('/agent/alerts').set(h).send({ name: 'kl copy', search_query: 'search *', actions: evil }),
+    ]) {
+      expect(t.status, t.text).toBe(400);
+    }
+    const stored = (await request(realSrv).get(`/alerts/${id}`).set(jwt())).body;
+    expect(stored.actions).toHaveLength(1);
+    expect(stored.actions[0].config).toEqual({ url: URL_, method: 'POST', headers: HEADERS });
+  });
+
+  it('a key can still replace every secret of an action outright', async () => {
+    const h = { Authorization: `ApiKey ${K.alertsRw}` };
+    const fresh = [{ type: 'webhook', config: { url: 'https://new.example.invalid/x', method: 'POST' } }];
+    const res = await request(realSrv).put(`/alerts/${id}`).set(h).send({ actions: fresh });
+    expect(res.status, res.text).toBe(200);
+    const stored = (await request(realSrv).get(`/alerts/${id}`).set(jwt())).body;
+    expect(stored.actions[0].config.url).toBe('https://new.example.invalid/x');
+    // stored headers the caller did not mention are kept only on a hidden round trip, not here
+    expect(stored.actions[0].config.headers).toBeUndefined();
+  });
+});
+
+describe('round 3: public share links and dashboard parts', () => {
+  const jwt = () => ({ Authorization: `Bearer ${jwtAdmin}` });
+  const dk = () => ({ Authorization: `ApiKey ${K.dashboards}` });
+
+  it('a dashboards:write key cannot share a dashboard; an admin key can', async () => {
+    const d = (await request(realSrv).post('/dashboards').set(dk()).send({ name: 'kl share me' })).body;
+    expect(d.id).toBeTruthy();
+    const no = await request(realSrv).post(`/dashboards/${d.id}/share`).set(dk()).send({});
+    expect(no.status).toBe(403);
+    expect(no.body.needed).toBe('admin');
+    expect((await request(realSrv).put(`/dashboards/${d.id}/share`).set(dk()).send({ is_public: true })).status).toBe(403);
+    const stored = (await request(realSrv).get(`/dashboards/${d.id}`).set(jwt())).body;
+    expect(stored.is_public).toBeFalsy();
+    expect((await request(realSrv).post(`/dashboards/${d.id}/share`).set('Authorization', `ApiKey ${K.admin}`).send({})).status).toBe(200);
+  });
+
+  it('a dashboards:write key cannot change what an already shared dashboard shows', async () => {
+    const d = (await request(realSrv).post('/dashboards').set(jwt()).send({ name: 'kl shared' })).body;
+    const p = (await request(realSrv).post(`/dashboards/${d.id}/panels`).set(jwt()).send({ title: 'kl', query: 'search index=uptime' })).body;
+    expect(p.id).toBeTruthy();
+    expect((await request(realSrv).post(`/dashboards/${d.id}/share`).set(jwt()).send({})).status).toBe(200);
+    const tries = [
+      await request(realSrv).put(`/dashboards/${d.id}/panels/${p.id}`).set(dk()).send({ query: 'search index=money' }),
+      await request(realSrv).post(`/dashboards/${d.id}/panels`).set(dk()).send({ title: 'x', query: 'search index=money' }),
+      await request(realSrv).put(`/dashboards/${d.id}`).set(dk()).send({ name: 'renamed' }),
+      await request(realSrv).delete(`/dashboards/${d.id}`).set(dk()),
+    ];
+    for (const t of tries) expect(t.status, t.text).toBe(403);
+    const panels = (await request(realSrv).get(`/dashboards/${d.id}`).set(jwt())).body.panels as Array<{ id: string; query: string }>;
+    expect(panels.find((x) => x.id === p.id)?.query).toBe('search index=uptime');
+    expect(panels).toHaveLength(1);
+    // copying it into a new (unshared) dashboard is fine, and so is a browser admin
+    expect((await request(realSrv).post(`/dashboards/${d.id}/duplicate`).set(dk()).send({})).status).toBeLessThan(300);
+    expect((await request(realSrv).put(`/dashboards/${d.id}/panels/${p.id}`).set(jwt()).send({ title: 'ok' })).status).toBe(200);
+  });
+
+  it("a user cannot reach someone else's dashboard parts through their own (or a missing) dashboard", async () => {
+    const u = await createUser('kl-user2', 'kl-user2@example.invalid', 'kl-user2-test-pass-1', 'user');
+    const uj = { Authorization: `Bearer ${(await generateTokenPair(u)).accessToken}` };
+    const mine = (await request(realSrv).post('/dashboards').set(uj).send({ name: 'kl mine' })).body;
+    const theirs = (await request(realSrv).post('/dashboards').set(jwt()).send({ name: 'kl theirs' })).body;
+    const v = (await request(realSrv).post(`/dashboards/${theirs.id}/variables`).set(jwt()).send({ name: 'host', type: 'custom', custom_values: 'a,b' })).body;
+    const pg = (await request(realSrv).post(`/dashboards/${theirs.id}/pages`).set(jwt()).send({ name: 'Theirs' })).body;
+    const p = (await request(realSrv).post(`/dashboards/${theirs.id}/panels`).set(jwt()).send({ title: 'theirs', query: 'search *' })).body;
+    const a = (await request(realSrv).post(`/dashboards/${theirs.id}/annotations`).set(jwt()).send({ timestamp: new Date().toISOString(), title: 'theirs' })).body;
+    expect([v.id, pg.id, p.id, a.id].every(Boolean)).toBe(true);
+
+    for (const via of [mine.id, 'kl-no-such-dashboard']) {
+      const tries = [
+        await request(realSrv).delete(`/dashboards/${via}/variables/${v.id}`).set(uj),
+        await request(realSrv).put(`/dashboards/${via}/variables/${v.id}`).set(uj).send({ name: 'pwned' }),
+        await request(realSrv).put(`/dashboards/${via}/pages/${pg.id}`).set(uj).send({ name: 'pwned' }),
+        await request(realSrv).delete(`/dashboards/${via}/pages/${pg.id}`).set(uj),
+        await request(realSrv).put(`/dashboards/${via}/panels/${p.id}`).set(uj).send({ title: 'pwned' }),
+        await request(realSrv).delete(`/dashboards/${via}/panels/${p.id}`).set(uj),
+        await request(realSrv).delete(`/dashboards/${via}/annotations/${a.id}`).set(uj),
+      ];
+      for (const t of tries) expect(t.status, `${via}: ${t.text}`).toBe(404);
+    }
+    const full = (await request(realSrv).get(`/dashboards/${theirs.id}`).set(jwt())).body;
+    expect(full.panels.map((x: { id: string; title: string }) => [x.id, x.title])).toEqual([[p.id, 'theirs']]);
+    const vars = (await request(realSrv).get(`/dashboards/${theirs.id}/variables`).set(jwt())).body as Array<{ id: string; name: string }>;
+    expect(vars.find((x) => x.id === v.id)?.name).toBe('host');
+    const pages = (await request(realSrv).get(`/dashboards/${theirs.id}/pages`).set(jwt())).body as Array<{ id: string; name: string }>;
+    expect(pages.find((x) => x.id === pg.id)?.name).toBe('Theirs');
+    const ann = (await request(realSrv).get(`/dashboards/${theirs.id}/annotations`).set(jwt())).body as Array<{ id: string }>;
+    expect(ann.map((x) => x.id)).toContain(a.id);
+  });
+});
+
+describe('round 3: the gate fails closed, and alert pop-ups need an unscoped key', () => {
+  it('a key that cannot be checked (database error) gets 500 and never reaches the route', async () => {
+    const h = { Authorization: 'ApiKey lnog_kl_db_down_000000000000000000000000000000' };
+    for (const [m, p] of [['get', '/alerts'], ['post', '/alerts'], ['post', '/ingest/http'], ['get', '/auth/api-keys']] as const) {
+      const res = await request(gateSrv)[m](p).set(h).send(m === 'post' ? {} : undefined);
+      expect(res.status, `${m} ${p}`).toBe(500);
+      expect(res.body.reached).toBeUndefined();
+      expect(res.text).not.toContain('lnog_kl_db_down');
+    }
+    const x = await request(gateSrv).get('/alerts').set('X-API-Key', 'lnog_kl_db_down_000000000000000000000000000000');
+    expect(x.status).toBe(500);
+  });
+
+  it('an index-scoped ingest key cannot fetch or clear alert pop-ups; an unscoped one can', async () => {
+    // The desktop agent sends Authorization: ApiKey (agent/src/lognog_in/shipper.py).
+    const scoped = { Authorization: `ApiKey ${K.ingestScoped}` };
+    const a = await request(realSrv).get('/ingest/notifications?hostname=kl-host').set(scoped);
+    expect(a.status).toBe(403);
+    expect((await request(realSrv).post('/ingest/notifications/kl-none/ack').set(scoped).send({})).status).toBe(403);
+    expect((await request(realSrv).get('/INGEST//notifications?hostname=kl-host').set(scoped)).status).toBe(403);
+    expect((await request(realSrv).get('/ingest/notifications?hostname=kl-host').set('X-API-Key', K.ingestScoped)).status).toBe(403);
+    const b = await request(realSrv).get('/ingest/notifications?hostname=kl-host').set('Authorization', `ApiKey ${K.ingest}`);
+    expect(b.status).toBe(200);
   });
 });

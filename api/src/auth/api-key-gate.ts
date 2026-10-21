@@ -13,6 +13,8 @@
  * - An invalid / revoked / expired key passes through too, so the route
  *   answers exactly as before (401 from `authenticate`, anonymous for
  *   `optionalAuth`). The gate only ever narrows what a VALID key can do.
+ * - A key that can't be checked at all (the lookup throws, e.g. a database
+ *   error) gets a 500 here and never reaches the route: fail closed.
  *
  * The validated key is cached on the request, so `authenticate` /
  * `authenticateIngestion` don't bcrypt the same key a second time.
@@ -48,18 +50,18 @@ export async function apiKeyGate(req: Request, res: Response, next: NextFunction
   }
 
   let result;
+  let user;
   try {
     result = await resolveApiKeyCached(req, key);
-  } catch {
-    next(); // let the route's own auth produce its usual error
+    user = result ? getUserById(result.userId) : undefined;
+  } catch (err) {
+    // Fail closed: if the key can't be checked (database error...), the
+    // request must not reach a route whose own auth might still let it in.
+    console.error('[api-key-gate] could not check an API key:', err instanceof Error ? err.message : 'unknown error');
+    res.status(500).json({ error: 'Could not check the API key; try again' });
     return;
   }
-  if (!result) {
-    next();
-    return;
-  }
-  const user = getUserById(result.userId);
-  if (!user || !user.is_active) {
+  if (!result || !user || !user.is_active) {
     next();
     return;
   }
@@ -70,13 +72,17 @@ export async function apiKeyGate(req: Request, res: Response, next: NextFunction
     return;
   }
 
-  logAuthEvent(user.id, 'apikey_permission_denied', req.ip, req.get('user-agent'), {
-    method: req.method,
-    path: req.path,
-    needed: decision.need,
-    apiKeyPermissions: result.permissions,
-    scoped: !!(result.allowedIndexes && result.allowedIndexes.length > 0),
-  });
+  try {
+    logAuthEvent(user.id, 'apikey_permission_denied', req.ip, req.get('user-agent'), {
+      method: req.method,
+      path: req.path,
+      needed: decision.need,
+      apiKeyPermissions: result.permissions,
+      scoped: !!(result.allowedIndexes && result.allowedIndexes.length > 0),
+    });
+  } catch {
+    // The refusal stands even if the audit log can't be written.
+  }
   res.status(403).json({
     error: 'API key lacks required permissions',
     needed: decision.need,

@@ -100,11 +100,17 @@ const RULES: readonly Rule[] = [
   { methods: ['POST'], path: /^\/reports\/generate$/, need: 'read' },
 
   // --- Alert changes. ---
+  // Runs every user's alerts at once, script actions included.
+  { methods: ['POST'], path: /^\/alerts\/evaluate-all$/, need: 'admin' },
   { methods: MUTATING, path: /^\/(alerts|silences)(\/|$)/, need: 'alerts:write' },
   { methods: MUTATING, path: /^\/agent\/alerts(\/|$)/, need: 'alerts:write' },
   { methods: ['POST'], path: /^\/saved-searches\/[^/]+\/create-alert$/, need: 'alerts:write' },
 
   // --- Dashboard changes. ---
+  // A share link runs the dashboard's panel queries for anyone, on every
+  // index, so publishing (or changing a link) needs an admin key. Changes to a
+  // dashboard that is already shared are refused in routes/dashboards.ts.
+  { methods: MUTATING, path: /^\/dashboards\/[^/]+\/share$/, need: 'admin' },
   { methods: MUTATING, path: /^\/dashboards(\/|$)/, need: 'dashboards:write' },
   { methods: ['POST'], path: /^\/saved-searches\/[^/]+\/create-panel$/, need: 'dashboards:write' },
 ];
@@ -150,6 +156,13 @@ export function apiKeyNeed(method: string, rawPath: string): KeyNeed {
   return m === 'GET' || m === 'HEAD' || m === 'OPTIONS' ? 'read' : 'admin';
 }
 
+/**
+ * Ingest routes a SCOPED key may not use: the alert pop-ups the desktop agent
+ * polls carry alert text and log lines from whatever index the alert watched,
+ * and nothing ties a pop-up to an index, so only an unscoped key gets them.
+ */
+const INGEST_UNSCOPED_ONLY: readonly RegExp[] = [/^\/ingest\/notifications(\/|$)/];
+
 export function isScopeAwareRead(rawPath: string): boolean {
   const path = normalizeKeyPath(rawPath);
   return SCOPE_AWARE_READS.some((re) => re.test(path));
@@ -179,6 +192,14 @@ export function decideApiKey(
   }
 
   const scoped = !!allowedIndexes && allowedIndexes.length > 0;
+  if (scoped && need === 'ingest' && INGEST_UNSCOPED_ONLY.some((re) => re.test(normalizeKeyPath(path)))) {
+    return {
+      allowed: false,
+      need,
+      reason:
+        'This API key is limited to some indexes. Alert pop-ups can carry logs from any index, so only a key that is not limited can fetch them.',
+    };
+  }
   if (scoped && need !== 'ingest' && !(need === 'read' && isScopeAwareRead(path))) {
     return {
       allowed: false,

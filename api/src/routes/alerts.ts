@@ -31,6 +31,13 @@ import { requireOwnerOrAdmin, withOwnership } from '../auth/ownership.js';
 import { ALERT_TEMPLATES } from '../data/alert-templates.js';
 import { authenticate, denyReadonly } from '../auth/middleware.js';
 import { isRelayConfigured, invalidRelayActions, RELAY_PROJECTS } from '../services/relay.js';
+import {
+  scriptActionForbidden,
+  scriptAlertLocked,
+  presentActions,
+  presentActionResults,
+  restoreHiddenActions,
+} from '../auth/alert-action-guard.js';
 
 const router = Router();
 
@@ -48,17 +55,6 @@ function safeJsonParse<T>(json: string | null | undefined, defaultValue: T): T {
     console.warn('[Alerts] Failed to parse JSON:', json.substring(0, 100));
     return defaultValue;
   }
-}
-
-// Script actions run arbitrary commands on the API host, so only admins may
-// attach one. Returns an error message when the caller is not allowed.
-function scriptActionForbidden(req: Request, actions: unknown): string | null {
-  if (!Array.isArray(actions)) return null;
-  const hasScript = actions.some(a => a && typeof a === 'object' && (a as AlertAction).type === 'script');
-  if (hasScript && req.user?.role !== 'admin') {
-    return 'Only administrators can attach script actions to alerts';
-  }
-  return null;
 }
 
 // An invalid cron silently never fires (the scheduler's matcher returns
@@ -96,13 +92,16 @@ function loadChannelsForProblems() {
 }
 
 function presentAlert<T extends { actions: string }>(
+  req: Request,
   alert: T,
   channels: ReturnType<typeof loadChannelsForProblems>,
 ) {
   const actions = safeJsonParse<AlertAction[]>(alert.actions, []);
   return {
     ...alert,
-    actions,
+    // Secret action settings (webhook URLs, headers...) are hidden from API
+    // keys without 'admin'; problems are worked out on the real settings.
+    actions: presentActions(req, actions),
     action_problems: findActionProblems(actions, channels),
   };
 }
@@ -111,10 +110,10 @@ function parseHistoryLimit(raw: unknown): number {
   return Math.min(parseInt(String(raw ?? ''), 10) || 100, 1000);
 }
 
-function presentHistory<T extends { actions_executed?: string | null; sample_results?: string | null }>(h: T) {
+function presentHistory<T extends { actions_executed?: string | null; sample_results?: string | null }>(req: Request, h: T) {
   return {
     ...h,
-    actions_executed: safeJsonParse(h.actions_executed, null),
+    actions_executed: presentActionResults(req, safeJsonParse(h.actions_executed, null)),
     sample_results: safeJsonParse(h.sample_results, null),
   };
 }
@@ -126,7 +125,7 @@ router.get('/', (req: Request, res: Response) => {
     const alerts = getAlerts(false, appScope);
     // Parse actions JSON for each alert
     const channels = loadChannelsForProblems();
-    const alertsWithParsedActions = alerts.map(alert => withOwnership(req, presentAlert(alert, channels)));
+    const alertsWithParsedActions = alerts.map(alert => withOwnership(req, presentAlert(req, alert, channels)));
     res.json(alertsWithParsedActions);
   } catch (error) {
     console.error('Error getting alerts:', error);
@@ -154,7 +153,7 @@ router.get('/relay/status', (_req: Request, res: Response) => {
 router.get('/history', (req: Request, res: Response) => {
   try {
     const history = getAlertHistory(undefined, parseHistoryLimit(req.query.limit));
-    res.json(history.map(presentHistory));
+    res.json(history.map((h) => presentHistory(req, h)));
   } catch (error) {
     console.error('Error getting alert history:', error);
     res.status(500).json({ error: 'Failed to get alert history' });
@@ -176,7 +175,7 @@ router.post('/history/:id/acknowledge', (req: Request, res: Response) => {
       return res.status(404).json({ error: 'History entry not found' });
     }
 
-    res.json(presentHistory(entry));
+    res.json(presentHistory(req, entry));
   } catch (error) {
     console.error('Error acknowledging alert:', error);
     res.status(500).json({ error: 'Failed to acknowledge alert' });
@@ -311,6 +310,11 @@ router.post('/', (req: Request, res: Response) => {
     if (forbidden) {
       return res.status(403).json({ error: forbidden });
     }
+    // A new alert has no saved settings for a "[hidden]" value to come from.
+    const restored = restoreHiddenActions(actions, null);
+    if ('error' in restored) {
+      return res.status(400).json({ error: restored.error });
+    }
     const badRelay = invalidRelayActions(actions);
     if (badRelay) {
       return res.status(400).json({ error: badRelay });
@@ -337,7 +341,7 @@ router.post('/', (req: Request, res: Response) => {
       owner_id: req.user?.id ?? null,
     });
 
-    res.status(201).json(presentAlert(alert, loadChannelsForProblems()));
+    res.status(201).json(presentAlert(req, alert, loadChannelsForProblems()));
   } catch (error) {
     console.error('Error creating alert:', error);
     res.status(500).json({ error: 'Failed to create alert' });
@@ -353,7 +357,7 @@ router.get('/:id', (req: Request, res: Response) => {
     if (!alert) {
       return res.status(404).json({ error: 'Alert not found' });
     }
-    res.json(presentAlert(alert, loadChannelsForProblems()));
+    res.json(presentAlert(req, alert, loadChannelsForProblems()));
   } catch (error) {
     console.error('Error getting alert:', error);
     res.status(500).json({ error: 'Failed to get alert' });
@@ -404,11 +408,22 @@ router.put('/:id', (req: Request, res: Response) => {
       return res.status(400).json({ error: badCondition });
     }
 
+    const locked = scriptAlertLocked(req, existing);
+    if (locked) {
+      return res.status(403).json({ error: locked });
+    }
     const forbidden = scriptActionForbidden(req, actions);
     if (forbidden) {
       return res.status(403).json({ error: forbidden });
     }
-    const badRelay = invalidRelayActions(actions);
+    // An API key without 'admin' saw secret settings as "[hidden]"; keep the
+    // saved values for those instead of overwriting them with the marker.
+    const restored = restoreHiddenActions(actions, existing.actions);
+    if ('error' in restored) {
+      return res.status(400).json({ error: restored.error });
+    }
+    const finalActions = restored.actions;
+    const badRelay = invalidRelayActions(finalActions);
     if (badRelay) {
       return res.status(400).json({ error: badRelay });
     }
@@ -423,7 +438,7 @@ router.put('/:id', (req: Request, res: Response) => {
       schedule_type: schedule_type as AlertScheduleType,
       cron_expression,
       time_range,
-      actions: actions as AlertAction[],
+      actions: finalActions as AlertAction[] | undefined,
       throttle_enabled,
       throttle_window_seconds,
       severity: severity as AlertSeverity,
@@ -440,7 +455,7 @@ router.put('/:id', (req: Request, res: Response) => {
     }
 
     // Saving never depends on channels: a broken action is reported, not refused.
-    res.json(presentAlert(alert, loadChannelsForProblems()));
+    res.json(presentAlert(req, alert, loadChannelsForProblems()));
   } catch (error) {
     console.error('Error updating alert:', error);
     res.status(500).json({ error: 'Failed to update alert' });
@@ -455,6 +470,10 @@ router.delete('/:id', (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Alert not found' });
     }
     if (!requireOwnerOrAdmin(req, res, existing, 'alert')) return;
+    const scriptLock = scriptAlertLocked(req, existing);
+    if (scriptLock) {
+      return res.status(403).json({ error: scriptLock });
+    }
     const deleted = deleteAlert(req.params.id);
     if (!deleted) {
       return res.status(404).json({ error: 'Alert not found' });
@@ -475,6 +494,10 @@ router.post('/:id/toggle', (req: Request, res: Response) => {
     }
     if (!requireOwnerOrAdmin(req, res, existing, 'alert')) return;
 
+    const scriptLock = scriptAlertLocked(req, existing);
+    if (scriptLock) {
+      return res.status(403).json({ error: scriptLock });
+    }
     const alert = updateAlert(req.params.id, {
       enabled: !existing.enabled,
     });
@@ -486,7 +509,7 @@ router.post('/:id/toggle', (req: Request, res: Response) => {
 
     res.json({
       ...alert,
-      actions: safeJsonParse<AlertAction[]>(alert.actions, []),
+      actions: presentActions(req, safeJsonParse<AlertAction[]>(alert.actions, [])),
     });
   } catch (error) {
     console.error('Error toggling alert:', error);
@@ -502,6 +525,10 @@ router.post('/:id/evaluate', async (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Alert not found' });
     }
     if (!requireOwnerOrAdmin(req, res, existing, 'alert')) return;
+    const scriptLock = scriptAlertLocked(req, existing);
+    if (scriptLock) {
+      return res.status(403).json({ error: scriptLock });
+    }
     const result = await evaluateAlert(req.params.id);
     res.json(result);
   } catch (error) {
@@ -514,7 +541,7 @@ router.post('/:id/evaluate', async (req: Request, res: Response) => {
 router.get('/:id/history', (req: Request, res: Response) => {
   try {
     const history = getAlertHistory(req.params.id, parseHistoryLimit(req.query.limit));
-    res.json(history.map(presentHistory));
+    res.json(history.map((h) => presentHistory(req, h)));
   } catch (error) {
     console.error('Error getting alert history:', error);
     res.status(500).json({ error: 'Failed to get alert history' });
