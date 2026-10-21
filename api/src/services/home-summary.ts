@@ -33,6 +33,12 @@ export const AI_COST_FIELD = 'cost_usd';
 /** How far back an app still counts as one of "your apps". */
 export const ACTIVITY_WINDOW_MS = 14 * DAY;
 /** Today's errors are compared with the average day in the 7 days before. */
+/**
+ * An app's normal silence is its 3rd-longest gap in 14 days (or its shortest
+ * gap when it has fewer): a nightly sleep repeats, so it stays; one or two
+ * outages don't, so they can't stretch "normal" and hide the next one.
+ */
+export const NORMAL_GAP_RANK = 3;
 export const BASELINE_DAYS = 7;
 
 export interface HomeThresholds {
@@ -119,6 +125,8 @@ export interface AppActivityRow {
   last_seen: string | number;
   active_minutes: number;
   longest_gap_s: number;
+  /** The app's normal silence: its NORMAL_GAP_RANK-th longest gap, so one or two outages don't stretch it. */
+  normal_gap_s: number;
 }
 
 /**
@@ -145,7 +153,8 @@ export function buildAppActivitySql(backend: Backend, nowMs: number, allowedInde
   toUnixTimestamp64Milli(min(timestamp)) AS first_seen,
   toUnixTimestamp64Milli(max(timestamp)) AS last_seen,
   length(groupUniqArray(toUnixTimestamp(toStartOfMinute(timestamp)))) AS active_minutes,
-  arrayMax(arrayDifference(arraySort(groupUniqArray(toUnixTimestamp(toStartOfMinute(timestamp)))))) AS longest_gap_s
+  if(length(arrayReverseSort(arrayPopFront(arrayDifference(arraySort(groupUniqArray(toUnixTimestamp(toStartOfMinute(timestamp))))))) AS gaps_desc) = 0, 0, gaps_desc[1]) AS longest_gap_s,
+  if(length(gaps_desc) = 0, 0, gaps_desc[least(${NORMAL_GAP_RANK}, length(gaps_desc))]) AS normal_gap_s
 FROM lognog.logs
 WHERE timestamp >= ${start} AND timestamp <= ${now}${scope}
 GROUP BY app_name, index_name
@@ -166,7 +175,8 @@ LIMIT 200`;
   a.first_seen AS first_seen,
   a.last_seen AS last_seen,
   COALESCE(g.active_minutes, 0) AS active_minutes,
-  COALESCE(g.longest_gap_s, 0) AS longest_gap_s
+  COALESCE(g.longest_gap_s, 0) AS longest_gap_s,
+  COALESCE(g.normal_gap_s, 0) AS normal_gap_s
 FROM (
   SELECT
     COALESCE(app_name, 'unknown') AS app_name,
@@ -182,15 +192,26 @@ FROM (
   GROUP BY COALESCE(app_name, 'unknown'), COALESCE(index_name, 'main')
 ) a
 LEFT JOIN (
-  SELECT app_name, index_name, COUNT(*) AS active_minutes,
-    MAX(CASE WHEN prev IS NULL THEN 0 ELSE CAST(ROUND((julianday(m) - julianday(prev)) * 86400) AS INTEGER) END) AS longest_gap_s
+  SELECT app_name, index_name, MAX(active_minutes) AS active_minutes,
+    COALESCE(MAX(gap_s), 0) AS longest_gap_s,
+    COALESCE(MAX(CASE WHEN rn = MIN(${NORMAL_GAP_RANK}, gap_count) THEN gap_s END), 0) AS normal_gap_s
   FROM (
-    SELECT app_name, index_name, m, LAG(m) OVER (PARTITION BY app_name, index_name ORDER BY m) AS prev
+    SELECT app_name, index_name, gap_s,
+      COUNT(*) OVER (PARTITION BY app_name, index_name) AS active_minutes,
+      COUNT(gap_s) OVER (PARTITION BY app_name, index_name) AS gap_count,
+      ROW_NUMBER() OVER (PARTITION BY app_name, index_name ORDER BY gap_s DESC) AS rn
     FROM (
-      SELECT DISTINCT COALESCE(app_name, 'unknown') AS app_name, COALESCE(index_name, 'main') AS index_name,
-        substr(${ts}, 1, 16) AS m
-      FROM logs
-      WHERE ${ts} >= ${start} AND ${ts} <= ${now}${scope}
+      SELECT app_name, index_name,
+        CASE WHEN prev IS NULL THEN NULL ELSE CAST(ROUND((julianday(m) - julianday(prev)) * 86400) AS INTEGER) END AS gap_s
+      FROM (
+        SELECT app_name, index_name, m, LAG(m) OVER (PARTITION BY app_name, index_name ORDER BY m) AS prev
+        FROM (
+          SELECT DISTINCT COALESCE(app_name, 'unknown') AS app_name, COALESCE(index_name, 'main') AS index_name,
+            substr(${ts}, 1, 16) AS m
+          FROM logs
+          WHERE ${ts} >= ${start} AND ${ts} <= ${now}${scope}
+        )
+      )
     )
   )
   GROUP BY app_name, index_name
@@ -325,6 +346,8 @@ export interface AppSummary {
   last_seen: string | null;
   silent_ms: number | null;
   longest_gap_ms: number | null;
+  /** The silence this app normally has (see NORMAL_GAP_RANK); quiet is judged against it. */
+  normal_gap_ms: number | null;
   quiet_after_ms: number | null;
 }
 
@@ -368,8 +391,11 @@ export function assessApp(row: AppActivityRow, nowMs: number, t: HomeThresholds)
 
   const silentMs = lastSeen === null ? null : Math.max(0, nowMs - lastSeen);
   const longestGapMs = n(row.longest_gap_s) * 1000;
-  const canJudgeQuiet = activeMinutes >= t.quietMinActiveMinutes;
-  const quietAfterMs = canJudgeQuiet ? Math.max(t.quietMultiplier * longestGapMs, t.quietFloorMs) : null;
+  const normalGapMs = n(row.normal_gap_s) * 1000;
+  // Quiet needs a rhythm to break: a day of history and a few active minutes.
+  const hasDay = firstSeen !== null && nowMs - firstSeen >= DAY;
+  const canJudgeQuiet = hasDay && activeMinutes >= t.quietMinActiveMinutes;
+  const quietAfterMs = canJudgeQuiet ? Math.max(t.quietMultiplier * normalGapMs, t.quietFloorMs) : null;
   const quiet = silentMs !== null && quietAfterMs !== null && silentMs > quietAfterMs;
 
   const base = {
@@ -384,6 +410,7 @@ export function assessApp(row: AppActivityRow, nowMs: number, t: HomeThresholds)
     last_seen: lastSeen === null ? null : new Date(lastSeen).toISOString(),
     silent_ms: silentMs,
     longest_gap_ms: canJudgeQuiet ? longestGapMs : null,
+    normal_gap_ms: canJudgeQuiet ? normalGapMs : null,
     quiet_after_ms: quietAfterMs,
   };
 
@@ -396,8 +423,8 @@ export function assessApp(row: AppActivityRow, nowMs: number, t: HomeThresholds)
       label: `Quiet ${formatDuration(silentMs)}`,
       detail:
         `No logs for ${formatDuration(silentMs)}. ` +
-        (longestGapMs > 0
-          ? `Its longest silence in the last 14 days was ${formatDuration(longestGapMs)}.`
+        (normalGapMs > 0
+          ? `Normally it is never silent for more than about ${formatDuration(normalGapMs)}.`
           : `It usually logs every minute.`),
     };
   }
@@ -602,6 +629,13 @@ export interface HomeSummary {
   apps: AppSummary[];
   /** True when the caller's key only sees some indexes (numbers cover those only). */
   scoped: boolean;
+  /**
+   * Alert rules aren't tied to one index, so a scoped key isn't shown any
+   * (their names and channels could belong to apps it can't see).
+   */
+  alerts_hidden: boolean;
+  /** The indexes a scoped key can read (null when it reads all). */
+  scope_indexes: string[] | null;
 }
 
 export async function loadApps(nowMs: number, allowedIndexes?: string[] | null): Promise<AppSummary[]> {
@@ -630,7 +664,8 @@ export async function getHomeSummary(opts: {
     loadBankSpend(nowMs, allowed),
     loadAiSpend(nowMs - 7 * DAY, nowMs + 1, nowMs - DAY, allowed),
   ]);
-  const unreachable = findUnreachableAlerts();
+  const scoped = Array.isArray(allowed) && allowed.length > 0;
+  const unreachable = scoped ? [] : findUnreachableAlerts();
   return {
     generated_at: new Date(nowMs).toISOString(),
     backend: getBackend(),
@@ -638,6 +673,8 @@ export async function getHomeSummary(opts: {
     money: { bank, ai },
     needs_you: needsYouFrom(apps, unreachable),
     apps,
-    scoped: Array.isArray(allowed) && allowed.length > 0,
+    scoped,
+    alerts_hidden: scoped,
+    scope_indexes: scoped ? [...(allowed as string[])] : null,
   };
 }

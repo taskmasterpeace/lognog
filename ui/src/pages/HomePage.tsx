@@ -240,12 +240,13 @@ function NeedsYouRow({ item }: { item: HomeNeedsYouItem }) {
           <p className="text-sm text-nog-600 dark:text-nog-300 break-words">{detail}</p>
         </div>
       </div>
-      {action}
+      {/* left-aligned on phones so the floating help button never covers it */}
+      <div className="self-start sm:self-auto sm:shrink-0">{action}</div>
     </li>
   );
 }
 
-function NeedsYou({ items }: { items: HomeNeedsYouItem[] }) {
+function NeedsYou({ items, alertsHidden }: { items: HomeNeedsYouItem[]; alertsHidden: boolean }) {
   return (
     <section aria-labelledby="needs-you-heading">
       <h2 id="needs-you-heading" className="mb-2 flex items-center gap-2 text-lg font-bold tracking-tight text-nog-900 dark:text-nog-50">
@@ -262,8 +263,10 @@ function NeedsYou({ items }: { items: HomeNeedsYouItem[] }) {
             <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
           </span>
           <p className="text-sm text-nog-600 dark:text-nog-300">
-            <strong className="text-nog-900 dark:text-nog-50">Nothing needs you.</strong> Every turned-on alert can reach you,
-            no app has an error spike, and none has gone quiet.
+            <strong className="text-nog-900 dark:text-nog-50">Nothing needs you.</strong>{' '}
+            {alertsHidden
+              ? 'No app you can see has an error spike, and none has gone quiet. (This login is not shown alert rules.)'
+              : 'Every turned-on alert can reach you, no app has an error spike, and none has gone quiet.'}
           </p>
         </div>
       ) : (
@@ -288,7 +291,9 @@ function AppCard({ app, now }: { app: HomeApp; now: Date }) {
     <li className="rounded-[0.625rem] border border-nog-200 dark:border-nog-700 bg-white dark:bg-nog-800 p-4 transition-shadow hover:shadow-md">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <h3 className="truncate font-bold tracking-tight text-nog-900 dark:text-nog-50" title={app.app_name}>{app.app_name}</h3>
+          <h3 className="truncate font-bold tracking-tight text-nog-900 dark:text-nog-50" title={app.app_name || 'Logs with no app name'}>
+            {app.app_name || <span className="italic text-nog-500 dark:text-nog-400">(no app name)</span>}
+          </h3>
           <p className="truncate text-xs text-nog-500 dark:text-nog-400">index {app.index_name}</p>
         </div>
         <span title={app.detail}><Pill tone={stateTone(app.state)}>{app.label}</Pill></span>
@@ -315,7 +320,7 @@ function AppCard({ app, now }: { app: HomeApp; now: Date }) {
   );
 }
 
-function Apps({ apps, now }: { apps: HomeApp[]; now: Date }) {
+function Apps({ apps, now, scopeIndexes }: { apps: HomeApp[]; now: Date; scopeIndexes: string[] | null }) {
   return (
     <section aria-labelledby="apps-heading">
       <h2 id="apps-heading" className="mb-2 text-lg font-bold tracking-tight text-nog-900 dark:text-nog-50">Apps</h2>
@@ -324,7 +329,11 @@ function Apps({ apps, now }: { apps: HomeApp[]; now: Date }) {
           <span className="flex h-14 w-14 items-center justify-center rounded-full bg-honey-50 dark:bg-honey-900/30">
             <Database className="h-8 w-8 text-honey-500" />
           </span>
-          <p className="font-semibold text-nog-900 dark:text-nog-50">No app has sent logs in the last 14 days.</p>
+          <p className="font-semibold text-nog-900 dark:text-nog-50">
+            {scopeIndexes && scopeIndexes.length > 0
+              ? `No app in ${scopeIndexes.join(', ')} has sent logs in the last 14 days.`
+              : 'No app has sent logs in the last 14 days.'}
+          </p>
           <p className="text-sm text-nog-600 dark:text-nog-300">
             Apps show up here once they send logs. <Link to="/data-sources" className="font-semibold text-honey-600 hover:underline">Add a data source</Link>.
           </p>
@@ -349,7 +358,7 @@ export default function HomePage() {
   const now = data ? toDate(data.generated_at) : new Date();
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 lg:px-8">
+    <div className="mx-auto w-full max-w-6xl px-4 pt-6 pb-24 sm:px-6 lg:px-8">
       <header className="mb-5 flex items-start justify-between gap-4">
         <div className="min-w-0">
           <h1 className="text-2xl font-bold tracking-[-0.025em] text-nog-900 dark:text-nog-50 sm:text-3xl">{greeting(new Date())}</h1>
@@ -382,11 +391,12 @@ export default function HomePage() {
           <MoneyStrip summary={data} now={now} />
           {data.scoped && (
             <p className="text-xs text-nog-500 dark:text-nog-400">
-              Your login can only read some indexes, so Home shows just those.
+              Your login can only read {data.scope_indexes && data.scope_indexes.length > 0 ? data.scope_indexes.join(', ') : 'some indexes'}, so
+              Home shows just those, and no alert rules.
             </p>
           )}
-          <NeedsYou items={data.needs_you} />
-          <Apps apps={data.apps} now={now} />
+          <NeedsYou items={data.needs_you} alertsHidden={data.alerts_hidden} />
+          <Apps apps={data.apps} now={now} scopeIndexes={data.scope_indexes} />
         </div>
       )}
     </div>

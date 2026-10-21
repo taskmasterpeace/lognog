@@ -12,7 +12,7 @@ import { join } from 'node:path';
 process.env.LOGNOG_BACKEND = 'sqlite';
 process.env.LOGS_DB_PATH = join(tmpdir(), `lognog-stats-home-${process.env.VITEST_WORKER_ID ?? '0'}-${randomUUID()}.db`);
 
-import { getSQLiteDB } from '../db/sqlite.js';
+import { getSQLiteDB, createAlert } from '../db/sqlite.js';
 import { insertLogs } from '../db/backend.js';
 import { createApiKey } from '../auth/auth.js';
 import statsRouter from './stats.js';
@@ -40,6 +40,17 @@ beforeAll(async () => {
     { timestamp: ts(60_000), index_name: 'money', app_name: 'money-watch', severity: 6, message: 'money snapshot',
       structured_data: JSON.stringify({ kind: 'snapshot', out_24h: 1, out_7d: 2 }) },
   ]);
+  createAlert('Money rule secret name', 'search index=money', {
+    trigger_type: 'number_of_results',
+    trigger_condition: 'greater_than',
+    trigger_threshold: 0,
+    schedule_type: 'cron',
+    cron_expression: '*/5 * * * *',
+    time_range: '-5m',
+    actions: [{ type: 'apprise', config: { channel: 'no-such-channel' } }],
+    severity: 'high',
+    enabled: true,
+  });
 });
 
 describe('GET /stats/home', () => {
@@ -54,6 +65,8 @@ describe('GET /stats/home', () => {
     expect(res.body.money.bank).toMatchObject({ status: 'ok', out_24h: 1, out_7d: 2 });
     expect(res.body.apps.map((a: { app_name: string }) => a.app_name).sort()).toEqual(['money-watch', 'octavia-uptime']);
     expect(res.body.scoped).toBe(false);
+    expect(res.body.alerts_hidden).toBe(false);
+    expect(res.body.needs_you.map((i: { kind: string }) => i.kind)).toContain('alert_unreachable');
   });
 
   it('a key scoped to uptime sees only uptime, and money says it is not visible', async () => {
@@ -62,5 +75,9 @@ describe('GET /stats/home', () => {
     expect(res.body.money.bank.status).toBe('not_visible');
     expect(res.body.apps.map((a: { app_name: string }) => a.app_name)).toEqual(['octavia-uptime']);
     expect(res.body.scoped).toBe(true);
+    // alert rules aren't tied to an index, so a scoped key sees none of their names
+    expect(res.body.alerts_hidden).toBe(true);
+    expect(res.body.scope_indexes).toEqual(['uptime']);
+    expect(JSON.stringify(res.body)).not.toContain('Money rule secret name');
   });
 });

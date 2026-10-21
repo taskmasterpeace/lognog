@@ -52,7 +52,11 @@ describe('ClickHouse SQL builders (live backend)', () => {
     );
     expect(sql).toContain('FROM lognog.logs');
     expect(sql).toContain('toUnixTimestamp64Milli(max(timestamp)) AS last_seen');
-    expect(sql).toContain('arrayMax(arrayDifference(arraySort(groupUniqArray(toUnixTimestamp(toStartOfMinute(timestamp)))))) AS longest_gap_s');
+    expect(sql).toContain(
+      'if(length(arrayReverseSort(arrayPopFront(arrayDifference(arraySort(groupUniqArray(toUnixTimestamp(toStartOfMinute(timestamp))))))) AS gaps_desc) = 0, 0, gaps_desc[1]) AS longest_gap_s',
+    );
+    // "normal" silence = the 3rd-longest gap, so one or two outages can't stretch it
+    expect(sql).toContain('if(length(gaps_desc) = 0, 0, gaps_desc[least(3, length(gaps_desc))]) AS normal_gap_s');
     expect(sql).toContain('GROUP BY app_name, index_name');
     expect(sql).not.toMatch(/now\(\)|datetime\('now'|INTERVAL/);
     expect(sql).not.toContain('IN (');
@@ -102,6 +106,7 @@ function row(p: Partial<AppActivityRow>): AppActivityRow {
     last_seen: NOW - MINUTE,
     active_minutes: 500,
     longest_gap_s: 600,
+    normal_gap_s: 600,
     ...p,
   };
 }
@@ -145,20 +150,43 @@ describe('judging an app against its own history', () => {
     expect(a.label).toBe('New');
   });
 
-  it('quiet = silent longer than twice its longest gap (never under 30 min)', () => {
-    const quiet = assessApp(row({ last_seen: NOW - 3 * HOUR, longest_gap_s: 3600 }), NOW, t);
+  it('quiet = silent longer than twice its normal gap (never under 30 min)', () => {
+    const quiet = assessApp(row({ last_seen: NOW - 3 * HOUR, longest_gap_s: 3600, normal_gap_s: 3600 }), NOW, t);
     expect(quiet.state).toBe('quiet');
     expect(quiet.label).toBe('Quiet 3 h');
-    expect(quiet.detail).toBe('No logs for 3 h. Its longest silence in the last 14 days was 1 h.');
-    expect(assessApp(row({ last_seen: NOW - 90 * MINUTE, longest_gap_s: 3600 }), NOW, t).state).toBe('fine');
+    expect(quiet.detail).toBe('No logs for 3 h. Normally it is never silent for more than about 1 h.');
+    expect(assessApp(row({ last_seen: NOW - 90 * MINUTE, normal_gap_s: 3600 }), NOW, t).state).toBe('fine');
     // a chatty app (1-minute gaps) is quiet after the 30-minute floor, not after 2 minutes
-    expect(assessApp(row({ last_seen: NOW - 20 * MINUTE, longest_gap_s: 60 }), NOW, t).state).toBe('fine');
-    expect(assessApp(row({ last_seen: NOW - 40 * MINUTE, longest_gap_s: 60 }), NOW, t).label).toBe('Quiet 40 min');
+    expect(assessApp(row({ last_seen: NOW - 20 * MINUTE, normal_gap_s: 60 }), NOW, t).state).toBe('fine');
+    expect(assessApp(row({ last_seen: NOW - 40 * MINUTE, normal_gap_s: 60 }), NOW, t).label).toBe('Quiet 40 min');
   });
 
   it('a nightly-silent app is not quiet at night', () => {
     // logs all day, silent 9 h every night: 6 h of silence is normal for it
-    expect(assessApp(row({ last_seen: NOW - 6 * HOUR, longest_gap_s: 9 * 3600 }), NOW, t).state).toBe('fine');
+    expect(assessApp(row({ last_seen: NOW - 6 * HOUR, longest_gap_s: 9 * 3600, normal_gap_s: 9 * 3600 }), NOW, t).state).toBe('fine');
+  });
+
+  it('one old outage does not hide the app dying again (critic 10-21 #1)', () => {
+    // a 4-day outage 8-12 days ago is its longest gap, but its normal gap is 10 minutes:
+    // silent for the last 3 days = quiet, not "Fine"
+    const a = assessApp(
+      row({ last_seen: NOW - 3 * DAY, logs_today: 0, longest_gap_s: 4 * 86400, normal_gap_s: 600 }),
+      NOW,
+      t,
+    );
+    expect(a.state).toBe('quiet');
+    expect(a.label).toBe('Quiet 3 days');
+  });
+
+  it('an app younger than a day is never called quiet (critic 10-21 #2)', () => {
+    // first seen 3 h ago, 11 active minutes, silent 2 h: too new to have a rhythm
+    const a = assessApp(
+      row({ first_seen: NOW - 3 * HOUR, last_seen: NOW - 2 * HOUR, active_minutes: 11, longest_gap_s: 120, normal_gap_s: 60 }),
+      NOW,
+      t,
+    );
+    expect(a.state).toBe('new');
+    expect(a.quiet_after_ms).toBeNull();
   });
 
   it('sorts worst first', () => {
@@ -228,6 +256,13 @@ describe('Home summary on the lite (SQLite) backend', () => {
     for (let i = 0; i < 20; i++) add('apps', 'spiky', 3, (i * 60 + 7) * MINUTE);
     // sleepy: every 20 min for 9 days, then nothing for the last 5 hours
     for (let m = 301; m < 9 * 24 * 60; m += 20) add('apps', 'sleepy', 6, m * MINUTE);
+    // relapsed: every 10 min for 14 days, a 4-day outage 8-12 days ago, and silent again for the last 3 days
+    for (let m = 3 * 24 * 60 + 5; m < 14 * 24 * 60 - 60; m += 10) {
+      if (m > 8 * 24 * 60 && m < 12 * 24 * 60) continue;
+      add('apps', 'relapsed', 6, m * MINUTE);
+    }
+    // fresh: first seen 3 h ago, 11 minutes of logs, nothing for the last 2 h
+    for (let i = 0; i < 11; i++) add('apps', 'fresh', 6, (180 - i * 6) * MINUTE);
     // money-watch shaped events (fake numbers): an old and a new snapshot
     add('money', 'money-watch', 6, 26 * HOUR, { kind: 'snapshot', out_24h: 999, out_7d: 9999 });
     add('money', 'money-watch', 6, 2 * HOUR, { kind: 'snapshot', out_24h: 12.5, out_7d: 210.25 });
@@ -270,19 +305,27 @@ describe('Home summary on the lite (SQLite) backend', () => {
   it('judges each app and puts the worst first', async () => {
     const home = await getHomeSummary({ nowMs: now });
     const byName = Object.fromEntries(home.apps.map(a => [a.app_name, a]));
-    expect(home.apps.map(a => a.app_name).slice(0, 2)).toEqual(['spiky', 'sleepy']);
+    expect(home.apps.map(a => a.state)).toEqual(['errors', 'quiet', 'quiet', 'new', 'new', 'fine']);
+    expect(home.apps[0].app_name).toBe('spiky');
     expect(byName.spiky.state).toBe('errors');
     expect(byName.spiky.errors_today).toBe(20);
     expect(byName.sleepy.state).toBe('quiet');
     expect(byName.sleepy.label).toBe('Quiet 5 h');
     expect(byName.steady.state).toBe('fine');
     expect(byName.steady.errors_today).toBe(1);
+    // its 4-day outage is its longest gap, but its normal gap is 10 minutes: dead again = quiet
+    expect(byName.relapsed.longest_gap_ms).toBeGreaterThanOrEqual(4 * DAY - 20 * MINUTE);
+    expect(byName.relapsed.normal_gap_ms).toBe(10 * MINUTE);
+    expect(byName.relapsed.state).toBe('quiet');
+    expect(byName.relapsed.label).toBe('Quiet 3 days');
+    // three hours old: no rhythm yet, so not quiet
+    expect(byName.fresh.state).toBe('new');
   });
 
   it('lists what needs you: the broken alert, the spike and the quiet app', async () => {
     const home = await getHomeSummary({ nowMs: now });
     const kinds = home.needs_you.map(i => i.kind + ':' + ('alert_name' in i ? i.alert_name : i.app.app_name));
-    expect(kinds).toEqual(['alert_unreachable:HYH Logging Dead', 'error_spike:spiky', 'quiet:sleepy']);
+    expect(kinds).toEqual(['alert_unreachable:HYH Logging Dead', 'error_spike:spiky', 'quiet:sleepy', 'quiet:relapsed']);
     const alert = home.needs_you[0];
     expect(alert.kind === 'alert_unreachable' && alert.problems[0]).toContain('slack-alerts');
   });
@@ -298,6 +341,14 @@ describe('Home summary on the lite (SQLite) backend', () => {
     expect(home.money.bank.status).toBe('not_visible');
     expect(home.scoped).toBe(true);
     expect(new Set(home.apps.map(a => a.index_name))).toEqual(new Set(['apps']));
+  });
+
+  it('a scoped key is not shown alert rules (critic 10-21 #3)', async () => {
+    const home = await getHomeSummary({ nowMs: now, allowedIndexes: ['money'] });
+    expect(home.alerts_hidden).toBe(true);
+    expect(home.needs_you.filter(i => i.kind === 'alert_unreachable')).toEqual([]);
+    expect(JSON.stringify(home)).not.toContain('HYH Logging Dead');
+    expect((await getHomeSummary({ nowMs: now })).alerts_hidden).toBe(false);
   });
 
   it('every number opens the logs behind it (drill-downs find the same rows)', async () => {

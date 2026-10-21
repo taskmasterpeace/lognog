@@ -742,6 +742,8 @@ export interface HomeApp {
   last_seen: string | null;
   silent_ms: number | null;
   longest_gap_ms: number | null;
+  /** The silence this app normally has (its 3rd-longest gap in 14 days); quiet is judged against it. */
+  normal_gap_ms: number | null;
   quiet_after_ms: number | null;
 }
 
@@ -783,6 +785,10 @@ export interface HomeSummary {
   needs_you: HomeNeedsYouItem[];
   apps: HomeApp[];
   scoped: boolean;
+  /** The indexes a scoped login can read (null when it reads all). */
+  scope_indexes: string[] | null;
+  /** True for a scoped login: alert rules aren't tied to an index, so none are shown. */
+  alerts_hidden: boolean;
 }
 
 export async function getHomeSummary(): Promise<HomeSummary> {
