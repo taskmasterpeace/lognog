@@ -6,6 +6,7 @@ import { getLabLights, LabLight } from '../api/client';
 import { toDate } from '../utils/formatDate';
 import { LIGHT_COLORS, appsFromParam, lightSearchUrl, shelfOrder, splitWhy } from '../utils/labLights';
 import { ageAgo } from '../utils/sourceStatus';
+import { useMute } from '../contexts/MuteContext';
 
 /**
  * Lab lights (/lights): one round screen per app, drawn the way the ESP32
@@ -37,14 +38,23 @@ function plateText(light: LabLight): string {
   return `last log ${ageAgo((Date.now() - seen) / 1000)}`;
 }
 
-function NumberLink({ app, kind, children }: { app: string; kind: 'logs' | 'errors'; children: React.ReactNode }) {
+/** Search hides muted apps and indexes, so a muted app's numbers would open an empty Search. */
+function useAppMuted(light: LabLight): boolean {
+  const { isMuted } = useMute();
+  return isMuted('app_name', light.app) || light.indexes.some((i) => isMuted('index_name', i || 'main'));
+}
+
+const MUTED_NOTE = '. Muted: Search hides these until you unmute.';
+
+function NumberLink({ app, kind, muted, children }: { app: string; kind: 'logs' | 'errors'; muted: boolean; children: React.ReactNode }) {
   const url = lightSearchUrl(app, kind);
   if (!url) return <span>{children}</span>;
+  const what = kind === 'errors' ? `Open ${app}'s errors from the last 15 minutes in Search` : `Open ${app}'s logs from the last 15 minutes in Search`;
   return (
     <Link
       to={url}
       className="underline decoration-honey-500/50 underline-offset-2 hover:text-honey-300 hover:decoration-honey-300 transition-colors"
-      title={kind === 'errors' ? `Open ${app}'s errors from the last 15 minutes in Search` : `Open ${app}'s logs from the last 15 minutes in Search`}
+      title={muted ? what + MUTED_NOTE : what}
     >
       {children}
     </Link>
@@ -60,6 +70,7 @@ function Screen({ light, offline, big }: { light: LabLight; offline: boolean; bi
     ? 'w-[200px] h-[200px] sm:w-[280px] sm:h-[280px]'
     : 'w-[150px] h-[150px] sm:w-[240px] sm:h-[240px]';
   const errors = light.errors_last_15m;
+  const muted = useAppMuted(light);
   return (
     <div className="flex flex-col items-center min-w-0" data-testid="lab-light" data-state={offline ? 'offline' : light.state}>
       {/* bezel */}
@@ -101,16 +112,21 @@ function Screen({ light, offline, big }: { light: LabLight; offline: boolean; bi
       </div>
       {/* the numbers behind the light, each opens its logs */}
       <div className="mt-2 text-[11px] sm:text-xs text-nog-300 text-center leading-relaxed">
-        <NumberLink app={light.app} kind="logs">
+        <NumberLink app={light.app} kind="logs" muted={muted}>
           {light.logs_last_15m.toLocaleString()} log{light.logs_last_15m === 1 ? '' : 's'}
         </NumberLink>
         {' · '}
-        <NumberLink app={light.app} kind="errors">
+        <NumberLink app={light.app} kind="errors" muted={muted}>
           <span className={errors > 0 ? 'text-red-300' : undefined}>
             {errors.toLocaleString()} error{errors === 1 ? '' : 's'}
           </span>
         </NumberLink>
         <div className="text-nog-400">in the last 15 min</div>
+        {muted && (
+          <div className="text-honey-300" title="You muted this app or its index. Search hides its logs until you unmute it on the Data Sources page.">
+            muted in Search
+          </div>
+        )}
       </div>
     </div>
   );
@@ -252,7 +268,7 @@ export default function LabLightsPage() {
         <div className="min-w-0">
           <h1 className="font-display text-2xl sm:text-3xl font-semibold tracking-tight text-nog-900 dark:text-nog-100">Lab lights</h1>
           <p className="text-sm text-nog-600 dark:text-nog-400 mt-1 max-w-2xl">
-            One round screen per app, as the screens on the lab shelf show it. Each reads LogNog every 30 seconds; when one turns red the lab says it out loud.
+            One round screen per app, the way the round screens for the lab shelf will show it. This page reads LogNog every 30 seconds.
           </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
@@ -320,10 +336,10 @@ export default function LabLightsPage() {
 
       <div className="mt-3 flex flex-col sm:flex-row gap-2 sm:gap-6 text-xs text-nog-500 dark:text-nog-400">
         <span className="inline-flex items-center gap-1.5">
-          <Cpu className="w-3.5 h-3.5" /> The shelf screens run the firmware in hardware/lab-lights and read /api/status/lights with a read-only key.
+          <Cpu className="w-3.5 h-3.5" /> Firmware for the shelf screens is ready in hardware/lab-lights (not on a screen yet). They read /api/status/lights with a read-only key.
         </span>
         <span className="inline-flex items-center gap-1.5">
-          <Volume2 className="w-3.5 h-3.5" /> Red is spoken once, when it turns red, outside quiet hours (11 pm to 8 am).
+          <Volume2 className="w-3.5 h-3.5" /> A spoken alert is ready to switch on: the lab board says an app once when it turns red, not in quiet hours (11 pm to 8 am).
         </span>
       </div>
     </div>
