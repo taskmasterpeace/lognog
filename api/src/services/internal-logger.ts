@@ -42,7 +42,6 @@ export type EventAction =
   | 'alert.evaluated'       // Alert check ran
   | 'alert.triggered'       // Alert condition met
   | 'alert.action_sent'     // Alert action executed
-  | 'alert.action_failed'   // Alert action could not deliver (one per failed action per run)
   | 'alert.throttled'       // Alert throttled
   | 'alert.silenced'        // Alert silenced
   | 'alert.error'           // Alert execution error
@@ -621,36 +620,18 @@ export function logAlertAction(data: {
   success: boolean;
   message: string;
 }): void {
-  if (!data.success) {
-    // Its own searchable event, e.g. search action="alert.action_failed",
-    // so a run that told no one shows up in LogNog instead of failing quietly.
-    logInternalEvent({
-      action: 'alert.action_failed',
-      category: 'alert',
-      message: `Alert action failed: "${data.alert_name}" ${data.action_type}: ${data.message}`,
-      success: false,
-      details: {
-        alert_id: data.alert_id,
-        alert_name: data.alert_name,
-        action_type: data.action_type,
-        reason: data.message,
-      },
-      severity: SEVERITY.ERROR,
-    }).catch(() => {});
-    return;
-  }
   logInternalEvent({
     action: 'alert.action_sent',
     category: 'alert',
     message: `Alert "${data.alert_name}" action ${data.action_type}: ${data.message}`,
-    success: true,
+    success: data.success,
     details: {
       alert_id: data.alert_id,
       alert_name: data.alert_name,
       action_type: data.action_type,
       result: data.message,
     },
-    severity: SEVERITY.INFO,
+    severity: data.success ? SEVERITY.INFO : SEVERITY.WARNING,
   }).catch(() => {});
 }
 

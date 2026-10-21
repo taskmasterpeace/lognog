@@ -31,7 +31,7 @@ import { getTemplatesByCategory, getTemplateStats, getActiveSources, SourceTempl
 import AddDataSourceWizard from '../components/AddDataSourceWizard';
 import SourceConfigList from '../components/source-config/SourceConfigList';
 import { useMute } from '../contexts/MuteContext';
-import { searchUrl, sourceLogsQuery, sourceErrorsQuery } from '../utils/sourceDrilldown';
+import { canDrillDown, searchUrl, sourceLogsQuery, sourceErrorsQuery } from '../utils/sourceDrilldown';
 
 type TabId = 'active' | 'templates' | 'config';
 
@@ -453,7 +453,7 @@ export default function DataSourcesPage() {
                             </span>
                           </td>
                           <td className="px-4 py-3 text-right">
-                            {source.log_count > 0 ? (
+                            {source.log_count > 0 && canDrillDown(source.app_name) ? (
                               <Link
                                 to={searchUrl(sourceLogsQuery(source.index_name, source.app_name))}
                                 title={`Open these ${source.log_count.toLocaleString()} logs in Search${mutedNote}`}
@@ -462,11 +462,11 @@ export default function DataSourcesPage() {
                                 {source.log_count.toLocaleString()}
                               </Link>
                             ) : (
-                              <span className="text-sm text-nog-400">0</span>
+                              <span className={source.log_count > 0 ? 'text-sm font-medium text-nog-900 dark:text-nog-100' : 'text-sm text-nog-400'}>{source.log_count > 0 ? source.log_count.toLocaleString() : 0}</span>
                             )}
                           </td>
                           <td className="px-4 py-3 text-right">
-                            {source.error_count > 0 ? (
+                            {source.error_count > 0 && canDrillDown(source.app_name) ? (
                               <Link
                                 to={searchUrl(sourceErrorsQuery(source.index_name, source.app_name))}
                                 title={`Open these ${source.error_count.toLocaleString()} error logs in Search (severity error or worse)${mutedNote}`}
@@ -475,7 +475,7 @@ export default function DataSourcesPage() {
                                 {source.error_count.toLocaleString()}
                               </Link>
                             ) : (
-                              <span className="text-sm text-nog-400">0</span>
+                              <span className={source.error_count > 0 ? 'text-sm font-medium text-red-600 dark:text-red-400' : 'text-sm text-nog-400'}>{source.error_count > 0 ? source.error_count.toLocaleString() : 0}</span>
                             )}
                           </td>
                           <td className="px-4 py-3 text-right">

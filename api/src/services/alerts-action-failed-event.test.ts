@@ -1,8 +1,8 @@
 /**
- * A failed alert action writes one searchable internal LogNog event
- * ("alert.action_failed") per failed action per run, carrying the alert
- * name, the action type and the reason. Successful actions keep their
- * existing "alert.action_sent" event.
+ * Guard for the existing self-monitoring behaviour (unchanged tonight):
+ * when internal logging is on, a failed alert action writes one searchable
+ * "alert.action_sent" event with success=false at WARNING level per failed
+ * action per run, carrying the alert name, the action type and the reason.
  */
 import { describe, it, expect, vi, beforeAll } from 'vitest';
 
@@ -29,7 +29,7 @@ function loggedEvents(): Logged[] {
   return mockInsertLogs.mock.calls.flatMap(call => call[0] as Logged[]);
 }
 
-describe('alert.action_failed internal event', () => {
+describe('failed alert action internal event', () => {
   beforeAll(() => {
     // Self-monitoring with the shipped default level (WARNING) and categories.
     setSystemSetting('internal_logging_enabled', 'true');
@@ -54,23 +54,24 @@ describe('alert.action_failed internal event', () => {
     expect(first.triggered).toBe(true);
     await shutdown();
 
-    let failed = loggedEvents().filter(e => e.action === 'alert.action_failed');
+    let failed = loggedEvents().filter(e => e.action === 'alert.action_sent' && !e.success);
     expect(failed).toHaveLength(1);
     expect(failed[0].message).toBe(
-      'Alert action failed: "Disk full on web-01" apprise: Notification channel "slack-alerts" not found',
+      'Alert "Disk full on web-01" action apprise: Notification channel "slack-alerts" not found',
     );
     expect(failed[0].success).toBe(false);
+    expect(failed[0].severity).toBe(4); // WARNING, so delivery failures don't count as error logs
     expect(JSON.parse(failed[0].structured_data).details).toEqual({
       alert_id: alert.id,
       alert_name: 'Disk full on web-01',
       action_type: 'apprise',
-      reason: 'Notification channel "slack-alerts" not found',
+      result: 'Notification channel "slack-alerts" not found',
     });
 
     // A second run writes a second event, not more than one.
     await evaluateAlert(alert.id);
     await shutdown();
-    failed = loggedEvents().filter(e => e.action === 'alert.action_failed');
+    failed = loggedEvents().filter(e => e.action === 'alert.action_sent' && !e.success);
     expect(failed).toHaveLength(2);
   });
 });

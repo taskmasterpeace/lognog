@@ -21,6 +21,16 @@ function quote(value: string): string {
   return `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
 }
 
+/**
+ * Rows whose app name is missing are shown as "unknown" (the API fills NULL app
+ * names with 'unknown'), so a search on app_name="unknown" would find nothing
+ * while the table shows a count. Those numbers stay plain text.
+ */
+export function canDrillDown(appName: string | null | undefined): boolean {
+  const name = (appName ?? '').trim();
+  return name !== '' && name !== 'unknown';
+}
+
 export function sourceLogsQuery(indexName: string, appName: string): string {
   return `search index=${quote(indexName || 'main')} app_name=${quote(appName)}`;
 }

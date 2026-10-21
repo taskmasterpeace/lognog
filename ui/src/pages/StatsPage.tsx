@@ -124,11 +124,13 @@ export default function StatsPage() {
               <h1 className="text-xl sm:text-2xl font-bold text-nog-900 dark:text-nog-100">Analytics</h1>
               <p className="text-nog-500 dark:text-nog-400 text-sm mt-1 hidden sm:block">Real-time log metrics and insights</p>
             </div>
-            <div className="flex items-center gap-2 text-xs sm:text-sm text-nog-500 dark:text-nog-400">
-              <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-honey-500" />
-              <span className="hidden sm:inline">Auto-refreshing every 30s</span>
-              <span className="sm:hidden">Live</span>
-            </div>
+            {!loadError && (
+              <div className="flex items-center gap-2 text-xs sm:text-sm text-nog-500 dark:text-nog-400">
+                <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-honey-500" />
+                <span className="hidden sm:inline">Auto-refreshing every 30s</span>
+                <span className="sm:hidden">Live</span>
+              </div>
+            )}
           </div>
 
           {/* Tab Navigation */}

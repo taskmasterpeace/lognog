@@ -24,12 +24,14 @@ interface DrilldownModule {
   sourceLogsQuery(indexName: string, appName: string): string;
   sourceErrorsQuery(indexName: string, appName: string): string;
   searchUrl(query: string, earliest?: string): string;
+  canDrillDown(appName: string | null | undefined): boolean;
   SOURCE_DRILLDOWN_EARLIEST: string;
 }
 const UI_MODULE = resolve(__dirname, '../../../ui/src/utils/sourceDrilldown.ts');
 let sourceLogsQuery: DrilldownModule['sourceLogsQuery'];
 let sourceErrorsQuery: DrilldownModule['sourceErrorsQuery'];
 let searchUrl: DrilldownModule['searchUrl'];
+let canDrillDown: DrilldownModule['canDrillDown'];
 let SOURCE_DRILLDOWN_EARLIEST: string;
 
 function ago(ms: number): string {
@@ -48,7 +50,7 @@ async function countOf(query: string): Promise<number> {
 describe('Data Sources drill-down queries match the Active Sources counts', () => {
   beforeAll(async () => {
     const ui = (await import(/* @vite-ignore */ UI_MODULE)) as DrilldownModule;
-    ({ sourceLogsQuery, sourceErrorsQuery, searchUrl, SOURCE_DRILLDOWN_EARLIEST } = ui);
+    ({ sourceLogsQuery, sourceErrorsQuery, searchUrl, canDrillDown, SOURCE_DRILLDOWN_EARLIEST } = ui);
 
     const rows: Record<string, unknown>[] = [];
     const add = (index_name: string, app_name: string, hostname: string, severity: number, ts: string) =>
@@ -95,5 +97,21 @@ describe('Data Sources drill-down queries match the Active Sources counts', () =
     expect(params.get('q')).toBe('search index="web" app_name="nginx" severity<=3');
     expect(params.get('earliest')).toBe('-7d');
     expect(sourceLogsQuery('', 'x')).toBe('search index="main" app_name="x"');
+  });
+
+  // Runs last: it adds a row with no app name. SQLite lists it as '' (stored empty) or
+  // 'unknown' (stored NULL); either way app_name="..." can't find those logs reliably.
+  it('a row with no app name is not a link', async () => {
+    await insertLogs([{ timestamp: ago(1 * HOUR), index_name: 'infra', hostname: 'edge-03', severity: 3, message: 'no app name' }]);
+    const { sources } = await getActiveSources();
+    const unnamed = sources.find(s => s.index_name === 'infra' && ['', 'unknown'].includes(s.app_name))!;
+    expect(unnamed).toBeDefined();
+    expect(Number(unnamed.log_count)).toBe(1);
+    expect(canDrillDown(unnamed.app_name)).toBe(false);
+    expect(canDrillDown('unknown')).toBe(false);
+    expect(canDrillDown(unnamed.app_name)).toBe(false);
+    expect(canDrillDown('')).toBe(false);
+    expect(canDrillDown(null)).toBe(false);
+    for (const s of sources.filter(x => x !== unnamed)) expect(canDrillDown(s.app_name)).toBe(true);
   });
 });
