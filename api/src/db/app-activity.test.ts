@@ -13,7 +13,7 @@ const tag = `${process.env.VITEST_WORKER_ID ?? '0'}-${randomUUID()}`;
 process.env.LOGS_DB_PATH = join(tmpdir(), `lognog-lights-logs-${tag}.db`);
 process.env.SQLITE_PATH = join(tmpdir(), `lognog-lights-main-${tag}.db`);
 
-import { appActivitySql, executeDSLQuery, getAppActivity, getActiveSources, insertLogs } from './backend';
+import { APP_ACTIVITY_WINDOW, appActivitySql, executeDSLQuery, getAppActivity, getActiveSources, insertLogs } from './backend';
 import { getSQLiteDB } from './sqlite';
 import { getLabLights, WHY_HEADLINES, _labLightsTesting } from '../services/lab-lights';
 
@@ -38,7 +38,7 @@ describe('appActivitySql (ClickHouse)', () => {
 
   it('groups by app over the 7-day Data Sources window', () => {
     expect(sql).toContain("if(app_name = '', 'unknown', app_name) AS app");
-    expect(sql).toContain('FROM lognog.logs WHERE timestamp >= now64(3) - INTERVAL 7 DAY GROUP BY app ORDER BY app LIMIT 200');
+    expect(sql).toContain('FROM lognog.logs WHERE timestamp >= now64(3) - INTERVAL 7 DAY AND timestamp <= now64(3) + INTERVAL 5 MINUTE GROUP BY app ORDER BY max(timestamp) DESC, app LIMIT 1000');
   });
 
   it('measures every window and the age on ClickHouse\'s own clock, never from Node\'s', () => {
@@ -55,7 +55,7 @@ describe('appActivitySql (ClickHouse)', () => {
 
   it('ANDs a scoped key\'s indexes into the WHERE', () => {
     const scoped = appActivitySql('clickhouse', "index_name IN ('hyh','money')").replace(/\s+/g, ' ');
-    expect(scoped).toContain("WHERE timestamp >= now64(3) - INTERVAL 7 DAY AND index_name IN ('hyh','money') GROUP BY app");
+    expect(scoped).toContain("WHERE timestamp >= now64(3) - INTERVAL 7 DAY AND timestamp <= now64(3) + INTERVAL 5 MINUTE AND index_name IN ('hyh','money') GROUP BY app");
   });
 
   it('Lite compares against ISO bounds built from the given clock', () => {
@@ -63,7 +63,8 @@ describe('appActivitySql (ClickHouse)', () => {
     const lite = appActivitySql('sqlite', null, now).replace(/\s+/g, ' ');
     expect(lite).toContain("timestamp >= '2026-10-21T11:45:00.000Z'");
     expect(lite).toContain("timestamp >= '2026-10-20T12:00:00.000Z' AND timestamp < '2026-10-21T11:45:00.000Z'");
-    expect(lite).toContain("WHERE timestamp >= '2026-10-14T12:00:00.000Z'");
+    expect(lite).toContain("WHERE timestamp >= '2026-10-14T12:00:00.000Z' AND timestamp <= '2026-10-21T12:05:00.000Z'");
+    expect(lite).toContain('ORDER BY MAX(timestamp) DESC, app LIMIT 1000');
     expect(lite).not.toContain("datetime('now')");
   });
 });
@@ -76,10 +77,10 @@ describe('lab lights over real Lite rows and real alerts', () => {
     };
     // directors-palette: busy and fine
     add('directors-palette', 'directors-palette', 6, ago(2 * MIN), 30);
-    // knuckle-up: 47 errors in the last 15 min against ~12 per 15 min the day before (1140 / 95 slices)
+    // knuckle-up: 47 errors in the last 15 min against ~10.5 per 15 min the day before (1000 / 95 slices), 4.5x
     add('knuckle-up', 'knuckle-up', 6, ago(1 * MIN), 5);
     add('knuckle-up', 'knuckle-up', 3, ago(3 * MIN), 47);
-    add('knuckle-up', 'knuckle-up', 3, ago(6 * HOUR), 1140);
+    add('knuckle-up', 'knuckle-up', 3, ago(6 * HOUR), 1000);
     // homework-tree: last log 3 hours ago (gone quiet)
     add('homework-tree', 'homework-tree', 6, ago(3 * HOUR), 4);
     // uptime: last log 40 minutes ago (quiet, Data Sources "Recent")
@@ -91,6 +92,8 @@ describe('lab lights over real Lite rows and real alerts', () => {
     // a row with no app name and one 8 days old
     add('', 'main', 6, ago(1 * MIN), 2);
     add('ancient', 'ancient', 6, ago(8 * 24 * HOUR), 1);
+    // clock-ahead: its only logs are stamped 2 hours in the future (a sender's bad clock)
+    add('clock-ahead', 'clock-ahead', 6, ago(-2 * HOUR), 3);
     await insertLogs(rows);
 
     const db = getSQLiteDB();
@@ -110,7 +113,7 @@ describe('lab lights over real Lite rows and real alerts', () => {
   it('getAppActivity counts the 15-minute logs and errors and the 24 h baseline per app', async () => {
     const acts = await getAppActivity();
     const ku = acts.find((a) => a.app === 'knuckle-up')!;
-    expect(ku).toMatchObject({ indexes: ['knuckle-up'], logs_15m: 52, errors_15m: 47, errors_prev_24h: 1140 });
+    expect(ku).toMatchObject({ indexes: ['knuckle-up'], logs_15m: 52, errors_15m: 47, errors_prev_24h: 1000 });
     expect(ku.age_seconds).toBeGreaterThanOrEqual(55);
     expect(ku.age_seconds).toBeLessThan(120);
     expect(acts.find((a) => a.app === 'money-watch')!.indexes).toEqual(['money']);
@@ -170,6 +173,33 @@ describe('lab lights over real Lite rows and real alerts', () => {
     const { apps } = await getLabLights(null, ['Knuckle-Up', 'money', 'nope']);
     expect(apps.map((a) => a.app)).toEqual(['knuckle-up', 'money-watch', 'nope']);
     expect(apps[2]).toMatchObject({ state: 'red', why: 'Gone quiet: no logs in 7 days', logs_last_15m: 0, last_seen: null });
+  });
+
+  it('logs stamped in the future do not count: an app whose only logs are ahead of the clock is not "fine"', async () => {
+    expect((await getAppActivity()).find((a) => a.app === 'clock-ahead')).toBeUndefined();
+    const { apps } = await getLabLights(null, ['clock-ahead']);
+    expect(apps[0]).toMatchObject({ app: 'clock-ahead', state: 'red', why: 'Gone quiet: no logs in 7 days' });
+  });
+
+  it('an app asked for twice (by name and by its index) gets one light', async () => {
+    const { apps } = await getLabLights(null, ['money-watch', 'money', 'MONEY-WATCH', 'hyh']);
+    expect(apps.map((a) => a.app)).toEqual(['money-watch', 'hyh']);
+  });
+
+  it('when the app list is full, an app left off says "no recent logs", not "no logs in 7 days"', async () => {
+    const win = APP_ACTIVITY_WINDOW as { maxApps: number };
+    const keep = win.maxApps;
+    win.maxApps = 2;
+    try {
+      const { apps } = await getLabLights();
+      expect(apps).toHaveLength(2);
+      expect(apps.map((a) => a.app)).not.toContain('homework-tree'); // the list keeps the apps that logged last
+      _labLightsTesting.reset();
+      const asked = await getLabLights(null, ['homework-tree']);
+      expect(asked.apps[0]).toMatchObject({ state: 'red', why: 'Gone quiet: no recent logs' });
+    } finally {
+      win.maxApps = keep;
+    }
   });
 
   it('a key scoped to one index sees only that app; others read as having no logs', async () => {

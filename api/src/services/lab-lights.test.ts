@@ -83,10 +83,12 @@ describe('decideLight', () => {
   });
 
   it('is red on an error spike: 10+ errors and 3x normal, saying how far above normal', () => {
-    // 24 h before: 1140 errors -> about 12 per 15 min; 47 now is ~4x.
-    const d = decideLight(activity({ errors_15m: 47, errors_prev_24h: 1140 }), []);
+    // 24 h before: 1000 errors -> about 10.5 per 15 min; 47 now is 4.5x.
+    const d = decideLight(activity({ errors_15m: 47, errors_prev_24h: 1000 }), []);
     expect(d.state).toBe('red');
     expect(d.why).toBe('Error spike: 47 in 15 min, 4x normal');
+    // Rounded down: 1140 a day is 12 per 15 min, and 47 is 3.9x, so it says 3x, never 4x.
+    expect(decideLight(activity({ errors_15m: 47, errors_prev_24h: 1140 }), []).why).toBe('Error spike: 47 in 15 min, 3x normal');
     expect(decideLight(activity({ errors_15m: 12, errors_prev_24h: 0 }), []).why).toBe(
       'Error spike: 12 in 15 min, usually none',
     );
@@ -180,6 +182,10 @@ describe('alert targets', () => {
     expect(alertTargets('search index=* severity<=3')).toEqual({ indexes: [], apps: [] });
     expect(alertTargets('search index!=hyh')).toEqual({ indexes: [], apps: [] });
     expect(alertTargets('search message="index=hyh"')).toEqual({ indexes: [], apps: [] });
+    // NOT index=x / NOT (index=x) is a rule about everything else: it names no app.
+    expect(alertTargets('search NOT index=main severity<=3')).toEqual({ indexes: [], apps: [] });
+    expect(alertTargets('search NOT (index=main) app_name=dp-web')).toEqual({ indexes: [], apps: ['dp-web'] });
+    expect(alertTargets('search index=hyh NOT app_name=hyh-cron')).toEqual({ indexes: ['hyh'], apps: [] });
   });
 
   it('ties an alert to an app by index, or by app name when the key may read every index the rule names', () => {
@@ -189,6 +195,12 @@ describe('alert targets', () => {
     expect(alertsForApp(app, [alert({ indexes: ['hyh'] })])).toHaveLength(0);
     // A scoped key must not learn about a rule over an index it can't read.
     expect(alertsForApp(app, [alert({ indexes: ['secret'], apps: ['dp-web'] })], ['directors-palette'])).toHaveLength(0);
+  });
+
+  it('an alert that names an app lights only that app, not its neighbours in the same index', () => {
+    const rule = alert({ indexes: ['shop'], apps: ['shop-worker'] });
+    expect(alertsForApp({ app: 'shop-worker', indexes: ['shop'] }, [rule])).toHaveLength(1);
+    expect(alertsForApp({ app: 'shop-web', indexes: ['shop'] }, [rule])).toHaveLength(0);
   });
 });
 
@@ -236,6 +248,8 @@ describe('words on the screen', () => {
     expect(displayLabel('directors-palette')).toBe('Directors Palette');
     expect(displayLabel('money_watch')).toBe('Money Watch');
     expect(displayLabel('knuckle-up')).toBe('Knuckle Up');
+    // A name with no words in it is shown as it is, never as a blank screen.
+    expect(displayLabel('__')).toBe('__');
   });
 
   it('says ages in plain words', () => {
@@ -274,5 +288,15 @@ describe('since (when the light took its colour)', () => {
   it('a rule that knows its own start wins, even on the first look', () => {
     _labLightsTesting.reset();
     expect(_labLightsTesting.sinceFor('*|b', d('red', 'alert:1', T1), T3)).toBe(T1);
+  });
+
+  it('holds while the colour holds, even when an alert fires again with a newer time', () => {
+    _labLightsTesting.reset();
+    expect(_labLightsTesting.sinceFor('*|c', d('red', 'alert:1', T1), T1)).toBe(T1);
+    expect(_labLightsTesting.sinceFor('*|c', d('red', 'alert:1', T3), T3)).toBe(T1);
+    // A red first seen with no known start stays unknown, then learns one if a rule gives it.
+    _labLightsTesting.reset();
+    expect(_labLightsTesting.sinceFor('*|d', d('red', 'spike'), T1)).toBeNull();
+    expect(_labLightsTesting.sinceFor('*|d', d('red', 'alert:1', T2), T3)).toBe(T2);
   });
 });

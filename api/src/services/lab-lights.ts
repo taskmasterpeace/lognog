@@ -15,10 +15,11 @@
  *           or the app is quiet 15-60 min (Data Sources says "Recent"),
  *           or errors are up (3+ in 15 min and 2x normal)
  *   green   everything else (Data Sources "Active", errors at their usual rate)
- * Freshness comes from services/source-status.ts, the same rule the Data
- * Sources page shows, so the two can never disagree.
+ * Freshness comes from services/source-status.ts, the same minutes the Data
+ * Sources page uses. Data Sources has one row per app and index; a light is
+ * per app and goes by the app's newest log in any of its indexes.
  */
-import { getAppActivity, type AppActivity } from '../db/backend.js';
+import { APP_ACTIVITY_WINDOW, getAppActivity, type AppActivity } from '../db/backend.js';
 import { getSQLiteDB } from '../db/sqlite.js';
 import { isIndexAllowed } from '../auth/index-scope.js';
 import { SOURCE_STATUS_MINUTES, sourceStatusFromAge, parseServerTime } from './source-status.js';
@@ -98,13 +99,16 @@ export interface FiringAlert {
 /**
  * Which indexes / app names a rule's search is about, read from its query
  * (`index=hyh`, `index="money"`, `app_name=dp-web`). Wildcards and negations
- * (`index!=x`) are ignored: a rule over every index is not about one app.
+ * (`index!=x`, `NOT index=x`) are ignored: a rule over every index, or every
+ * index but one, is not about one app.
  */
 export function alertTargets(searchQuery: string): { indexes: string[]; apps: string[] } {
   const pick = (field: string): string[] => {
     const re = new RegExp(`(?:^|[\\s(])${field}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s|()"']+))`, 'gi');
     const out = new Set<string>();
     for (const m of searchQuery.matchAll(re)) {
+      const before = searchQuery.slice(0, (m.index ?? 0) + (/^[\s(]/.test(m[0]) ? 1 : 0));
+      if (/\bNOT\s*\(?\s*$/i.test(before)) continue;
       const v = (m[1] ?? m[2] ?? m[3] ?? '').trim();
       if (v && !v.includes('*')) out.add(v.toLowerCase());
     }
@@ -165,9 +169,10 @@ export function loadFiringAlerts(nowMs: number = Date.now()): FiringAlert[] {
 }
 
 /**
- * Alerts about this app. A rule counts when it searches one of the app's
- * indexes, or names the app (app_name=...) without naming an index the
- * caller's key may not read.
+ * Alerts about this app. A rule that names apps (app_name=...) is about those
+ * apps only, never their neighbours in the same index, and only counts when
+ * the caller's key may read every index the rule names. A rule that names no
+ * app is about every app in the indexes it searches.
  */
 export function alertsForApp(
   activity: Pick<AppActivity, 'app' | 'indexes'>,
@@ -177,9 +182,10 @@ export function alertsForApp(
   const app = activity.app.toLowerCase();
   const idx = new Set(activity.indexes.map((i) => i.toLowerCase()));
   return alerts.filter((a) => {
-    if (a.indexes.some((i) => idx.has(i))) return true;
-    if (!a.apps.includes(app)) return false;
-    return a.indexes.every((i) => isIndexAllowed(allowedIndexes, i));
+    if (a.apps.length > 0) {
+      return a.apps.includes(app) && a.indexes.every((i) => isIndexAllowed(allowedIndexes, i));
+    }
+    return a.indexes.some((i) => idx.has(i));
   });
 }
 
@@ -210,11 +216,13 @@ function errorsVsNormal(errors: number, errorsPrev24h: number): string {
   if (errorsPrev24h <= 0) return 'usually none';
   const normal = normalErrorsPer15m(errorsPrev24h);
   if (normal < 0.5) return `usually ${errorsPrev24h.toLocaleString('en-US')} a day`;
-  return `${Math.round(errors / normal)}x normal`;
+  // Rounded down, so "3x" only ever means at least three times normal.
+  return `${Math.floor(errors / normal)}x normal`;
 }
 
 export function displayLabel(app: string): string {
   const words = app.split(/[-_\s.]+/).filter(Boolean);
+  if (words.length === 0) return app;
   if (words.length === 1 && words[0].length <= 3) return words[0].toUpperCase();
   return words.map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
 }
@@ -300,10 +308,12 @@ export function decideLight(activity: AppActivity, alerts: FiringAlert[]): Decis
 // Cached read, shared by every caller
 // ---------------------------------------------------------------------------
 
+type Computed = { apps: AppLight[]; generated_at: string; capped: boolean };
+
 interface CacheEntry {
   at: number;
-  value?: { apps: AppLight[]; generated_at: string };
-  pending?: Promise<{ apps: AppLight[]; generated_at: string }>;
+  value?: Computed;
+  pending?: Promise<Computed>;
 }
 
 const cache = new Map<string, CacheEntry>();
@@ -318,24 +328,26 @@ function scopeKey(allowedIndexes?: string[] | null): string {
 }
 
 /**
- * When the light took its colour. A rule that knows its own start (an alert's
- * fire time, the minute the logs ran out) gives it directly. Otherwise it is the
- * moment this server saw the colour change; a light that was already this colour
- * when the server started watching has no known start (null), rather than
- * pretending it began at the API's start-up.
+ * When the light took its colour, as best this server knows. While the colour
+ * holds, the start holds (an alert firing again, or a new reason for the same
+ * colour, doesn't move it). When the colour changes, or on the first look, a
+ * rule that knows its own start gives it (the alert's fire time, the minute the
+ * logs ran out); otherwise it is the moment this server saw the change. A light
+ * that was already this colour when the server started watching, with no rule
+ * start, is null rather than pretending it began at the API's start-up.
  */
 function sinceFor(key: string, d: Decision, nowIso: string): string | null {
   const prev = transitions.get(key);
   let since: string | null;
-  if (d.since_hint) since = d.since_hint;
+  if (prev && prev.state === d.state) since = prev.since ?? d.since_hint; // colour held: keep its start
+  else if (d.since_hint) since = d.since_hint;
   else if (!prev) since = null; // first look: it was already like this, start unknown
-  else if (prev.state === d.state) since = prev.since; // same colour (maybe new wording): keep the start
   else since = nowIso; // the colour changed while we watched
   transitions.set(key, { state: d.state, reason: d.reason, since });
   return since;
 }
 
-async function compute(allowedIndexes: string[] | null | undefined): Promise<{ apps: AppLight[]; generated_at: string }> {
+async function compute(allowedIndexes: string[] | null | undefined): Promise<Computed> {
   const nowMs = clock();
   const nowIso = new Date(nowMs).toISOString();
   logQueries += 1;
@@ -343,7 +355,7 @@ async function compute(allowedIndexes: string[] | null | undefined): Promise<{ a
   const firing = loadFiringAlerts(nowMs);
   const sk = scopeKey(allowedIndexes);
   const apps = activity.map((a) => lightFor(a, firing, allowedIndexes, sk, nowIso));
-  return { apps, generated_at: nowIso };
+  return { apps, generated_at: nowIso, capped: activity.length >= APP_ACTIVITY_WINDOW.maxApps };
 }
 
 function lightFor(
@@ -388,35 +400,39 @@ async function cachedLights(allowedIndexes?: string[] | null) {
 
 /**
  * Lights for every app the key can see (7-day list, minus rows with no app
- * name), or for the asked-for apps in the order asked. An asked-for app with
- * no logs the key can read is red "Gone quiet: no logs in 7 days" (the same
- * answer whether it doesn't exist or the key can't see it).
+ * name), or for the asked-for apps in the order asked (asking for an app by
+ * name and by index gives it once). An asked-for app with no logs the key can
+ * read is red "Gone quiet: no logs in 7 days" (the same answer whether it
+ * doesn't exist or the key can't see it). The list keeps the 1000 apps that
+ * logged most recently; when there are more, an asked-for app outside them
+ * logged less recently than all 1000 and says "no recent logs" instead.
  */
 export async function getLabLights(
   allowedIndexes?: string[] | null,
   apps?: string[],
 ): Promise<LightsResult> {
-  const { apps: all, generated_at } = await cachedLights(allowedIndexes);
+  const { apps: all, generated_at, capped } = await cachedLights(allowedIndexes);
   let out: AppLight[];
   if (apps && apps.length) {
+    const seen = new Set<string>();
     out = apps.map((wanted) => {
       const w = wanted.toLowerCase();
       const found =
         all.find((l) => l.app.toLowerCase() === w) ??
         all.find((l) => l.app !== 'unknown' && l.indexes.some((i) => i.toLowerCase() === w));
-      if (found) return found;
+      if (found) return seen.has(found.app) ? null : (seen.add(found.app), found);
       return {
         app: wanted,
         label: displayLabel(wanted),
         state: 'red' as const,
-        why: 'Gone quiet: no logs in 7 days',
+        why: capped ? 'Gone quiet: no recent logs' : 'Gone quiet: no logs in 7 days',
         since: null,
         logs_last_15m: 0,
         errors_last_15m: 0,
         last_seen: null,
         indexes: [],
       };
-    });
+    }).filter((l): l is AppLight => l !== null);
   } else {
     out = all.filter((l) => l.app !== 'unknown');
   }
