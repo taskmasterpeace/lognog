@@ -1173,6 +1173,15 @@ export interface Alert {
   app_scope?: string;
   created_at: string;
   updated_at: string;
+  /** Actions that can't deliver right now (missing or turned-off channel); plain sentences. */
+  action_problems?: AlertActionProblem[];
+}
+
+export interface AlertActionProblem {
+  /** Position in `actions`. */
+  index: number;
+  type: AlertAction['type'];
+  problem: string;
 }
 
 export interface AlertHistory {

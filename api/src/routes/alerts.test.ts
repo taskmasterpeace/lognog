@@ -174,4 +174,89 @@ describe('alert routes', () => {
       }
     });
   });
+
+  describe('actions that cannot deliver (action_problems)', () => {
+    let okId: string;
+    let offName: string;
+    let brokenAlertId: string;
+    let zeroActionId: string;
+
+    beforeAll(() => {
+      const ok = createNotificationChannel('problems-ok', 'slack', 'slack://T/B/ok-token', {});
+      okId = ok.id;
+      offName = createNotificationChannel('problems-off', 'slack', 'slack://T/B/off-token', { enabled: false }).name;
+
+      brokenAlertId = createAlert('problems broken', 'search severity<=3', {
+        actions: [
+          { type: 'apprise', config: { channel: 'slack-alerts' } },
+          { type: 'apprise', config: { channel: okId } },
+          { type: 'apprise', config: { channel: 'problems-ok' } },
+          { type: 'apprise', config: { channel: offName } },
+          { type: 'apprise', config: { apprise_urls: 'json://example.invalid' } },
+          { type: 'log', config: {} },
+        ],
+      }).id;
+      zeroActionId = createAlert('problems zero actions', 'search *', { actions: [] }).id;
+    });
+
+    it('GET /alerts/:id names the missing and turned-off channels, matching id or name like the sender', async () => {
+      const res = await request(app).get(`/alerts/${brokenAlertId}`);
+      expect(res.status).toBe(200);
+      expect(res.body.action_problems).toEqual([
+        { index: 0, type: 'apprise', problem: `Channel "slack-alerts" doesn't exist, so this alert can't be delivered.` },
+        { index: 3, type: 'apprise', problem: `Channel "problems-off" is turned off, so this alert can't be delivered.` },
+      ]);
+    });
+
+    it('GET /alerts includes action_problems on every rule, empty for a rule with no actions', async () => {
+      const res = await request(app).get('/alerts');
+      expect(res.status).toBe(200);
+      for (const a of res.body) expect(Array.isArray(a.action_problems)).toBe(true);
+      const broken = res.body.find((a: { id: string }) => a.id === brokenAlertId);
+      expect(broken.action_problems.map((p: { index: number }) => p.index)).toEqual([0, 3]);
+      const zero = res.body.find((a: { id: string }) => a.id === zeroActionId);
+      expect(zero.action_problems).toEqual([]);
+    });
+
+    it('PUT still saves a live-shaped rule whose untouched apprise action points at a missing channel', async () => {
+      const live = createAlert('Critical errors (live shape)', 'search severity<=3 | stats count', {
+        trigger_type: 'number_of_results',
+        trigger_condition: 'greater_than',
+        trigger_threshold: 0,
+        schedule_type: 'cron',
+        cron_expression: '*/5 * * * *',
+        time_range: '-5m',
+        throttle_enabled: true,
+        throttle_window_seconds: 3600,
+        severity: 'high',
+        actions: [{ type: 'apprise', config: { channel: 'slack-alerts', title: '{{alert_name}}', message: '{{result_count}} errors' } }],
+      });
+      const current = (await request(app).get(`/alerts/${live.id}`)).body;
+      expect(current.action_problems).toHaveLength(1);
+
+      // The edit form sends the whole rule back with only the name changed.
+      const res = await request(app)
+        .put(`/alerts/${live.id}`)
+        .send({
+          name: 'Critical errors (renamed)',
+          description: current.description,
+          search_query: current.search_query,
+          trigger_type: current.trigger_type,
+          trigger_condition: current.trigger_condition,
+          trigger_threshold: current.trigger_threshold,
+          schedule_type: current.schedule_type,
+          cron_expression: current.cron_expression,
+          time_range: current.time_range,
+          actions: current.actions,
+          throttle_enabled: current.throttle_enabled,
+          throttle_window_seconds: current.throttle_window_seconds,
+          severity: current.severity,
+          enabled: current.enabled,
+        });
+      expect(res.status).toBe(200);
+      expect(res.body.name).toBe('Critical errors (renamed)');
+      expect(res.body.actions).toEqual(current.actions);
+      expect(res.body.action_problems).toEqual(current.action_problems);
+    });
+  });
 });

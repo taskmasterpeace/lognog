@@ -22,7 +22,9 @@ import {
   AlertTriggerCondition,
   AlertSeverity,
   AlertScheduleType,
+  getNotificationChannels,
 } from '../db/sqlite.js';
+import { findActionProblems } from '../services/alert-action-problems.js';
 import { evaluateAlert, testAlert, evaluateAllAlerts, normalizeTriggerType } from '../services/alerts.js';
 import { validateDslCondition } from '../db/backend.js';
 import { requireOwnerOrAdmin, withOwnership } from '../auth/ownership.js';
@@ -81,6 +83,29 @@ function invalidCustomCondition(triggerType: unknown, condition: unknown): strin
   return error ? `Invalid custom condition: ${error}` : null;
 }
 
+// One channel-list read per request; every rule is checked against it.
+// A failure here must never hide the alerts themselves.
+function loadChannelsForProblems() {
+  try {
+    return getNotificationChannels();
+  } catch (error) {
+    console.error('[Alerts] Could not read notification channels:', error);
+    return null;
+  }
+}
+
+function presentAlert<T extends { actions: string }>(
+  alert: T,
+  channels: ReturnType<typeof loadChannelsForProblems>,
+) {
+  const actions = safeJsonParse<AlertAction[]>(alert.actions, []);
+  return {
+    ...alert,
+    actions,
+    action_problems: channels ? findActionProblems(actions, channels) : [],
+  };
+}
+
 function parseHistoryLimit(raw: unknown): number {
   return Math.min(parseInt(String(raw ?? ''), 10) || 100, 1000);
 }
@@ -99,10 +124,8 @@ router.get('/', (req: Request, res: Response) => {
     const appScope = req.query.app_scope as string | undefined;
     const alerts = getAlerts(false, appScope);
     // Parse actions JSON for each alert
-    const alertsWithParsedActions = alerts.map(alert => withOwnership(req, {
-      ...alert,
-      actions: safeJsonParse<AlertAction[]>(alert.actions, []),
-    }));
+    const channels = loadChannelsForProblems();
+    const alertsWithParsedActions = alerts.map(alert => withOwnership(req, presentAlert(alert, channels)));
     res.json(alertsWithParsedActions);
   } catch (error) {
     console.error('Error getting alerts:', error);
@@ -303,10 +326,7 @@ router.post('/', (req: Request, res: Response) => {
       owner_id: req.user?.id ?? null,
     });
 
-    res.status(201).json({
-      ...alert,
-      actions: safeJsonParse<AlertAction[]>(alert.actions, []),
-    });
+    res.status(201).json(presentAlert(alert, loadChannelsForProblems()));
   } catch (error) {
     console.error('Error creating alert:', error);
     res.status(500).json({ error: 'Failed to create alert' });
@@ -322,10 +342,7 @@ router.get('/:id', (req: Request, res: Response) => {
     if (!alert) {
       return res.status(404).json({ error: 'Alert not found' });
     }
-    res.json({
-      ...alert,
-      actions: safeJsonParse<AlertAction[]>(alert.actions, []),
-    });
+    res.json(presentAlert(alert, loadChannelsForProblems()));
   } catch (error) {
     console.error('Error getting alert:', error);
     res.status(500).json({ error: 'Failed to get alert' });
@@ -407,10 +424,8 @@ router.put('/:id', (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Alert not found' });
     }
 
-    res.json({
-      ...alert,
-      actions: safeJsonParse<AlertAction[]>(alert.actions, []),
-    });
+    // Saving never depends on channels: a broken action is reported, not refused.
+    res.json(presentAlert(alert, loadChannelsForProblems()));
   } catch (error) {
     console.error('Error updating alert:', error);
     res.status(500).json({ error: 'Failed to update alert' });

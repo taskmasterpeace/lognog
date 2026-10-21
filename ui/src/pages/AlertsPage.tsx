@@ -146,6 +146,21 @@ const TIME_RANGES = [
   { label: 'Last 24 hours', value: '-24h' },
 ];
 
+
+// Same lookup the sender uses: channel id first, then exact name.
+function findChannel(channels: NotificationChannel[], ref: string | undefined): NotificationChannel | undefined {
+  if (!ref) return undefined;
+  return channels.find(c => c.id === ref) ?? channels.find(c => c.name === ref);
+}
+
+// "Channel "x" doesn't exist, so this alert can't be delivered." reads as
+// "channel "x" doesn't exist" after the row's "Won't be delivered:" label.
+function shortProblem(problem: string): string {
+  const short = problem.replace(/, so this alert can't be delivered\.$/, '');
+  if (short === problem) return problem;
+  return short.charAt(0).toLowerCase() + short.slice(1);
+}
+
 export default function AlertsPage() {
   const { formatDate } = useDateFormat();
   const toast = useToast();
@@ -276,7 +291,7 @@ export default function AlertsPage() {
   });
 
   // Load notification channels for Apprise action
-  const { data: notificationChannels = [] } = useQuery<NotificationChannel[]>({
+  const { data: notificationChannels = [], isSuccess: channelsLoaded } = useQuery<NotificationChannel[]>({
     queryKey: ['notificationChannels'],
     queryFn: getNotificationChannels,
   });
@@ -748,6 +763,15 @@ export default function AlertsPage() {
                         Failing
                       </div>
                     )}
+                    {alert.actions.length === 0 && (
+                      <div
+                        className="px-2 py-0.5 sm:py-1 bg-nog-100 text-nog-600 dark:bg-nog-700 dark:text-nog-300 rounded-full text-xs font-medium inline-flex items-center gap-1"
+                        title="This alert has no actions. When it fires it's recorded in Alert History, but no message is sent to anyone."
+                      >
+                        <BellOff className="w-3 h-3" />
+                        Dashboard only (no one is told)
+                      </div>
+                    )}
                   </div>
 
                   {/* Action buttons - scrollable on mobile */}
@@ -817,6 +841,23 @@ export default function AlertsPage() {
                   </div>
                 </div>
 
+                {/* Actions that can't deliver: always visible, in words, not colour only. */}
+                {alert.action_problems && alert.action_problems.length > 0 && (
+                  <ul className="px-3 sm:px-4 pb-3 -mt-1 space-y-1">
+                    {alert.action_problems.map((p) => (
+                      <li
+                        key={`${p.index}-${p.problem}`}
+                        className="flex items-start gap-1.5 text-xs sm:text-sm text-red-700 dark:text-red-300"
+                      >
+                        <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" aria-hidden="true" />
+                        <span className="min-w-0 break-words">
+                          <span className="font-medium">Won't be delivered:</span> {shortProblem(p.problem)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
                 {/* Expanded Details */}
                 {isExpanded && (
                   <div id={`alert-details-${alert.id}`} className="px-3 sm:px-4 pb-3 sm:pb-4 border-t border-nog-100 dark:border-nog-700 pt-3 sm:pt-4">
@@ -876,10 +917,17 @@ export default function AlertsPage() {
                       <div className="mt-4">
                         <div className="text-nog-500 dark:text-nog-400 text-sm mb-2">Actions</div>
                         <div className="flex flex-wrap gap-2">
-                          {alert.actions.map((action, i) => (
+                          {alert.actions.map((action, i) => {
+                            const problem = alert.action_problems?.find(p => p.index === i);
+                            return (
                             <div
                               key={i}
-                              className="px-3 py-1 bg-nog-100 dark:bg-nog-700 rounded-full text-sm flex items-center gap-2"
+                              title={problem?.problem}
+                              className={`px-3 py-1 rounded-full text-sm flex items-center gap-2 ${
+                                problem
+                                  ? 'bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800'
+                                  : 'bg-nog-100 dark:bg-nog-700'
+                              }`}
                             >
                               {action.type === 'email' && <Mail className="w-3 h-3" />}
                               {action.type === 'webhook' && <Globe className="w-3 h-3" />}
@@ -888,8 +936,13 @@ export default function AlertsPage() {
                               {action.type === 'script' && <Terminal className="w-3 h-3" />}
                               {action.type === 'show_on_login' && <LogIn className="w-3 h-3" />}
                               {action.type === 'show_on_login' ? 'On Login' : action.type}
+                              {action.type === 'apprise' && action.config.channel && (
+                                <span className="text-xs opacity-80">{findChannel(notificationChannels, action.config.channel)?.name ?? action.config.channel}</span>
+                              )}
+                              {problem && <span className="text-xs font-medium">(won't deliver)</span>}
                             </div>
-                          ))}
+                            );
+                          })}
                         </div>
                       </div>
                     )}
@@ -1484,18 +1537,62 @@ export default function AlertsPage() {
                               <label className="block text-xs font-medium text-nog-700 dark:text-nog-300 mb-1">
                                 Notification Channel
                               </label>
-                              <select
-                                value={action.config.channel || ''}
-                                onChange={(e) => updateAction(index, { channel: e.target.value, apprise_urls: '' })}
-                                className="w-full px-3 py-2 border border-nog-300 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-700 text-nog-900 dark:text-nog-100 text-sm"
-                              >
-                                <option value="">Select a channel or use custom URL...</option>
-                                {notificationChannels?.filter(ch => ch.enabled).map((channel) => (
-                                  <option key={channel.id} value={channel.id}>
-                                    {channel.name} ({channel.service})
-                                  </option>
-                                ))}
-                              </select>
+                              {(() => {
+                                const ref = action.config.channel || '';
+                                const resolved = findChannel(notificationChannels, ref);
+                                // A saved rule may point at a channel by name, at a deleted
+                                // channel, or at a turned-off one; keep it selectable so the
+                                // picker shows what is really saved instead of a blank.
+                                const listed = notificationChannels.some(ch => ch.enabled && ch.id === ref);
+                                const problem = ref && channelsLoaded
+                                  ? !resolved
+                                    ? `channel "${ref}" doesn't exist`
+                                    : !resolved.enabled
+                                      ? `channel "${resolved.name}" is turned off`
+                                      : null
+                                  : null;
+                                return (
+                                  <>
+                                    <select
+                                      value={ref}
+                                      onChange={(e) => updateAction(index, { channel: e.target.value, apprise_urls: '' })}
+                                      aria-invalid={problem ? true : undefined}
+                                      aria-describedby={problem ? `apprise-channel-problem-${index}` : undefined}
+                                      className={`w-full px-3 py-2 border rounded-lg bg-white dark:bg-nog-700 text-nog-900 dark:text-nog-100 text-sm ${
+                                        problem ? 'border-red-400 dark:border-red-600' : 'border-nog-300 dark:border-nog-600'
+                                      }`}
+                                    >
+                                      <option value="">Select a channel or use custom URL...</option>
+                                      {ref && !listed && (
+                                        <option value={ref}>
+                                          {resolved
+                                            ? `${resolved.name} (${resolved.service})${resolved.enabled ? '' : ' (turned off)'}`
+                                            : `${ref} (doesn't exist)`}
+                                        </option>
+                                      )}
+                                      {notificationChannels?.filter(ch => ch.enabled).map((channel) => (
+                                        <option key={channel.id} value={channel.id}>
+                                          {channel.name} ({channel.service})
+                                        </option>
+                                      ))}
+                                    </select>
+                                    {problem && (
+                                      <p
+                                        id={`apprise-channel-problem-${index}`}
+                                        className="mt-1 flex items-start gap-1.5 text-xs text-red-700 dark:text-red-300"
+                                      >
+                                        <AlertTriangle className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
+                                        <span className="min-w-0 break-words">
+                                          <span className="font-medium">Won't be delivered:</span> {problem}.{' '}
+                                          {resolved
+                                            ? 'Turn it on in Settings > Notifications or pick another channel. You can still save.'
+                                            : 'Pick another channel. You can still save.'}
+                                        </span>
+                                      </p>
+                                    )}
+                                  </>
+                                );
+                              })()}
                             </div>
 
                             {!action.config.channel && (
@@ -1836,18 +1933,25 @@ export default function AlertsPage() {
                             </div>
                             {entry.actions_executed && entry.actions_executed.length > 0 && (
                               <div className="mt-2 flex flex-wrap gap-2">
-                                {entry.actions_executed.map((action, i) => (
-                                  <span
-                                    key={i}
-                                    className={`text-xs px-2 py-1 rounded ${
-                                      action.success
-                                        ? 'bg-green-100 text-green-700'
-                                        : 'bg-red-100 text-red-700'
-                                    }`}
-                                  >
-                                    {action.type}: {action.success ? 'OK' : 'Failed'}
-                                  </span>
-                                ))}
+                                {entry.actions_executed.map((action, i) => {
+                                  // Older rows may lack a message; show the plain status then.
+                                  const reason = !action.success && typeof action.message === 'string' && action.message.trim()
+                                    ? action.message.trim()
+                                    : null;
+                                  return (
+                                    <span
+                                      key={i}
+                                      className={`text-xs px-2 py-1 rounded max-w-full break-words ${
+                                        action.success
+                                          ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300'
+                                          : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300'
+                                      }`}
+                                    >
+                                      {action.type}: {action.success ? 'OK' : 'Failed'}
+                                      {reason && <> ({reason})</>}
+                                    </span>
+                                  );
+                                })}
                               </div>
                             )}
                           </div>
