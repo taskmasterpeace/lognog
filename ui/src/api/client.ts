@@ -1112,7 +1112,7 @@ export async function deleteWorkflowAction(id: string): Promise<void> {
 
 // Alerts API
 export interface AlertAction {
-  type: 'email' | 'webhook' | 'log' | 'apprise' | 'script' | 'show_on_login';
+  type: 'email' | 'webhook' | 'log' | 'apprise' | 'script' | 'show_on_login' | 'relay';
   config: {
     // Email
     to?: string;
@@ -1134,6 +1134,11 @@ export interface AlertAction {
     // Show on login
     expires_in?: string;
     user_id?: string;
+    // Studio relay (uses `message` above). The relay URL and key live on the server only.
+    project?: string;
+    telegram?: boolean;
+    lab?: boolean;
+    urgent?: boolean;
   };
 }
 
@@ -1245,6 +1250,17 @@ export async function toggleAlert(id: string): Promise<Alert> {
 
 export async function evaluateAlert(id: string): Promise<{ triggered: boolean; resultCount: number; message: string }> {
   return request(`/alerts/${id}/evaluate`, { method: 'POST' });
+}
+
+export interface RelayStatus {
+  /** True when the server has RELAY_URL and RELAY_BUS_KEY set. */
+  configured: boolean;
+  /** PROJECT labels the relay accepts. */
+  projects: string[];
+}
+
+export async function getRelayStatus(): Promise<RelayStatus> {
+  return request('/alerts/relay/status');
 }
 
 export async function testAlert(config: {
