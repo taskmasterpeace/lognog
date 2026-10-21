@@ -27,6 +27,7 @@ import {
   Send,
   Terminal,
   LogIn,
+  Radio,
   Filter,
   ArrowUpDown,
   Timer,
@@ -48,6 +49,7 @@ import {
   getNotificationChannels,
   NotificationChannel,
 } from '../api/client';
+import RelayActionEditor, { isRelayActionValid, relayActionLabel } from '../components/RelayActionEditor';
 import VariableHelper from '../components/VariableHelper';
 import { useToast } from '../contexts/ToastContext';
 import { useConfirm } from '../components/ui/ConfirmDialog';
@@ -544,6 +546,9 @@ export default function AlertsPage() {
         // Must have a command
         return !!(action.config.command?.trim());
       }
+      if (action.type === 'relay') {
+        return isRelayActionValid(action);
+      }
       if (action.type === 'show_on_login') {
         // Title is required (message is optional, will use alert name as fallback)
         return !!(action.config.title?.trim());
@@ -935,7 +940,12 @@ export default function AlertsPage() {
                               {action.type === 'apprise' && <Send className="w-3 h-3" />}
                               {action.type === 'script' && <Terminal className="w-3 h-3" />}
                               {action.type === 'show_on_login' && <LogIn className="w-3 h-3" />}
-                              {action.type === 'show_on_login' ? 'On Login' : action.type}
+                              {action.type === 'relay' && <Radio className="w-3 h-3" />}
+                              {action.type === 'show_on_login'
+                                ? 'On Login'
+                                : action.type === 'relay'
+                                  ? relayActionLabel(action.config)
+                                  : action.type}
                               {action.type === 'apprise' && action.config.channel && (
                                 <span className="text-xs opacity-80">{findChannel(notificationChannels, action.config.channel)?.name ?? action.config.channel}</span>
                               )}
@@ -1385,11 +1395,16 @@ export default function AlertsPage() {
                   </div>
                 </div>
 
+                <RelayActionEditor
+                  actions={formData.actions}
+                  onChange={(actions) => setFormData((prev) => ({ ...prev, actions }))}
+                />
+
                 {formData.actions.length === 0 ? (
                   <p className="text-sm text-nog-500">No actions configured. Alert will only log to history.</p>
                 ) : (
                   <div className="space-y-3">
-                    {formData.actions.map((action, index) => (
+                    {formData.actions.map((action, index) => action.type === 'relay' ? null : (
                       <div key={index} className="p-4 bg-nog-50 dark:bg-nog-700/50 rounded-lg">
                         <div className="flex items-center justify-between mb-3">
                           <div className="flex items-center gap-2 font-medium capitalize">

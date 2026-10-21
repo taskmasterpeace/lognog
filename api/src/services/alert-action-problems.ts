@@ -9,6 +9,7 @@
  */
 
 import type { AlertAction, NotificationChannel } from '../db/sqlite.js';
+import { isRelayConfigured } from './relay.js';
 
 export interface ActionProblem {
   index: number;
@@ -22,13 +23,30 @@ export function findChannelInList<T extends ChannelLike>(channels: T[], idOrName
   return channels.find(c => c.id === idOrName) ?? channels.find(c => c.name === idOrName);
 }
 
-export function findActionProblems(actions: unknown, channels: ChannelLike[]): ActionProblem[] {
+export const RELAY_NOT_SET_UP_PROBLEM =
+  "The studio relay isn't set up on this server (RELAY_URL and RELAY_BUS_KEY), so this alert can't be delivered.";
+
+/**
+ * `channels` null means the channel list couldn't be read: apprise actions
+ * are then not judged (never a false alarm). Relay actions are judged
+ * against the server's RELAY_URL/RELAY_BUS_KEY, the same test the sender uses.
+ */
+export function findActionProblems(
+  actions: unknown,
+  channels: ChannelLike[] | null,
+  opts: { relayConfigured?: boolean } = {},
+): ActionProblem[] {
   if (!Array.isArray(actions)) return [];
+  const relayConfigured = opts.relayConfigured ?? isRelayConfigured();
   const problems: ActionProblem[] = [];
   actions.forEach((action, index) => {
     if (!action || typeof action !== 'object') return;
     const a = action as AlertAction;
-    if (a.type !== 'apprise') return;
+    if (a.type === 'relay') {
+      if (!relayConfigured) problems.push({ index, type: a.type, problem: RELAY_NOT_SET_UP_PROBLEM });
+      return;
+    }
+    if (a.type !== 'apprise' || !channels) return;
     // Same test as the sender: no channel means it uses apprise_urls instead.
     const ref = typeof a.config?.channel === 'string' ? a.config.channel : '';
     if (!ref) return;
