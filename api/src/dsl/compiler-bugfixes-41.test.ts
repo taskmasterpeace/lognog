@@ -33,10 +33,17 @@ describe('#41-3 dedup is a real dedup, not a silent no-op', () => {
     expect(result.sql).toMatch(/LIMIT 1 BY JSONExtractString\(structured_data, 'request_id'\)/);
   });
 
-  it('SQLite: collapses to GROUP BY on the dedup keys while keeping all columns', () => {
+  it('SQLite: one row per dedup key while keeping all columns', () => {
     const result = compileDSLToSQLite(parseToAST('search * | dedup hostname'));
     expect(result.sql).toContain('message');
-    expect(result.sql).toContain('GROUP BY hostname');
+    expect(result.sql).toContain('PARTITION BY hostname');
+  });
+
+  it('SQLite: keeps the NEWEST row per key, like ClickHouse (not an arbitrary one)', () => {
+    const result = compileDSLToSQLite(parseToAST('search * | dedup hostname'));
+    expect(result.sql).toContain("ROW_NUMBER() OVER (PARTITION BY hostname ORDER BY replace(timestamp, 'T', ' ') DESC, rowid DESC)");
+    expect(result.sql).toContain('WHERE __dedup_rn = 1');
+    expect(result.sql).not.toContain('GROUP BY hostname');
   });
 
   it('does not emit DISTINCT-less no-op that drops columns anymore (CH)', () => {
