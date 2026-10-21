@@ -15,6 +15,9 @@
  *           or the app is quiet 15-60 min (Data Sources says "Recent"),
  *           or errors are up (3+ in 15 min and 2x normal)
  *   green   everything else (Data Sources "Active", errors at their usual rate)
+ * An alert counts for an app when its search names that app (app_name=), or,
+ * naming no app, when it searches an index the app logs to. A rule that names
+ * neither (e.g. `search severity<=3`) lights nothing: it isn't about one app.
  * Freshness comes from services/source-status.ts, the same minutes the Data
  * Sources page uses. Data Sources has one row per app and index; a light is
  * per app and goes by the app's newest log in any of its indexes.
@@ -45,6 +48,8 @@ export interface AppLight {
   since: string | null;
   logs_last_15m: number;
   errors_last_15m: number;
+  /** Errors in the 24 h before the last 15 min: the "usual" the spike is measured against. */
+  errors_usual_24h: number;
   /** ISO time of the newest log (null = none in 7 days). */
   last_seen: string | null;
   /** Indexes the app logs to, so a caller can open the logs behind a number. */
@@ -128,22 +133,57 @@ interface AlertRow {
   throttle_enabled: number | null;
   throttle_window_seconds: number | null;
   last_ack: number | null;
+  /** How the rule judges a run (alerts.trigger_type / trigger_condition / trigger_threshold). */
+  trigger_type?: string | null;
+  trigger_condition?: string | null;
+  trigger_threshold?: number | null;
+  /** The value the latest run compared (alerts.last_value), written on every run. */
+  last_value?: number | null;
+  /** 1 when a global or alert-level silence covers the rule right now. */
+  silenced?: number | null;
+}
+
+const PLAIN_CONDITIONS = new Set(['greater_than', 'less_than', 'equal_to', 'not_equal_to']);
+
+/**
+ * Did the latest run still meet the rule's condition? The scheduler writes
+ * last_status 'ok' both when a run found nothing and when it was throttled,
+ * but it writes last_value on every run, so for plain count rules the value
+ * tells the two apart. null = can't tell from the stored row (custom
+ * conditions, drops_by / rises_by): the throttle window decides.
+ */
+export function latestRunStillMet(row: AlertRow): boolean | null {
+  const value = row.last_value;
+  if (typeof value !== 'number' || !Number.isFinite(value)) return null;
+  const type = String(row.trigger_type || 'number_of_results').toLowerCase();
+  if (['no_data', 'nodata', 'no_results'].includes(type)) return value === 0;
+  if (['custom_condition', 'custom'].includes(type)) return null;
+  const cond = String(row.trigger_condition || 'greater_than');
+  if (!PLAIN_CONDITIONS.has(cond)) return null;
+  const t = Number(row.trigger_threshold ?? 0);
+  if (cond === 'greater_than') return value > t;
+  if (cond === 'less_than') return value < t;
+  if (cond === 'equal_to') return value === t;
+  return value !== t;
 }
 
 /**
  * An enabled rule is firing when its latest evaluation fired, or it fired
  * inside its throttle window (a throttled re-check records "ok" even while
- * the condition still holds), and nobody has acknowledged that firing.
+ * the condition still holds) and its latest run still met the condition,
+ * and nobody has acknowledged or silenced it.
  */
 export function isFiring(row: AlertRow, nowMs: number): boolean {
-  if (row.last_ack) return false;
+  if (row.last_ack || row.silenced) return false;
   const triggered = parseServerTime(row.last_triggered);
   const ran = parseServerTime(row.last_run);
   if (triggered === null || ran === null) return false;
   if (nowMs - ran > LIGHTS_RULES.alertFreshHours * 3_600_000) return false;
   if (row.last_status === 'triggered') return true;
   const windowMs = (row.throttle_enabled ? Number(row.throttle_window_seconds) || 0 : 0) * 1000;
-  return windowMs > 0 && nowMs - triggered <= windowMs;
+  if (!(windowMs > 0 && nowMs - triggered <= windowMs)) return false;
+  // Inside the window: a run that no longer met the condition means it cleared.
+  return latestRunStillMet(row) !== false;
 }
 
 export function loadFiringAlerts(nowMs: number = Date.now()): FiringAlert[] {
@@ -151,8 +191,12 @@ export function loadFiringAlerts(nowMs: number = Date.now()): FiringAlert[] {
     .prepare(
       `SELECT a.id, a.name, a.severity, a.search_query, a.last_run, a.last_triggered, a.last_status,
               a.throttle_enabled, a.throttle_window_seconds,
+              a.trigger_type, a.trigger_condition, a.trigger_threshold, a.last_value,
               (SELECT h.acknowledged FROM alert_history h
-                 WHERE h.alert_id = a.id ORDER BY h.triggered_at DESC LIMIT 1) AS last_ack
+                 WHERE h.alert_id = a.id ORDER BY h.triggered_at DESC LIMIT 1) AS last_ack,
+              EXISTS (SELECT 1 FROM alert_silences s
+                       WHERE (s.ends_at IS NULL OR s.ends_at > datetime('now'))
+                         AND (s.level = 'global' OR (s.level = 'alert' AND s.target_id = a.id))) AS silenced
          FROM alerts a
         WHERE a.enabled = 1 AND a.last_triggered IS NOT NULL`,
     )
@@ -183,7 +227,11 @@ export function alertsForApp(
   const idx = new Set(activity.indexes.map((i) => i.toLowerCase()));
   return alerts.filter((a) => {
     if (a.apps.length > 0) {
-      return a.apps.includes(app) && a.indexes.every((i) => isIndexAllowed(allowedIndexes, i));
+      if (!a.apps.includes(app)) return false;
+      // A rule that names no index searches every index: only a key that can
+      // read every index may see it. Otherwise every index it names must be readable.
+      if (a.indexes.length === 0) return isUnscoped(allowedIndexes);
+      return a.indexes.every((i) => isIndexAllowed(allowedIndexes, i));
     }
     return a.indexes.some((i) => idx.has(i));
   });
@@ -221,7 +269,9 @@ function errorsVsNormal(errors: number, errorsPrev24h: number): string {
 }
 
 export function displayLabel(app: string): string {
-  const words = app.split(/[-_\s.]+/).filter(Boolean);
+  // Syslog-style names carry punctuation ("kernel:", "rsyslogd[12]:"): drop it at the ends.
+  const trimmed = app.replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '') || app;
+  const words = trimmed.split(/[-_\s.:]+/).filter(Boolean);
   if (words.length === 0) return app;
   if (words.length === 1 && words[0].length <= 3) return words[0].toUpperCase();
   return words.map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
@@ -318,9 +368,19 @@ interface CacheEntry {
 
 const cache = new Map<string, CacheEntry>();
 /** When each app entered its current state: `${scope}|${app}` -> state + reason + since. */
-const transitions = new Map<string, { state: LightState; reason: string; since: string | null }>();
+const transitions = new Map<string, { state: LightState; reason: string; since: string | null; seen: number }>();
+/** Forget an app this server hasn't been asked about for a week, so the memory can't only grow. */
+const TRANSITION_FORGET_MS = 7 * 24 * 3_600_000;
+
+function pruneTransitions(nowMs: number): void {
+  for (const [key, t] of transitions) if (nowMs - t.seen > TRANSITION_FORGET_MS) transitions.delete(key);
+}
 let logQueries = 0;
 let clock: () => number = () => Date.now();
+
+function isUnscoped(allowedIndexes?: string[] | null): boolean {
+  return !allowedIndexes || allowedIndexes.length === 0;
+}
 
 function scopeKey(allowedIndexes?: string[] | null): string {
   if (!allowedIndexes || allowedIndexes.length === 0) return '*';
@@ -343,12 +403,13 @@ function sinceFor(key: string, d: Decision, nowIso: string): string | null {
   else if (d.since_hint) since = d.since_hint;
   else if (!prev) since = null; // first look: it was already like this, start unknown
   else since = nowIso; // the colour changed while we watched
-  transitions.set(key, { state: d.state, reason: d.reason, since });
+  transitions.set(key, { state: d.state, reason: d.reason, since, seen: Date.parse(nowIso) });
   return since;
 }
 
 async function compute(allowedIndexes: string[] | null | undefined): Promise<Computed> {
   const nowMs = clock();
+  pruneTransitions(nowMs);
   const nowIso = new Date(nowMs).toISOString();
   logQueries += 1;
   const activity = await getAppActivity(allowedIndexes ?? undefined, nowMs);
@@ -374,6 +435,7 @@ function lightFor(
     since: sinceFor(`${sk}|${a.app.toLowerCase()}`, d, nowIso),
     logs_last_15m: a.logs_15m,
     errors_last_15m: a.errors_15m,
+    errors_usual_24h: a.errors_prev_24h,
     last_seen: a.last_seen,
     indexes: a.indexes,
   };
@@ -429,6 +491,7 @@ export async function getLabLights(
         since: null,
         logs_last_15m: 0,
         errors_last_15m: 0,
+        errors_usual_24h: 0,
         last_seen: null,
         indexes: [],
       };
@@ -454,4 +517,8 @@ export const _labLightsTesting = {
     clock = fn;
   },
   sinceFor,
+  pruneTransitions,
+  remembered(): number {
+    return transitions.size;
+  },
 };

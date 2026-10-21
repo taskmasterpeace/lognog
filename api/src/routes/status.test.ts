@@ -72,7 +72,7 @@ describe('GET /status/lights', () => {
     ]);
     for (const a of res.body.apps) {
       expect(Object.keys(a).sort()).toEqual(
-        ['app', 'errors_last_15m', 'indexes', 'label', 'last_seen', 'logs_last_15m', 'since', 'state', 'why'].sort(),
+        ['app', 'errors_last_15m', 'errors_usual_24h', 'indexes', 'label', 'last_seen', 'logs_last_15m', 'since', 'state', 'why'].sort(),
       );
     }
   });

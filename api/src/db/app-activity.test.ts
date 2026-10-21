@@ -19,7 +19,8 @@ import { getLabLights, WHY_HEADLINES, _labLightsTesting } from '../services/lab-
 
 // UI modules, loaded by path so the API's tsc program never includes UI files.
 interface LabLightsUi {
-  lightSearchUrl(app: string, kind: 'logs' | 'errors' | 'week'): string | null;
+  lightSearchUrl(app: string, kind: 'logs' | 'errors' | 'usual' | 'week'): string | null;
+  screenLink(app: string, headline: string): { url: string; title: string } | null;
   splitWhy(why: string, state: 'green' | 'yellow' | 'red'): { headline: string; detail: string };
   shelfOrder<T extends { state: 'green' | 'yellow' | 'red'; label: string }>(lights: T[], asked: boolean): T[];
 }
@@ -223,14 +224,34 @@ describe('lab lights over real Lite rows and real alerts', () => {
     const { apps } = await getLabLights();
     const countOf = async (url: string) => {
       const p = new URLSearchParams(url.split('?')[1]);
-      const { results } = await executeDSLQuery<{ count: number }>(`${p.get('q')} | stats count`, { earliest: p.get('earliest')! });
+      const { results } = await executeDSLQuery<{ count: number }>(`${p.get('q')} | stats count`, {
+        earliest: p.get('earliest')!,
+        latest: p.get('latest') ?? undefined,
+      });
       return Number(results[0]?.count ?? 0);
     };
     for (const l of apps) {
       expect(await countOf(lightSearchUrl(l.app, 'logs')!)).toBe(l.logs_last_15m);
       expect(await countOf(lightSearchUrl(l.app, 'errors')!)).toBe(l.errors_last_15m);
+      // "usually N a day" / "4x normal": the 24 h before the last 15 min.
+      expect(await countOf(lightSearchUrl(l.app, 'usual')!)).toBe(l.errors_usual_24h);
     }
+    const ku = apps.find((a) => a.app === 'knuckle-up')!;
+    expect(ku.errors_usual_24h).toBe(1000);
     expect(lightSearchUrl('unknown', 'logs')).toBeNull();
+  });
+
+  it('the round screen opens what its word is about; quiet opens the last 7 days, where the newest log is', async () => {
+    const { screenLink } = (await import(/* @vite-ignore */ ui('labLights.ts'))) as LabLightsUi;
+    const { apps } = await getLabLights();
+    const by = Object.fromEntries(apps.map((a) => [a.app, a]));
+    expect(screenLink('hyh', 'Alert')!.url).toBe('/alerts');
+    expect(screenLink('knuckle-up', 'Error spike')!.url).toContain('severity%3C%3D3');
+    const quiet = new URLSearchParams(screenLink('homework-tree', 'Gone quiet')!.url.split('?')[1]);
+    expect(quiet.get('earliest')).toBe('-7d');
+    const { results } = await executeDSLQuery<{ newest: string }>(`${quiet.get('q')} | stats max(timestamp) as newest`, { earliest: '-7d' });
+    expect(Date.parse(String(results[0]?.newest).replace(' ', 'T') + (String(results[0]?.newest).includes('Z') ? '' : 'Z'))).toBe(Date.parse(by['homework-tree'].last_seen!));
+    expect(screenLink('unknown', 'Fine')).toBeNull();
   });
 
   it('the screen splits every why into its big headline and small detail', async () => {
@@ -262,5 +283,31 @@ describe('lab lights over real Lite rows and real alerts', () => {
     expect(sourceStatusInfo('inactive').label).toBe('Inactive');
     expect(sourceStatusInfo(undefined).label).toBe('Stale');
     expect(ageAgo(3 * 86400)).toBe('3d ago');
+  });
+
+  it('a silenced alert, or one whose latest run no longer met its rule, stops lighting the app', async () => {
+    const db = getSQLiteDB();
+    db.prepare(`INSERT INTO alert_silences (id, level, target_id, ends_at) VALUES ('sil-hyh', 'alert', 'al-hyh', datetime('now', '+1 hour'))`).run();
+    try {
+      const hyh = (await getLabLights(null, ['hyh'])).apps[0];
+      expect(hyh.why).not.toBe('Alert: HYH checkout errors');
+    } finally {
+      db.prepare(`DELETE FROM alert_silences WHERE id = 'sil-hyh'`).run();
+    }
+    // Throttled inside its window, but the latest run counted 0 of "more than 5": cleared.
+    db.prepare(
+      `UPDATE alerts SET last_status = 'ok', throttle_enabled = 1, throttle_window_seconds = 3600,
+              trigger_type = 'number_of_results', trigger_condition = 'greater_than', trigger_threshold = 5, last_value = 0
+        WHERE id = 'al-hyh'`,
+    ).run();
+    try {
+      _labLightsTesting.reset();
+      expect((await getLabLights(null, ['hyh'])).apps[0].why).not.toBe('Alert: HYH checkout errors');
+      db.prepare(`UPDATE alerts SET last_value = 9 WHERE id = 'al-hyh'`).run();
+      _labLightsTesting.reset();
+      expect((await getLabLights(null, ['hyh'])).apps[0]).toMatchObject({ state: 'red', why: 'Alert: HYH checkout errors' });
+    } finally {
+      db.prepare(`UPDATE alerts SET last_status = 'triggered', throttle_enabled = 0, last_value = NULL WHERE id = 'al-hyh'`).run();
+    }
   });
 });

@@ -14,6 +14,7 @@ import {
   plainAge,
   WHY_HEADLINES,
   _labLightsTesting,
+  latestRunStillMet,
   type FiringAlert,
 } from './lab-lights.js';
 import { ageSecondsFrom, parseServerTime, sourceStatusFromAge } from './source-status.js';
@@ -197,6 +198,17 @@ describe('alert targets', () => {
     expect(alertsForApp(app, [alert({ indexes: ['secret'], apps: ['dp-web'] })], ['directors-palette'])).toHaveLength(0);
   });
 
+  it('an alert that names an app but no index searches every index: only an unscoped key sees it', () => {
+    const rule = alert({ indexes: [], apps: ['shop-worker'] });
+    expect(alertsForApp({ app: 'shop-worker', indexes: ['shop'] }, [rule])).toHaveLength(1);
+    expect(alertsForApp({ app: 'shop-worker', indexes: ['shop'] }, [rule], ['shop'])).toHaveLength(0);
+  });
+
+  it('an alert that names neither an index nor an app lights nothing', () => {
+    const rule = alert({ indexes: [], apps: [] });
+    expect(alertsForApp({ app: 'shop-worker', indexes: ['shop'] }, [rule])).toHaveLength(0);
+  });
+
   it('an alert that names an app lights only that app, not its neighbours in the same index', () => {
     const rule = alert({ indexes: ['shop'], apps: ['shop-worker'] });
     expect(alertsForApp({ app: 'shop-worker', indexes: ['shop'] }, [rule])).toHaveLength(1);
@@ -232,6 +244,24 @@ describe('isFiring', () => {
     ).toBe(false);
   });
 
+  it('a rule whose latest run no longer met its condition has cleared, even inside the throttle window', () => {
+    const throttled = { last_status: 'ok', throttle_enabled: 1, throttle_window_seconds: 300 };
+    // greater_than 10: the latest run counted 3, so the condition is gone.
+    expect(isFiring(row({ ...throttled, trigger_condition: 'greater_than', trigger_threshold: 10, last_value: 3 }), NOW)).toBe(false);
+    // ...but a throttled run that counted 40 is still firing.
+    expect(isFiring(row({ ...throttled, trigger_condition: 'greater_than', trigger_threshold: 10, last_value: 40 }), NOW)).toBe(true);
+    // A "no data" rule cleared once the latest run found logs again.
+    expect(isFiring(row({ ...throttled, trigger_type: 'no_data', last_value: 12 }), NOW)).toBe(false);
+    expect(isFiring(row({ ...throttled, trigger_type: 'no_data', last_value: 0 }), NOW)).toBe(true);
+    // drops_by can't be re-judged from one value: the window decides.
+    expect(isFiring(row({ ...throttled, trigger_condition: 'drops_by', trigger_threshold: 5, last_value: 3 }), NOW)).toBe(true);
+    expect(latestRunStillMet(row({ trigger_type: 'custom_condition', last_value: 0 }))).toBeNull();
+  });
+
+  it('a silenced rule is not firing', () => {
+    expect(isFiring(row({ silenced: 1 }), NOW)).toBe(false);
+  });
+
   it('ignores a rule that has not run for a day (the scheduler is off, the state is old)', () => {
     const old = new Date(NOW - 26 * 3600_000).toISOString();
     expect(isFiring(row({ last_run: old, last_triggered: old }), NOW)).toBe(false);
@@ -250,6 +280,9 @@ describe('words on the screen', () => {
     expect(displayLabel('knuckle-up')).toBe('Knuckle Up');
     // A name with no words in it is shown as it is, never as a blank screen.
     expect(displayLabel('__')).toBe('__');
+    // Syslog-style names lose their punctuation.
+    expect(displayLabel('kernel:')).toBe('Kernel');
+    expect(displayLabel('rsyslogd:')).toBe('Rsyslogd');
   });
 
   it('says ages in plain words', () => {
@@ -298,5 +331,13 @@ describe('since (when the light took its colour)', () => {
     _labLightsTesting.reset();
     expect(_labLightsTesting.sinceFor('*|d', d('red', 'spike'), T1)).toBeNull();
     expect(_labLightsTesting.sinceFor('*|d', d('red', 'alert:1', T2), T3)).toBe(T2);
+  });
+
+  it('forgets an app it has not been asked about for a week (memory does not only grow)', () => {
+    _labLightsTesting.reset();
+    _labLightsTesting.sinceFor('*|old', d('green', 'fine'), T1);
+    _labLightsTesting.sinceFor('*|new', d('green', 'fine'), T3);
+    _labLightsTesting.pruneTransitions(Date.parse(T1) + 7 * 24 * 3600_000 + 60_000);
+    expect(_labLightsTesting.remembered()).toBe(1);
   });
 });
