@@ -1100,13 +1100,16 @@ export function appActivitySql(backend: Backend, scope: string | null, nowMs: nu
     const t24 = iso(baselineHours * 3_600_000);
     const t7 = iso(listDays * 86_400_000);
     const tAhead = iso(-futureSkewMinutes * 60_000);
+    // The 15-min counts stop at now, like the Search they link to (latest=now);
+    // logs stamped a little ahead still count for last_seen.
+    const tNow = iso(0);
     return `
       SELECT
         COALESCE(NULLIF(app_name, ''), 'unknown') AS app,
         GROUP_CONCAT(DISTINCT COALESCE(NULLIF(index_name, ''), 'main')) AS indexes,
         MAX(timestamp) AS last_seen,
-        SUM(CASE WHEN timestamp >= '${t15}' THEN 1 ELSE 0 END) AS logs_15m,
-        SUM(CASE WHEN severity <= 3 AND timestamp >= '${t15}' THEN 1 ELSE 0 END) AS errors_15m,
+        SUM(CASE WHEN timestamp >= '${t15}' AND timestamp <= '${tNow}' THEN 1 ELSE 0 END) AS logs_15m,
+        SUM(CASE WHEN severity <= 3 AND timestamp >= '${t15}' AND timestamp <= '${tNow}' THEN 1 ELSE 0 END) AS errors_15m,
         SUM(CASE WHEN severity <= 3 AND timestamp >= '${t24}' AND timestamp < '${t15}' THEN 1 ELSE 0 END) AS errors_prev_24h
       FROM logs
       WHERE timestamp >= '${t7}' AND timestamp <= '${tAhead}'${scopeAnd}
@@ -1125,8 +1128,8 @@ export function appActivitySql(backend: Backend, scope: string | null, nowMs: nu
         arraySort(groupUniqArray(if(index_name = '', 'main', index_name))) AS indexes,
         toUnixTimestamp64Milli(max(timestamp)) AS last_seen_ms,
         dateDiff('second', max(timestamp), now64(3)) AS age_seconds,
-        countIf(timestamp >= ${since('MINUTE', recentMinutes)}) AS logs_15m,
-        countIf(severity <= 3 AND timestamp >= ${since('MINUTE', recentMinutes)}) AS errors_15m,
+        countIf(timestamp >= ${since('MINUTE', recentMinutes)} AND timestamp <= now64(3)) AS logs_15m,
+        countIf(severity <= 3 AND timestamp >= ${since('MINUTE', recentMinutes)} AND timestamp <= now64(3)) AS errors_15m,
         countIf(severity <= 3 AND timestamp >= ${since('HOUR', baselineHours)} AND timestamp < ${since('MINUTE', recentMinutes)}) AS errors_prev_24h
       FROM lognog.logs
       WHERE timestamp >= ${since('DAY', listDays)} AND timestamp <= now64(3) + INTERVAL ${futureSkewMinutes} MINUTE${scopeAnd}

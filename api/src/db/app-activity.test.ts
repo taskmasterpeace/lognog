@@ -15,6 +15,7 @@ process.env.SQLITE_PATH = join(tmpdir(), `lognog-lights-main-${tag}.db`);
 
 import { APP_ACTIVITY_WINDOW, appActivitySql, executeDSLQuery, getAppActivity, getActiveSources, insertLogs } from './backend';
 import { getSQLiteDB } from './sqlite';
+import { getSQLiteLogsDB } from './sqlite-logs';
 import { getLabLights, WHY_HEADLINES, _labLightsTesting } from '../services/lab-lights';
 
 // UI modules, loaded by path so the API's tsc program never includes UI files.
@@ -22,7 +23,8 @@ interface LabLightsUi {
   lightSearchUrl(app: string, kind: 'logs' | 'errors' | 'usual' | 'week'): string | null;
   screenLink(app: string, headline: string, detail?: string): { url: string; title: string } | null;
   numberSearchUrl(app: string, kind: 'logs' | 'errors' | 'usual' | 'week', count: number): string | null;
-  plateLink(app: string, headline: string, since: string | null, nowMs?: number): { url: string; title: string } | null;
+  plateLink(app: string, headline: string, since: string | null, nowMs?: number, detail?: string): { url: string; title: string } | null;
+  NO_LOGS_DETAIL: string;
   onlyState<T extends { state: 'green' | 'yellow' | 'red' }>(lights: T[], only: 'green' | 'yellow' | 'red' | null): T[];
   shelfGridClass(wall: boolean): string;
   splitWhy(why: string, state: 'green' | 'yellow' | 'red'): { headline: string; detail: string };
@@ -47,8 +49,9 @@ describe('appActivitySql (ClickHouse)', () => {
   });
 
   it('measures every window and the age on ClickHouse\'s own clock, never from Node\'s', () => {
-    expect(sql).toContain('countIf(timestamp >= now64(3) - INTERVAL 15 MINUTE) AS logs_15m');
-    expect(sql).toContain('countIf(severity <= 3 AND timestamp >= now64(3) - INTERVAL 15 MINUTE) AS errors_15m');
+    // The 15-min counts stop at now, as the Search they open does; the list itself allows 5 min ahead.
+    expect(sql).toContain('countIf(timestamp >= now64(3) - INTERVAL 15 MINUTE AND timestamp <= now64(3)) AS logs_15m');
+    expect(sql).toContain('countIf(severity <= 3 AND timestamp >= now64(3) - INTERVAL 15 MINUTE AND timestamp <= now64(3)) AS errors_15m');
     expect(sql).toContain(
       'countIf(severity <= 3 AND timestamp >= now64(3) - INTERVAL 24 HOUR AND timestamp < now64(3) - INTERVAL 15 MINUTE) AS errors_prev_24h',
     );
@@ -66,7 +69,8 @@ describe('appActivitySql (ClickHouse)', () => {
   it('Lite compares against ISO bounds built from the given clock', () => {
     const now = Date.parse('2026-10-21T12:00:00.000Z');
     const lite = appActivitySql('sqlite', null, now).replace(/\s+/g, ' ');
-    expect(lite).toContain("timestamp >= '2026-10-21T11:45:00.000Z'");
+    expect(lite).toContain("SUM(CASE WHEN timestamp >= '2026-10-21T11:45:00.000Z' AND timestamp <= '2026-10-21T12:00:00.000Z' THEN 1 ELSE 0 END) AS logs_15m");
+    expect(lite).toContain("severity <= 3 AND timestamp >= '2026-10-21T11:45:00.000Z' AND timestamp <= '2026-10-21T12:00:00.000Z' THEN 1 ELSE 0 END) AS errors_15m");
     expect(lite).toContain("timestamp >= '2026-10-20T12:00:00.000Z' AND timestamp < '2026-10-21T11:45:00.000Z'");
     expect(lite).toContain("WHERE timestamp >= '2026-10-14T12:00:00.000Z' AND timestamp <= '2026-10-21T12:05:00.000Z'");
     expect(lite).toContain('ORDER BY MAX(timestamp) DESC, app LIMIT 1000');
@@ -390,6 +394,83 @@ describe('lab lights over real Lite rows and real alerts', () => {
       expect(await hyhWhy()).toBe(FIRING);
     } finally {
       clear();
+      _labLightsTesting.reset();
+    }
+  });
+  it('logs stamped a few minutes ahead are not in the 15-min numbers, so each number still equals its Search', async () => {
+    const { lightSearchUrl } = (await import(/* @vite-ignore */ ui('labLights.ts'))) as LabLightsUi;
+    const logsDb = getSQLiteLogsDB();
+    const row = (ts: string, severity: number) => ({ timestamp: ts, app_name: 'clock-near', index_name: 'clock-near', hostname: 'h', severity, message: 'near' });
+    try {
+      // 2 logs now (one an error) and 3 errors stamped 3 min ahead (inside the 5-min tolerance).
+      await insertLogs([row(ago(30_000), 6), row(ago(30_000), 3), ...Array.from({ length: 3 }, () => row(ago(-3 * MIN), 3))]);
+      _labLightsTesting.reset();
+      const light = (await getLabLights(null, ['clock-near'])).apps[0];
+      expect(light).toMatchObject({ app: 'clock-near', logs_last_15m: 2, errors_last_15m: 1 });
+      expect(light.last_seen).not.toBeNull();
+      const countOf = async (url: string) => {
+        const p = new URLSearchParams(url.split('?')[1]);
+        const { results } = await executeDSLQuery<{ count: number }>(`${p.get('q')} | stats count`, { earliest: p.get('earliest')! });
+        return Number(results[0]?.count ?? 0);
+      };
+      expect(await countOf(lightSearchUrl('clock-near', 'logs')!)).toBe(2);
+      expect(await countOf(lightSearchUrl('clock-near', 'errors')!)).toBe(1);
+    } finally {
+      logsDb.prepare(`DELETE FROM logs WHERE app_name = 'clock-near'`).run();
+      _labLightsTesting.reset();
+    }
+  });
+
+  it('an app with no logs in 7 days links nowhere (screen and plate); a capped "no recent logs" app still opens its week', async () => {
+    const { screenLink, plateLink, splitWhy, NO_LOGS_DETAIL } = (await import(/* @vite-ignore */ ui('labLights.ts'))) as LabLightsUi;
+    const none = (await getLabLights(null, ['nobody-here'])).apps[0];
+    expect(none).toMatchObject({ state: 'red', why: 'Gone quiet: no logs in 7 days', last_seen: null });
+    const { headline, detail } = splitWhy(none.why, none.state);
+    expect(detail).toBe(NO_LOGS_DETAIL);
+    expect(screenLink(none.app, headline, detail)).toBeNull();
+    expect(plateLink(none.app, headline, null, Date.now(), detail)).toBeNull();
+    expect(plateLink(none.app, headline, new Date(Date.now() - 10 * MIN).toISOString(), Date.now(), detail)).toBeNull();
+    // The Search the link would have opened really is empty.
+    const { results } = await executeDSLQuery<{ count: number }>('search app_name="nobody-here" | stats count', { earliest: '-7d' });
+    expect(Number(results[0]?.count ?? 0)).toBe(0);
+    // Left off a full list: it may still have logs this week, so the week stays linked.
+    const capped = splitWhy('Gone quiet: no recent logs', 'red');
+    expect(screenLink('homework-tree', capped.headline, capped.detail)!.url).toContain('earliest=-7d');
+    expect(plateLink('homework-tree', capped.headline, null, Date.now(), capped.detail)!.url).toContain('earliest=-7d');
+  });
+
+  it('real rule text over real rows: an app= rule lights only its app, not a neighbour in the same index (and DSL aliases count)', async () => {
+    const db = getSQLiteDB();
+    const logsDb = getSQLiteLogsDB();
+    const row = (app: string, severity: number) => ({ timestamp: ago(MIN), app_name: app, index_name: 'shop', hostname: 'h', severity, message: app });
+    const addAlert = db.prepare(
+      `INSERT INTO alerts (id, name, search_query, severity, enabled, last_run, last_triggered, last_status)
+       VALUES (?, ?, ?, 'high', 1, ?, ?, 'triggered')`,
+    );
+    const lights = async (key: string[] | null) => {
+      _labLightsTesting.reset();
+      return Object.fromEntries((await getLabLights(key, ['shop-worker', 'shop-web'])).apps.map((a) => [a.app, a]));
+    };
+    try {
+      await insertLogs([row('shop-worker', 3), row('shop-worker', 6), row('shop-web', 6)]);
+      addAlert.run('al-shop-k2', 'Shop worker errors', 'search index=shop app=shop-worker severity<=3', ago(MIN), ago(2 * MIN));
+      for (const key of [null, ['shop']]) {
+        const by = await lights(key);
+        expect(by['shop-worker']).toMatchObject({ state: 'red', why: 'Alert: Shop worker errors' });
+        expect(by['shop-web'].why).not.toMatch(/^Alert/);
+      }
+      // "program=" is the same field to the DSL (app_name): still only shop-worker.
+      db.prepare(`UPDATE alerts SET search_query = 'search index=shop program="shop-worker" severity<=3' WHERE id = 'al-shop-k2'`).run();
+      const by = await lights(null);
+      expect(by['shop-worker'].why).toBe('Alert: Shop worker errors');
+      expect(by['shop-web'].why).not.toMatch(/^Alert/);
+      // An "index=*" branch may read any index, so a key limited to shop does not see the rule; an unscoped key does.
+      db.prepare(`UPDATE alerts SET search_query = 'search index=shop OR index=* severity<=3' WHERE id = 'al-shop-k2'`).run();
+      expect((await lights(['shop']))['shop-web'].why).not.toMatch(/^Alert/);
+      expect((await lights(null))['shop-web'].why).toBe('Alert: Shop worker errors');
+    } finally {
+      db.prepare(`DELETE FROM alerts WHERE id = 'al-shop-k2'`).run();
+      logsDb.prepare(`DELETE FROM logs WHERE app_name IN ('shop-worker', 'shop-web')`).run();
       _labLightsTesting.reset();
     }
   });

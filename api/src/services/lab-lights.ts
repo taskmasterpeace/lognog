@@ -15,7 +15,8 @@
  *           or the app is quiet 15-60 min (Data Sources says "Recent"),
  *           or errors are up (3+ in 15 min and 2x normal)
  *   green   everything else (Data Sources "Active", errors at their usual rate)
- * An alert counts for an app when its search names that app (app_name=), or,
+ * An alert counts for an app when its search names that app (app_name= or
+ * the DSL's app= / program= / sourcetype=), or,
  * naming no app, when it searches an index the app logs to. A rule that names
  * neither (e.g. `search severity<=3`) lights nothing: it isn't about one app.
  * Freshness comes from services/source-status.ts, the same minutes the Data
@@ -25,6 +26,7 @@
 import { APP_ACTIVITY_WINDOW, getAppActivity, type AppActivity } from '../db/backend.js';
 import { getSQLiteDB } from '../db/sqlite.js';
 import { isIndexAllowed } from '../auth/index-scope.js';
+import { parseToAST, FIELD_MAP, isLogicGroup, type Condition, type SimpleCondition } from '../dsl/index.js';
 import { SOURCE_STATUS_MINUTES, sourceStatusFromAge, parseServerTime } from './source-status.js';
 
 export type LightState = 'green' | 'yellow' | 'red';
@@ -99,27 +101,91 @@ export interface FiringAlert {
   fired_at: string;
   indexes: string[];
   apps: string[];
+  /**
+   * True when the rule may read logs outside the indexes it names: no index,
+   * a wildcard, a NOT, an OR branch with no index, a subsearch, or a query
+   * the DSL can't read. Only a key that can read every index may see it.
+   */
+  openIndexes?: boolean;
 }
 
 /**
- * Which indexes / app names a rule's search is about, read from its query
- * (`index=hyh`, `index="money"`, `app_name=dp-web`). Wildcards and negations
- * (`index!=x`, `NOT index=x`) are ignored: a rule over every index, or every
- * index but one, is not about one app.
+ * Which indexes / app names a rule's search is about, read with the DSL's own
+ * parser (the scheduler runs the same DSL), so the DSL's field names count:
+ * `app=`, `program=`, `sourcetype=` and `app_name=` are the app; `index=` and
+ * `index_name=` are the index; `IN (...)` lists count too. Search, filter and
+ * where stages are all read.
+ *
+ * indexes / apps: the plain values the rule asks for (`=` or IN, not negated,
+ * no wildcard). They decide which apps the rule lights.
+ * openIndexes: the rule may read indexes it does not name, so a key limited to
+ * some indexes must not see it. That is the case when the rule names no index,
+ * when an OR has a branch with no plain index, when an index is matched by a
+ * wildcard, `!=` or NOT, when it has a subsearch (append), or when the DSL
+ * can't parse it (then it lights nothing at all).
  */
-export function alertTargets(searchQuery: string): { indexes: string[]; apps: string[] } {
-  const pick = (field: string): string[] => {
-    const re = new RegExp(`(?:^|[\\s(])${field}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s|()"']+))`, 'gi');
-    const out = new Set<string>();
-    for (const m of searchQuery.matchAll(re)) {
-      const before = searchQuery.slice(0, (m.index ?? 0) + (/^[\s(]/.test(m[0]) ? 1 : 0));
-      if (/\bNOT\s*\(?\s*$/i.test(before)) continue;
-      const v = (m[1] ?? m[2] ?? m[3] ?? '').trim();
-      if (v && !v.includes('*')) out.add(v.toLowerCase());
-    }
-    return [...out];
+export function alertTargets(searchQuery: string): { indexes: string[]; apps: string[]; openIndexes: boolean } {
+  const column = (field: string) => {
+    const f = field.toLowerCase();
+    return FIELD_MAP[f] ?? f;
   };
-  return { indexes: pick('index'), apps: pick('app_name') };
+  const values = (c: SimpleCondition): string[] | null => {
+    if (c.negate) return null;
+    let vs: unknown[];
+    if (c.operator === '=') vs = [c.value];
+    else if (c.operator === 'IN') {
+      try {
+        const parsed = JSON.parse(String(c.value));
+        vs = Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return null;
+      }
+    } else return null;
+    const out = vs.map((v) => String(v ?? '').trim().toLowerCase());
+    return out.length > 0 && out.every((v) => v && !v.includes('*')) ? out : null;
+  };
+  const indexes = new Set<string>();
+  const apps = new Set<string>();
+  const collect = (c: Condition) => {
+    if (isLogicGroup(c)) return c.conditions.forEach(collect);
+    const col = column(c.field);
+    if (col !== 'index_name' && col !== 'app_name') return;
+    const v = values(c);
+    if (v) v.forEach((x) => (col === 'index_name' ? indexes : apps).add(x));
+  };
+  /** The only indexes this condition can match, or null when it can match any. */
+  const bound = (c: Condition): Set<string> | null => {
+    if (isLogicGroup(c)) {
+      const parts = c.conditions.map(bound);
+      if (c.logic === 'OR') {
+        if (parts.some((p) => p === null)) return null;
+        return new Set(parts.flatMap((p) => [...p!]));
+      }
+      const set = parts.filter((p): p is Set<string> => p !== null);
+      return set.length ? new Set(set.flatMap((p) => [...p])) : null;
+    }
+    if (column(c.field) !== 'index_name') return null;
+    const v = values(c);
+    return v ? new Set(v) : null;
+  };
+  let stages: Array<{ type: string; conditions?: Condition[] }>;
+  try {
+    stages = parseToAST(searchQuery).stages as Array<{ type: string; conditions?: Condition[] }>;
+  } catch {
+    return { indexes: [], apps: [], openIndexes: true };
+  }
+  let open = stages.some((st) => st.type === 'append' || st.type === 'inputlookup');
+  let bounded = false;
+  for (const st of stages) {
+    if (st.type !== 'search' && st.type !== 'filter' && st.type !== 'where') continue;
+    for (const c of st.conditions ?? []) {
+      collect(c);
+      if (bound(c) !== null) bounded = true;
+    }
+  }
+  // No stage pins the search to plainly named indexes: it can read any.
+  if (!bounded) open = true;
+  return { indexes: [...indexes], apps: [...apps], openIndexes: open };
 }
 
 interface AlertRow {
@@ -214,11 +280,13 @@ export function loadFiringAlerts(nowMs: number = Date.now()): FiringAlert[] {
 }
 
 /**
- * Alerts about this app. A rule that names apps (app_name=...) is about those
- * apps only, never their neighbours in the same index. A rule that names no
- * app is about every app in the indexes it searches. Either way it only counts
- * when the caller's key may read every index the rule names, so a key scoped
- * to one index never sees the name of a rule that also watches another.
+ * Alerts about this app. A rule that names apps (app_name=, app=, program=,
+ * sourcetype=) is about those apps only, never their neighbours in the same
+ * index. A rule that names no app is about every app in the indexes it
+ * searches. Either way a key limited to some indexes sees it only when the
+ * rule can read nothing but indexes the key may read (see alertTargets'
+ * openIndexes), so such a key never sees the name of a rule that also
+ * watches another index.
  *
  * Silences: alert-level and global silences darken a rule (loadFiringAlerts).
  * Host-level silences are not applied here: a light is per app, not per host.
@@ -235,10 +303,14 @@ export function alertsForApp(
       if (!a.apps.includes(app)) return false;
       // A rule that names no index searches every index: only a key that can
       // read every index may see it. Otherwise every index it names must be readable.
-      if (a.indexes.length === 0) return isUnscoped(allowedIndexes);
+      if (a.indexes.length === 0 || a.openIndexes) return isUnscoped(allowedIndexes);
       return a.indexes.every((i) => isIndexAllowed(allowedIndexes, i));
     }
-    return a.indexes.some((i) => idx.has(i)) && a.indexes.every((i) => isIndexAllowed(allowedIndexes, i));
+    if (!a.indexes.some((i) => idx.has(i))) return false;
+    // A rule that can read indexes it doesn't name (index=a OR index=b*):
+    // only a key that can read every index sees it.
+    if (a.openIndexes) return isUnscoped(allowedIndexes);
+    return a.indexes.every((i) => isIndexAllowed(allowedIndexes, i));
   });
 }
 

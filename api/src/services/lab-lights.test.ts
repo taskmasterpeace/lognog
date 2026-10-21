@@ -177,16 +177,67 @@ describe('why always starts with a headline', () => {
 
 describe('alert targets', () => {
   it('reads index= and app_name= from a rule search, quoted or bare, ignoring wildcards and negations', () => {
-    expect(alertTargets('search index=hyh severity<=3')).toEqual({ indexes: ['hyh'], apps: [] });
-    expect(alertTargets('index="Money-Watch" | stats count')).toEqual({ indexes: ['money-watch'], apps: [] });
-    expect(alertTargets("search (index='a' OR index=b) app_name=dp-web")).toEqual({ indexes: ['a', 'b'], apps: ['dp-web'] });
-    expect(alertTargets('search index=* severity<=3')).toEqual({ indexes: [], apps: [] });
-    expect(alertTargets('search index!=hyh')).toEqual({ indexes: [], apps: [] });
-    expect(alertTargets('search message="index=hyh"')).toEqual({ indexes: [], apps: [] });
-    // NOT index=x / NOT (index=x) is a rule about everything else: it names no app.
-    expect(alertTargets('search NOT index=main severity<=3')).toEqual({ indexes: [], apps: [] });
-    expect(alertTargets('search NOT (index=main) app_name=dp-web')).toEqual({ indexes: [], apps: ['dp-web'] });
-    expect(alertTargets('search index=hyh NOT app_name=hyh-cron')).toEqual({ indexes: ['hyh'], apps: [] });
+    expect(alertTargets('search index=hyh severity<=3')).toEqual({ indexes: ['hyh'], apps: [], openIndexes: false });
+    expect(alertTargets('index="Money-Watch" | stats count')).toEqual({ indexes: ['money-watch'], apps: [], openIndexes: false });
+    expect(alertTargets("search (index='a' OR index=b) app_name=dp-web")).toEqual({ indexes: ['a', 'b'], apps: ['dp-web'], openIndexes: false });
+    expect(alertTargets('search index=* severity<=3')).toEqual({ indexes: [], apps: [], openIndexes: true });
+    expect(alertTargets('search index!=hyh')).toEqual({ indexes: [], apps: [], openIndexes: true });
+    expect(alertTargets('search message="index=hyh"')).toEqual({ indexes: [], apps: [], openIndexes: true });
+    // NOT index=x is a rule about everything else: it names no app.
+    expect(alertTargets('search NOT index=main severity<=3')).toEqual({ indexes: [], apps: [], openIndexes: true });
+    // The DSL can't parse NOT (...), so the scheduler can't run this rule: it lights nothing.
+    expect(alertTargets('search NOT (index=main) app_name=dp-web')).toEqual({ indexes: [], apps: [], openIndexes: true });
+    expect(alertTargets('search index=hyh NOT app_name=hyh-cron')).toEqual({ indexes: ['hyh'], apps: [], openIndexes: false });
+    // Excluding an index inside one named index still reads only that index.
+    expect(alertTargets('search index=shop NOT index=x')).toEqual({ indexes: ['shop'], apps: [], openIndexes: false });
+  });
+
+  it("reads the DSL's own field names: app= / program= / sourcetype= are the app, index_name= and IN lists count", () => {
+    expect(alertTargets('search index=shop app=shop-worker severity<=3')).toEqual({ indexes: ['shop'], apps: ['shop-worker'], openIndexes: false });
+    expect(alertTargets('search program=sshd index=sec')).toEqual({ indexes: ['sec'], apps: ['sshd'], openIndexes: false });
+    expect(alertTargets('search sourcetype="Nginx" index_name=web')).toEqual({ indexes: ['web'], apps: ['nginx'], openIndexes: false });
+    expect(alertTargets('search app IN ("x","y") index IN ("a","b")')).toEqual({ indexes: ['a', 'b'], apps: ['x', 'y'], openIndexes: false });
+    expect(alertTargets('search index=shop | where app_name="w"')).toEqual({ indexes: ['shop'], apps: ['w'], openIndexes: false });
+    expect(alertTargets('search app=shop-*')).toEqual({ indexes: [], apps: [], openIndexes: true });
+  });
+
+  it('a rule that can read indexes it does not name is open: wildcard, OR branch without an index, subsearch', () => {
+    expect(alertTargets('search index=shop OR index=sec*').openIndexes).toBe(true);
+    expect(alertTargets('search index=shop OR index=*').openIndexes).toBe(true);
+    expect(alertTargets('search index=shop OR severity<=1').openIndexes).toBe(true);
+    expect(alertTargets('search index=shop | append [search index=secret]').openIndexes).toBe(true);
+    expect(alertTargets('search index=shop OR index_name=secret')).toEqual({ indexes: ['shop', 'secret'], apps: [], openIndexes: false });
+  });
+
+  it('end to end from the rule text: who lights, and which keys see it', () => {
+    const rule = (q: string) => alert({ ...alertTargets(q) });
+    const worker = { app: 'shop-worker', indexes: ['shop'] };
+    const web = { app: 'shop-web', indexes: ['shop'] };
+    // app= names the app: the neighbour in the same index stays dark (it used to turn red).
+    const k2 = rule('search index=shop app=shop-worker severity<=3');
+    expect(alertsForApp(worker, [k2])).toHaveLength(1);
+    expect(alertsForApp(web, [k2])).toHaveLength(0);
+    // app= alone: the app lights (it used to stay green "Fine"), for unscoped keys only.
+    const a2 = rule('search app=shop-worker');
+    expect(alertsForApp(worker, [a2])).toHaveLength(1);
+    expect(alertsForApp(worker, [a2], ['shop'])).toHaveLength(0);
+    // A key limited to shop never sees a rule that can also read another index.
+    for (const q of [
+      'search index=shop OR index=sec*',
+      'search index=shop OR index=*',
+      'search index=shop OR index_name=secret',
+      'search app_name=shop-worker (index=shop OR index=sec*)',
+      'search app_name=shop-worker (index=shop OR index=secret)',
+      'search index=shop | append [search index=secret]',
+    ]) {
+      expect(alertsForApp(worker, [rule(q)], ['shop']), q).toHaveLength(0);
+      expect(alertsForApp(worker, [rule(q)]), q).toHaveLength(1);
+    }
+    // ...but still sees one over just its own index, with or without the app.
+    expect(alertsForApp(worker, [rule('search index=shop severity<=3')], ['shop'])).toHaveLength(1);
+    expect(alertsForApp(worker, [rule('search app=shop-worker index=shop')], ['shop'])).toHaveLength(1);
+    // An app-named rule over two indexes needs both readable.
+    expect(alertsForApp(worker, [rule('search app=shop-worker index IN ("shop","secret")')], ['shop', 'secret'])).toHaveLength(1);
   });
 
   it('ties an alert to an app by index, or by app name when the key may read every index the rule names', () => {
