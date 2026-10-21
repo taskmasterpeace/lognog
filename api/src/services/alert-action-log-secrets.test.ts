@@ -38,8 +38,10 @@ beforeAll(async () => {
     res.statusCode = 200;
     res.end('ok');
   });
-  await new Promise<void>((r) => srv.listen(0, '127.0.0.1', r));
-  base = `http://127.0.0.1:${(srv.address() as AddressInfo).port}`;
+  // IPv6 loopback only: a 127.0.0.1-only server can share a port with another
+  // test file's supertest server (wildcard) and answer that file's requests.
+  await new Promise<void>((r) => srv.listen(0, '::1', r));
+  base = `http://[::1]:${(srv.address() as AddressInfo).port}`;
 });
 
 afterAll(async () => {
@@ -64,7 +66,7 @@ describe('alert action results carry no secrets', () => {
     await shutdown();
 
     const history = JSON.stringify(getAlertHistory(alert.id));
-    expect(history).toContain('Webhook POST 127.0.0.1:');
+    expect(history).toContain('Webhook POST [::1]:');
     expect(history).not.toContain('kl-secret');
     const sent = logged().filter((e) => e.action === 'alert.action_sent');
     expect(sent.length).toBeGreaterThan(0);

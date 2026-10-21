@@ -49,6 +49,7 @@ vi.mock('../auth/api-key-cache.js', async (importOriginal) => {
 
 import express, { Express, Router } from 'express';
 import type { Server } from 'node:http';
+import type { AddressInfo } from 'node:net';
 import supertest from 'supertest';
 import http from 'node:http';
 import { createUser, createApiKey, generateTokenPair, getApiKeys } from '../auth/auth.js';
@@ -199,8 +200,15 @@ let gateApp: Express; // the gate in front of a stub that answers 299
 let realApp: Express; // the gate + every real router
 // One listening server per app: thousands of supertest(app) calls would each
 // open (and leave in TIME_WAIT) their own ephemeral server and port.
-let gateSrv: Server;
-let realSrv: Server;
+// They listen on the IPv6 loopback ::1 only. supertest(app) in the other test
+// files listens on the wildcard address and connects to 127.0.0.1; macOS lets
+// a 127.0.0.1-only server share that port, and then it receives the other
+// file's requests (the likely cause of rare stray answers in other files).
+// Nobody else connects to ::1, so these servers never take another's request.
+let gateServer: Server;
+let realServer: Server;
+let gateSrv = ''; // base URL of gateServer
+let realSrv = ''; // base URL of realServer
 
 const REFUSED = 'API key lacks required permissions';
 
@@ -238,27 +246,31 @@ beforeAll(async () => {
   realApp.use(express.json());
   mountApiRoutes(realApp);
 
-  gateSrv = gateApp.listen(0, '127.0.0.1');
-  realSrv = realApp.listen(0, '127.0.0.1');
-  // Node closes an idle keep-alive socket after 5 s; a request sent on it at
-  // that moment fails with "socket hang up" (ECONNRESET). Some tests pause
-  // longer than that (password hashing), so keep idle sockets open for the run.
-  for (const s of [gateSrv, realSrv]) {
-    s.keepAliveTimeout = 10 * 60_000;
-    s.headersTimeout = 10 * 60_000 + 1_000;
-  }
+  const listen = async (app: Express) => {
+    const srv = app.listen(0, '::1');
+    await new Promise<void>((r) => srv.once('listening', () => r()));
+    // Node closes an idle keep-alive socket after 5 s; a request the client
+    // sends on it at that moment fails. Keep idle sockets open for the run.
+    srv.keepAliveTimeout = 10 * 60_000;
+    srv.headersTimeout = 10 * 60_000 + 1_000;
+    return srv;
+  };
+  gateServer = await listen(gateApp);
+  realServer = await listen(realApp);
+  gateSrv = `http://[::1]:${(gateServer.address() as AddressInfo).port}`;
+  realSrv = `http://[::1]:${(realServer.address() as AddressInfo).port}`;
 });
 
 afterAll(async () => {
   keepAlive.destroy();
-  gateSrv.closeAllConnections();
-  realSrv.closeAllConnections();
-  await new Promise((r) => gateSrv.close(r));
-  await new Promise((r) => realSrv.close(r));
+  gateServer.closeAllConnections();
+  realServer.closeAllConnections();
+  await new Promise((r) => gateServer.close(r));
+  await new Promise((r) => realServer.close(r));
   closeDatabase();
 });
 
-async function hit(app: Express | Server, r: RouteRow, headers: Record<string, string>) {
+async function hit(app: string, r: RouteRow, headers: Record<string, string>) {
   let req = request(app)[r.method.toLowerCase() as 'get'](r.path);
   for (const [h, v] of Object.entries(headers)) req = req.set(h, v);
   if (r.method !== 'GET' && r.method !== 'DELETE') req = req.send({});
