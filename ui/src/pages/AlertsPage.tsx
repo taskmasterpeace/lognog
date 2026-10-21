@@ -461,6 +461,18 @@ export default function AlertsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editParam, alerts]);
 
+  // ?history=all (the Weekly paper's alerts tile): open the history of every alert.
+  const historyParam = searchParams.get('history');
+  useEffect(() => {
+    if (historyParam !== 'all') return;
+    setSelectedAlertId(null);
+    setShowHistoryModal(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete('history');
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [historyParam]);
+
   const handleTest = async () => {
     setTesting(true);
     try {

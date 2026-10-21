@@ -42,6 +42,7 @@ import {
   ReportRun,
 } from '../api/client';
 import AppScopeFilter from '../components/AppScopeFilter';
+import WeeklyPaper from '../components/reports/WeeklyPaper';
 import { useToast } from '../contexts/ToastContext';
 import { useConfirm } from '../components/ui/ConfirmDialog';
 
@@ -346,9 +347,10 @@ export default function ReportsPage() {
 
   if (error) {
     return (
-      <div className="p-8">
+      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+        <WeeklyPaper />
         <div className="card border-red-200 bg-red-50 dark:bg-red-900/30 dark:border-red-800 dark:text-red-300 p-6">
-          <p className="font-semibold text-red-900 dark:text-red-200">Failed to load reports</p>
+          <p className="font-semibold text-red-900 dark:text-red-200">Failed to load scheduled reports</p>
           <p className="text-sm text-red-700 dark:text-red-300 mt-1">{String(error)}</p>
         </div>
       </div>
@@ -384,6 +386,9 @@ export default function ReportsPage() {
       </div>
 
       <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+        {/* The LogNog Weekly: this week's paper (GET /reports/weekly) */}
+        <WeeklyPaper />
+
         {/* Quick Export Section */}
         <section className="card p-4 sm:p-6">
           <div className="flex flex-col sm:flex-row items-start gap-3 sm:gap-4">
