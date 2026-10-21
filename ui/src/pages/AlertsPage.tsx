@@ -566,12 +566,14 @@ export default function AlertsPage() {
             Configure alert rules to notify you when conditions are met
           </p>
         </div>
-        <div className="flex gap-2 items-center">
-          <div className="flex items-center gap-2">
+        {/* Wraps on phones: filters on one line, the two buttons on their own
+            full-width line so neither is pushed off-screen at 390px. */}
+        <div className="flex flex-wrap gap-2 items-center">
+          <div className="flex items-center gap-2 min-w-0">
             <Filter className="w-4 h-4 text-nog-400" />
             <AppScopeFilter value={appScope} onChange={setAppScope} />
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 min-w-0">
             <ArrowUpDown className="w-4 h-4 text-nog-400" />
             <select
               value={`${sortBy}-${sortDir}`}
@@ -592,29 +594,29 @@ export default function AlertsPage() {
               <option value="created_at-asc">Oldest</option>
             </select>
           </div>
-          <button
-            onClick={() => {
-              setSelectedAlertId(null);
-              setShowHistoryModal(true);
-            }}
-            className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-nog-100 hover:bg-nog-200 dark:bg-nog-700 dark:hover:bg-nog-600 text-nog-700 dark:text-nog-200 rounded-lg flex items-center justify-center gap-2"
-          >
-            <History className="w-4 h-4" />
-            <span className="hidden sm:inline">Alert History</span>
-            <span className="sm:hidden">History</span>
-          </button>
-          <button
-            onClick={() => {
-              resetForm();
-              setEditingAlert(null);
-              setShowCreateModal(true);
-            }}
-            className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-honey-500 hover:bg-honey-600 text-nog-900 rounded-lg flex items-center justify-center gap-2"
-          >
-            <Plus className="w-4 h-4" />
-            <span className="hidden sm:inline">Create Alert</span>
-            <span className="sm:hidden">Create</span>
-          </button>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <button
+              onClick={() => {
+                setSelectedAlertId(null);
+                setShowHistoryModal(true);
+              }}
+              className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-nog-100 hover:bg-nog-200 dark:bg-nog-700 dark:hover:bg-nog-600 text-nog-700 dark:text-nog-200 rounded-lg flex items-center justify-center gap-2 whitespace-nowrap"
+            >
+              <History className="w-4 h-4 flex-shrink-0" />
+              Alert History
+            </button>
+            <button
+              onClick={() => {
+                resetForm();
+                setEditingAlert(null);
+                setShowCreateModal(true);
+              }}
+              className="flex-1 sm:flex-none px-3 sm:px-4 py-2 bg-honey-500 hover:bg-honey-600 text-nog-900 rounded-lg flex items-center justify-center gap-2 whitespace-nowrap"
+            >
+              <Plus className="w-4 h-4 flex-shrink-0" />
+              Create Alert
+            </button>
+          </div>
         </div>
       </div>
 
@@ -685,26 +687,44 @@ export default function AlertsPage() {
                       onClick={(e) => e.stopPropagation()}
                       className="w-4 h-4 rounded border-nog-300 dark:border-nog-600 text-honey-600 focus:ring-honey-500 flex-shrink-0"
                     />
+                    {/* Mouse shortcut only; the row header below is the keyboard target. */}
                     <button
                       onClick={() => toggleExpand(alert.id)}
-                      aria-label={isExpanded ? 'Collapse alert details' : 'Expand alert details'}
-                      aria-expanded={isExpanded}
+                      tabIndex={-1}
+                      aria-hidden="true"
                       className="text-nog-400 hover:text-nog-600 flex-shrink-0"
                     >
                       {isExpanded ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
                     </button>
 
-                    <div className={`p-2 rounded-lg ${severity.bg} flex-shrink-0`}>
-                      <SeverityIcon className={`w-5 h-5 ${severity.color}`} />
-                    </div>
+                    {/* Clicking the name/row opens the details, not only the chevron. */}
+                    <div
+                      role="button"
+                      tabIndex={0}
+                      aria-expanded={isExpanded}
+                      aria-controls={`alert-details-${alert.id}`}
+                      aria-label={`${alert.name}: ${isExpanded ? 'hide' : 'show'} details`}
+                      onClick={() => toggleExpand(alert.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          toggleExpand(alert.id);
+                        }
+                      }}
+                      className="group flex items-center gap-3 sm:gap-4 flex-1 min-w-0 cursor-pointer rounded-lg focus:outline-none focus-visible:ring-2 focus-visible:ring-honey-500"
+                    >
+                      <div className={`p-2 rounded-lg ${severity.bg} flex-shrink-0`}>
+                        <SeverityIcon className={`w-5 h-5 ${severity.color}`} />
+                      </div>
 
-                    <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-nog-900 dark:text-nog-100 truncate text-sm sm:text-base">
-                        {alert.name}
-                      </h3>
-                      <p className="text-xs sm:text-sm text-nog-500 dark:text-nog-400 truncate">
-                        {alert.search_query}
-                      </p>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-nog-900 dark:text-nog-100 truncate text-sm sm:text-base group-hover:text-honey-600 dark:group-hover:text-honey-400 transition-colors">
+                          {alert.name}
+                        </h3>
+                        <p className="text-xs sm:text-sm text-nog-500 dark:text-nog-400 truncate">
+                          {alert.search_query}
+                        </p>
+                      </div>
                     </div>
                   </div>
 
@@ -799,7 +819,7 @@ export default function AlertsPage() {
 
                 {/* Expanded Details */}
                 {isExpanded && (
-                  <div className="px-3 sm:px-4 pb-3 sm:pb-4 border-t border-nog-100 dark:border-nog-700 pt-3 sm:pt-4">
+                  <div id={`alert-details-${alert.id}`} className="px-3 sm:px-4 pb-3 sm:pb-4 border-t border-nog-100 dark:border-nog-700 pt-3 sm:pt-4">
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 text-xs sm:text-sm">
                       <div>
                         <div className="text-nog-500 dark:text-nog-400">Trigger Condition</div>
