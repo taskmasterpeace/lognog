@@ -2558,6 +2558,33 @@ describe('round 9: routes that ask for a permission by name use the gate grants;
     expect(await pendingFor(B, 'kl-r9-host-0')).toBe(true);
   });
 
+  it('the kinds of refusal whose audit-down line was said are capped at 5000: the oldest is said again, the rest stay quiet', async () => {
+    (resetDenialRowsForTest as (() => void) | undefined)?.();
+    const db = getSQLiteDB();
+    const k = (await newKey('kl r9 audit down cap', ['write'])).apiKey;
+    const ua = 'kl-r9-audit-down-cap';
+    const hdr = { Authorization: `ApiKey ${k}`, 'User-Agent': ua };
+    db.exec("CREATE TEMP TRIGGER kl_r9_audit_down_cap BEFORE INSERT ON auth_audit_log WHEN NEW.user_agent = 'kl-r9-audit-down-cap' BEGIN SELECT RAISE(ABORT, 'kl-r9 audit table down'); END;");
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const said = () => errors.mock.calls.map((c) => c.map(String).join(' ')).filter((l) => /could not write the audit row/.test(l)).length;
+    try {
+      // 5001 different kinds, oldest first: one past the cap
+      for (let i = 0; i <= 5000; i++) {
+        expect((await request(gateSrv).get(`/alerts/kl-r9-cap-${i}`).set(hdr)).status).toBe(403);
+      }
+      expect(said()).toBe(5001);
+      // the second-oldest is still remembered: quiet
+      expect((await request(gateSrv).get('/alerts/kl-r9-cap-1').set(hdr)).status).toBe(403);
+      expect(said()).toBe(5001);
+      // the oldest was forgotten: said again
+      expect((await request(gateSrv).get('/alerts/kl-r9-cap-0').set(hdr)).status).toBe(403);
+      expect(said()).toBe(5002);
+    } finally {
+      errors.mockRestore();
+      db.exec('DROP TRIGGER IF EXISTS kl_r9_audit_down_cap');
+    }
+  }, 180_000);
+
   it('when the audit row cannot be written, the console says so once per kind of refusal a day, not once per request', async () => {
     (resetDenialRowsForTest as (() => void) | undefined)?.();
     const db = getSQLiteDB();
@@ -2584,6 +2611,11 @@ describe('round 9: routes that ask for a permission by name use the gate grants;
       expect(said()).toHaveLength(3);
       await at('/alerts', now - 2 * 24 * 60 * 60 * 1000); // clock set back: said again
       expect(said()).toHaveLength(4);
+      await at('/alerts', now - 2 * 24 * 60 * 60 * 1000 + 1000); // the same kind a second later: quiet
+      expect(said()).toHaveLength(4);
+      resetDenialRowsForTest(); // the test hook forgets what was said too
+      await at('/alerts', now - 2 * 24 * 60 * 60 * 1000 + 2000);
+      expect(said()).toHaveLength(5);
       for (const l of said()) expect(l).not.toMatch(/lnog_|\/alerts|\/dashboards|kl-r9 audit table down/);
     } finally {
       errors.mockRestore();
