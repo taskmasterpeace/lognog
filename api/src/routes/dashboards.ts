@@ -271,7 +271,7 @@ router.use('/:id', (req: Request, res: Response, next) => {
   if (
     sharedLock &&
     apiKeyNeed(req.method, `/dashboards/${req.params.id}${req.path}`) !== 'read' &&
-    !/^\/duplicate\/?$/i.test(req.path) // copies it into a new, unshared dashboard
+    !/^\/duplicate\/?$/i.test(req.path) // copies it into a new dashboard with no share link, owned by the caller
   ) {
     return res.status(403).json({ error: sharedLock });
   }
@@ -456,7 +456,7 @@ router.post('/from-wizard', (req: Request, res: Response) => {
     }
 
     // Create the dashboard - use app_scope if provided, otherwise use the index as the scope
-    const dashboard = createDashboard(name, `Auto-generated dashboard for index: ${index}`, app_scope || index);
+    const dashboard = createDashboard(name, `Auto-generated dashboard for index: ${index}`, app_scope || index, undefined, undefined, req.user?.id ?? null);
 
     let createdPanels: Array<{ id: string; title: string; vizType: string }> = [];
 
@@ -1271,8 +1271,14 @@ router.post('/:id/duplicate', (req: Request, res: Response) => {
       sourceDashboard.description,
       sourceDashboard.app_scope,
       sourceDashboard.category,
-      sourceDashboard.project_id
+      sourceDashboard.project_id,
+      req.user?.id ?? null // the person who copies it owns the copy
     );
+    // A copy of a private dashboard stays private (it used to come out shared
+    // with no owner, so every user could open and edit the copy).
+    if (sourceDashboard.visibility === 'private') {
+      updateDashboard(newDashboard.id, { visibility: 'private' });
+    }
 
     // Copy branding settings
     if (sourceDashboard.logo_url || sourceDashboard.accent_color || sourceDashboard.header_color) {
@@ -1325,7 +1331,7 @@ router.post('/:id/duplicate', (req: Request, res: Response) => {
     // Return the new dashboard with panels
     const newPanels = getDashboardPanels(newDashboard.id);
     return res.status(201).json({
-      ...newDashboard,
+      ...(getDashboard(newDashboard.id) ?? newDashboard),
       panels: newPanels.map(p => ({
         ...p,
         options: safeJsonParse(p.options, {}),
@@ -1351,7 +1357,9 @@ router.post('/import', (req: Request, res: Response) => {
       name || template.name || 'Imported Dashboard',
       template.description,
       typeof template.app_scope === 'string' ? template.app_scope : undefined,
-      typeof template.category === 'string' ? template.category : undefined
+      typeof template.category === 'string' ? template.category : undefined,
+      undefined,
+      req.user?.id ?? null
     );
 
     // Apply branding
@@ -1465,7 +1473,11 @@ router.post('/templates/:templateId/create', (req: Request, res: Response) => {
     // Create dashboard from template
     const dashboard = createDashboard(
       name || templateData.name || template.name,
-      templateData.description || template.description
+      templateData.description || template.description,
+      undefined,
+      undefined,
+      undefined,
+      req.user?.id ?? null
     );
 
     // Apply branding

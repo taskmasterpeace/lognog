@@ -65,7 +65,7 @@ router.get('/sse', async (req: Request, res: Response) => {
     console.log(`[MCP] SSE client connected: ${connectionId} (userId: ${keyInfo.userId})`);
 
     // Create and connect MCP server
-    const server = createMCPServer();
+    const server = createMCPServer(keyInfo.userId); // what it makes belongs to the key's user
     await server.connect(transport);
 
     // Handle client disconnect

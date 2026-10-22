@@ -163,7 +163,11 @@ export default function AccountTab() {
 
   // Only an administrator may make an 'admin' key (the server refuses it for
   // anyone else, and a key never does more than its owner).
-  const offeredPermissions = API_KEY_PERMISSIONS.filter((p) => p.value !== 'admin' || user?.role === 'admin');
+  // A key never does more than its owner (api key-policy.ts): only admins are
+  // offered 'admin', and a read-only account is offered 'read' only.
+  const readOnlyAccount = ['readonly', 'viewer', 'read-only'].includes(user?.role ?? '');
+  const offeredPermissions = API_KEY_PERMISSIONS.filter((p) =>
+    readOnlyAccount ? p.value === 'read' : p.value !== 'admin' || user?.role === 'admin');
 
   // alerts:write and dashboards:write only work together with read (an alert
   // or panel runs searches), so picking one adds read and dropping read drops them.

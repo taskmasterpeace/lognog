@@ -259,7 +259,7 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
 
     setCreatingKey(true);
     try {
-      const result = await createApiKey(newApiKeyName.trim(), ['ingest']);
+      const result = await createApiKey(newApiKeyName.trim(), ['write']) // 'write' = send logs only; there is no 'ingest' permission (an ['ingest'] key could not send logs);
       setSelectedApiKey(result.apiKey);
       setShowCreateKey(false);
       setNewApiKeyName('');

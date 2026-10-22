@@ -321,7 +321,7 @@ Everything above is about *sending* logs. LogNog also has an **Agent API** so a 
 
 **Base:** `{LOGNOG_URL}/api/agent` · **Auth:** `X-API-Key: <key>` (or `Authorization: ApiKey <key>`).
 
-**Permissions** (set on the key when it's created): a `read` key can search/check; a `write` key can also create/manage alerts. A read-only key gets `403` on write endpoints.
+**Permissions** (set on the key when it's created): a `write` key can only **send** logs (the `/api/ingest/*` endpoints). A `read` (or `search`) key can search and check. To create or manage alerts a key needs `alerts:write` **together with** `read`; `dashboards:write` (also together with `read`) changes dashboards; an alert with a `script` action (it runs a command on the server), or attaching one, needs an `admin` key, and only an admin user can make an `admin` key. A key that lacks the permission gets `403` with `needed` naming what is missing. Secret action settings (webhook URLs and headers, Apprise URLs, e-mail addresses, script commands) show as `"[hidden]"` to keys without `admin`; send `"[hidden]"` back unchanged to keep the stored value.
 
 **Start here — the API describes itself:**
 ```bash
@@ -353,10 +353,10 @@ curl -H "X-API-Key: $KEY" "$LOGNOG_URL/api/agent/summary"
 ### Act — create and manage alerts
 | Endpoint | Does | Needs |
 |---|---|---|
-| `POST /api/agent/alerts` | Create an alert. | write |
-| `PATCH /api/agent/alerts/:id` | Update fields (threshold, enabled, query, schedule, …). | write |
-| `POST /api/agent/alerts/:id/evaluate` | Evaluate the alert now. | write |
-| `DELETE /api/agent/alerts/:id` | Delete it. | write |
+| `POST /api/agent/alerts` | Create an alert. | alerts:write + read (script actions: admin) |
+| `PATCH /api/agent/alerts/:id` | Update fields (threshold, enabled, query, schedule, …). | alerts:write + read (script actions: admin) |
+| `POST /api/agent/alerts/:id/evaluate` | Evaluate the alert now. | alerts:write + read (script actions: admin) |
+| `DELETE /api/agent/alerts/:id` | Delete it. | alerts:write + read (script actions: admin) |
 
 **Create-alert body** (only `name` + `search_query` are required):
 ```json

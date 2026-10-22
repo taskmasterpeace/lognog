@@ -87,7 +87,7 @@ const INGEST_SCHEMA = {
   },
   auth: {
     how: 'Create a key in the LogNog UI (Settings -> API Keys). Send it as `X-API-Key: <key>` or `Authorization: ApiKey <key>`.',
-    permissions: '`read` = search/check; `write` = also create/manage alerts. Choose when creating the key.',
+    permissions: '`write` = send logs only (the /api/ingest/* endpoints); `read` (or `search`) = search and read; `alerts:write` = create/manage alerts and `dashboards:write` = create/change dashboards, each only together with `read`; `admin` = everything except sending logs (only an admin user can make an `admin` key). Any other request answers 403 with `needed` naming the missing permission. Choose when creating the key.',
     index_scoping: 'A key can optionally be restricted to specific indexes (allowed_indexes); searches and ingest are then limited to those.',
     note: 'The key is server-side only. Reading these public docs needs NO key; calling the APIs does.',
   },
@@ -133,10 +133,10 @@ const INGEST_SCHEMA = {
       'POST /api/agent/alerts/test': 'Preview would-fire without saving. Body { search_query, trigger_condition?, trigger_threshold?, time_range? }. Needs read.',
     },
     act: {
-      'POST /api/agent/alerts': 'Create an alert. Body { name*, search_query*, trigger_type?, trigger_condition?, trigger_threshold?, cron_expression?, time_range?, severity?, enabled?, actions? }. Needs write.',
-      'PATCH /api/agent/alerts/:id': 'Update alert fields. Needs write.',
-      'POST /api/agent/alerts/:id/evaluate': 'Evaluate the alert now. Needs write.',
-      'DELETE /api/agent/alerts/:id': 'Delete the alert. Needs write.',
+      'POST /api/agent/alerts': 'Create an alert. Body { name*, search_query*, trigger_type?, trigger_condition?, trigger_threshold?, cron_expression?, time_range?, severity?, enabled?, actions? }. Needs alerts:write together with read (or admin); script actions need admin.',
+      'PATCH /api/agent/alerts/:id': 'Update alert fields. Needs alerts:write together with read (or admin); script actions need admin.',
+      'POST /api/agent/alerts/:id/evaluate': 'Evaluate the alert now. Needs alerts:write together with read (or admin); script actions need admin.',
+      'DELETE /api/agent/alerts/:id': 'Delete the alert. Needs alerts:write together with read (or admin); script actions need admin.',
     },
     alert_fields: {
       trigger_type: ['number_of_results (aka threshold/results_count)', 'number_of_hosts', 'custom_condition', 'no_data'],

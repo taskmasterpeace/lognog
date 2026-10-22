@@ -33,7 +33,7 @@ export function isAdminGrade(req: Request): boolean {
 }
 
 /** Admin user AND (browser session or admin key). */
-function mayUseScripts(req: Request): boolean {
+export function mayUseScripts(req: Request): boolean {
   return req.user?.role === 'admin' && isAdminGrade(req);
 }
 

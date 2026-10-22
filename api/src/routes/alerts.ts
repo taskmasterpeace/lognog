@@ -34,6 +34,7 @@ import { isRelayConfigured, invalidRelayActions, RELAY_PROJECTS } from '../servi
 import {
   scriptActionForbidden,
   scriptAlertLocked,
+  mayUseScripts,
   presentActions,
   presentActionResults,
   restoreHiddenActions,
@@ -218,8 +219,13 @@ router.post('/test', async (req: Request, res: Response) => {
   }
 });
 
-// Evaluate all enabled alerts (for manual trigger or testing)
-router.post('/evaluate-all', async (_req: Request, res: Response) => {
+// Evaluate all enabled alerts (for manual trigger or testing). It runs every
+// user's alerts, script actions included (a shell command on the API host), so
+// only an admin may call it: a signed-in admin or an admin user's 'admin' key.
+router.post('/evaluate-all', async (req: Request, res: Response) => {
+  if (!mayUseScripts(req)) {
+    return res.status(403).json({ error: 'Only an administrator can run every alert at once (some alerts run scripts on the server)' });
+  }
   try {
     const result = await evaluateAllAlerts();
     res.json(result);
@@ -253,6 +259,7 @@ router.post('/from-template/:templateId', (req: Request, res: Response) => {
       actions: [],
       enabled: true,
       app_scope,
+      owner_id: req.user?.id ?? null, // owner-less alerts are editable by every user
     });
 
     res.status(201).json({

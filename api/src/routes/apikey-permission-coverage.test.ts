@@ -52,13 +52,20 @@ import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import supertest from 'supertest';
 import http from 'node:http';
-import { createUser, createApiKey, generateTokenPair, getApiKeys, validateApiKey } from '../auth/auth.js';
+import { createUser, createApiKey, generateTokenPair, getApiKeys, validateApiKey, deactivateUser, updateUserRole } from '../auth/auth.js';
 import { apiKeyGate } from '../auth/api-key-gate.js';
 import { requireAdmin } from '../auth/middleware.js';
-import { apiKeyNeed, decideApiKey, keyHasNeed, effectiveKeyPermissions } from '../auth/key-policy.js';
+import { apiKeyNeed, decideApiKey, keyHasNeed, effectiveKeyPermissions, permissionsAboveOwner } from '../auth/key-policy.js';
+import { mayUseScripts } from '../auth/alert-action-guard.js';
 import { API_ROUTERS, mountApiRoutes } from './mount.js';
 import { closeDatabase, getSQLiteDB } from '../db/sqlite.js';
 import { createAlertHistoryEntry } from '../db/sqlite-alerts.js';
+import { createDashboardTemplate, getDashboard } from '../db/sqlite-dashboards.js';
+import { getAlert } from '../db/sqlite-alerts.js';
+import { ALERT_TEMPLATES } from '../data/alert-templates.js';
+import { createMCPServer } from '../mcp/server.js';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 
 // ---------------------------------------------------------------------------
 // Route table, read from the real routers.
@@ -1170,5 +1177,199 @@ describe("a key never does more than its owner: 'admin' and '*' only count on an
     const res = await request(realSrv).get('/auth/api-keys').set('Authorization', `ApiKey ${K.admin}`);
     expect(res.status).toBe(200);
     expect((await validateApiKey(K.admin))?.permissions).toContain('admin');
+  });
+});
+
+describe('round 3, last gaps: run-all, read-only accounts, switched-off owners, owned copies', () => {
+  const jwt = () => ({ Authorization: `Bearer ${jwtAdmin}` });
+  const c = {} as {
+    userA: string; uaJ: Record<string, string>; ubJ: Record<string, string>;
+    roJ: Record<string, string>; roStar: string; roWrite: string;
+  };
+  beforeAll(async () => {
+    const a = await createUser('kl-user6', 'kl-user6@example.invalid', 'kl-user6-test-pass-1', 'user');
+    const b = await createUser('kl-user7', 'kl-user7@example.invalid', 'kl-user7-test-pass-1', 'user');
+    const ro = await createUser('kl-viewer', 'kl-viewer@example.invalid', 'kl-viewer-test-pass-1', 'readonly');
+    c.userA = a.id;
+    c.uaJ = { Authorization: `Bearer ${(await generateTokenPair(a)).accessToken}` };
+    c.ubJ = { Authorization: `Bearer ${(await generateTokenPair(b)).accessToken}` };
+    c.roJ = { Authorization: `Bearer ${(await generateTokenPair(ro)).accessToken}` };
+    // Keys like these may already exist (made before this rule); made here straight in the database.
+    c.roStar = (await createApiKey(ro.id, 'kl viewer star', ['*'])).apiKey;
+    c.roWrite = (await createApiKey(ro.id, 'kl viewer write', ['write', 'read', 'alerts:write', 'dashboards:write'])).apiKey;
+  });
+
+  it('only an administrator signed in (or an admin key) may run every alert at once', async () => {
+    for (const h of [c.uaJ, c.roJ]) {
+      const res = await request(realSrv).post('/alerts/evaluate-all').set(h).send({});
+      expect(res.status, res.text).toBe(403);
+    }
+    // the admin side of the same check (not run here: it would evaluate every alert in the file)
+    const fake = (role: string, authMethod: string, apiKeyPermissions?: string[]) =>
+      ({ user: { id: 'x', username: 'x', role }, authMethod, apiKeyPermissions }) as unknown as Parameters<typeof mayUseScripts>[0];
+    expect(mayUseScripts(fake('admin', 'jwt'))).toBe(true);
+    expect(mayUseScripts(fake('admin', 'apikey', ['admin']))).toBe(true);
+    expect(mayUseScripts(fake('admin', 'apikey', ['read', 'alerts:write']))).toBe(false);
+    expect(mayUseScripts(fake('user', 'jwt'))).toBe(false);
+  });
+
+  it('a read-only account can only make read or search keys', async () => {
+    for (const permissions of [['write'], ['read', 'alerts:write'], ['read', 'dashboards:write'], ['*'], ['admin']]) {
+      const res = await request(realSrv).post('/auth/api-keys').set(c.roJ).send({ name: 'kl viewer nope', permissions });
+      // never put the response text in the message: on failure it would carry the new key
+      expect(res.status, `${JSON.stringify(permissions)}: ${res.status} ${String(res.body?.error ?? '')}`).toBe(403);
+      expect(res.text).not.toContain('lnog_');
+      expect(res.body.refused.length).toBeGreaterThan(0);
+    }
+    const ok = await request(realSrv).post('/auth/api-keys').set(c.roJ).send({ name: 'kl viewer read', permissions: ['read'] });
+    expect(ok.status, String(ok.body?.error ?? '')).toBe(201);
+  });
+
+  it("a read-only account's existing write or '*' key reads but cannot send logs or change anything", async () => {
+    for (const key of [c.roStar, c.roWrite]) {
+      const h = { Authorization: `ApiKey ${key}` };
+      expect((await request(realSrv).get('/alerts').set(h)).status).toBe(200);
+      const tries = [
+        await request(realSrv).post('/ingest/http').set(h).send([{ message: 'kl viewer' }]),
+        await request(realSrv).post('/alerts').set(h).send({ name: 'kl viewer rule', search_query: 'search *' }),
+        await request(realSrv).post('/dashboards').set(h).send({ name: 'kl viewer dash' }),
+        await request(realSrv).post('/auth/api-keys').set(h).send({ name: 'kl viewer mint', permissions: ['read'] }),
+      ];
+      for (const t of tries) {
+        expect(t.status, `${t.status} ${String(t.body?.error ?? '')}`).toBe(403);
+        expect(t.text).not.toContain('lnog_');
+      }
+    }
+    expect(effectiveKeyPermissions(['*'], 'readonly')).toEqual(['read']);
+    expect(effectiveKeyPermissions(['write', 'search'], 'readonly')).toEqual(['search']);
+    expect(effectiveKeyPermissions(['write', 'alerts:write', 'dashboards:write'], 'viewer')).toEqual([]);
+    expect(permissionsAboveOwner(['read', 'write'], 'readonly')).toEqual(['write']);
+    expect(permissionsAboveOwner(['read', 'write', 'alerts:write'], 'user')).toEqual([]);
+  });
+
+  it('a key whose owner is switched off or demoted loses what the owner lost', async () => {
+    const gone = await createUser('kl-gone', 'kl-gone@example.invalid', 'kl-gone-test-pass-1', 'admin');
+    const goneKey = (await createApiKey(gone.id, 'kl gone admin', ['admin'])).apiKey;
+    const demoted = await createUser('kl-demoted', 'kl-demoted@example.invalid', 'kl-demoted-test-pass-1', 'admin');
+    const demotedKey = (await createApiKey(demoted.id, 'kl demoted admin', ['*'])).apiKey;
+    deactivateUser(gone.id);
+    updateUserRole(demoted.id, 'readonly');
+    // routes/mcp.ts reads the key itself with validateApiKey, so this is what the MCP stream sees
+    expect(await validateApiKey(goneKey)).toBeNull();
+    const mcp = await request(realSrv).get('/mcp/sse').set('X-API-Key', goneKey).timeout({ response: 5_000 });
+    expect(mcp.status).toBe(401);
+    expect((await request(realSrv).get('/alerts').set('Authorization', `ApiKey ${goneKey}`)).status).toBe(401);
+    expect((await validateApiKey(demotedKey))?.permissions).toEqual(['read']);
+    const ai = await request(realSrv).post('/search/ai').set('Authorization', `ApiKey ${demotedKey}`).send({ prompt: 'errors' });
+    expect(ai.status, `${ai.status} ${String(ai.body?.error ?? '')}`).toBe(403);
+  });
+
+  it("a copy of a private dashboard stays private and belongs to whoever copied it", async () => {
+    const d = await request(realSrv).post('/dashboards').set(c.uaJ).send({ name: 'kl a private' });
+    expect(d.status, d.text).toBe(201);
+    expect((await request(realSrv).put(`/dashboards/${d.body.id}`).set(c.uaJ).send({ visibility: 'private' })).status).toBe(200);
+
+    const mine = await request(realSrv).post(`/dashboards/${d.body.id}/duplicate`).set(c.uaJ).send({});
+    expect(mine.status, mine.text).toBe(201);
+    expect(mine.body.visibility).toBe('private');
+    expect(mine.body.owner_id).toBe(c.userA);
+    expect(getDashboard(mine.body.id)?.owner_id).toBe(c.userA);
+    // another user can neither open nor change the copy
+    expect((await request(realSrv).get(`/dashboards/${mine.body.id}`).set(c.ubJ)).status).toBe(404);
+    expect([403, 404]).toContain((await request(realSrv).put(`/dashboards/${mine.body.id}`).set(c.ubJ).send({ name: 'kl taken' })).status);
+    expect([403, 404]).toContain((await request(realSrv).delete(`/dashboards/${mine.body.id}`).set(c.ubJ)).status);
+    expect(getDashboard(mine.body.id)?.name).toBe('kl a private - Copy');
+
+    // an administrator's copy belongs to the administrator and is still private
+    const admins = await request(realSrv).post(`/dashboards/${d.body.id}/duplicate`).set(jwt()).send({});
+    expect(admins.status, admins.text).toBe(201);
+    expect(admins.body.visibility).toBe('private');
+    expect(admins.body.owner_id).toBeTruthy();
+    expect(admins.body.owner_id).not.toBe(c.userA);
+    expect((await request(realSrv).get(`/dashboards/${admins.body.id}`).set(c.uaJ)).status).toBe(404);
+  });
+
+  it('dashboards made from the wizard, an import or a template belong to their maker (no more owner-less rows anyone can edit)', async () => {
+    const tpl = createDashboardTemplate('kl template', JSON.stringify({ name: 'kl from template', panels: [] }));
+    const made = [
+      await request(realSrv).post('/dashboards/from-wizard').set(c.uaJ).send({ name: 'kl wizard', index: 'kl-idx' }),
+      await request(realSrv).post('/dashboards/import').set(c.uaJ).send({ name: 'kl imported', template: { panels: [] } }),
+      await request(realSrv).post(`/dashboards/templates/${tpl.id}/create`).set(c.uaJ).send({ name: 'kl templated' }),
+    ];
+    for (const m of made) {
+      expect(m.status, m.text).toBe(201);
+      const id = m.body.id ?? m.body.dashboard_id ?? m.body.dashboard?.id;
+      expect(id, m.text).toBeTruthy();
+      expect(getDashboard(id)?.owner_id).toBe(c.userA);
+      const taken = await request(realSrv).put(`/dashboards/${id}`).set(c.ubJ).send({ name: 'kl taken' });
+      expect(taken.status, taken.text).toBe(403);
+      expect(getDashboard(id)?.name).not.toBe('kl taken');
+    }
+  });
+
+  it('alerts and dashboards made through the MCP tools belong to the user whose key opened the stream', async () => {
+    const [clientSide, serverSide] = InMemoryTransport.createLinkedPair();
+    const server = createMCPServer(c.userA);
+    await server.connect(serverSide);
+    const client = new Client({ name: 'kl-test', version: '1.0.0' });
+    await client.connect(clientSide);
+    try {
+      const text = (r: unknown) => JSON.parse(((r as { content: Array<{ text: string }> }).content[0]).text);
+      const d = text(await client.callTool({ name: 'create_dashboard', arguments: { name: 'kl mcp dash' } }));
+      const a = text(await client.callTool({ name: 'create_alert', arguments: { name: 'kl mcp alert', query: 'search kl-none', threshold: 1000000 } }));
+      expect(getDashboard(d.dashboard_id)?.owner_id).toBe(c.userA);
+      expect(getAlert(a.alert_id)?.owner_id).toBe(c.userA);
+      expect((await request(realSrv).put(`/dashboards/${d.dashboard_id}`).set(c.ubJ).send({ name: 'kl taken' })).status).toBe(403);
+      expect((await request(realSrv).put(`/alerts/${a.alert_id}`).set(c.ubJ).send({ name: 'kl taken' })).status).toBe(403);
+    } finally {
+      await client.close();
+      await server.close();
+    }
+  });
+
+  it('alerts and reports made from a template, a saved search or the agent API belong to their maker', async () => {
+    const ss = await request(realSrv).post('/saved-searches').set(c.uaJ).send({ name: 'kl a saved', query: 'search kl-none' });
+    expect(ss.status, ss.text).toBe(201);
+    const made = [
+      await request(realSrv).post('/agent/alerts').set(c.uaJ).send({ name: 'kl agent alert', search_query: 'search kl-none', enabled: false }),
+      await request(realSrv).post(`/alerts/from-template/${ALERT_TEMPLATES[0].id}`).set(c.uaJ).send({}),
+      await request(realSrv).post(`/saved-searches/${ss.body.id}/create-alert`).set(c.uaJ).send({}),
+    ];
+    for (const m of made) {
+      expect(m.status, m.text).toBe(201);
+      const id = m.body.id ?? m.body.alert_id ?? m.body.alert?.id;
+      expect(id, m.text).toBeTruthy();
+      expect(getAlert(id)?.owner_id).toBe(c.userA);
+      const taken = await request(realSrv).put(`/alerts/${id}`).set(c.ubJ).send({ name: 'kl taken' });
+      expect(taken.status, taken.text).toBe(403);
+    }
+    const rep = await request(realSrv).post(`/saved-searches/${ss.body.id}/create-report`).set(c.uaJ)
+      .send({ schedule: '0 8 * * *', recipients: 'kl@example.invalid' });
+    expect(rep.status, rep.text).toBe(201);
+    const row = getSQLiteDB().prepare('SELECT owner_id FROM scheduled_reports WHERE id = ?').get(rep.body.report_id) as { owner_id: string | null };
+    expect(row.owner_id).toBe(c.userA);
+    const repTaken = await request(realSrv).delete(`/reports/${rep.body.report_id}`).set(c.ubJ);
+    expect(repTaken.status, repTaken.text).toBe(403);
+  });
+
+  it("the old /search/saved routes follow the saved-search owner rule (no reading, changing or deleting someone else's)", async () => {
+    const mine = await request(realSrv).post('/search/saved').set(c.uaJ).send({ name: 'kl legacy', query: 'search kl-none', description: 'kl d' });
+    expect(mine.status, mine.text).toBe(201);
+    expect(mine.body.owner_id).toBe(c.userA);
+    expect(mine.body.description).toBe('kl d');
+    const id = mine.body.id;
+    expect((await request(realSrv).get(`/search/saved/${id}`).set(c.ubJ)).status).toBe(404);
+    const list = await request(realSrv).get('/search/saved').set(c.ubJ);
+    expect(list.status).toBe(200);
+    expect((list.body as Array<{ id: string }>).some((x) => x.id === id)).toBe(false);
+    expect((await request(realSrv).put(`/search/saved/${id}`).set(c.ubJ).send({ name: 'kl taken', query: 'search *' })).status).toBe(404);
+    expect((await request(realSrv).delete(`/search/saved/${id}`).set(c.ubJ)).status).toBe(404);
+    const still = await request(realSrv).get(`/search/saved/${id}`).set(c.uaJ);
+    expect(still.status).toBe(200);
+    expect(still.body.name).toBe('kl legacy');
+    // the owner and an administrator still can
+    expect((await request(realSrv).get(`/search/saved/${id}`).set(jwt())).status).toBe(200);
+    expect((await request(realSrv).put(`/search/saved/${id}`).set(c.uaJ).send({ name: 'kl legacy 2', query: 'search *' })).status).toBe(200);
+    expect((await request(realSrv).delete(`/search/saved/${id}`).set(jwt())).status).toBe(204);
   });
 });

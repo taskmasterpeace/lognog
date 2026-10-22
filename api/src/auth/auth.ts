@@ -518,8 +518,11 @@ export async function validateApiKey(
         }
       }
 
-      // A key never does more than its owner may (key-policy.ts).
+      // A key never does more than its owner may (key-policy.ts), and a key
+      // whose owner is gone or switched off does nothing at all. Every caller
+      // gets this, including /mcp/sse, which reads the key itself.
       const owner = getUserById(key.user_id);
+      if (!owner || !owner.is_active) return null;
       return {
         userId: key.user_id,
         permissions: effectiveKeyPermissions(JSON.parse(key.permissions), owner?.role),

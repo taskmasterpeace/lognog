@@ -26,7 +26,7 @@ import {
 } from '../db/sqlite.js';
 import { authenticate, requireAdmin, requireRole, rateLimit, accountLockoutRemaining, recordLoginFailure, clearLoginFailures } from '../auth/middleware.js';
 import { logAuthLogin, logAuthLoginFailed, logAuthLogout, logAuthSetup } from '../services/internal-logger.js';
-import { ADMIN_ONLY_KEY_PERMISSIONS } from '../auth/key-policy.js';
+import { ADMIN_ONLY_KEY_PERMISSIONS, permissionsAboveOwner } from '../auth/key-policy.js';
 
 const router = Router();
 
@@ -274,8 +274,14 @@ router.post('/api-keys', authenticate, async (req, res) => {
     // Only an administrator may make a key with 'admin' or '*' (a key never
     // does more than its owner; key-policy.ts effectiveKeyPermissions).
     const asked = data.permissions || ['read'];
-    if (req.user!.role !== 'admin' && asked.some((p) => ADMIN_ONLY_KEY_PERMISSIONS.includes(p))) {
-      res.status(403).json({ error: "Only an administrator can make a key with the 'admin' or '*' permission" });
+    const above = permissionsAboveOwner(asked, req.user!.role);
+    if (above.length > 0) {
+      res.status(403).json({
+        error: above.some((p) => ADMIN_ONLY_KEY_PERMISSIONS.includes(p))
+          ? "Only an administrator can make a key with the 'admin' or '*' permission"
+          : "A read-only account can only make keys with the 'read' or 'search' permission",
+        refused: above,
+      });
       return;
     }
     const { apiKey, keyData } = await createApiKey(

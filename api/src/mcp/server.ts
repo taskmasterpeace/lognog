@@ -34,7 +34,10 @@ let server: Server;
 /**
  * Initialize the MCP server with all resources and tools
  */
-export function createMCPServer(): Server {
+export function createMCPServer(ownerId: string | null = null): Server {
+  // ownerId: the user whose API key opened the stream. Alerts and dashboards
+  // the tools make belong to that user (an owner-less row is editable by every
+  // signed-in user). Stdio mode has no user, so its rows stay owner-less.
   server = new Server(
     {
       name: 'lognog-mcp',
@@ -52,7 +55,7 @@ export function createMCPServer(): Server {
   registerResourceHandlers();
 
   // Register tool handlers
-  registerToolHandlers();
+  registerToolHandlers(ownerId);
 
   // Error handling
   server.onerror = (error) => {
@@ -256,7 +259,7 @@ function registerResourceHandlers(): void {
 /**
  * Register tool handlers for write operations
  */
-function registerToolHandlers(): void {
+function registerToolHandlers(ownerId: string | null): void {
   // List available tools
   server.setRequestHandler(ListToolsRequestSchema, async () => {
     return {
@@ -519,9 +522,9 @@ function registerToolHandlers(): void {
           const description = (args?.description as string) || '';
 
           db.prepare(`
-            INSERT INTO dashboards (id, name, description, created_at, updated_at)
-            VALUES (?, ?, ?, datetime('now'), datetime('now'))
-          `).run(id, name, description);
+            INSERT INTO dashboards (id, name, description, owner_id, created_at, updated_at)
+            VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))
+          `).run(id, name, description, ownerId);
 
           // Add panels if provided
           const panels = args?.panels as Array<{ title: string; query: string; visualization: string }>;
@@ -656,6 +659,7 @@ function registerToolHandlers(): void {
             time_range: '-5m',
             actions,
             enabled: true,
+            owner_id: ownerId,
           });
 
           return {

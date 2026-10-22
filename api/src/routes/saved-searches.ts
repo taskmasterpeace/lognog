@@ -519,6 +519,7 @@ router.post('/:id/create-alert', authenticate, denyReadonly, (req: Request, res:
       time_range: search.time_range,
       actions: data.actions || [],
       enabled: true,
+      owner_id: req.user?.id ?? null, // owner-less alerts are editable by every user
     });
 
     return res.status(201).json({
@@ -605,15 +606,16 @@ router.post('/:id/create-report', authenticate, denyReadonly, (req: Request, res
     const id = uuidv4();
 
     database.prepare(`
-      INSERT INTO scheduled_reports (id, name, query, schedule, recipients, format)
-      VALUES (?, ?, ?, ?, ?, ?)
+      INSERT INTO scheduled_reports (id, name, query, schedule, recipients, format, owner_id)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
     `).run(
       id,
       `Report: ${search.name}`,
       search.query,
       data.schedule,
       data.recipients,
-      data.format || 'html'
+      data.format || 'html',
+      req.user?.id ?? null // owner-less reports are editable by every user
     );
 
     return res.status(201).json({

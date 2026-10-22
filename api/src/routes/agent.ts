@@ -5,7 +5,9 @@
  *
  * Auth: `X-API-Key: <key>` or `Authorization: ApiKey <key>` (a JWT also works).
  *   - `read`  permission: search, indexes, fields, summary, list/get alerts, test.
- *   - `write` permission: create / update / delete / evaluate alerts.
+ *   - `alerts:write` permission (only together with `read`, or `admin`):
+ *     create / update / delete / evaluate alerts. Script actions need `admin`.
+ *   - `write` alone only sends logs (/api/ingest); it gets 403 here.
  * Index-scoped keys automatically restrict what searches can see.
  *
  * Mounted at /api/agent. This path is CSRF-exempt (see middleware/csrf.ts) and
@@ -107,10 +109,10 @@ router.get('/', READ, (req: Request, res: Response) => {
       'GET /api/agent/alerts': 'List alerts with health (last_status/last_error). Needs: read.',
       'GET /api/agent/alerts/:id': 'Get one alert. Needs: read.',
       'POST /api/agent/alerts/test': 'Preview whether a query+condition would fire (no save). Needs: read.',
-      'POST /api/agent/alerts': 'Create an alert. Needs: write.',
-      'PATCH /api/agent/alerts/:id': 'Update an alert. Needs: write.',
-      'POST /api/agent/alerts/:id/evaluate': 'Evaluate an alert now. Needs: write.',
-      'DELETE /api/agent/alerts/:id': 'Delete an alert. Needs: write.',
+      'POST /api/agent/alerts': 'Create an alert. Needs: alerts:write together with read (or admin). An alert with a script action, or attaching one, needs admin.',
+      'PATCH /api/agent/alerts/:id': 'Update an alert. Needs: alerts:write together with read (or admin). An alert with a script action, or attaching one, needs admin.',
+      'POST /api/agent/alerts/:id/evaluate': 'Evaluate an alert now. Needs: alerts:write together with read (or admin). An alert with a script action, or attaching one, needs admin.',
+      'DELETE /api/agent/alerts/:id': 'Delete an alert. Needs: alerts:write together with read (or admin). An alert with a script action, or attaching one, needs admin.',
     },
     dsl: 'Pipe-based: `search severity<=3 | stats count by app_name | sort -count | head 10`. Commands: search, filter, where, stats, sort, limit/head/tail, table, fields, dedup, rename, top, rare, bin, timechart, rex, eval, lookup.',
     docs: '/api/ingest/guide',
@@ -267,6 +269,7 @@ router.post('/alerts', WRITE, (req: Request, res: Response) => {
       severity,
       enabled,
       app_scope,
+      owner_id: req.user?.id ?? null, // owner-less alerts are editable by every user
     });
     return res.status(201).json(shapeAlert(req, alert as unknown as Record<string, unknown>));
   } catch (error) {

@@ -57,17 +57,38 @@ export function keyHasNeed(permissions: readonly string[] | null | undefined, ne
  * A key can never do more than the person who owns it. 'admin' and '*' only
  * count on a key whose owner is an administrator: on anyone else's key,
  * 'admin' is dropped and '*' means every non-admin permission (send logs,
- * read, alerts:write, dashboards:write), which that user's browser session
- * can do anyway. Without this, a non-admin user could make a '*' key and use
- * it to open the MCP stream (every dashboard, private ones too) or any other
- * route that trusts an 'admin' key.
+ * read, alerts:write, dashboards:write), which a 'user' role's browser
+ * session can do anyway. A read-only account ('readonly', 'viewer',
+ * 'read-only': it may not change or send anything in the browser) keeps only
+ * 'read' / 'search' on its keys ('admin' or '*' count as 'read'). Without
+ * this, a non-admin user could make a '*' key and use it to open the MCP
+ * stream (every dashboard, private ones too) or any other route that trusts
+ * an 'admin' key, and a read-only user could make a key that sends logs.
+ * The owner's role is read on every request, so demoting a user also takes
+ * the extra power from their existing keys.
  */
 export const ADMIN_ONLY_KEY_PERMISSIONS: readonly string[] = ['admin', '*'];
+export const READONLY_ROLES: readonly string[] = ['readonly', 'viewer', 'read-only'];
+const READ_PERMISSIONS: readonly string[] = ['read', 'search'];
 export function effectiveKeyPermissions(permissions: readonly string[], ownerRole: string | null | undefined): string[] {
   if (ownerRole === 'admin') return [...permissions];
+  if (ownerRole && READONLY_ROLES.includes(ownerRole)) {
+    const out = permissions.filter((p) => READ_PERMISSIONS.includes(p));
+    if (permissions.some((p) => ADMIN_ONLY_KEY_PERMISSIONS.includes(p))) out.push('read');
+    return [...new Set(out)];
+  }
   const out = permissions.filter((p) => !ADMIN_ONLY_KEY_PERMISSIONS.includes(p));
   if (permissions.includes('*')) out.push('write', 'read', 'alerts:write', 'dashboards:write');
   return [...new Set(out)];
+}
+
+/**
+ * The asked permissions this owner could not use (effectiveKeyPermissions
+ * would drop them). POST /auth/api-keys refuses a key that asks for any.
+ */
+export function permissionsAboveOwner(asked: readonly string[], ownerRole: string | null | undefined): string[] {
+  const kept = effectiveKeyPermissions(asked, ownerRole);
+  return asked.filter((p) => !kept.includes(p));
 }
 
 type Rule = { methods: '*' | readonly string[]; path: RegExp; need: KeyNeed };
