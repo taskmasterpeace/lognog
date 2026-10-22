@@ -655,13 +655,31 @@ export function logAlertAction(data: {
 // ============================================
 
 /**
- * A report error, safe for the lognog-internal index (any API key that can
- * read can search it): only the part before the first ':' (an SMTP error such
- * as "550 5.1.1 <boss@example.com>: Recipient address rejected" names the
- * address after it), and any e-mail address left is replaced by [hidden].
+ * A report error, safe for the lognog-internal index and the console (any API
+ * key that can read can search the index, and container logs may be shipped
+ * into it). The raw error can carry e-mail addresses and the mail server's
+ * own reply ("550 5.1.1 <boss@example.com>: Recipient address rejected",
+ * "535 5.7.8 Username and Password not accepted"), so it is never copied:
+ * the error is only sorted into one of a few fixed phrases. The full error
+ * stays in the report's run history, which only admins see.
  */
+export const REPORT_ERROR_PHRASES = {
+  login: 'Mail server refused the login',
+  connection: 'Could not reach the mail server',
+  recipient: 'Mail server refused a recipient',
+  mail: 'Mail server refused the message',
+  search: "The report's search failed",
+  other: 'Report failed (details in the run history)',
+} as const;
+
 export function reportErrorSummary(error: string): string {
-  return String(error).split(':')[0].replace(/[^\s<>"'(),;]+@[^\s<>"'(),;]+/g, '[hidden]').trim() || 'Report failed';
+  const e = String(error ?? '');
+  if (/\b(EAUTH|535|534|530)\b|invalid login|authenticat|credential|password|username/i.test(e)) return REPORT_ERROR_PHRASES.login;
+  if (/\b(ECONNECTION|ECONNREFUSED|ECONNRESET|ETIMEDOUT|EHOSTUNREACH|ENETUNREACH|ENOTFOUND|EDNS|ESOCKET|ETLS)\b|getaddrinfo|timed? ?out|greeting|socket|certificate|\btls\b|\bssl\b/i.test(e)) return REPORT_ERROR_PHRASES.connection;
+  if (/\b(EENVELOPE|550|551|553)\b|recipient|mailbox|user unknown|no such user|can ?not send mail to|cannot send mail to|address rejected/i.test(e)) return REPORT_ERROR_PHRASES.recipient;
+  if (/\b(EMESSAGE|552|554|5\d\d|4\d\d)\b|smtp|mail server|message (failed|rejected)/i.test(e)) return REPORT_ERROR_PHRASES.mail;
+  if (/\b(query|search|dsl|parse|syntax|index)\b/i.test(e)) return REPORT_ERROR_PHRASES.search;
+  return REPORT_ERROR_PHRASES.other;
 }
 
 /**

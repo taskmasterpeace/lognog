@@ -21,7 +21,7 @@ vi.mock('../db/backend.js', () => ({
 }));
 
 import { evaluateAlert, webhookHost } from './alerts.js';
-import { logAlertAction, actionLogSummary, logReportGenerated, reportErrorSummary, shutdown } from './internal-logger.js';
+import { logAlertAction, actionLogSummary, logReportGenerated, reportErrorSummary, REPORT_ERROR_PHRASES, shutdown } from './internal-logger.js';
 import { createAlert, getAlertHistory } from '../db/sqlite-alerts.js';
 import { setSystemSetting } from '../db/sqlite-settings.js';
 
@@ -137,17 +137,46 @@ describe('scheduled report runs carry no addresses or mail-server text (key lock
     const failed = logged().filter((e) => e.action === 'report.error');
     expect(failed.length).toBe(2);
     const text = JSON.stringify(failed);
-    expect(text).toContain('Invalid login');
-    expect(text).toContain('Can not send mail to [hidden]');
+    // Fixed phrases only (round 7): the first clause of a mail error can
+    // itself be the server's reply, so nothing from the error is copied.
+    expect(text).toContain(REPORT_ERROR_PHRASES.login);
+    expect(text).toContain(REPORT_ERROR_PHRASES.recipient);
     expect(text).not.toContain('kl-secret');
     expect(text).not.toContain('535');
-    expect(text).not.toContain('mailbox full');
+    expect(text).not.toContain('mailbox');
+    expect(text).not.toContain('Invalid login');
   });
 
-  it('reportErrorSummary keeps the first clause and hides any address in it', () => {
-    expect(reportErrorSummary('Connection timeout')).toBe('Connection timeout');
-    expect(reportErrorSummary('Message failed: 550 no such user x@y.z')).toBe('Message failed');
-    expect(reportErrorSummary('Mail to a@b.c bounced')).toBe('Mail to [hidden] bounced');
-    expect(reportErrorSummary(': only detail')).toBe('Report failed');
+  it('reportErrorSummary only ever answers with one of its fixed phrases (round 7)', () => {
+    const phrases = Object.values(REPORT_ERROR_PHRASES) as string[];
+    const nasty = [
+      'Message failed 550 5.1.1 User unknown in virtual mailbox table b@x.y',
+      'x'.repeat(5000) + ' kl-secret-long@example.com',
+      'Can not send mail to b\uFF20x.y',
+      'Can not send mail to b%40x.y',
+      'Invalid login: 535 5.7.8 Username and Password not accepted',
+      'connect ECONNREFUSED 10.0.0.5:587',
+      'getaddrinfo ENOTFOUND smtp.internal.example',
+      'Greeting never received',
+      'Message failed: 552 message size exceeds',
+      'Search failed: no such index kl-secret-index',
+      'boom kl-secret-other',
+      '',
+    ];
+    for (const raw of nasty) {
+      const out = reportErrorSummary(raw);
+      expect(phrases).toContain(out);
+      expect(out).not.toMatch(/@|%40|\uFF20|kl-secret|\d{3}/);
+      expect(out.length).toBeLessThan(60);
+    }
+    expect(reportErrorSummary(nasty[0])).toBe(REPORT_ERROR_PHRASES.recipient);
+    expect(reportErrorSummary(nasty[2])).toBe(REPORT_ERROR_PHRASES.recipient);
+    expect(reportErrorSummary(nasty[4])).toBe(REPORT_ERROR_PHRASES.login);
+    expect(reportErrorSummary(nasty[5])).toBe(REPORT_ERROR_PHRASES.connection);
+    expect(reportErrorSummary(nasty[6])).toBe(REPORT_ERROR_PHRASES.connection);
+    expect(reportErrorSummary(nasty[7])).toBe(REPORT_ERROR_PHRASES.connection);
+    expect(reportErrorSummary(nasty[8])).toBe(REPORT_ERROR_PHRASES.mail);
+    expect(reportErrorSummary(nasty[9])).toBe(REPORT_ERROR_PHRASES.search);
+    expect(reportErrorSummary(nasty[10])).toBe(REPORT_ERROR_PHRASES.other);
   });
 });

@@ -60,9 +60,9 @@ import type { AddressInfo } from 'node:net';
 import supertest from 'supertest';
 import http from 'node:http';
 import { createUser, createApiKey, generateTokenPair, getApiKeys, validateApiKey, deactivateUser, updateUserRole, revokeApiKey } from '../auth/auth.js';
-import { apiKeyGate } from '../auth/api-key-gate.js';
+import { apiKeyGate, resetDenialRowsForTest, DENIAL_ROW_WINDOW_MS } from '../auth/api-key-gate.js';
 import { requireAdmin } from '../auth/middleware.js';
-import { apiKeyNeed, decideApiKey, keyHasNeed, effectiveKeyPermissions, permissionsAboveOwner } from '../auth/key-policy.js';
+import { apiKeyNeed, decideApiKey, keyHasNeed, effectiveKeyPermissions, permissionsAboveOwner, permissionNameForNeed } from '../auth/key-policy.js';
 import { mayUseScripts } from '../auth/alert-action-guard.js';
 import { API_ROUTERS, mountApiRoutes } from './mount.js';
 import { closeDatabase, getSQLiteDB } from '../db/sqlite.js';
@@ -212,6 +212,7 @@ const request = (app: Parameters<typeof supertest>[0]): ReturnType<typeof supert
 
 const K: Record<string, string> = {};
 let jwtAdmin = '';
+let klAdminId = '';
 let gateApp: Express; // the gate in front of a stub that answers 299
 let realApp: Express; // the gate + every real router
 // One listening server per app: thousands of supertest(app) calls would each
@@ -230,6 +231,7 @@ const REFUSED = 'API key lacks required permissions';
 
 beforeAll(async () => {
   const admin = await createUser('kl-admin', 'kl-admin@example.invalid', 'kl-admin-test-pass-1', 'admin');
+  klAdminId = admin.id;
   const mk = async (name: string, perms: string[], indexes?: string[]) =>
     (await createApiKey(admin.id, name, perms, undefined, indexes)).apiKey;
   K.ingest = await mk('ingest only', ['write']);
@@ -1687,5 +1689,138 @@ describe('round 5: scheduled report recipients', () => {
     }
     // a read key still cannot change a report
     expect((await request(realSrv).put(`/reports/${id}`).set('Authorization', `ApiKey ${K.read}`).send({ recipients: 'kl-r5-thief@example.invalid' })).status).toBe(403);
+  });
+});
+
+describe('round 7: repeated refusals, the permission names, and pop-ups per reader', () => {
+  const newKey = async (name: string, perms: string[]) => (await createApiKey(klAdminId, name, perms)).apiKey;
+  const denialRows = (ua: string) =>
+    getSQLiteDB()
+      .prepare("SELECT id, details FROM auth_audit_log WHERE event_type = 'apikey_permission_denied' AND user_agent = ? ORDER BY created_at")
+      .all(ua) as Array<{ id: string; details: string }>;
+
+  it('an agent polling pop-ups with a send-logs-only key writes one audit row, counting the repeats', async () => {
+    resetDenialRowsForTest();
+    const keyA = await newKey('kl-r7 poller A', ['write']);
+    const keyB = await newKey('kl-r7 poller B', ['write']);
+    const ua = 'kl-r7-poller';
+    for (let i = 0; i < 20; i++) {
+      const res = await request(realSrv).get('/ingest/notifications?hostname=kl-r7-host').set({ Authorization: `ApiKey ${keyA}`, 'User-Agent': ua });
+      expect(res.status).toBe(403);
+    }
+    let rows = denialRows(ua);
+    expect(rows).toHaveLength(1);
+    const d = JSON.parse(rows[0].details);
+    expect(d.repeats).toBe(19);
+    expect(typeof d.last_seen).toBe('string');
+    expect(d.path).toBe('/ingest/notifications');
+    expect(d.needed).toBe('write');
+    expect(d.missing).toEqual(['read']);
+
+    // a different path, a different method, and a different key each get their own row
+    expect((await request(realSrv).get('/alerts').set({ Authorization: `ApiKey ${keyA}`, 'User-Agent': ua })).status).toBe(403);
+    expect((await request(realSrv).post('/ingest/notifications/kl-none/ack').set({ Authorization: `ApiKey ${keyA}`, 'User-Agent': ua }).send({})).status).toBe(403);
+    expect((await request(realSrv).get('/ingest/notifications').set({ Authorization: `ApiKey ${keyB}`, 'User-Agent': ua })).status).toBe(403);
+    rows = denialRows(ua);
+    expect(rows).toHaveLength(4);
+
+    // path spellings count as the same route
+    expect((await request(realSrv).get('/INGEST//notifications/').set({ Authorization: `ApiKey ${keyA}`, 'User-Agent': ua })).status).toBe(403);
+    expect(denialRows(ua)).toHaveLength(4);
+    expect(JSON.parse(denialRows(ua)[0].details).repeats).toBe(20);
+
+    // an admin who clears the row gets a fresh one on the next refusal
+    getSQLiteDB().prepare('DELETE FROM auth_audit_log WHERE id = ?').run(rows[0].id);
+    expect((await request(realSrv).get('/ingest/notifications').set({ Authorization: `ApiKey ${keyA}`, 'User-Agent': ua })).status).toBe(403);
+    expect(denialRows(ua)).toHaveLength(4);
+
+    // after the window the next refusal writes a fresh row again
+    const now = Date.now();
+    const spy = vi.spyOn(Date, 'now').mockReturnValue(now + DENIAL_ROW_WINDOW_MS + 60_000);
+    try {
+      expect((await request(realSrv).get('/alerts').set({ Authorization: `ApiKey ${keyA}`, 'User-Agent': ua })).status).toBe(403);
+    } finally {
+      spy.mockRestore();
+    }
+    expect(denialRows(ua)).toHaveLength(5);
+  });
+
+  it("a refusal names the permission a person can tick: 'write' (send logs), never 'ingest'", async () => {
+    const ua = 'kl-r7-names';
+    const res = await request(realSrv).post('/ingest/http').set({ Authorization: `ApiKey ${K.read}`, 'User-Agent': ua }).send([{ message: 'kl-r7' }]);
+    expect(res.status).toBe(403);
+    expect(res.body.needed).toBe('write');
+    expect(res.body.missing).toEqual(['write']);
+    expect(res.body.message).toMatch(/'write'/);
+    expect(res.body.message).toMatch(/send logs/);
+    expect(res.text).not.toMatch(/'ingest'/);
+    const row = JSON.parse(denialRows(ua)[0].details);
+    expect(row.needed).toBe('write');
+    // 'missing' names exactly what each key lacks
+    const refusal = async (key: string, m: 'get' | 'post', p: string) => {
+      const r = await request(realSrv)[m](p).set({ Authorization: `ApiKey ${key}`, 'User-Agent': ua }).send(m === 'post' ? {} : undefined);
+      expect(r.status, `${m} ${p}`).toBe(403);
+      return { needed: r.body.needed, missing: r.body.missing };
+    };
+    expect(await refusal(K.ingest, 'get', '/ingest/notifications')).toEqual({ needed: 'write', missing: ['read'] });
+    expect(await refusal(K.read, 'post', '/ingest/notifications/kl-none/ack')).toEqual({ needed: 'write', missing: ['write'] });
+    expect(await refusal(K.read, 'post', '/alerts')).toEqual({ needed: 'alerts:write', missing: ['alerts:write'] });
+    expect(await refusal(K.alertsOnly, 'post', '/alerts')).toEqual({ needed: 'alerts:write', missing: ['read'] });
+    expect(await refusal(K.ingest, 'post', '/dashboards')).toEqual({ needed: 'dashboards:write', missing: ['dashboards:write', 'read'] });
+    expect(await refusal(K.read, 'get', '/auth/api-keys')).toEqual({ needed: 'admin', missing: ['admin'] });
+    expect(await refusal(K.ingestScoped, 'get', '/ingest/notifications')).toEqual({ needed: 'write', missing: ['read'] });
+    expect(await refusal(K.readScoped, 'get', '/alerts')).toEqual({ needed: 'read', missing: [] });
+    for (const need of ['read', 'search', 'admin', 'alerts:write', 'dashboards:write']) {
+      expect(permissionNameForNeed(need as Parameters<typeof permissionNameForNeed>[0])).toBe(need);
+    }
+    expect(permissionNameForNeed('ingest')).toBe('write');
+  });
+
+  it('clearing a pop-up clears it for that key on that host only', async () => {
+    const { createAgentNotification, getAgentNotification } = await import('../db/sqlite-notifications.js');
+    const A = { Authorization: `ApiKey ${await newKey('kl-r7 agent A', ['write', 'read'])}` };
+    const B = { Authorization: `ApiKey ${await newKey('kl-r7 agent B', ['write', 'read'])}` };
+    const all = createAgentNotification('kl-r7 alert', 'kl-r7 for every host', 'm', {});
+    const mine = createAgentNotification('kl-r7 alert', 'kl-r7 for host one', 'm', { hostname: 'kl-r7-one' });
+    const ids = async (h: Record<string, string>, host: string) => {
+      const res = await request(realSrv).get(`/ingest/notifications?hostname=${host}`).set(h);
+      expect(res.status, res.text).toBe(200);
+      return (res.body.notifications as Array<{ id: string }>).map((x) => x.id);
+    };
+    expect(await ids(A, 'kl-r7-one')).toEqual(expect.arrayContaining([all.id, mine.id]));
+    expect(await ids(A, 'kl-r7-two')).toContain(all.id);
+    expect(await ids(A, 'kl-r7-two')).not.toContain(mine.id);
+
+    // A on host one clears both
+    expect((await request(realSrv).post(`/ingest/notifications/${all.id}/ack`).set(A).send({ hostname: 'kl-r7-one' })).status).toBe(200);
+    expect((await request(realSrv).post(`/ingest/notifications/${mine.id}/ack`).set(A).send({ hostname: 'kl-r7-one' })).status).toBe(200);
+    expect(await ids(A, 'kl-r7-one')).not.toContain(all.id);
+    expect(await ids(A, 'kl-r7-one')).not.toContain(mine.id);
+    // ...but A's other host and key B still have them
+    expect(await ids(A, 'kl-r7-two')).toContain(all.id);
+    expect(await ids(B, 'kl-r7-one')).toEqual(expect.arrayContaining([all.id, mine.id]));
+    expect(await ids(B, 'kl-r7-two')).toContain(all.id);
+    // clearing twice is harmless
+    expect((await request(realSrv).post(`/ingest/notifications/${all.id}/ack`).set(A).send({ hostname: 'kl-r7-one' })).status).toBe(200);
+
+    // a pop-up meant for another host can't be cleared from here
+    expect((await request(realSrv).post(`/ingest/notifications/${mine.id}/ack`).set(B).send({ hostname: 'kl-r7-two' })).status).toBe(404);
+    expect((await request(realSrv).post(`/ingest/notifications/${mine.id}/ack`).set(B).send({})).status).toBe(404);
+    expect(await ids(B, 'kl-r7-one')).toContain(mine.id);
+    // nor can one that doesn't exist or has expired
+    expect((await request(realSrv).post('/ingest/notifications/kl-r7-none/ack').set(B).send({ hostname: 'kl-r7-one' })).status).toBe(404);
+    const old = createAgentNotification('kl-r7 alert', 'kl-r7 expired', 'm', { expires_at: new Date(Date.now() - 60_000).toISOString() });
+    expect(await ids(B, 'kl-r7-one')).not.toContain(old.id);
+    expect((await request(realSrv).post(`/ingest/notifications/${old.id}/ack`).set(B).send({ hostname: 'kl-r7-one' })).status).toBe(404);
+    // an ISO expiry later today still counts as not expired (text vs time comparison)
+    const soon = createAgentNotification('kl-r7 alert', 'kl-r7 soon', 'm', { expires_at: new Date(Date.now() + 60_000).toISOString() });
+    expect(await ids(B, 'kl-r7-one')).toContain(soon.id);
+
+    // a pop-up shown before this upgrade (delivered=1, no per-reader rows) stays shown for everyone
+    const legacy = createAgentNotification('kl-r7 alert', 'kl-r7 legacy', 'm', {});
+    getSQLiteDB().prepare("UPDATE agent_notifications SET delivered = 1, delivered_at = datetime('now') WHERE id = ?").run(legacy.id);
+    expect(await ids(A, 'kl-r7-one')).not.toContain(legacy.id);
+    expect(await ids(B, 'kl-r7-two')).not.toContain(legacy.id);
+    expect(getAgentNotification(all.id)?.delivered).toBe(1);
   });
 });

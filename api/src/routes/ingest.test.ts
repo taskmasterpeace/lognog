@@ -151,6 +151,7 @@ describe('OTLP Authentication', () => {
       // Setup mocks
       vi.mocked(auth.validateApiKey).mockResolvedValue({
         userId: 'test-user-id',
+        keyId: 'test-key-id',
         permissions: ['write'],
         allowedIndexes: null,
       });
@@ -178,6 +179,7 @@ describe('OTLP Authentication', () => {
     it('should accept request with valid API key in X-API-Key header', async () => {
       vi.mocked(auth.validateApiKey).mockResolvedValue({
         userId: 'test-user-id',
+        keyId: 'test-key-id',
         permissions: ['write'],
         allowedIndexes: null,
       });
@@ -205,6 +207,7 @@ describe('OTLP Authentication', () => {
     it('should reject request when API key lacks write permission', async () => {
       vi.mocked(auth.validateApiKey).mockResolvedValue({
         userId: 'test-user-id',
+        keyId: 'test-key-id',
         permissions: ['read'],
         allowedIndexes: null,
       });
@@ -231,6 +234,7 @@ describe('OTLP Authentication', () => {
     it('should accept request when API key has wildcard permission', async () => {
       vi.mocked(auth.validateApiKey).mockResolvedValue({
         userId: 'admin-user-id',
+        keyId: 'test-key-id',
         permissions: ['*'],
         allowedIndexes: null,
       });
@@ -257,6 +261,7 @@ describe('OTLP Authentication', () => {
     it('should reject request when user account is disabled', async () => {
       vi.mocked(auth.validateApiKey).mockResolvedValue({
         userId: 'disabled-user-id',
+        keyId: 'test-key-id',
         permissions: ['write'],
         allowedIndexes: null,
       });
@@ -310,6 +315,7 @@ describe('OTLP Authentication', () => {
     it('should still validate authentication if provided', async () => {
       vi.mocked(auth.validateApiKey).mockResolvedValue({
         userId: 'test-user-id',
+        keyId: 'test-key-id',
         permissions: ['write'],
         allowedIndexes: null,
       });
@@ -410,6 +416,7 @@ describe('ingest index scoping', () => {
   it('rejects ingest to an index outside the key scope with 403', async () => {
     vi.mocked(auth.validateApiKey).mockResolvedValue({
       userId: 'scoped-user-id',
+      keyId: 'test-key-id',
       permissions: ['write'],
       allowedIndexes: ['web-app'],
     });
@@ -429,6 +436,7 @@ describe('ingest index scoping', () => {
   it('allows ingest to an in-scope index', async () => {
     vi.mocked(auth.validateApiKey).mockResolvedValue({
       userId: 'scoped-user-id',
+      keyId: 'test-key-id',
       permissions: ['write'],
       allowedIndexes: ['web-app'],
     });
@@ -448,6 +456,7 @@ describe('ingest index scoping', () => {
   it('allows any index for an unscoped key (backward compatible)', async () => {
     vi.mocked(auth.validateApiKey).mockResolvedValue({
       userId: 'scoped-user-id',
+      keyId: 'test-key-id',
       permissions: ['write'],
       allowedIndexes: null,
     });
@@ -466,6 +475,7 @@ describe('ingest index scoping', () => {
   it('rejects when routing rules re-route a processed record to an out-of-scope index (post-routing recheck)', async () => {
     vi.mocked(auth.validateApiKey).mockResolvedValue({
       userId: 'scoped-user-id',
+      keyId: 'test-key-id',
       permissions: ['write'],
       allowedIndexes: ['web-app'],
     });
@@ -493,6 +503,7 @@ describe('ingest index scoping', () => {
   it('rejects OTLP ingest (index "otel") for a key not scoped to otel', async () => {
     vi.mocked(auth.validateApiKey).mockResolvedValue({
       userId: 'scoped-user-id',
+      keyId: 'test-key-id',
       permissions: ['write'],
       allowedIndexes: ['web-app'],
     });
@@ -511,6 +522,7 @@ describe('ingest index scoping', () => {
   it('allows OTLP ingest for an unscoped key', async () => {
     vi.mocked(auth.validateApiKey).mockResolvedValue({
       userId: 'scoped-user-id',
+      keyId: 'test-key-id',
       permissions: ['write'],
       allowedIndexes: null,
     });
@@ -528,6 +540,7 @@ describe('ingest index scoping', () => {
   it('rejects Vercel ingest (index "vercel") for a key not scoped to vercel', async () => {
     vi.mocked(auth.validateApiKey).mockResolvedValue({
       userId: 'scoped-user-id',
+      keyId: 'test-key-id',
       permissions: ['write'],
       allowedIndexes: ['web-app'],
     });
@@ -546,6 +559,7 @@ describe('ingest index scoping', () => {
   it('allows Vercel ingest for an unscoped key', async () => {
     vi.mocked(auth.validateApiKey).mockResolvedValue({
       userId: 'scoped-user-id',
+      keyId: 'test-key-id',
       permissions: ['write'],
       allowedIndexes: null,
     });
@@ -587,6 +601,7 @@ describe('ingest index scoping', () => {
   it('rejects SmartThings ingest (resolves to "main") for a key not scoped to main', async () => {
     vi.mocked(auth.validateApiKey).mockResolvedValue({
       userId: 'scoped-user-id',
+      keyId: 'test-key-id',
       permissions: ['write'],
       allowedIndexes: ['web-app'],
     });
@@ -605,6 +620,7 @@ describe('ingest index scoping', () => {
   it('allows SmartThings ingest for a key scoped to main', async () => {
     vi.mocked(auth.validateApiKey).mockResolvedValue({
       userId: 'scoped-user-id',
+      keyId: 'test-key-id',
       permissions: ['write'],
       allowedIndexes: ['main'],
     });
@@ -623,6 +639,7 @@ describe('ingest index scoping', () => {
   it('allows SmartThings ingest for an unscoped key', async () => {
     vi.mocked(auth.validateApiKey).mockResolvedValue({
       userId: 'scoped-user-id',
+      keyId: 'test-key-id',
       permissions: ['write'],
       allowedIndexes: null,
     });

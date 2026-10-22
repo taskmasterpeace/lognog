@@ -21,8 +21,56 @@
  */
 import type { Request, Response, NextFunction } from 'express';
 import { getUserById, logAuthEvent } from './auth.js';
-import { decideApiKey, apiKeyNeed, normalizeKeyPath } from './key-policy.js';
+import { decideApiKey, apiKeyNeed, normalizeKeyPath, permissionNameForNeed } from './key-policy.js';
 import { resolveApiKeyCached } from './api-key-cache.js';
+import { getSQLiteDB } from '../db/sqlite.js';
+
+/**
+ * One audit row per repeated refusal, not one per request.
+ *
+ * A machine that keeps asking for something its key may not do (the desktop
+ * agent polling alert pop-ups with a send-logs-only key, every 30 seconds)
+ * would otherwise write thousands of identical 'apikey_permission_denied'
+ * rows a day, and nothing prunes auth_audit_log, so real refusals get buried.
+ * The first refusal of a key + IP + method + path writes a row as before;
+ * repeats within DENIAL_ROW_WINDOW_MS update that same row (details.repeats
+ * and details.last_seen) instead, so no refusal goes uncounted. After the
+ * window, or once the row is gone, the next refusal writes a fresh row.
+ */
+export const DENIAL_ROW_WINDOW_MS = 24 * 60 * 60 * 1000;
+const DENIAL_ROW_MAX_TRACKED = 5000;
+const recentDenialRows = new Map<string, { rowId: string; firstAt: number; repeats: number }>();
+
+/** Test hook: forget the rows tracked so far. */
+export function resetDenialRowsForTest(): void {
+  recentDenialRows.clear();
+}
+
+function recordDenial(
+  signature: string,
+  write: () => string,
+  now: number = Date.now(),
+): void {
+  const seen = recentDenialRows.get(signature);
+  if (seen && now - seen.firstAt < DENIAL_ROW_WINDOW_MS) {
+    seen.repeats += 1;
+    const changed = getSQLiteDB()
+      .prepare(
+        "UPDATE auth_audit_log SET details = json_set(COALESCE(details, '{}'), '$.repeats', ?, '$.last_seen', ?) WHERE id = ?",
+      )
+      .run(seen.repeats, new Date(now).toISOString(), seen.rowId);
+    if (changed.changes > 0) return;
+    // The row is gone (cleared by an admin): start a new one below.
+  }
+  recentDenialRows.delete(signature);
+  const rowId = write();
+  recentDenialRows.set(signature, { rowId, firstAt: now, repeats: 0 });
+  if (recentDenialRows.size > DENIAL_ROW_MAX_TRACKED) {
+    // Forget the oldest; at worst its next refusal writes a new row.
+    const oldest = recentDenialRows.keys().next().value;
+    if (oldest !== undefined) recentDenialRows.delete(oldest);
+  }
+}
 
 /** The API key this request presents, if any (never logged). */
 export function presentedApiKey(req: Request): string | undefined {
@@ -72,20 +120,26 @@ export async function apiKeyGate(req: Request, res: Response, next: NextFunction
     return;
   }
 
+  const needed = permissionNameForNeed(decision.need);
   try {
-    logAuthEvent(user.id, 'apikey_permission_denied', req.ip, req.get('user-agent'), {
-      method: req.method,
-      path: req.path,
-      needed: decision.need,
-      apiKeyPermissions: result.permissions,
-      scoped: !!(result.allowedIndexes && result.allowedIndexes.length > 0),
-    });
+    const signature = [result.keyId, req.ip ?? '', req.method.toUpperCase(), normalizeKeyPath(req.path)].join('|');
+    recordDenial(signature, () =>
+      logAuthEvent(user.id, 'apikey_permission_denied', req.ip, req.get('user-agent'), {
+        method: req.method,
+        path: req.path,
+        needed,
+        missing: decision.missing,
+        apiKeyPermissions: result.permissions,
+        scoped: !!(result.allowedIndexes && result.allowedIndexes.length > 0),
+      }),
+    );
   } catch {
     // The refusal stands even if the audit log can't be written.
   }
   res.status(403).json({
     error: 'API key lacks required permissions',
-    needed: decision.need,
+    needed,
+    missing: decision.missing,
     message: decision.reason,
   });
 }

@@ -24,6 +24,9 @@ logger = logging.getLogger(__name__)
 COMPRESS_MIN_BYTES = 1024
 # The server accepts at most this many events per request.
 SERVER_MAX_BATCH = 10_000
+# How long to wait before asking for alert pop-ups again after the server
+# refuses this API key for them (403).
+NOTIFICATIONS_REFUSED_RETRY_SECONDS = 3600
 
 
 class ConnectionStatus(Enum):
@@ -102,6 +105,10 @@ class HTTPShipper:
         self._last_error: Optional[str] = None
         self._last_notification_check: Optional[float] = None
         self._notifications_refused_logged = False
+        # After the server refuses this key for pop-ups, ask again only hourly
+        # (each refusal is an audit entry on the server; a key fixed in
+        # Settings > API Keys is picked up within the hour or on restart).
+        self._notifications_refused_until: Optional[float] = None
         self._last_heartbeat: Optional[float] = None
         self._heartbeats_sent = 0
 
@@ -558,8 +565,10 @@ class HTTPShipper:
         if not self.on_notification or not self.config.api_key:
             return
 
-        # Only check every 30 seconds
+        # Only check every 30 seconds, or hourly while the key is refused
         now = time.time()
+        if self._notifications_refused_until and now < self._notifications_refused_until:
+            return
         if self._last_notification_check and (now - self._last_notification_check) < 30:
             return
 
@@ -579,6 +588,8 @@ class HTTPShipper:
             )
 
             if response.status_code == 200:
+                self._notifications_refused_until = None
+                self._notifications_refused_logged = False
                 data = response.json()
                 notifications = data.get("notifications", [])
 
@@ -595,14 +606,18 @@ class HTTPShipper:
 
                 if notifications:
                     logger.info(f"Received {len(notifications)} alert notification(s)")
-            elif response.status_code == 403 and not self._notifications_refused_logged:
-                # Said once, not every 30 seconds: logs still ship with this key.
-                self._notifications_refused_logged = True
-                logger.warning(
-                    "Alert pop-ups are off: the server refused this API key for them. "
-                    "Pop-ups need a key with both 'send logs' (write) and 'read' and no index "
-                    "limit (Settings > API Keys). Sending logs is not affected."
-                )
+            elif response.status_code == 403:
+                # Ask again in an hour, not every 30 seconds: logs still ship with this key.
+                self._notifications_refused_until = now + NOTIFICATIONS_REFUSED_RETRY_SECONDS
+                if not self._notifications_refused_logged:
+                    # Said once, not every hour.
+                    self._notifications_refused_logged = True
+                    logger.warning(
+                        "Alert pop-ups are off: the server refused this API key for them. "
+                        "Pop-ups need a key with both 'send logs' (write) and 'read' and no index "
+                        "limit (Settings > API Keys). Sending logs is not affected. "
+                        "The agent asks again every hour."
+                    )
 
         except Exception as e:
             logger.debug(f"Notification check failed: {e}")
@@ -634,6 +649,7 @@ class HTTPShipper:
             "batches_sent": self._batches_sent,
             "bytes_sent": self._bytes_sent,
             "heartbeats_sent": self._heartbeats_sent,
+            "notifications_refused": self._notifications_refused_until is not None,
             "last_send_time": self._last_send_time,
             "last_error": self._last_error,
             "uptime_seconds": int(time.time() - self._started_at),

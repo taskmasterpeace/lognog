@@ -61,7 +61,7 @@ router.get('/sse', async (req: Request, res: Response) => {
     // this too, but the key can arrive here by header or query param).
     const mcpDecision = decideApiKey('GET', '/mcp/sse', keyInfo.permissions, keyInfo.allowedIndexes);
     if (!mcpDecision.allowed) {
-      res.status(403).json({ error: 'API key lacks required permissions', needed: 'admin', message: mcpDecision.reason });
+      res.status(403).json({ error: 'API key lacks required permissions', needed: 'admin', missing: mcpDecision.missing, message: mcpDecision.reason });
       return;
     }
 

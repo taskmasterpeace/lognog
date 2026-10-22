@@ -87,7 +87,7 @@ const INGEST_SCHEMA = {
   },
   auth: {
     how: 'Create a key in the LogNog UI (Settings -> API Keys). Send it as `X-API-Key: <key>` or `Authorization: ApiKey <key>`.',
-    permissions: '`write` = send logs only (the /api/ingest/* endpoints; alert pop-ups for the desktop agent at /api/ingest/notifications need `write` together with `read` and no index limit); `read` (or `search`) = search and read; `alerts:write` = create/manage alerts and `dashboards:write` = create/change dashboards, each only together with `read`; `admin` = everything except sending logs (only an admin user can make an `admin` key). Any other request answers 403 with `needed` naming the missing permission. Choose when creating the key.',
+    permissions: '`write` = send logs only (the /api/ingest/* endpoints; alert pop-ups for the desktop agent at /api/ingest/notifications need `write` together with `read` and no index limit); `read` (or `search`) = search and read; `alerts:write` = create/manage alerts and `dashboards:write` = create/change dashboards, each only together with `read`; `admin` = everything except sending logs (only an admin user can make an `admin` key). Any other request answers 403 with `needed` (the permission the route needs) and `missing` (the permissions this key lacks; empty when the key is refused for its index limit). Choose when creating the key.',
     index_scoping: 'A key can optionally be restricted to specific indexes (allowed_indexes); searches and ingest are then limited to those.',
     note: 'The key is server-side only. Reading these public docs needs NO key; calling the APIs does.',
   },
@@ -495,6 +495,15 @@ router.get('/health', (_req, res) => {
 // =============================================================================
 
 /**
+ * Who is reading pop-ups: the API key (by id, never the key) or, for a
+ * browser session, the signed-in user. Each reader keeps its own "already
+ * shown" list, so one machine clearing a pop-up never hides it from another.
+ */
+function notificationReader(req: Request): string {
+  return req.apiKeyId ? `key:${req.apiKeyId}` : `user:${req.user?.id ?? 'unknown'}`;
+}
+
+/**
  * GET /api/ingest/notifications
  *
  * Get pending notifications for the agent.
@@ -506,8 +515,8 @@ router.get(
   authenticate,
   async (req, res) => {
     try {
-      const hostname = req.query.hostname as string | undefined;
-      const notifications = getPendingNotifications(hostname);
+      const hostname = typeof req.query.hostname === 'string' ? req.query.hostname : undefined;
+      const notifications = getPendingNotifications({ reader: notificationReader(req), hostname });
 
       res.json({
         notifications: notifications.map((n: AgentNotification) => ({
@@ -542,9 +551,9 @@ router.post(
   async (req, res) => {
     try {
       const { id } = req.params;
-      const hostname = req.body.hostname as string | undefined;
+      const hostname = typeof req.body?.hostname === 'string' ? req.body.hostname : undefined;
 
-      const success = markNotificationDelivered(id, hostname);
+      const success = markNotificationDelivered(id, { reader: notificationReader(req), hostname });
 
       if (success) {
         res.json({ success: true });

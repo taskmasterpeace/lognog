@@ -14,6 +14,8 @@ declare global {
       };
       authMethod?: 'jwt' | 'apikey';
       apiKeyPermissions?: string[];
+      /** The id of the API key this request used (never the key itself). */
+      apiKeyId?: string;
       allowedIndexes?: string[] | null;
     }
   }
@@ -75,6 +77,7 @@ export async function authenticate(req: Request, res: Response, next: NextFuncti
       };
       req.authMethod = 'apikey';
       req.apiKeyPermissions = result.permissions;
+      req.apiKeyId = result.keyId;
       req.allowedIndexes = result.allowedIndexes;
       next();
     } catch {
@@ -130,6 +133,7 @@ export async function optionalAuth(req: Request, res: Response, next: NextFuncti
           };
           req.authMethod = 'apikey';
           req.apiKeyPermissions = result.permissions;
+          req.apiKeyId = result.keyId;
           req.allowedIndexes = result.allowedIndexes;
         }
       }
@@ -191,7 +195,7 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction): v
       path: req.path,
       apiKeyPermissions: req.apiKeyPermissions,
     });
-    res.status(403).json({ error: 'API key lacks required permissions', needed: 'admin' });
+    res.status(403).json({ error: 'API key lacks required permissions', needed: 'admin', missing: ['admin'] });
     return;
   }
 
@@ -528,6 +532,7 @@ export async function authenticateIngestion(req: Request, res: Response, next: N
     };
     req.authMethod = 'apikey';
     req.apiKeyPermissions = result.permissions;
+    req.apiKeyId = result.keyId;
     req.allowedIndexes = result.allowedIndexes;
 
     // Log successful authentication

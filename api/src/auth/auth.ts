@@ -478,7 +478,7 @@ export async function createApiKey(
 
 export async function validateApiKey(
   apiKey: string,
-): Promise<{ userId: string; permissions: string[]; allowedIndexes: string[] | null } | null> {
+): Promise<{ userId: string; keyId: string; permissions: string[]; allowedIndexes: string[] | null } | null> {
   if (!apiKey.startsWith('lnog_')) return null;
   // A well-formed key is `lnog_<32 hex>_<64 hex>` (102 chars). Reject anything
   // too short before touching the DB — this stops a stub like `lnog_` from
@@ -525,6 +525,7 @@ export async function validateApiKey(
       if (!owner || !owner.is_active) return null;
       return {
         userId: key.user_id,
+        keyId: key.id,
         permissions: effectiveKeyPermissions(JSON.parse(key.permissions), owner?.role),
         allowedIndexes,
       };
@@ -565,19 +566,21 @@ export function logAuthEvent(
   ipAddress?: string,
   userAgent?: string,
   details?: Record<string, unknown>
-): void {
+): string {
   const db = getSQLiteDB();
+  const id = uuidv4();
   db.prepare(`
     INSERT INTO auth_audit_log (id, user_id, event_type, ip_address, user_agent, details)
     VALUES (?, ?, ?, ?, ?, ?)
   `).run(
-    uuidv4(),
+    id,
     userId,
     eventType,
     ipAddress || null,
     userAgent || null,
     details ? JSON.stringify(details) : null
   );
+  return id;
 }
 
 export function getAuthAuditLog(

@@ -228,7 +228,35 @@ export function isScopeAwareRead(rawPath: string): boolean {
   return SCOPE_AWARE_READS.some((re) => re.test(path));
 }
 
-export type KeyDecision = { allowed: true; need: KeyNeed } | { allowed: false; need: KeyNeed; reason: string };
+/**
+ * The permission a person ticks for a need, as the key form and docs name it.
+ * Every need is itself a permission name except 'ingest', which is the
+ * 'write' permission ("send logs"); a key can't be made with 'ingest'.
+ */
+export function permissionNameForNeed(need: KeyNeed): string {
+  return need === 'ingest' ? 'write' : need;
+}
+
+/**
+ * A refusal says what the route needs and what this key lacks, both as the
+ * permission names a person ticks on the key form ('write' = send logs).
+ * `missing` is empty when the key has the permissions but its index limit is
+ * the reason.
+ */
+export type KeyDecision =
+  | { allowed: true; need: KeyNeed }
+  | { allowed: false; need: KeyNeed; reason: string; missing: string[] };
+
+/** The permissions this key lacks for a need it does not have. */
+function missingForNeed(permissions: readonly string[] | null | undefined, need: Exclude<KeyNeed, 'none'>): string[] {
+  const perms = permissions ?? [];
+  const missing: string[] = [];
+  if (!KEY_GRANTS[need].some((p) => perms.includes(p))) missing.push(permissionNameForNeed(need));
+  if (WRITES_THAT_READ.has(need) && !KEY_GRANTS.admin.some((p) => perms.includes(p)) && !KEY_GRANTS.read.some((p) => perms.includes(p))) {
+    missing.push('read');
+  }
+  return missing;
+}
 
 /**
  * The whole decision for one API-key request: does this key's permission list
@@ -247,9 +275,12 @@ export function decideApiKey(
     return {
       allowed: false,
       need,
+      missing: missingForNeed(permissions, need),
       reason: WRITES_THAT_READ.has(need)
         ? `This API key can't do that: it needs the '${need}' permission together with 'read' (it has ${JSON.stringify(permissions ?? [])}).`
-        : `This API key can't do that: it needs the '${need}' permission (it has ${JSON.stringify(permissions ?? [])}).`,
+        : need === 'ingest'
+          ? `This API key can't do that: it needs the 'write' (send logs) permission (it has ${JSON.stringify(permissions ?? [])}).`
+          : `This API key can't do that: it needs the '${need}' permission (it has ${JSON.stringify(permissions ?? [])}).`,
     };
   }
 
@@ -257,6 +288,7 @@ export function decideApiKey(
     return {
       allowed: false,
       need,
+      missing: ['read'],
       reason: `This API key can't do that: alert pop-ups carry alert text from every index, so fetching or clearing them needs the 'write' permission together with 'read' (it has ${JSON.stringify(permissions ?? [])}).`,
     };
   }
@@ -266,6 +298,7 @@ export function decideApiKey(
     return {
       allowed: false,
       need,
+      missing: [],
       reason:
         'This API key is limited to some indexes. Alert pop-ups can carry logs from any index, so only a key that is not limited can fetch them.',
     };
@@ -274,6 +307,7 @@ export function decideApiKey(
     return {
       allowed: false,
       need,
+      missing: [],
       reason:
         "This API key is limited to some indexes, so it may only send logs to them and read them through search, stats and the agent API.",
     };

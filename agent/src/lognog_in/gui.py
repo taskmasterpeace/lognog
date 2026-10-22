@@ -229,7 +229,7 @@ class ConfigWindow:
             cursor="hand2",
         )
         help_label.pack(side="left", padx=(10, 0))
-        ToolTip(help_label, "In your LogNog web interface:\n1. Go to Settings\n2. Click 'API Keys'\n3. Create a new key with 'write' permission\n4. Copy and paste it here")
+        ToolTip(help_label, "In your LogNog web interface:\n1. Go to Settings\n2. Click 'API Keys'\n3. Create a new key with 'send logs' (write)\n   (for alert pop-ups, also tick 'read', no index limit)\n4. Copy and paste it here")
         row += 1
 
         # Test connection button
@@ -598,6 +598,19 @@ class ConfigWindow:
         )
         enable_check.grid(row=row, column=0, columnspan=2, sticky="w", pady=(0, 10))
         ToolTip(enable_check, "Play sounds when alert notifications are received from the server")
+        row += 1
+
+        ttk.Label(
+            parent,
+            text=(
+                "Alert pop-ups need an API key with both 'send logs' (write) and 'read', "
+                "and no index limit. A send-logs-only key still ships logs, but gets no pop-ups."
+            ),
+            font=("Segoe UI", 8),
+            foreground="#666666",
+            wraplength=420,
+            justify="left",
+        ).grid(row=row, column=0, columnspan=2, sticky="w", pady=(0, 10))
         row += 1
 
         # === Volume control ===

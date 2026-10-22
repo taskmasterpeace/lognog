@@ -53,56 +53,99 @@ export function getAgentNotification(id: string): AgentNotification | undefined 
   return database.prepare('SELECT * FROM agent_notifications WHERE id = ?').get(id) as AgentNotification | undefined;
 }
 
-export function getPendingNotifications(hostname?: string): AgentNotification[] {
-  const database = getSQLiteDB();
-
-  // Get undelivered, non-expired notifications
-  // Matches specific hostname OR notifications with no hostname (broadcast)
-  if (hostname) {
-    return database.prepare(`
-      SELECT * FROM agent_notifications
-      WHERE delivered = 0
-      AND (hostname IS NULL OR hostname = ?)
-      AND (expires_at IS NULL OR expires_at > datetime('now'))
-      ORDER BY created_at ASC
-    `).all(hostname) as AgentNotification[];
-  }
-
-  return database.prepare(`
-    SELECT * FROM agent_notifications
-    WHERE delivered = 0
-    AND (expires_at IS NULL OR expires_at > datetime('now'))
-    ORDER BY created_at ASC
-  `).all() as AgentNotification[];
+/**
+ * Who is reading agent pop-ups: one API key (or one signed-in user) on one
+ * host name. Delivery is recorded per reader, so one machine clearing a
+ * pop-up never hides it from another machine or another key, and a key can
+ * only clear pop-ups for itself.
+ */
+export interface NotificationReader {
+  /** 'key:<api key id>' or 'user:<user id>'. */
+  reader: string;
+  hostname?: string;
 }
 
-export function markNotificationDelivered(id: string, hostname?: string): boolean {
-  const database = getSQLiteDB();
+// Expiry times are stored as ISO strings ("...T...Z"); compare them as times,
+// not as text against datetime('now') ("YYYY-MM-DD HH:MM:SS").
+const NOT_EXPIRED = "(expires_at IS NULL OR datetime(expires_at) > datetime('now'))";
 
-  // For broadcast notifications (hostname IS NULL), we create a delivery record
-  // For targeted notifications, just mark as delivered
-  const notification = getAgentNotification(id);
-  if (!notification) return false;
-
-  if (notification.hostname === null && hostname) {
-    // Broadcast notification - we could track per-host delivery
-    // For simplicity, mark as delivered for now
+let lastExpiredSweep = 0;
+function sweepExpiredNotifications(): void {
+  const now = Date.now();
+  if (now - lastExpiredSweep < 60 * 60 * 1000) return;
+  lastExpiredSweep = now;
+  try {
+    deleteExpiredNotifications();
+  } catch {
+    // A failed sweep only means old rows stay a little longer.
   }
+}
 
-  const result = database.prepare(`
+/**
+ * Pop-ups this reader has not shown yet: not expired, meant for every host
+ * or for this reader's host, and not already cleared by this reader on this
+ * host. A pop-up marked delivered before per-reader delivery existed stays
+ * delivered for everyone (no old pop-ups come back after an upgrade).
+ */
+export function getPendingNotifications(who: NotificationReader): AgentNotification[] {
+  const database = getSQLiteDB();
+  sweepExpiredNotifications();
+  const hostname = who.hostname ?? '';
+  return database.prepare(`
+    SELECT n.* FROM agent_notifications n
+    WHERE ${NOT_EXPIRED.replace(/expires_at/g, 'n.expires_at')}
+    AND (n.hostname IS NULL OR n.hostname = ?)
+    AND NOT EXISTS (
+      SELECT 1 FROM agent_notification_deliveries d
+      WHERE d.notification_id = n.id AND d.reader = ? AND d.hostname = ?
+    )
+    -- Shown before per-reader delivery existed (no delivery rows): done.
+    AND NOT (n.delivered = 1 AND NOT EXISTS (
+      SELECT 1 FROM agent_notification_deliveries d2 WHERE d2.notification_id = n.id
+    ))
+    ORDER BY n.created_at ASC
+  `).all(hostname, who.reader, hostname) as AgentNotification[];
+}
+
+/**
+ * Mark a pop-up as shown for this reader on this host only. Returns false
+ * (the route answers 404) when the pop-up does not exist, has expired, or is
+ * meant for a different host: a reader can only clear what it could fetch.
+ */
+export function markNotificationDelivered(id: string, who: NotificationReader): boolean {
+  const database = getSQLiteDB();
+  const hostname = who.hostname ?? '';
+  const notification = database.prepare(`
+    SELECT * FROM agent_notifications WHERE id = ? AND ${NOT_EXPIRED}
+  `).get(id) as AgentNotification | undefined;
+  if (!notification) return false;
+  if (notification.hostname && notification.hostname !== hostname) return false;
+
+  database.prepare(`
+    INSERT OR IGNORE INTO agent_notification_deliveries (notification_id, reader, hostname)
+    VALUES (?, ?, ?)
+  `).run(id, who.reader, hostname);
+  // 'delivered' now means "shown on at least one machine" (kept for anything
+  // that reads it); who still has it pending is decided per reader above.
+  database.prepare(`
     UPDATE agent_notifications
-    SET delivered = 1, delivered_at = datetime('now')
+    SET delivered = 1, delivered_at = COALESCE(delivered_at, datetime('now'))
     WHERE id = ?
   `).run(id);
-
-  return result.changes > 0;
+  return true;
 }
 
 export function deleteExpiredNotifications(): number {
   const database = getSQLiteDB();
+  database.prepare(`
+    DELETE FROM agent_notification_deliveries WHERE notification_id IN (
+      SELECT id FROM agent_notifications
+      WHERE expires_at IS NOT NULL AND datetime(expires_at) < datetime('now')
+    )
+  `).run();
   const result = database.prepare(`
     DELETE FROM agent_notifications
-    WHERE expires_at IS NOT NULL AND expires_at < datetime('now')
+    WHERE expires_at IS NOT NULL AND datetime(expires_at) < datetime('now')
   `).run();
   return result.changes;
 }
