@@ -53,6 +53,23 @@ export function keyHasNeed(permissions: readonly string[] | null | undefined, ne
   return true;
 }
 
+/**
+ * A key can never do more than the person who owns it. 'admin' and '*' only
+ * count on a key whose owner is an administrator: on anyone else's key,
+ * 'admin' is dropped and '*' means every non-admin permission (send logs,
+ * read, alerts:write, dashboards:write), which that user's browser session
+ * can do anyway. Without this, a non-admin user could make a '*' key and use
+ * it to open the MCP stream (every dashboard, private ones too) or any other
+ * route that trusts an 'admin' key.
+ */
+export const ADMIN_ONLY_KEY_PERMISSIONS: readonly string[] = ['admin', '*'];
+export function effectiveKeyPermissions(permissions: readonly string[], ownerRole: string | null | undefined): string[] {
+  if (ownerRole === 'admin') return [...permissions];
+  const out = permissions.filter((p) => !ADMIN_ONLY_KEY_PERMISSIONS.includes(p));
+  if (permissions.includes('*')) out.push('write', 'read', 'alerts:write', 'dashboards:write');
+  return [...new Set(out)];
+}
+
 type Rule = { methods: '*' | readonly string[]; path: RegExp; need: KeyNeed };
 
 const MUTATING = ['POST', 'PUT', 'PATCH', 'DELETE'] as const;

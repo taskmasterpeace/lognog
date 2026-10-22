@@ -52,12 +52,12 @@ import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import supertest from 'supertest';
 import http from 'node:http';
-import { createUser, createApiKey, generateTokenPair, getApiKeys } from '../auth/auth.js';
+import { createUser, createApiKey, generateTokenPair, getApiKeys, validateApiKey } from '../auth/auth.js';
 import { apiKeyGate } from '../auth/api-key-gate.js';
 import { requireAdmin } from '../auth/middleware.js';
-import { apiKeyNeed, decideApiKey, keyHasNeed } from '../auth/key-policy.js';
+import { apiKeyNeed, decideApiKey, keyHasNeed, effectiveKeyPermissions } from '../auth/key-policy.js';
 import { API_ROUTERS, mountApiRoutes } from './mount.js';
-import { closeDatabase } from '../db/sqlite.js';
+import { closeDatabase, getSQLiteDB } from '../db/sqlite.js';
 import { createAlertHistoryEntry } from '../db/sqlite-alerts.js';
 
 // ---------------------------------------------------------------------------
@@ -951,6 +951,56 @@ describe('round 3: public share links and dashboard parts', () => {
       const again = await request(realSrv).post(`/dashboards/${c.shared.id}/panels/copy`).set(jwt()).send({ sourcePanelId: c.p.id });
       expect(again.status, again.text).toBe(201);
     });
+
+    it('the panel picker (GET /dashboards/all-panels) leaves it out for a user who cannot open it; the owner sees it', async () => {
+      for (const who of [c.uj, c.uk]) {
+        const res = await request(realSrv).get('/dashboards/all-panels').set(who);
+        expect(res.status, res.text).toBe(200);
+        const ids = (res.body as Array<{ dashboard: { id: string } }>).map((x) => x.dashboard.id);
+        expect(ids).not.toContain(c.priv.id);
+        expect(ids).toContain(c.mine.id);
+        // the admin's copy of the panel lives on a shared dashboard and stays listed; the private one does not
+        expect(res.text).not.toContain('kl private');
+      }
+      const own = await request(realSrv).get('/dashboards/all-panels').set(jwt());
+      expect((own.body as Array<{ dashboard: { id: string } }>).map((x) => x.dashboard.id)).toContain(c.priv.id);
+    });
+
+    it("a project's dashboard list leaves it out for a user who cannot open it, and never carries the share-password hash", async () => {
+      const proj = await request(realSrv).post('/projects').set(jwt()).send({ name: 'kl project', slug: 'kl-project' });
+      expect(proj.status, proj.text).toBe(201);
+      expect((await request(realSrv).put(`/dashboards/${c.priv.id}`).set(jwt()).send({ project_id: proj.body.id })).status).toBe(200);
+      expect((await request(realSrv).put(`/dashboards/${c.shared.id}`).set(jwt()).send({ project_id: proj.body.id })).status).toBe(200);
+      for (const who of [c.uj, c.uk]) {
+        const res = await request(realSrv).get(`/projects/${proj.body.id}/dashboards`).set(who);
+        expect(res.status, res.text).toBe(200);
+        const ids = (res.body as Array<{ id: string }>).map((d) => d.id);
+        expect(ids).toContain(c.shared.id);
+        expect(ids).not.toContain(c.priv.id);
+        expect(res.text).not.toContain('kl private');
+        expect(res.text).not.toContain('public_password');
+      }
+      const own = await request(realSrv).get(`/projects/${proj.body.id}/dashboards`).set(jwt());
+      expect((own.body as Array<{ id: string }>).map((d) => d.id)).toContain(c.priv.id);
+      expect(own.text).not.toContain('public_password');
+    });
+
+    it('a private dashboard with no owner cannot be exported or duplicated by a user who cannot open it', async () => {
+      const legacy = (await request(realSrv).post('/dashboards').set(jwt()).send({ name: 'kl legacy private' })).body;
+      expect((await request(realSrv).post(`/dashboards/${legacy.id}/panels`).set(jwt()).send({ title: 'kl-legacy-panel', query: 'search index=money kl-legacy-query' })).status).toBe(201);
+      expect((await request(realSrv).put(`/dashboards/${legacy.id}`).set(jwt()).send({ visibility: 'private' })).status).toBe(200);
+      getSQLiteDB().prepare('UPDATE dashboards SET owner_id = NULL WHERE id = ?').run(legacy.id);
+      for (const who of [c.uj, c.uk]) {
+        for (const sub of ['/export', '/duplicate']) {
+          const res = await request(realSrv).post(`/dashboards/${legacy.id}${sub}`).set(who).send({});
+          expect(res.status, `POST ${sub}: ${res.text}`).toBe(404);
+          expect(res.text).not.toContain('kl-legacy');
+        }
+      }
+      const exp = await request(realSrv).post(`/dashboards/${legacy.id}/export`).set(jwt()).send({});
+      expect(exp.status, exp.text).toBe(200);
+      expect(exp.text).toContain('kl-legacy-panel');
+    });
   });
 
   it('a change under a dashboard that does not exist answers 404, even where no child id is checked', async () => {
@@ -1061,5 +1111,64 @@ describe('round 3: no side door from a write permission to reading every index',
       expect(decideApiKey('GET', p, ['read'], ['uptime']).allowed, p).toBe(true);
     }
     expect(decideApiKey('GET', '/reports/kl-none', ['read'], ['uptime']).allowed).toBe(false);
+  });
+});
+
+describe("a key never does more than its owner: 'admin' and '*' only count on an administrator's key", () => {
+  const jwt = () => ({ Authorization: `Bearer ${jwtAdmin}` });
+  const c = {} as { uj: Record<string, string>; star: string; adm: string };
+  beforeAll(async () => {
+    const u = await createUser('kl-user5', 'kl-user5@example.invalid', 'kl-user5-test-pass-1', 'user');
+    c.uj = { Authorization: `Bearer ${(await generateTokenPair(u)).accessToken}` };
+    // Keys like these may already exist (made before this rule); made here straight in the database.
+    c.star = (await createApiKey(u.id, 'kl user5 star', ['*'])).apiKey;
+    c.adm = (await createApiKey(u.id, 'kl user5 admin', ['admin', 'read'])).apiKey;
+  });
+
+  it("a non-admin user cannot make an 'admin' or '*' key; a plain key and an administrator's '*' key still work", async () => {
+    for (const permissions of [['*'], ['admin'], ['read', 'admin']]) {
+      const res = await request(realSrv).post('/auth/api-keys').set(c.uj).send({ name: 'kl nope', permissions });
+      // never put the response text in the message: on failure it would carry the new key
+      expect(res.status, `${JSON.stringify(permissions)}: ${res.status} ${String(res.body?.error ?? '')}`).toBe(403);
+      expect(res.text).not.toContain('lnog_');
+    }
+    const ok = await request(realSrv).post('/auth/api-keys').set(c.uj).send({ name: 'kl user5 read', permissions: ['read'] });
+    expect(ok.status, String(ok.body?.error ?? '')).toBe(201);
+    const adminStar = await request(realSrv).post('/auth/api-keys').set(jwt()).send({ name: 'kl admin star 2', permissions: ['*'] });
+    expect(adminStar.status, String(adminStar.body?.error ?? '')).toBe(201);
+  });
+
+  it("a non-admin user's existing '*' or 'admin' key cannot open admin-only routes (AI search, MCP stream, sharing)", async () => {
+    for (const key of [c.star, c.adm]) {
+      const h = { Authorization: `ApiKey ${key}` };
+      const ai = await request(realSrv).post('/search/ai').set(h).send({ prompt: 'errors' });
+      expect(ai.status, ai.text).toBe(403);
+      expect(ai.body.needed).toBe('admin');
+      const info = await validateApiKey(key);
+      expect(info?.permissions).not.toContain('*');
+      expect(info?.permissions).not.toContain('admin');
+      // routes/mcp.ts decides the MCP stream from exactly this result
+      expect(decideApiKey('GET', '/mcp/sse', info?.permissions, info?.allowedIndexes).allowed).toBe(false);
+      const d = await request(realSrv).post('/dashboards').set(c.uj).send({ name: 'kl user5 dash' });
+      expect(d.status, d.text).toBe(201);
+      const share = await request(realSrv).post(`/dashboards/${d.body.id}/share`).set(h).send({ is_public: true });
+      expect(share.status, share.text).toBe(403);
+    }
+  });
+
+  it("a non-admin user's '*' key still does what that user may: read, send logs, alerts and dashboards", async () => {
+    const h = { Authorization: `ApiKey ${c.star}` };
+    expect((await request(realSrv).get('/alerts').set(h)).status).toBe(200);
+    expect((await request(realSrv).post('/ingest/http').set(h).send([{ message: 'kl user5' }])).status).toBe(200);
+    expect((await request(realSrv).post('/alerts').set(h).send({ name: 'kl user5 rule', search_query: 'search *' })).status).toBe(201);
+    expect(effectiveKeyPermissions(['*'], 'user').sort()).toEqual(['alerts:write', 'dashboards:write', 'read', 'write']);
+    expect(effectiveKeyPermissions(['*'], 'admin')).toEqual(['*']);
+    expect(effectiveKeyPermissions(['admin', 'read'], 'readonly')).toEqual(['read']);
+  });
+
+  it("the administrator's own '*' and 'admin' keys keep everything", async () => {
+    const res = await request(realSrv).get('/auth/api-keys').set('Authorization', `ApiKey ${K.admin}`);
+    expect(res.status).toBe(200);
+    expect((await validateApiKey(K.admin))?.permissions).toContain('admin');
   });
 });

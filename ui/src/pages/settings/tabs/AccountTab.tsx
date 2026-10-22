@@ -161,6 +161,10 @@ export default function AccountTab() {
     return new Date(dateStr).toLocaleString();
   };
 
+  // Only an administrator may make an 'admin' key (the server refuses it for
+  // anyone else, and a key never does more than its owner).
+  const offeredPermissions = API_KEY_PERMISSIONS.filter((p) => p.value !== 'admin' || user?.role === 'admin');
+
   // alerts:write and dashboards:write only work together with read (an alert
   // or panel runs searches), so picking one adds read and dropping read drops them.
   const NEEDS_READ = ['alerts:write', 'dashboards:write'];
@@ -389,7 +393,7 @@ export default function AccountTab() {
                     content={
                       <div className="space-y-1">
                         <p>Each key can only do what you tick here. Pick the least it needs.</p>
-                        {API_KEY_PERMISSIONS.map((p) => (
+                        {offeredPermissions.map((p) => (
                           <p key={p.value}><strong>{p.label}:</strong> {p.hint}</p>
                         ))}
                       </div>
@@ -398,7 +402,7 @@ export default function AccountTab() {
                   />
                 </label>
                 <div className="flex flex-wrap gap-2">
-                  {API_KEY_PERMISSIONS.map(({ value: perm, label, hint }) => (
+                  {offeredPermissions.map(({ value: perm, label, hint }) => (
                     <button
                       key={perm}
                       type="button"

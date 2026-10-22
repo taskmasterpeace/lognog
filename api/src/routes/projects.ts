@@ -9,6 +9,7 @@ import {
   getDashboardsByProject,
 } from '../db/sqlite.js';
 import { authenticate, requireAdmin, denyReadonly } from '../auth/middleware.js';
+import { canReadDashboard, presentDashboard } from './dashboards.js';
 
 const router = Router();
 
@@ -142,8 +143,10 @@ router.get('/:id/dashboards', (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Project not found' });
     }
 
-    const dashboards = getDashboardsByProject(req.params.id);
-    return res.json(dashboards);
+    // Only the dashboards this caller may open, without the share-password
+    // hash: the same rules and shape as GET /dashboards.
+    const dashboards = getDashboardsByProject(req.params.id).filter((d) => canReadDashboard(req, d));
+    return res.json(dashboards.map((d) => presentDashboard(d)));
   } catch (error) {
     console.error('Error fetching project dashboards:', error);
     return res.status(500).json({ error: 'Failed to fetch project dashboards' });

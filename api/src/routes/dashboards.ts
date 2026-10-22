@@ -59,14 +59,14 @@ const router = Router();
 // Never hand the bcrypt hash of a share password to API clients; expose only
 // whether one is set. (The share modal used to pre-fill its password field
 // with the hash and re-submit it.)
-function presentDashboard<T extends { public_password?: string | null }>(d: T): Omit<T, 'public_password'> & { has_password: boolean } {
+export function presentDashboard<T extends { public_password?: string | null }>(d: T): Omit<T, 'public_password'> & { has_password: boolean } {
   const { public_password, ...rest } = d;
   return { ...rest, has_password: !!public_password };
 }
 
 // Dashboard RBAC: a 'private' dashboard is readable only by its owner and admins.
 // 'shared' (the default) stays visible to any authenticated user.
-function canReadDashboard(req: Request, d: { owner_id?: string | null; visibility?: string | null }): boolean {
+export function canReadDashboard(req: Request, d: { owner_id?: string | null; visibility?: string | null }): boolean {
   if (d.visibility !== 'private') return true;
   const user = req.user;
   return !!user && (user.role === 'admin' || d.owner_id === user.id);
@@ -261,6 +261,10 @@ router.use('/:id', (req: Request, res: Response, next) => {
     return next();
   }
   if (!requireOwnerOrAdmin(req, res, dashboard, 'dashboard')) return;
+  // A private dashboard with no owner (legacy) passes the owner check above;
+  // it still answers 404, as its GET does, to anyone who may not open it
+  // (e.g. POST /:id/export or /:id/duplicate would hand over its panels).
+  if (!canReadDashboard(req, dashboard)) return res.status(404).json({ error: 'Dashboard not found' });
   // A dashboard shared by public link runs its panel queries for anyone, on
   // every index. An API key without 'admin' may not change what it shows.
   const sharedLock = sharedDashboardLocked(req, dashboard);
@@ -319,9 +323,11 @@ router.get('/', (req: Request, res: Response) => {
 
 // Get all panels from all dashboards (for panel picker)
 // NOTE: This route MUST be before /:id to avoid path matching issues
-router.get('/all-panels', (_req: Request, res: Response) => {
+router.get('/all-panels', (req: Request, res: Response) => {
   try {
-    const dashboards = getDashboards();
+    // Only dashboards this caller may open (a private one is its owner's and
+    // the admins'), the same list GET /dashboards gives.
+    const dashboards = getDashboards().filter((d) => canReadDashboard(req, d));
     const projects = getProjects();
 
     const projectMap = new Map(projects.map(p => [p.id, p]));
