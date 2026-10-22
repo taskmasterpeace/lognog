@@ -303,9 +303,12 @@ class Agent:
         """Handle config saved from GUI."""
         logger.info("Configuration saved")
         self.config = new_config
+        # The shipper sends with the new key and server from now on; a new
+        # key also ends the hourly wait after a pop-up refusal.
+        self.shipper.update_config(new_config)
         # Update sound manager with new config
         self.sound_manager.update_config(new_config)
-        # Note: Full reload requires restart for now
+        # Note: watched paths and other collectors still need a restart
 
     def _on_pause(self) -> None:
         """Handle pause action."""
@@ -392,7 +395,7 @@ class Agent:
         self.config = config
         self.config.mark_wizard_complete()
         # Update components with new config
-        self.shipper.config = config
+        self.shipper.update_config(config)
         self.watcher.config = config
         self.sound_manager.update_config(config)
 

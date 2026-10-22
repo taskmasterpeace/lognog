@@ -44,8 +44,11 @@ beforeAll(async () => {
       if (reply.delayMs) setTimeout(send, reply.delayMs); else send();
     });
   });
-  await new Promise<void>((r) => server.listen(0, '127.0.0.1', () => r()));
-  base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  // ::1 only: macOS lets a 127.0.0.1-only server share a port with another test
+  // file's wildcard (supertest) server and takes its 127.0.0.1 requests. Nobody
+  // else connects to ::1, so this stub never answers (or cuts) another file's request.
+  await new Promise<void>((r) => server.listen(0, '::1', () => r()));
+  base = `http://[::1]:${(server.address() as AddressInfo).port}`;
 });
 
 afterAll(async () => {

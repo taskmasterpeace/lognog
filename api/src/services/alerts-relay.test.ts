@@ -33,8 +33,9 @@ beforeAll(async () => {
       res.end(replyBody);
     });
   });
-  await new Promise<void>((r) => server.listen(0, '127.0.0.1', () => r()));
-  process.env.RELAY_URL = `http://127.0.0.1:${(server.address() as AddressInfo).port}/`;
+  // ::1 only, see relay.test.ts: a 127.0.0.1-only stub can take another file's requests.
+  await new Promise<void>((r) => server.listen(0, '::1', () => r()));
+  process.env.RELAY_URL = `http://[::1]:${(server.address() as AddressInfo).port}/`;
   process.env.RELAY_BUS_KEY = KEY;
 });
 

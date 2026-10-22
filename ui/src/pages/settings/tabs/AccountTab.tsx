@@ -4,6 +4,19 @@ import { User, Key, Plus, Trash2, Copy, Check, AlertCircle, Loader2, Shield, Clo
 import { InfoTip } from '../../../components/ui/InfoTip';
 import { useConfirm } from '../../../components/ui/ConfirmDialog';
 
+
+/**
+ * What an API key may do. The server checks every request made with a key
+ * against these (api/src/auth/key-policy.ts); browser sign-ins are not affected.
+ */
+const API_KEY_PERMISSIONS: { value: string; label: string; hint: string }[] = [
+  { value: 'write', label: 'send logs', hint: "Send logs to the ingest endpoints. Nothing else. (The desktop agent's alert pop-ups need read as well, because they carry alert text from every index.)" },
+  { value: 'read', label: 'read', hint: 'Search logs and view stats, dashboards and alerts (webhook addresses stay hidden). Changes nothing.' },
+  { value: 'alerts:write', label: 'alerts:write', hint: 'Create, change and delete alerts and silences. Comes with read (alerts send search results). Cannot add or run script actions; that needs admin.' },
+  { value: 'dashboards:write', label: 'dashboards:write', hint: 'Create, change and delete dashboards and panels. Comes with read. Cannot share a public link or change a shared dashboard; that needs admin.' },
+  { value: 'admin', label: 'admin', hint: 'Everything except sending logs: settings, users, API keys, AI, script actions, public links.' },
+];
+
 export default function AccountTab() {
   const { user, logout, getApiKeys, createApiKey, revokeApiKey } = useAuth();
   const { confirm } = useConfirm();
@@ -92,6 +105,10 @@ export default function AccountTab() {
 
   const handleCreateKey = async () => {
     if (!newKeyName.trim()) return;
+    if (newKeyPermissions.length === 0) {
+      setError('Pick at least one permission for the key');
+      return;
+    }
 
     setCreatingKey(true);
     setError(null);
@@ -148,10 +165,24 @@ export default function AccountTab() {
     return new Date(dateStr).toLocaleString();
   };
 
+  // A key never does more than its owner (api key-policy.ts): only admins are
+  // offered 'admin', and a read-only account is offered 'read' only.
+  const readOnlyAccount = ['readonly', 'viewer', 'read-only'].includes(user?.role ?? '');
+  const offeredPermissions = API_KEY_PERMISSIONS.filter((p) =>
+    readOnlyAccount ? p.value === 'read' : p.value !== 'admin' || user?.role === 'admin');
+
+  // alerts:write and dashboards:write only work together with read (an alert
+  // or panel runs searches), so picking one adds read and dropping read drops them.
+  const NEEDS_READ = ['alerts:write', 'dashboards:write'];
   const togglePermission = (perm: string) => {
-    setNewKeyPermissions((prev) =>
-      prev.includes(perm) ? prev.filter((p) => p !== perm) : [...prev, perm]
-    );
+    setNewKeyPermissions((prev) => {
+      if (prev.includes(perm)) {
+        const left = prev.filter((p) => p !== perm);
+        return perm === 'read' ? left.filter((p) => !NEEDS_READ.includes(p)) : left;
+      }
+      const next = [...prev, perm];
+      return NEEDS_READ.includes(perm) && !next.includes('read') ? [...next, 'read'] : next;
+    });
   };
 
   return (
@@ -367,19 +398,22 @@ export default function AccountTab() {
                   <InfoTip
                     content={
                       <div className="space-y-1">
-                        <p><strong>read:</strong> View logs and search data</p>
-                        <p><strong>write:</strong> Ingest logs and create data</p>
-                        <p><strong>admin:</strong> Full access including settings and user management</p>
+                        <p>Each key can only do what you tick here. Pick the least it needs.</p>
+                        {offeredPermissions.map((p) => (
+                          <p key={p.value}><strong>{p.label}:</strong> {p.hint}</p>
+                        ))}
                       </div>
                     }
                     placement="right"
                   />
                 </label>
                 <div className="flex flex-wrap gap-2">
-                  {['read', 'write', 'admin'].map((perm) => (
+                  {offeredPermissions.map(({ value: perm, label, hint }) => (
                     <button
                       key={perm}
                       type="button"
+                      title={hint}
+                      aria-pressed={newKeyPermissions.includes(perm)}
                       onClick={() => togglePermission(perm)}
                       className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
                         newKeyPermissions.includes(perm)
@@ -387,7 +421,7 @@ export default function AccountTab() {
                           : 'bg-nog-100 text-nog-600 dark:bg-nog-700 dark:text-nog-400'
                       }`}
                     >
-                      {perm}
+                      {label}
                     </button>
                   ))}
                 </div>
@@ -414,7 +448,8 @@ export default function AccountTab() {
               <div className="flex gap-2">
                 <button
                   onClick={handleCreateKey}
-                  disabled={creatingKey || !newKeyName.trim()}
+                  disabled={creatingKey || !newKeyName.trim() || newKeyPermissions.length === 0}
+                  title={newKeyPermissions.length === 0 ? 'Pick at least one permission' : undefined}
                   className="flex items-center gap-2 px-4 py-2 bg-honey-500 hover:bg-honey-600 text-nog-900 font-medium rounded-lg transition-colors disabled:opacity-50"
                 >
                   {creatingKey ? (
@@ -502,7 +537,7 @@ export default function AccountTab() {
                 <div className="mt-3 flex flex-wrap gap-4 text-sm text-nog-500 dark:text-nog-400">
                   <span className="flex items-center gap-1">
                     <Shield className="w-4 h-4" />
-                    {JSON.parse(key.permissions).join(', ')}
+                    {(JSON.parse(key.permissions) as string[]).map((p) => (p === 'write' ? 'send logs' : p)).join(', ')}
                   </span>
                   <span className="flex items-center gap-1">
                     <Clock className="w-4 h-4" />

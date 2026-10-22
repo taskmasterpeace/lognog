@@ -159,11 +159,12 @@ router.post('/provision', authenticate, requireAdmin, async (req: Request, res: 
       enabled: true,
       app_scope: index,
       actions: [],
+      owner_id: userId,
     });
     alertId = alert.id;
 
     // 4. Starter dashboard with 3 panels.
-    const dashboard = createDashboard(name, `Auto-provisioned dashboard for ${name}`, index);
+    const dashboard = createDashboard(name, `Auto-provisioned dashboard for ${name}`, index, undefined, undefined, userId);
     dashboardId = dashboard.id;
 
     createDashboardPanel(

@@ -1,4 +1,6 @@
 import type { Request, Response } from 'express';
+import { keyHasNeed } from './key-policy.js';
+import { refuseAdminOnly } from './api-key-gate.js';
 
 /**
  * Ownership gate for team objects (alerts, reports, dashboards).
@@ -23,7 +25,9 @@ export function requireOwnerOrAdmin(
   }
   if (user.role === 'admin') return true;
   if (!row?.owner_id || row.owner_id === user.id) return true;
-  res.status(403).json({ error: `Only the owner of this ${what} (or an admin) can change it` });
+  // For an API key this names needed 'admin' like every other key refusal: an
+  // administrator's 'admin' key may change it, this key may not.
+  refuseAdminOnly(req, res, `Only the owner of this ${what} (or an admin) can change it`);
   return false;
 }
 
@@ -32,4 +36,15 @@ export function withOwnership<T extends { owner_id?: string | null }>(req: Reque
   const user = req.user;
   const is_owner = !!user && (user.role === 'admin' || !row.owner_id || row.owner_id === user.id);
   return { ...row, is_owner };
+}
+
+/**
+ * A dashboard shared by public link runs its panel queries for anyone, over
+ * every index. An API key without 'admin' may not change what it shows (on
+ * any route that adds to or edits it). Returns the error, or null.
+ */
+export function sharedDashboardLocked(req: Request, dashboard: { is_public?: unknown } | undefined): string | null {
+  if (!dashboard || !dashboard.is_public) return null;
+  if (req.authMethod !== 'apikey' || keyHasNeed(req.apiKeyPermissions, 'admin')) return null;
+  return "This dashboard is shared by a public link, so only an API key with the 'admin' permission can change it";
 }

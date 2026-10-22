@@ -16,6 +16,14 @@ export default function MCPSection() {
             to securely interact with external tools and data sources - all while keeping your data on your own infrastructure.
           </p>
         </div>
+
+        <div className="card p-4 bg-red-50 border-red-200 dark:bg-red-900/20 dark:border-red-800 mb-6" role="note">
+          <p className="text-red-800 dark:text-red-300 text-sm">
+            <strong>Known issue:</strong> the MCP stream does not finish opening yet (the server tries to send its headers twice,
+            and messages look for a <code className="code">connectionId</code> the client never gets), so Claude Desktop cannot
+            call LogNog tools yet. The steps below are what it will need once that is fixed.
+          </p>
+        </div>
       </section>
 
       <section>
@@ -24,7 +32,9 @@ export default function MCPSection() {
           <div className="card p-4 dark:bg-nog-800">
             <h3 className="font-semibold text-nog-900 dark:text-nog-100 mb-2">1. Generate an API Key</h3>
             <p className="text-sm text-nog-600 dark:text-nog-400 mb-2">
-              Go to <strong>Settings → API Keys</strong> and create a new key for Claude Desktop.
+              Go to <strong>Settings → API Keys</strong> and create a new key for Claude Desktop with <strong>admin</strong> ticked
+              and no index limit. Only an admin user can make it; any other key gets <code className="code">403</code>.
+              The key is checked again on every message, and anything Claude creates belongs to you.
             </p>
           </div>
 

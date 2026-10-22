@@ -225,6 +225,18 @@ function initializeSchema(): void {
       FOREIGN KEY (alert_id) REFERENCES alerts(id) ON DELETE SET NULL
     );
 
+    -- Which reader has already shown each agent pop-up. A reader is one API
+    -- key (or one signed-in user) on one host name, so one machine clearing
+    -- a pop-up never hides it from another machine or another key.
+    CREATE TABLE IF NOT EXISTS agent_notification_deliveries (
+      notification_id TEXT NOT NULL,
+      reader TEXT NOT NULL,
+      hostname TEXT NOT NULL DEFAULT '',
+      delivered_at TEXT DEFAULT (datetime('now')),
+      PRIMARY KEY (notification_id, reader, hostname),
+      FOREIGN KEY (notification_id) REFERENCES agent_notifications(id) ON DELETE CASCADE
+    );
+
     -- Source Templates (for onboarding different log types)
     CREATE TABLE IF NOT EXISTS source_templates (
       id TEXT PRIMARY KEY,

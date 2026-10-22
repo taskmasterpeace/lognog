@@ -34,6 +34,11 @@ export default function APIReferenceSection() {
             <CodeBlock code={`X-API-Key: <your_api_key>
 # OR
 Authorization: Bearer <your_api_key>`} />
+            <p className="text-xs text-nog-500 dark:text-nog-400 mt-2">
+              A key can only do what its permissions say: <code className="code">write</code> (send logs),
+              <code className="code"> read</code>, <code className="code">alerts:write</code> and <code className="code">dashboards:write</code> (both need read too),
+              <code className="code"> admin</code> (admin users only). Anything else gets <code className="code">403</code>, and a key never does more than its owner.
+            </p>
           </div>
         </div>
         <div className="overflow-x-auto mt-4">

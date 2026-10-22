@@ -5,7 +5,9 @@
  *
  * Auth: `X-API-Key: <key>` or `Authorization: ApiKey <key>` (a JWT also works).
  *   - `read`  permission: search, indexes, fields, summary, list/get alerts, test.
- *   - `write` permission: create / update / delete / evaluate alerts.
+ *   - `alerts:write` permission (only together with `read`, or `admin`):
+ *     create / update / delete / evaluate alerts. Script actions need `admin`.
+ *   - `write` alone only sends logs (/api/ingest); it gets 403 here.
  * Index-scoped keys automatically restrict what searches can see.
  *
  * Mounted at /api/agent. This path is CSRF-exempt (see middleware/csrf.ts) and
@@ -26,6 +28,14 @@ import {
 import type { AlertAction } from '../db/sqlite.js';
 import { safeJsonParse } from '../utils/json.js';
 import { normalizeTriggerType, testAlert, evaluateAlert } from '../services/alerts.js';
+import { requireOwnerOrAdmin } from '../auth/ownership.js';
+import {
+  scriptActionForbidden,
+  scriptAlertLocked,
+  presentActions,
+  restoreHiddenActions,
+} from '../auth/alert-action-guard.js';
+import { refuseAdminOnly } from '../auth/api-key-gate.js';
 
 const router = Router();
 
@@ -43,8 +53,13 @@ router.use((req, _res, next) => {
 router.use(authenticate);
 router.use(rateLimit(120, 60000));
 
-const READ = requirePermission('read', 'write', 'admin', '*');
-const WRITE = requirePermission('write', 'admin', '*');
+// Same grants as the key lock (requirePermission uses key-policy.ts
+// keyHasPermission): 'read' is met by a read, search, admin or '*' key, and
+// 'alerts:write' needs read too unless the key is admin or '*'. An ingest-only
+// 'write' key can't read or change alerts here; the API-key gate in front of
+// every router enforces this too. A read-only account's read key reads here.
+const READ = requirePermission('read');
+const WRITE = requirePermission('alerts:write');
 
 function firstCount(results: unknown[]): number {
   const row = (results?.[0] || {}) as Record<string, unknown>;
@@ -53,7 +68,7 @@ function firstCount(results: unknown[]): number {
   return Number.isFinite(n) ? n : results?.length || 0;
 }
 
-function shapeAlert(a: Record<string, unknown>) {
+function shapeAlert(req: Request, a: Record<string, unknown>) {
   return {
     id: a.id,
     name: a.name,
@@ -72,7 +87,8 @@ function shapeAlert(a: Record<string, unknown>) {
     last_status: a.last_status ?? null,
     last_error: a.last_error ?? null,
     trigger_count: a.trigger_count,
-    actions: safeJsonParse<AlertAction[]>(a.actions as string, []),
+    // Secret action settings are hidden from keys without 'admin'.
+    actions: presentActions(req, safeJsonParse<AlertAction[]>(a.actions as string, [])),
   };
 }
 
@@ -95,10 +111,10 @@ router.get('/', READ, (req: Request, res: Response) => {
       'GET /api/agent/alerts': 'List alerts with health (last_status/last_error). Needs: read.',
       'GET /api/agent/alerts/:id': 'Get one alert. Needs: read.',
       'POST /api/agent/alerts/test': 'Preview whether a query+condition would fire (no save). Needs: read.',
-      'POST /api/agent/alerts': 'Create an alert. Needs: write.',
-      'PATCH /api/agent/alerts/:id': 'Update an alert. Needs: write.',
-      'POST /api/agent/alerts/:id/evaluate': 'Evaluate an alert now. Needs: write.',
-      'DELETE /api/agent/alerts/:id': 'Delete an alert. Needs: write.',
+      'POST /api/agent/alerts': 'Create an alert. Needs: alerts:write together with read (or admin). An alert with a script action, or attaching one, needs admin.',
+      'PATCH /api/agent/alerts/:id': 'Update an alert. Needs: alerts:write together with read (or admin). An alert with a script action, or attaching one, needs admin.',
+      'POST /api/agent/alerts/:id/evaluate': 'Evaluate an alert now. Needs: alerts:write together with read (or admin). An alert with a script action, or attaching one, needs admin.',
+      'DELETE /api/agent/alerts/:id': 'Delete an alert. Needs: alerts:write together with read (or admin). An alert with a script action, or attaching one, needs admin.',
     },
     dsl: 'Pipe-based: `search severity<=3 | stats count by app_name | sort -count | head 10`. Commands: search, filter, where, stats, sort, limit/head/tail, table, fields, dedup, rename, top, rare, bin, timechart, rex, eval, lookup.',
     docs: '/api/ingest/guide',
@@ -197,15 +213,15 @@ router.get('/fields', READ, (_req: Request, res: Response) => {
 });
 
 // ── READ: alerts ─────────────────────────────────────────────────────────────
-router.get('/alerts', READ, (_req: Request, res: Response) => {
+router.get('/alerts', READ, (req: Request, res: Response) => {
   const alerts = getAlerts() as unknown as Record<string, unknown>[];
-  res.json({ count: alerts.length, alerts: alerts.map(shapeAlert) });
+  res.json({ count: alerts.length, alerts: alerts.map((a) => shapeAlert(req, a)) });
 });
 
 router.get('/alerts/:id', READ, (req: Request, res: Response) => {
   const a = getAlert(req.params.id) as unknown as Record<string, unknown> | undefined;
   if (!a) return res.status(404).json({ error: 'Alert not found' });
-  return res.json(shapeAlert(a));
+  return res.json(shapeAlert(req, a));
 });
 
 // Preview whether a query + condition would fire, without saving.
@@ -237,6 +253,10 @@ router.post('/alerts', WRITE, (req: Request, res: Response) => {
     if (!name || !search_query) {
       return res.status(400).json({ error: '`name` and `search_query` are required.' });
     }
+    const forbidden = scriptActionForbidden(req, actions);
+    if (forbidden) return refuseAdminOnly(req, res, forbidden);
+    const restored = restoreHiddenActions(actions, null);
+    if ('error' in restored) return res.status(400).json({ error: restored.error });
     const alert = createAlert(name, search_query, {
       description,
       trigger_type: normalizeTriggerType(trigger_type),
@@ -251,8 +271,9 @@ router.post('/alerts', WRITE, (req: Request, res: Response) => {
       severity,
       enabled,
       app_scope,
+      owner_id: req.user?.id ?? null, // owner-less alerts are editable by every user
     });
-    return res.status(201).json(shapeAlert(alert as unknown as Record<string, unknown>));
+    return res.status(201).json(shapeAlert(req, alert as unknown as Record<string, unknown>));
   } catch (error) {
     return res.status(500).json({ error: 'Failed to create alert', message: error instanceof Error ? error.message : 'Unknown error' });
   }
@@ -262,13 +283,20 @@ router.patch('/alerts/:id', WRITE, (req: Request, res: Response) => {
   try {
     const existing = getAlert(req.params.id);
     if (!existing) return res.status(404).json({ error: 'Alert not found' });
+    if (!requireOwnerOrAdmin(req, res, existing, 'alert')) return;
+    const locked = scriptAlertLocked(req, existing);
+    if (locked) return refuseAdminOnly(req, res, locked);
     const b = req.body || {};
+    const forbidden = scriptActionForbidden(req, b.actions);
+    if (forbidden) return refuseAdminOnly(req, res, forbidden);
+    const restored = restoreHiddenActions(b.actions, existing.actions);
+    if ('error' in restored) return res.status(400).json({ error: restored.error });
     const alert = updateAlert(req.params.id, {
       ...b,
       trigger_type: b.trigger_type !== undefined ? normalizeTriggerType(b.trigger_type) : undefined,
-      actions: b.actions as AlertAction[] | undefined,
+      actions: restored.actions as AlertAction[] | undefined,
     });
-    return res.json(shapeAlert(alert as unknown as Record<string, unknown>));
+    return res.json(shapeAlert(req, alert as unknown as Record<string, unknown>));
   } catch (error) {
     return res.status(500).json({ error: 'Failed to update alert', message: error instanceof Error ? error.message : 'Unknown error' });
   }
@@ -278,6 +306,9 @@ router.post('/alerts/:id/evaluate', WRITE, async (req: Request, res: Response) =
   try {
     const existing = getAlert(req.params.id);
     if (!existing) return res.status(404).json({ error: 'Alert not found' });
+    if (!requireOwnerOrAdmin(req, res, existing, 'alert')) return;
+    const locked = scriptAlertLocked(req, existing);
+    if (locked) return refuseAdminOnly(req, res, locked);
     const result = await evaluateAlert(req.params.id);
     return res.json(result);
   } catch (error) {
@@ -286,6 +317,11 @@ router.post('/alerts/:id/evaluate', WRITE, async (req: Request, res: Response) =
 });
 
 router.delete('/alerts/:id', WRITE, (req: Request, res: Response) => {
+  const existing = getAlert(req.params.id);
+  if (!existing) return res.status(404).json({ error: 'Alert not found' });
+  if (!requireOwnerOrAdmin(req, res, existing, 'alert')) return;
+  const locked = scriptAlertLocked(req, existing);
+  if (locked) return refuseAdminOnly(req, res, locked);
   const deleted = deleteAlert(req.params.id);
   if (!deleted) return res.status(404).json({ error: 'Alert not found' });
   return res.json({ success: true });

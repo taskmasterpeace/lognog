@@ -8,6 +8,7 @@ import { triggerReport } from '../services/scheduler.js';
 import { listReportRuns, getReportRun } from '../db/sqlite-report-runs.js';
 import { rateLimit, authenticate, denyReadonly } from '../auth/middleware.js';
 import { requireOwnerOrAdmin, withOwnership } from '../auth/ownership.js';
+import { isAdminGrade, HIDDEN } from '../auth/alert-action-guard.js';
 import { getReportTemplates, getTemplateById, getTemplatesByCategory, getTemplateCategories } from '../data/report-templates.js';
 import { getAvailableReportTokens } from '../services/template-engine.js';
 import { getWeeklyReport, WeekError } from '../services/weekly-report.js';
@@ -51,6 +52,24 @@ function loadOwnedReport(req: Request, res: Response): ScheduledReport | null {
   }
   if (!requireOwnerOrAdmin(req, res, report, 'report')) return null;
   return report;
+}
+
+/**
+ * Report recipients are e-mail addresses, the same kind of secret an alert's
+ * e-mail action holds, so an API key without 'admin' sees them as "[hidden]"
+ * (as it does for alert actions). Browser sessions and admin keys see them.
+ * Every report write needs an admin key, so no round trip of "[hidden]" is
+ * possible; the "[hidden]" value also fails the e-mail check on PUT.
+ */
+function presentReport<T extends { recipients?: unknown }>(req: Request, report: T): T {
+  if (isAdminGrade(req)) return report;
+  return { ...report, recipients: report.recipients ? HIDDEN : report.recipients };
+}
+
+/** A run names who it went to and, on failure, the mail server's answer. */
+function presentRun<T extends { recipients?: unknown; reason?: unknown }>(req: Request, run: T): T {
+  if (isAdminGrade(req)) return run;
+  return { ...run, recipients: run.recipients ? HIDDEN : run.recipients, reason: run.reason ? HIDDEN : run.reason };
 }
 
 // ==================== Validation ====================
@@ -259,7 +278,7 @@ router.get('/', (req: Request, res: Response) => {
     } else {
       reports = db.prepare('SELECT * FROM scheduled_reports ORDER BY created_at DESC').all() as ScheduledReport[];
     }
-    return res.json(reports.map(r => withOwnership(req, r)));
+    return res.json(reports.map(r => presentReport(req, withOwnership(req, r))));
   } catch (error) {
     console.error('Error fetching reports:', error);
     return res.status(500).json({ error: 'Failed to fetch reports' });
@@ -384,7 +403,7 @@ router.get('/:id/runs', (req: Request, res: Response) => {
       return res.status(404).json({ error: 'Report not found' });
     }
     const limit = Math.min(parseInt(String(req.query.limit ?? ''), 10) || 20, 100);
-    return res.json(listReportRuns(req.params.id, limit));
+    return res.json(listReportRuns(req.params.id, limit).map((run) => presentRun(req, run)));
   } catch (error) {
     console.error('Error listing report runs:', error);
     return res.status(500).json({ error: 'Failed to list report runs' });

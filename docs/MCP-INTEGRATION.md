@@ -16,6 +16,8 @@ Connect LogNog to Claude Desktop for AI-powered log management. Ask Claude to se
 
 All while keeping your data on your own infrastructure.
 
+> **Known issue (older than the key lock):** the `/mcp/sse` stream does not finish opening (the server tries to send its headers twice), and `/mcp/messages` looks for a `connectionId` the client never gets (the MCP SDK hands out a `sessionId`). So Claude Desktop cannot call LogNog tools yet. The steps below are what it will need once that is fixed.
+
 ---
 
 ## Quick Start
@@ -24,7 +26,7 @@ All while keeping your data on your own infrastructure.
 
 - LogNog running (Full or Lite)
 - Claude Desktop installed
-- API key from LogNog (Settings → API Keys)
+- An **admin** API key from LogNog (Settings → API Keys), made by an admin user, not limited to some indexes
 
 ### Step 1: Generate an API Key
 
@@ -32,7 +34,10 @@ All while keeping your data on your own infrastructure.
 2. Go to **Settings → API Keys**
 3. Click **Create API Key**
 4. Give it a name like "Claude Desktop"
-5. Copy the API key (you won't see it again!)
+5. Tick **admin** (only an admin user is offered it) and leave the index limit empty
+6. Copy the API key (you won't see it again!)
+
+The MCP stream needs an unscoped `admin` (or `*`) key. Any other key gets `403`. LogNog checks the key again on every message, so a key that is revoked, loses admin, or whose owner is switched off stops working at once and the stream is closed. Dashboards and alerts that Claude creates belong to the key's owner.
 
 ### Step 2: Configure Claude Desktop
 
@@ -277,14 +282,16 @@ Simple health check endpoint.
 
 ### Authentication
 
-All MCP connections require a valid API key. Keys can be created in LogNog's Settings → API Keys section.
+All MCP connections require an API key. Keys are created in LogNog's Settings → API Keys section.
 
 ### Permissions
 
-MCP respects LogNog's role-based access control:
-- **Admin**: Full read/write access
-- **User**: Read access + create dashboards/alerts
-- **Readonly**: Read access only
+The MCP tools can search every index, create dashboards and alerts, and ingest logs, so the stream needs an **admin** key:
+- The key must have the `admin` (or `*`) permission and no index limit. Only an admin user can make such a key.
+- A key never does more than its owner: if the owner stops being an admin or is switched off, the key loses admin on the next request.
+- Every `/mcp/messages` call re-checks the key. A refused key gets `403` and its stream is closed.
+- Anything the tools create (dashboards, alerts) belongs to the key's owner.
+- Read, send-logs, alerts:write and dashboards:write keys get `403` on `/mcp/sse`.
 
 ### Data Privacy
 
@@ -308,7 +315,9 @@ MCP respects LogNog's role-based access control:
 
 ### Invalid API Key
 
-**Problem:** "401 Unauthorized" error
+**Problem:** "401 Unauthorized" or "403 API key lacks required permissions" error
+
+A `403` means the key is not an unscoped admin key (see Permissions above). Make a new key with **admin** ticked, as an admin user.
 
 **Solutions:**
 1. Regenerate API key in LogNog Settings

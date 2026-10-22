@@ -26,6 +26,7 @@ import {
 } from '../db/sqlite.js';
 import { authenticate, requireAdmin, requireRole, rateLimit, accountLockoutRemaining, recordLoginFailure, clearLoginFailures } from '../auth/middleware.js';
 import { logAuthLogin, logAuthLoginFailed, logAuthLogout, logAuthSetup } from '../services/internal-logger.js';
+import { ADMIN_ONLY_KEY_PERMISSIONS, KNOWN_KEY_PERMISSIONS, permissionsAboveOwner } from '../auth/key-policy.js';
 
 const router = Router();
 
@@ -48,7 +49,12 @@ const changePasswordSchema = z.object({
 
 const createApiKeySchema = z.object({
   name: z.string().min(1).max(100),
-  permissions: z.array(z.string()).optional(),
+  // Only permissions the key lock understands, and at least one: a typo such as
+  // 'read ' or an empty list used to make a key that silently did nothing.
+  // Each permission is stored once (['read','read'] is kept as ['read']).
+  permissions: z.array(z.enum(KNOWN_KEY_PERMISSIONS)).min(1)
+    .transform((list) => [...new Set(list)])
+    .optional(),
   expiresInDays: z.number().positive().optional(),
   allowed_indexes: z.array(z.string()).optional(),
 });
@@ -270,6 +276,19 @@ router.get('/api-keys', authenticate, (req, res) => {
 router.post('/api-keys', authenticate, async (req, res) => {
   try {
     const data = createApiKeySchema.parse(req.body);
+    // Only an administrator may make a key with 'admin' or '*' (a key never
+    // does more than its owner; key-policy.ts effectiveKeyPermissions).
+    const asked = data.permissions || ['read'];
+    const above = permissionsAboveOwner(asked, req.user!.role);
+    if (above.length > 0) {
+      res.status(403).json({
+        error: above.some((p) => ADMIN_ONLY_KEY_PERMISSIONS.includes(p))
+          ? "Only an administrator can make a key with the 'admin' or '*' permission"
+          : "A read-only account can only make keys with the 'read' or 'search' permission",
+        refused: above,
+      });
+      return;
+    }
     const { apiKey, keyData } = await createApiKey(
       req.user!.id,
       data.name,

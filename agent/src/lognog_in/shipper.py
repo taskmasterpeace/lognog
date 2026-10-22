@@ -8,6 +8,8 @@ import random
 import threading
 import time
 import uuid
+from collections import OrderedDict
+from collections.abc import Hashable
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Callable, Optional
@@ -24,6 +26,18 @@ logger = logging.getLogger(__name__)
 COMPRESS_MIN_BYTES = 1024
 # The server accepts at most this many events per request.
 SERVER_MAX_BATCH = 10_000
+# How long to wait before asking for alert pop-ups again after the server
+# refuses this API key for them (403).
+NOTIFICATIONS_REFUSED_RETRY_SECONDS = 3600
+# Pop-up ids this agent has shown since it started. The server keeps a pop-up
+# pending for a host until that host's clear is recorded; when a clear isn't
+# recorded (the ack failed, or one key already cleared the pop-up on the
+# server's limit of hosts), the next check returns it again and the agent
+# clears it again without showing it a second time. Every id the server still
+# returns is kept, however many; of the ids it no longer returns, only the
+# newest this many are kept (a pop-up the server no longer returns is not
+# pending, so it does not come back).
+MAX_SHOWN_NOTIFICATION_IDS = 1000
 
 
 class ConnectionStatus(Enum):
@@ -101,8 +115,41 @@ class HTTPShipper:
         self._last_send_time: Optional[float] = None
         self._last_error: Optional[str] = None
         self._last_notification_check: Optional[float] = None
+        self._notifications_refused_logged = False
+        # After the server refuses this key for pop-ups, ask again only hourly
+        # (each refusal is an audit entry on the server; a key fixed in
+        # Settings > API Keys is picked up within the hour or on restart, and
+        # a new key or server saved in the agent's own settings at once).
+        self._notifications_refused_until: Optional[float] = None
+        # The (api_key, server_url) the server refused. The settings window
+        # changes the Config this shipper already holds, so the wait ends
+        # when the current pair differs from this one, however it changed.
+        self._notifications_refused_for: Optional[tuple[str, str]] = None
         self._last_heartbeat: Optional[float] = None
         self._heartbeats_sent = 0
+        self._shown_notification_ids: "OrderedDict[str, None]" = OrderedDict()
+
+    def update_config(self, config: Config) -> None:
+        """Use settings saved in the agent's settings window.
+
+        A new API key or server ends the hourly wait after a pop-up refusal,
+        so a key fixed here is asked about on the next check, not up to an
+        hour later. This holds whether the settings come as a new Config or
+        as changes to the one this shipper already holds (the settings
+        window does the latter): the check compares against the refused pair.
+        """
+        self.config = config
+        self._end_refusal_wait_if_key_changed()
+
+    def _end_refusal_wait_if_key_changed(self) -> None:
+        """End the hourly pop-up wait when the key or server is not the refused one."""
+        if self._notifications_refused_for is None:
+            return
+        if (self.config.api_key, self.config.server_url) != self._notifications_refused_for:
+            self._notifications_refused_until = None
+            self._notifications_refused_for = None
+            self._notifications_refused_logged = False
+            self._last_notification_check = None
 
     @property
     def status(self) -> ConnectionStatus:
@@ -557,46 +604,100 @@ class HTTPShipper:
         if not self.on_notification or not self.config.api_key:
             return
 
-        # Only check every 30 seconds
+        # Only check every 30 seconds, or hourly while the key is refused
+        # (a different key or server than the refused one asks at once)
+        self._end_refusal_wait_if_key_changed()
         now = time.time()
+        if self._notifications_refused_until and now < self._notifications_refused_until:
+            return
         if self._last_notification_check and (now - self._last_notification_check) < 30:
             return
 
         self._last_notification_check = now
 
+        # The pair this request is made with (the settings window may change
+        # the Config while the request is out).
+        api_key, server_url = self.config.api_key, self.config.server_url
         try:
-            url = f"{self.config.server_url}/api/ingest/notifications"
+            url = f"{server_url}/api/ingest/notifications"
             params = {"hostname": self.config.hostname}
 
             response = await client.get(
                 url,
                 params=params,
                 headers={
-                    "Authorization": f"ApiKey {self.config.api_key}",
+                    "Authorization": f"ApiKey {api_key}",
                 },
                 timeout=10.0,
             )
 
             if response.status_code == 200:
+                self._notifications_refused_until = None
+                self._notifications_refused_for = None
+                self._notifications_refused_logged = False
                 data = response.json()
                 notifications = data.get("notifications", [])
 
+                # Pop-ups still pending are the newest in the memory, and the
+                # memory never forgets one the server is still returning (even
+                # with more than MAX_SHOWN_NOTIFICATION_IDS pending), so none
+                # of them is shown twice.
+                pending_ids = {
+                    notif.get("id") for notif in notifications
+                    if isinstance(notif.get("id"), Hashable)
+                }
                 for notif in notifications:
-                    # Show notification
-                    self.on_notification(
-                        notif.get("title", "LogNog Alert"),
-                        notif.get("message", ""),
-                        notif.get("severity", "medium"),
-                    )
+                    if notif.get("id") in self._shown_notification_ids:
+                        self._shown_notification_ids.move_to_end(notif["id"])
+                for notif in notifications:
+                    notif_id = notif.get("id")
+                    # Show each pop-up once per run: one returned again
+                    # (its clear was not recorded) is only cleared again.
+                    if notif_id is None or notif_id not in self._shown_notification_ids:
+                        self.on_notification(
+                            notif.get("title", "LogNog Alert"),
+                            notif.get("message", ""),
+                            notif.get("severity", "medium"),
+                        )
+                        if notif_id is not None:
+                            self._remember_shown_notification(notif_id, keep=pending_ids)
 
                     # Acknowledge delivery
                     await self._ack_notification(client, notif["id"])
 
                 if notifications:
                     logger.info(f"Received {len(notifications)} alert notification(s)")
+            elif response.status_code == 403:
+                # Ask again in an hour, not every 30 seconds: logs still ship with this key.
+                self._notifications_refused_until = now + NOTIFICATIONS_REFUSED_RETRY_SECONDS
+                self._notifications_refused_for = (api_key, server_url)
+                if not self._notifications_refused_logged:
+                    # Said once, not every hour.
+                    self._notifications_refused_logged = True
+                    logger.warning(
+                        "Alert pop-ups are off: the server refused this API key for them. "
+                        "Pop-ups need a key with both 'send logs' (write) and 'read' and no index "
+                        "limit (Settings > API Keys). Sending logs is not affected. "
+                        "The agent asks again every hour, or at once when a new key is saved in its settings."
+                    )
 
         except Exception as e:
             logger.debug(f"Notification check failed: {e}")
+
+    def _remember_shown_notification(self, notification_id: str, keep: "frozenset | set" = frozenset()) -> None:
+        """Remember a shown pop-up id.
+
+        Past MAX_SHOWN_NOTIFICATION_IDS the oldest ids are forgotten, but
+        never one in `keep` (the ids the server returned on this check). The
+        ids in `keep` are the newest in the memory (moved to the end, or just
+        added), so once the oldest is one of them, all the rest are too.
+        """
+        self._shown_notification_ids[notification_id] = None
+        while len(self._shown_notification_ids) > MAX_SHOWN_NOTIFICATION_IDS:
+            oldest = next(iter(self._shown_notification_ids))
+            if oldest in keep:
+                break
+            self._shown_notification_ids.popitem(last=False)
 
     async def _ack_notification(self, client: httpx.AsyncClient, notification_id: str) -> None:
         """Acknowledge a notification as delivered."""
@@ -625,6 +726,7 @@ class HTTPShipper:
             "batches_sent": self._batches_sent,
             "bytes_sent": self._bytes_sent,
             "heartbeats_sent": self._heartbeats_sent,
+            "notifications_refused": self._notifications_refused_until is not None,
             "last_send_time": self._last_send_time,
             "last_error": self._last_error,
             "uptime_seconds": int(time.time() - self._started_at),

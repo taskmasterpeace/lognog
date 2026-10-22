@@ -686,7 +686,9 @@ curl -X POST "https://your-lognog/api/ingest/otlp/v1/logs" \
 
 Connect LogNog to Claude Desktop for AI-powered log analysis:
 
-1. Generate API key in LogNog (Settings → API Keys)
+> Known issue (older than the key lock): the `/mcp/sse` stream does not finish opening and `/mcp/messages` expects a `connectionId` the client never gets, so Claude Desktop cannot call LogNog tools yet. See [docs/MCP-INTEGRATION.md](docs/MCP-INTEGRATION.md).
+
+1. Generate an **admin** API key in LogNog (Settings → API Keys, as an admin user, no index limit); other keys get 403
 2. Add to Claude Desktop config:
    ```json
    {

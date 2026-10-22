@@ -50,22 +50,24 @@ import {
   getProjects,
 } from '../db/sqlite.js';
 import { authenticate, denyReadonly, rateLimit } from '../auth/middleware.js';
-import { requireOwnerOrAdmin, withOwnership } from '../auth/ownership.js';
+import { requireOwnerOrAdmin, withOwnership, sharedDashboardLocked } from '../auth/ownership.js';
+import { apiKeyNeed } from '../auth/key-policy.js';
 import { executeDSLQuery } from '../db/backend.js';
+import { refuseAdminOnly } from '../auth/api-key-gate.js';
 
 const router = Router();
 
 // Never hand the bcrypt hash of a share password to API clients; expose only
 // whether one is set. (The share modal used to pre-fill its password field
 // with the hash and re-submit it.)
-function presentDashboard<T extends { public_password?: string | null }>(d: T): Omit<T, 'public_password'> & { has_password: boolean } {
+export function presentDashboard<T extends { public_password?: string | null }>(d: T): Omit<T, 'public_password'> & { has_password: boolean } {
   const { public_password, ...rest } = d;
   return { ...rest, has_password: !!public_password };
 }
 
 // Dashboard RBAC: a 'private' dashboard is readable only by its owner and admins.
 // 'shared' (the default) stays visible to any authenticated user.
-function canReadDashboard(req: Request, d: { owner_id?: string | null; visibility?: string | null }): boolean {
+export function canReadDashboard(req: Request, d: { owner_id?: string | null; visibility?: string | null }): boolean {
   if (d.visibility !== 'private') return true;
   const user = req.user;
   return !!user && (user.role === 'admin' || d.owner_id === user.id);
@@ -238,11 +240,64 @@ router.use(denyReadonly);
 // open to every authenticated user. Legacy dashboards with no owner stay
 // editable by everyone.
 router.use('/:id', (req: Request, res: Response, next) => {
-  if (req.method === 'GET') return next();
+  if (req.method === 'GET') {
+    // A private dashboard and everything under it (variables, pages,
+    // annotations, logos, panel provenance) 404s for anyone who may not read
+    // it, the same answer GET /:id gives. Ids that are not dashboards (e.g.
+    // /templates, /app-scopes) fall through to their own routes.
+    const d = getDashboard(req.params.id);
+    if (d && !canReadDashboard(req, d)) return res.status(404).json({ error: 'Dashboard not found' });
+    return next();
+  }
   // Collection-level POSTs (e.g. /from-wizard, /import) are not dashboard ids.
   const dashboard = getDashboard(req.params.id);
-  if (!dashboard) return next();
+  if (!dashboard) {
+    // A change UNDER a dashboard that does not exist (e.g. DELETE
+    // /dashboards/<nothing>/variables/<someone else's variable>) used to skip
+    // the owner check and act on the child id alone. The only collection
+    // routes with a deeper path are /templates/:templateId/create.
+    if (req.path !== '/' && req.params.id.toLowerCase() !== 'templates') {
+      return res.status(404).json({ error: 'Dashboard not found' });
+    }
+    return next();
+  }
+  // A private dashboard the caller may not open answers 404 to every method,
+  // as its GET does, BEFORE the owner check: a 403 "only the owner can change
+  // it" would confirm that someone else's private dashboard exists. This also
+  // covers a private dashboard with no owner (legacy), which the owner check
+  // lets through (e.g. POST /:id/export or /:id/duplicate would hand over its panels).
+  if (!canReadDashboard(req, dashboard)) return res.status(404).json({ error: 'Dashboard not found' });
   if (!requireOwnerOrAdmin(req, res, dashboard, 'dashboard')) return;
+  // A dashboard shared by public link runs its panel queries for anyone, on
+  // every index. An API key without 'admin' may not change what it shows.
+  const sharedLock = sharedDashboardLocked(req, dashboard);
+  if (
+    sharedLock &&
+    apiKeyNeed(req.method, `/dashboards/${req.params.id}${req.path}`) !== 'read' &&
+    !/^\/duplicate\/?$/i.test(req.path) // copies it into a new dashboard with no share link, owned by the caller
+  ) {
+    return refuseAdminOnly(req, res, sharedLock);
+  }
+  next();
+});
+
+// Every change to a panel, variable, page, annotation or logo must name the
+// dashboard it really belongs to; the handlers below act on the child id.
+const CHILD_LISTS: Record<string, (dashboardId: string) => Array<{ id: string }>> = {
+  panels: getDashboardPanels,
+  variables: getDashboardVariables,
+  pages: getDashboardPages,
+  annotations: getDashboardAnnotations,
+  logos: getDashboardLogos,
+};
+const COLLECTION_WORDS = new Set(['copy', 'reorder', 'preview-options']);
+router.use('/:id/:kind/:childId', (req: Request, res: Response, next) => {
+  if (req.method === 'GET') return next();
+  const list = CHILD_LISTS[req.params.kind.toLowerCase()];
+  if (!list || COLLECTION_WORDS.has(req.params.childId.toLowerCase())) return next();
+  if (!list(req.params.id).some((c) => c.id === req.params.childId)) {
+    return res.status(404).json({ error: `Not found on this dashboard` });
+  }
   next();
 });
 
@@ -271,9 +326,11 @@ router.get('/', (req: Request, res: Response) => {
 
 // Get all panels from all dashboards (for panel picker)
 // NOTE: This route MUST be before /:id to avoid path matching issues
-router.get('/all-panels', (_req: Request, res: Response) => {
+router.get('/all-panels', (req: Request, res: Response) => {
   try {
-    const dashboards = getDashboards();
+    // Only dashboards this caller may open (a private one is its owner's and
+    // the admins'), the same list GET /dashboards gives.
+    const dashboards = getDashboards().filter((d) => canReadDashboard(req, d));
     const projects = getProjects();
 
     const projectMap = new Map(projects.map(p => [p.id, p]));
@@ -402,7 +459,7 @@ router.post('/from-wizard', (req: Request, res: Response) => {
     }
 
     // Create the dashboard - use app_scope if provided, otherwise use the index as the scope
-    const dashboard = createDashboard(name, `Auto-generated dashboard for index: ${index}`, app_scope || index);
+    const dashboard = createDashboard(name, `Auto-generated dashboard for index: ${index}`, app_scope || index, undefined, undefined, req.user?.id ?? null);
 
     let createdPanels: Array<{ id: string; title: string; vizType: string }> = [];
 
@@ -604,9 +661,11 @@ router.post('/:id/panels/copy', (req: Request, res: Response) => {
       return res.status(400).json({ error: 'sourcePanelId is required' });
     }
 
-    // Verify source panel exists
+    // Verify source panel exists, on a dashboard the caller may read (a copy
+    // carries the panel's title, query and options).
     const sourcePanel = getDashboardPanel(sourcePanelId);
-    if (!sourcePanel) {
+    const sourceDashboard = sourcePanel ? getDashboard(sourcePanel.dashboard_id) : undefined;
+    if (!sourcePanel || !sourceDashboard || !canReadDashboard(req, sourceDashboard)) {
       return res.status(404).json({ error: 'Source panel not found' });
     }
 
@@ -637,11 +696,21 @@ router.post('/:id/panels/copy', (req: Request, res: Response) => {
 router.get('/:id/panels/:panelId/provenance', (req: Request, res: Response) => {
   try {
     const panel = getDashboardPanel(req.params.panelId);
-    if (!panel) {
+    if (!panel || panel.dashboard_id !== req.params.id) {
       return res.status(404).json({ error: 'Panel not found' });
     }
 
     const provenance = getPanelProvenance(req.params.panelId);
+    // Don't name a source panel or dashboard the caller may not read.
+    const readable = (dashboardId: string | undefined | null) => {
+      if (!dashboardId) return true;
+      const d = getDashboard(dashboardId);
+      return !!d && canReadDashboard(req, d);
+    };
+    const sourcePanelDashboard = provenance?.sourcePanel ? getDashboardPanel(provenance.sourcePanel.id)?.dashboard_id : null;
+    if (provenance && (!readable(provenance.sourceDashboard?.id) || !readable(sourcePanelDashboard))) {
+      return res.json({ ...provenance, sourcePanel: null, sourceDashboard: null, sourceProject: null });
+    }
     return res.json(provenance);
   } catch (error) {
     console.error('Error fetching panel provenance:', error);
@@ -725,6 +794,13 @@ router.put('/:id/layout', (req: Request, res: Response) => {
     const { layout } = req.body;
     if (!Array.isArray(layout)) {
       return res.status(400).json({ error: 'Layout must be an array' });
+    }
+    // Panels are moved by id alone, so every panel named must be on THIS
+    // dashboard (the owner and share checks above only cover this one).
+    const own = new Set(getDashboardPanels(dashboard.id).map((p) => p.id));
+    const foreign = layout.filter((l: { panelId?: unknown }) => !own.has(String(l?.panelId)));
+    if (foreign.length > 0) {
+      return res.status(404).json({ error: 'Not found on this dashboard', panelIds: foreign.map((l: { panelId?: unknown }) => l?.panelId) });
     }
 
     updatePanelPositions(layout.map((l: { panelId: string; x: number; y: number; w: number; h: number }) => ({
@@ -1198,8 +1274,14 @@ router.post('/:id/duplicate', (req: Request, res: Response) => {
       sourceDashboard.description,
       sourceDashboard.app_scope,
       sourceDashboard.category,
-      sourceDashboard.project_id
+      sourceDashboard.project_id,
+      req.user?.id ?? null // the person who copies it owns the copy
     );
+    // A copy of a private dashboard stays private (it used to come out shared
+    // with no owner, so every user could open and edit the copy).
+    if (sourceDashboard.visibility === 'private') {
+      updateDashboard(newDashboard.id, { visibility: 'private' });
+    }
 
     // Copy branding settings
     if (sourceDashboard.logo_url || sourceDashboard.accent_color || sourceDashboard.header_color) {
@@ -1252,7 +1334,7 @@ router.post('/:id/duplicate', (req: Request, res: Response) => {
     // Return the new dashboard with panels
     const newPanels = getDashboardPanels(newDashboard.id);
     return res.status(201).json({
-      ...newDashboard,
+      ...(getDashboard(newDashboard.id) ?? newDashboard),
       panels: newPanels.map(p => ({
         ...p,
         options: safeJsonParse(p.options, {}),
@@ -1278,7 +1360,9 @@ router.post('/import', (req: Request, res: Response) => {
       name || template.name || 'Imported Dashboard',
       template.description,
       typeof template.app_scope === 'string' ? template.app_scope : undefined,
-      typeof template.category === 'string' ? template.category : undefined
+      typeof template.category === 'string' ? template.category : undefined,
+      undefined,
+      req.user?.id ?? null
     );
 
     // Apply branding
@@ -1392,7 +1476,11 @@ router.post('/templates/:templateId/create', (req: Request, res: Response) => {
     // Create dashboard from template
     const dashboard = createDashboard(
       name || templateData.name || template.name,
-      templateData.description || template.description
+      templateData.description || template.description,
+      undefined,
+      undefined,
+      undefined,
+      req.user?.id ?? null
     );
 
     // Apply branding

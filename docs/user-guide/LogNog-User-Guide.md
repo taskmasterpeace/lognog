@@ -612,8 +612,8 @@ Then confirm with `search index=my-app` on the Search page.
 **Example use case:** Connect My App by creating a key named "MyApp Production," setting `X-Index: my-app`, and posting batched events — they appear under Data Sources within seconds.
 **Inputs:** An API key and log payloads.
 **Outputs:** Searchable logs, an auto-created index, and a listed source.
-**Admin notes:** Keys can be scoped to `ingest`/`read`/`write`/`admin`; in production the `/api/ingest` path is exempt from the Cloudflare Access login so machines can ship logs.
-**Limitations:** Only the HTTP ingest path currently enforces per-key **index scoping**; syslog is unauthenticated by design (network-restricted).
+**Admin notes:** A key gets one or more permissions: **send logs** (`write`, the ingest endpoints only; the desktop agent's alert pop-ups need read as well), **read**, **alerts:write**, **dashboards:write** and **admin** (admin users only); see **Settings → API Keys** below. In production the `/api/ingest` path is exempt from the Cloudflare Access login so machines can ship logs.
+**Limitations:** A key limited to some indexes may only send logs to those indexes and read them through search, stats and the agent API; every other route refuses it. Syslog is unauthenticated by design (network-restricted).
 
 ![data-sources](/guide-screenshots/data-sources.jpg)
 
@@ -626,7 +626,7 @@ Then confirm with `search index=my-app` on the Search page.
 **Installing & first run:**
 1. Download and run the agent (Windows `lognog-in.exe --install`; Linux/macOS packages also available).
 2. It appears in the **system tray**. Right-click → **Configure**.
-3. Enter your **LogNog server URL** and paste an **API key** (from Settings → API Keys).
+3. Enter your **LogNog server URL** and paste an **API key** (from Settings → API Keys). A **send logs** key ships logs. For **alert pop-ups** on this machine the key also needs **read** and no index limit (pop-ups carry alert text from every index, and read lets the key search every log, so only on machines you trust); without it the agent writes one "Alert pop-ups are off" warning to its log and keeps shipping.
 4. Add **Watch Paths** (files/globs to ship) and, optionally, **FIM paths** to monitor for changes.
 5. Save. The tray icon shows **🟢 connected**, **🟡 buffering** (server unreachable, will retry), or **🔴 error**.
 
@@ -754,8 +754,8 @@ search source_type=windows_events event_id=7045 | table timestamp computer messa
 
 **Inputs:** Natural-language prompts in Claude Desktop.
 **Outputs:** Searches, dashboards, alerts, silences, ingested logs, and reports created in LogNog.
-**Admin notes:** MCP respects LogNog roles (admin full, user read + create, readonly read); all traffic stays on your network.
-**Limitations:** Requires Claude Desktop and a valid API key; SSE connections can drop behind aggressive reverse proxies.
+**Admin notes:** MCP needs an **admin** key that is not limited to some indexes, made by an admin user (other keys get 403), and what it creates belongs to that key's owner. All traffic stays on your network.
+**Limitations:** Requires Claude Desktop and an admin API key; SSE connections can drop behind aggressive reverse proxies. Known issue (older than the key lock): the `/mcp/sse` stream does not finish opening (the server tries to send its headers twice) and `/mcp/messages` looks for a `connectionId` the client never gets, so Claude Desktop cannot call LogNog tools yet.
 
 ---
 
@@ -777,9 +777,11 @@ On a brand-new LogNog with no accounts, the login page becomes a **Setup** scree
 
 ### API keys (Settings → API Keys, also under Account)
 
-- **Create a key:** click **New Key**, give it a descriptive **Name** (e.g. "LogNog In Agent – Server 1"), choose **Permissions** (`read`, `write`, `admin`; the Add-Data-Source wizard uses an `ingest` scope), and optionally an **expiry in days**.
+- **Create a key:** click **New Key**, give it a descriptive **Name** (e.g. "LogNog In Agent – Server 1"), choose **Permissions**, and optionally an **expiry in days**. The permissions: **send logs** (`write`, the ingest endpoints only), **read** (search, dashboards, alerts list), **alerts:write** (create and change alerts) and **dashboards:write** (create and change dashboards), the last two only together with read (the form ticks read for you), and **admin** (everything except sending logs, offered only to admin users). A key never does more than its owner: an `admin` key made by a non-admin user does not count as admin. Alerts with a script action, public share links and the MCP stream need an admin key. The Add-Data-Source wizard makes a send-logs (`write`) key. The desktop agent's alert pop-ups carry alert text from every index, so they need a key with **send logs and read** and no index limit; with a send-logs-only key the agent still ships logs, writes one "Alert pop-ups are off" warning to its log, shows no pop-ups, and asks again every hour (or at once when a new key or server is saved in the agent's own settings). Each machine and each key clears its own pop-ups: a pop-up shown on one PC still appears on the others. The machine name the agent sends is at most 255 characters, counted as Unicode code points (a plain emoji is one; a flag, a skin-tone emoji or a joined emoji such as a family counts as 2 or more). The server keeps one key's clears of one pop-up for at most 1000 machines; on any further machine the pop-up stays pending, and the agent shows it once while it runs and clears it again on each check (it remembers every pop-up the server still returns, however many; it can show one once more after the agent restarts). Nothing is hidden by the limit.
 - **Save it immediately:** the full key is shown **once** in a banner (*"This is the only time you'll see this key"*) with a copy button. After that only a masked prefix is visible.
-- **Restrict by index (optional):** keys can be scoped so an app can only write to its own index (enforced on the HTTP ingest path).
+- **Restrict by index (optional):** keys can be scoped to some indexes: such a key can only send logs to those indexes and read them through search, stats and the agent API (plus `/auth/me` and report generation); other routes answer 403.
+- **What a key without admin sees:** secret settings show as `[hidden]`: alert action settings (webhook URLs and headers, Apprise URLs, e-mail addresses, script commands), the action messages in alert history, and a scheduled report's recipients and run messages. Signed-in users and admin keys see them as before.
+- **When a key is refused:** every refusal of a key for what it may do (its permissions, its owner's role, its index limit, an admin-only action) is a 403 with `error`, `message`, `needed` (the permission the route needs) and `missing` (everything this key lacks for it, e.g. `write` and `read` for an alerts-only key asking for pop-ups; empty when the key's index limit or its owner's role is the reason). Each refusal is written to the audit log with the full path and the key's id (never the key) once per key, address, method and path (spellings that differ only in upper/lower case or doubled slashes count as one path), with a count of the repeats in the last day, so a machine retrying all day leaves one entry, not thousands. If the audit log can't be written the key is still refused, and the server prints one line saying an audit row could not be written, once a day for each kind of refusal, not once per request (no key or path in it).
 - **Revoke:** click the trash icon on a key; confirm. Revoked keys are marked and stop working immediately.
 
 ### Notification channels (Settings → Notifications)
@@ -806,7 +808,7 @@ Enable geographic IP lookups (country/city/ASN) using MaxMind GeoLite2 databases
 
 ### System (Settings → System)
 
-Read-only system info (API version, Node version, uptime, memory) and configuration (retention, rate limit, max batch size). Also configure **Internal Logging** — LogNog logging its own operations to the `lognog-internal` index (toggle self-monitoring, set a minimum level and categories). Query it with `search app_name="lognog-internal"`.
+Read-only system info (API version, Node version, uptime, memory) and configuration (retention, rate limit, max batch size). Also configure **Internal Logging** — LogNog logging its own operations to the `lognog-internal` index (toggle self-monitoring, set a minimum level and categories). Query it with `search app_name="lognog-internal"`. It is off by default. Anyone who can search sees it (every signed-in user and every API key with read), and sign-in events carry user names and IP addresses; alert actions and scheduled reports are logged without secrets (webhook host only, no e-mail addresses, no script output or mail-server replies). A failed report is logged as a fixed phrase that names the step that failed ("The report's search failed", or for sending, e.g. "Mail server refused a recipient"), with that step in `failed_step`; the full reason is in the report's run history, which only admins see.
 
 ### AI (Settings → AI)
 

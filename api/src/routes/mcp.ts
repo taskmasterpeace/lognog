@@ -10,11 +10,63 @@ import { Router, Request, Response } from 'express';
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
 import { createMCPServer } from '../mcp/server.js';
 import { validateApiKey } from '../auth/auth.js';
+import { decideApiKey } from '../auth/key-policy.js';
+import { refuseApiKey, type RefusedKey } from '../auth/api-key-gate.js';
 
 const router = Router();
 
-// Store active SSE connections
-const activeConnections: Map<string, SSEServerTransport> = new Map();
+// Store active SSE connections, each with the key that opened it.
+interface McpConnection {
+  transport: SSEServerTransport;
+  apiKey: string;
+  stream: Response; // the open SSE response, ended when the key is refused
+  // Who opened it, for the audit row when the key is later refused: a revoked
+  // key can no longer be looked up, so its id and owner are kept from here.
+  keyId: string;
+  userId: string;
+  permissions: readonly string[];
+}
+const activeConnections: Map<string, McpConnection> = new Map();
+
+/**
+ * May this key (still) use the MCP stream? The same check GET /sse makes: the key
+ * exists, is not revoked or expired, its owner is still active, and it is an
+ * unscoped admin key whose owner is still an admin. POST /messages asks again on
+ * every message, so revoking the key or demoting its owner stops an open stream.
+ */
+export async function mcpKeyStillAllowed(apiKey: string): Promise<boolean> {
+  return (await mcpKeyRefusal(apiKey)) === null;
+}
+
+/**
+ * Why this key may no longer use the MCP stream (null when it still may):
+ * what it lacks, in the same form as every other API-key 403. A key that was
+ * revoked or expired (or whose owner was disabled) has no permission left, so
+ * it lacks 'admin'.
+ */
+export async function mcpKeyRefusal(
+  apiKey: string,
+): Promise<{ missing: string[]; message: string; key?: RefusedKey } | null> {
+  const keyInfo = await validateApiKey(apiKey);
+  if (!keyInfo) {
+    return {
+      missing: ['admin'],
+      message: 'The API key that opened this MCP stream was revoked or expired, or its owner was disabled, so it has no permission left.',
+    };
+  }
+  const decision = decideApiKey('GET', '/mcp/sse', keyInfo.permissions, keyInfo.allowedIndexes);
+  if (decision.allowed) return null;
+  return {
+    missing: decision.missing,
+    message: `The API key that opened this MCP stream may no longer use it. ${decision.reason}`,
+    key: {
+      keyId: keyInfo.keyId,
+      userId: keyInfo.userId,
+      permissions: keyInfo.permissions,
+      scoped: !!(keyInfo.allowedIndexes && keyInfo.allowedIndexes.length > 0),
+    },
+  };
+}
 
 /**
  * GET /mcp/sse
@@ -38,6 +90,24 @@ router.get('/sse', async (req: Request, res: Response) => {
       res.status(401).json({ error: 'Invalid API key' });
       return;
     }
+    // The MCP tools create dashboards and alerts and search every index, so the
+    // stream needs an unscoped admin key (the key lock; the API-key gate checks
+    // this too, but the key can arrive here by header or query param).
+    const mcpDecision = decideApiKey('GET', '/mcp/sse', keyInfo.permissions, keyInfo.allowedIndexes);
+    if (!mcpDecision.allowed) {
+      refuseApiKey(req, res, {
+        needed: 'admin',
+        missing: mcpDecision.missing,
+        message: mcpDecision.reason,
+        key: {
+          keyId: keyInfo.keyId,
+          userId: keyInfo.userId,
+          permissions: keyInfo.permissions,
+          scoped: !!(keyInfo.allowedIndexes && keyInfo.allowedIndexes.length > 0),
+        },
+      });
+      return;
+    }
 
     // Set SSE headers
     res.setHeader('Content-Type', 'text/event-stream');
@@ -51,12 +121,19 @@ router.get('/sse', async (req: Request, res: Response) => {
 
     // Create SSE transport
     const transport = new SSEServerTransport('/mcp/messages', res);
-    activeConnections.set(connectionId, transport);
+    activeConnections.set(connectionId, {
+      transport,
+      apiKey,
+      stream: res,
+      keyId: keyInfo.keyId,
+      userId: keyInfo.userId,
+      permissions: keyInfo.permissions,
+    });
 
     console.log(`[MCP] SSE client connected: ${connectionId} (userId: ${keyInfo.userId})`);
 
     // Create and connect MCP server
-    const server = createMCPServer();
+    const server = createMCPServer(keyInfo.userId); // what it makes belongs to the key's user
     await server.connect(transport);
 
     // Handle client disconnect
@@ -85,17 +162,39 @@ router.post('/messages', async (req: Request, res: Response) => {
     return;
   }
 
-  const transport = activeConnections.get(connectionId);
-  if (!transport) {
+  const connection = activeConnections.get(connectionId);
+  if (!connection) {
     res.status(404).json({ error: 'Connection not found' });
     return;
   }
 
   try {
-    await transport.handlePostMessage(req, res);
+    // The key lock: re-check the key that opened the stream on every message.
+    const refusal = await mcpKeyRefusal(connection.apiKey);
+    if (refusal) {
+      activeConnections.delete(connectionId);
+      try {
+        await connection.transport.close();
+      } catch {
+        /* already closed */
+      }
+      if (!connection.stream.writableEnded) connection.stream.end();
+      refuseApiKey(req, res, {
+        needed: 'admin',
+        missing: refusal.missing,
+        message: refusal.message,
+        // a revoked key can't be looked up any more: name the key that opened the stream
+        key: refusal.key ?? { keyId: connection.keyId, userId: connection.userId, permissions: connection.permissions, scoped: false },
+      });
+      return;
+    }
+    await connection.transport.handlePostMessage(req, res);
   } catch (error) {
     console.error('[MCP] Message handling error:', error);
-    res.status(500).json({ error: 'Failed to process message' });
+    // the MCP transport may already have answered (it writes its own 500 before throwing)
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Failed to process message' });
+    }
   }
 });
 

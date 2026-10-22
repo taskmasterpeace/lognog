@@ -165,6 +165,8 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
   const [sourceType, setSourceType] = useState<SourceType>(null);
   const [selectedApiKey, setSelectedApiKey] = useState<string>('');
   const [newApiKeyName, setNewApiKeyName] = useState('');
+  // Why the server refused to make the key (e.g. a read-only account cannot make a send-logs key).
+  const [createKeyError, setCreateKeyError] = useState<string | null>(null);
   const [showCreateKey, setShowCreateKey] = useState(false);
   const [creatingKey, setCreatingKey] = useState(false);
   const [indexName, setIndexName] = useState('');
@@ -258,14 +260,17 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
     if (!newApiKeyName.trim()) return;
 
     setCreatingKey(true);
+    setCreateKeyError(null);
     try {
-      const result = await createApiKey(newApiKeyName.trim(), ['ingest']);
+      // 'write' = send logs only; there is no 'ingest' permission (an ['ingest'] key could not send logs).
+      const result = await createApiKey(newApiKeyName.trim(), ['write']);
       setSelectedApiKey(result.apiKey);
       setShowCreateKey(false);
       setNewApiKeyName('');
       refetchApiKeys();
     } catch (error) {
       console.error('Failed to create API key:', error);
+      setCreateKeyError(error instanceof Error && error.message ? error.message : 'Could not create the API key');
     } finally {
       setCreatingKey(false);
     }
@@ -449,13 +454,14 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
                   API Key
                 </label>
                 {showCreateKey ? (
-                  <div className="flex items-center gap-2">
+                  <div>
+                  <div className="flex flex-wrap items-center gap-2">
                     <input
                       type="text"
                       value={newApiKeyName}
                       onChange={(e) => setNewApiKeyName(e.target.value)}
                       placeholder="Enter key name (e.g., my-app)"
-                      className="flex-1 px-4 py-2 border border-nog-200 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-900 text-nog-900 dark:text-nog-100"
+                      className="flex-1 min-w-0 basis-48 px-4 py-2 border border-nog-200 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-900 text-nog-900 dark:text-nog-100"
                     />
                     <button
                       onClick={handleCreateApiKey}
@@ -470,11 +476,18 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
                       Create
                     </button>
                     <button
-                      onClick={() => setShowCreateKey(false)}
+                      onClick={() => { setShowCreateKey(false); setCreateKeyError(null); }}
                       className="px-4 py-2 text-nog-600 hover:text-nog-900 dark:text-nog-400 dark:hover:text-nog-100"
                     >
                       Cancel
                     </button>
+                  </div>
+                  {createKeyError && (
+                    <p role="alert" className="mt-2 flex items-center gap-1 text-sm text-red-600 dark:text-red-400">
+                      <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                      {createKeyError}
+                    </p>
+                  )}
                   </div>
                 ) : selectedApiKey ? (
                   <div className="flex items-center gap-2">
@@ -564,6 +577,11 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
                   <h4 className="font-medium text-honey-700 dark:text-honey-300 mb-2">LogNog In Agent</h4>
                   <p className="text-sm text-honey-600 dark:text-honey-400">
                     Download the LogNog In agent for Windows or Linux to collect log files and Windows Event Logs.
+                  </p>
+                  <p className="text-sm text-honey-600 dark:text-honey-400 mt-2">
+                    The key made here sends logs only. For alert pop-ups on that machine, make a key in Settings &rarr; API Keys
+                    with <strong>send logs</strong> and <strong>read</strong> and no index limit. Read lets the key search every log,
+                    so only use it on machines you trust.
                   </p>
                   <a
                     href="https://github.com/machinekinglabs/lognog/releases"

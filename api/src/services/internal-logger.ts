@@ -613,6 +613,20 @@ export function logAlertEvaluated(data: {
 /**
  * Log alert action execution
  */
+/**
+ * What an alert action did, safe for the lognog-internal index (any API key
+ * that can read can search it). Action results can name an e-mail address,
+ * echo a remote error body or carry what a script printed, so only the part
+ * before the first ':' is kept. A webhook's success message already names the
+ * host only. The full message stays in alert history (hidden from non-admin
+ * keys).
+ */
+export function actionLogSummary(actionType: string, success: boolean, message: string): string {
+  if (actionType === 'webhook' && success) return message;
+  if (actionType === 'email' && success) return 'Email sent';
+  return String(message).split(':')[0];
+}
+
 export function logAlertAction(data: {
   alert_id: string;
   alert_name: string;
@@ -620,16 +634,17 @@ export function logAlertAction(data: {
   success: boolean;
   message: string;
 }): void {
+  const message = actionLogSummary(data.action_type, data.success, data.message);
   logInternalEvent({
     action: 'alert.action_sent',
     category: 'alert',
-    message: `Alert "${data.alert_name}" action ${data.action_type}: ${data.message}`,
+    message: `Alert "${data.alert_name}" action ${data.action_type}: ${message}`,
     success: data.success,
     details: {
       alert_id: data.alert_id,
       alert_name: data.alert_name,
       action_type: data.action_type,
-      result: data.message,
+      result: message,
     },
     severity: data.success ? SEVERITY.INFO : SEVERITY.WARNING,
   }).catch(() => {});
@@ -640,7 +655,55 @@ export function logAlertAction(data: {
 // ============================================
 
 /**
- * Log report generation
+ * A report error, safe for the lognog-internal index and the console (any API
+ * key that can read can search the index, and container logs may be shipped
+ * into it). The raw error can carry e-mail addresses and the mail server's
+ * own reply ("550 5.1.1 <boss@example.com>: Recipient address rejected",
+ * "535 5.7.8 Username and Password not accepted"), so it is never copied:
+ * the error is only sorted into one of a few fixed phrases. The full error
+ * stays in the report's run history, which only admins see.
+ */
+export const REPORT_ERROR_PHRASES = {
+  login: 'Mail server refused the login',
+  connection: 'Could not reach the mail server',
+  recipient: 'Mail server refused a recipient',
+  mail: 'Mail server refused the message',
+  search: "The report's search failed",
+  other: 'Report failed (details in the run history)',
+} as const;
+
+/**
+ * Which step of a report run failed. The step picks the phrase: an error from
+ * the search step is always "The report's search failed" (a database error
+ * such as "connect ECONNREFUSED 127.0.0.1:8123" or "Authentication failed"
+ * must not be reported as a mail-server problem), an error while building the
+ * e-mail is "Report failed", and only an error from sending is sorted into
+ * the mail phrases. Anything a mail error does not match says "Report failed".
+ */
+export type ReportStage = 'search' | 'render' | 'mail' | 'finish';
+
+/**
+ * The step must be named: 'unknown' (sort a mail-looking error by its text)
+ * has to be asked for, so no new caller can forget the step and have a
+ * database error called a mail-server problem.
+ */
+export function reportErrorSummary(error: string, stage: ReportStage | 'unknown'): string {
+  const e = String(error ?? '');
+  if (stage === 'search') return REPORT_ERROR_PHRASES.search;
+  if (stage === 'render' || stage === 'finish') return REPORT_ERROR_PHRASES.other;
+  if (/\b(EAUTH|535|534|530)\b|invalid login|authenticat|credential|password|username/i.test(e)) return REPORT_ERROR_PHRASES.login;
+  if (/\b(ECONNECTION|ECONNREFUSED|ECONNRESET|ETIMEDOUT|EHOSTUNREACH|ENETUNREACH|ENOTFOUND|EDNS|ESOCKET|ETLS)\b|getaddrinfo|timed? ?out|greeting|socket|certificate|\btls\b|\bssl\b/i.test(e)) return REPORT_ERROR_PHRASES.connection;
+  if (/\b(EENVELOPE|550|551|553)\b|recipient|mailbox|user unknown|no such user|can ?not send mail to|cannot send mail to|address rejected/i.test(e)) return REPORT_ERROR_PHRASES.recipient;
+  if (/\b(EMESSAGE|552|554|5\d\d|4\d\d)\b|smtp|mail server|message (failed|rejected)/i.test(e)) return REPORT_ERROR_PHRASES.mail;
+  if (stage === 'mail') return REPORT_ERROR_PHRASES.other;
+  if (/\b(query|search|dsl|parse|syntax|index)\b/i.test(e)) return REPORT_ERROR_PHRASES.search;
+  return REPORT_ERROR_PHRASES.other;
+}
+
+/**
+ * Log report generation. Recipients are never written to the index (only how
+ * many there were): report e-mail addresses are hidden from keys without
+ * 'admin' on /reports, so they must not be searchable either.
  */
 export function logReportGenerated(data: {
   report_id: string;
@@ -648,19 +711,24 @@ export function logReportGenerated(data: {
   duration_ms: number;
   row_count: number;
   sent_to?: string[];
-  error?: string;
-}): void {
+} & (
+  | { error?: undefined; stage?: undefined }
+  /** A failed run names the step that failed; it picks the phrase (see reportErrorSummary). */
+  | { error: string; stage: ReportStage | 'unknown' }
+)): void {
   const action: EventAction = data.error ? 'report.error' :
                               data.sent_to?.length ? 'report.sent' :
                               'report.generated';
 
+  const error = data.error ? reportErrorSummary(data.error, data.stage) : undefined;
+  const sentCount = data.sent_to?.length ?? 0;
   logInternalEvent({
     action,
     category: 'report',
-    message: data.error
-      ? `Report "${data.report_name}" failed: ${data.error}`
-      : data.sent_to?.length
-        ? `Report "${data.report_name}" sent to ${data.sent_to.join(', ')}`
+    message: error
+      ? `Report "${data.report_name}" failed: ${error}`
+      : sentCount
+        ? `Report "${data.report_name}" sent to ${sentCount} recipient${sentCount === 1 ? '' : 's'}`
         : `Report "${data.report_name}" generated (${data.row_count} rows)`,
     success: !data.error,
     duration_ms: data.duration_ms,
@@ -668,8 +736,9 @@ export function logReportGenerated(data: {
       report_id: data.report_id,
       report_name: data.report_name,
       row_count: data.row_count,
-      recipients: data.sent_to,
-      ...(data.error && { error: data.error }),
+      recipient_count: sentCount,
+      ...(error && { error }),
+      ...(error && data.stage && data.stage !== 'unknown' && { failed_step: data.stage }),
     },
     severity: data.error ? SEVERITY.ERROR : SEVERITY.INFO,
   }).catch(() => {});

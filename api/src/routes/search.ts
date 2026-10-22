@@ -1078,9 +1078,22 @@ router.get('/lookup-tables', (_req: Request, res: Response) => {
 // unauthenticated — anyone could list, tamper with, or DELETE any saved search —
 // so every verb now requires auth.
 
-router.get('/saved', authenticate, (_req: Request, res: Response) => {
+// Same owner rule as the canonical /saved-searches router: an admin sees and
+// changes every saved search; anyone else sees their own and shared ones and
+// changes only their own (others answer 404, so their existence never leaks).
+// Before, any signed-in user could read, change or delete every saved search here.
+function mayOpenSaved(req: Request, s: { owner_id?: string | null; is_shared?: number | boolean | null }): boolean {
+  if (req.user?.role === 'admin') return true;
+  return (!!s.owner_id && s.owner_id === req.user?.id) || !!s.is_shared;
+}
+function mayChangeSaved(req: Request, s: { owner_id?: string | null }): boolean {
+  if (req.user?.role === 'admin') return true;
+  return !!s.owner_id && s.owner_id === req.user?.id;
+}
+
+router.get('/saved', authenticate, (req: Request, res: Response) => {
   try {
-    const searches = getSavedSearches();
+    const searches = getSavedSearches().filter((s) => mayOpenSaved(req, s));
     return res.json(searches);
   } catch (error) {
     console.error('Error fetching saved searches:', error);
@@ -1091,7 +1104,7 @@ router.get('/saved', authenticate, (_req: Request, res: Response) => {
 router.get('/saved/:id', authenticate, (req: Request, res: Response) => {
   try {
     const search = getSavedSearch(req.params.id);
-    if (!search) {
+    if (!search || !mayOpenSaved(req, search)) {
       return res.status(404).json({ error: 'Saved search not found' });
     }
     return res.json(search);
@@ -1109,7 +1122,10 @@ router.post('/saved', authenticate, (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Name and query are required' });
     }
 
-    const search = createSavedSearch(name, query, description);
+    const search = createSavedSearch(String(name), String(query), {
+      description: typeof description === 'string' ? description : undefined,
+      owner_id: req.user!.id,
+    });
     return res.status(201).json(search);
   } catch (error) {
     console.error('Error creating saved search:', error);
@@ -1125,6 +1141,10 @@ router.put('/saved/:id', authenticate, (req: Request, res: Response) => {
       return res.status(400).json({ error: 'Name and query are required' });
     }
 
+    const existing = getSavedSearch(req.params.id);
+    if (!existing || !mayChangeSaved(req, existing)) {
+      return res.status(404).json({ error: 'Saved search not found' });
+    }
     const search = updateSavedSearch(req.params.id, { name, query, description });
     if (!search) {
       return res.status(404).json({ error: 'Saved search not found' });
@@ -1139,6 +1159,10 @@ router.put('/saved/:id', authenticate, (req: Request, res: Response) => {
 
 router.delete('/saved/:id', authenticate, (req: Request, res: Response) => {
   try {
+    const existing = getSavedSearch(req.params.id);
+    if (!existing || !mayChangeSaved(req, existing)) {
+      return res.status(404).json({ error: 'Saved search not found' });
+    }
     const deleted = deleteSavedSearch(req.params.id);
     if (!deleted) {
       return res.status(404).json({ error: 'Saved search not found' });

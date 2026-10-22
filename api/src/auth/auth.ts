@@ -2,6 +2,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import { getSQLiteDB } from '../db/sqlite.js';
+import { effectiveKeyPermissions, parseStoredAllowedIndexes, parseStoredKeyPermissions } from './key-policy.js';
 
 // Environment configuration
 // SECURITY: JWT secrets must be configured via environment variables in production
@@ -477,7 +478,7 @@ export async function createApiKey(
 
 export async function validateApiKey(
   apiKey: string,
-): Promise<{ userId: string; permissions: string[]; allowedIndexes: string[] | null } | null> {
+): Promise<{ userId: string; keyId: string; permissions: string[]; allowedIndexes: string[] | null } | null> {
   if (!apiKey.startsWith('lnog_')) return null;
   // A well-formed key is `lnog_<32 hex>_<64 hex>` (102 chars). Reject anything
   // too short before touching the DB — this stops a stub like `lnog_` from
@@ -506,20 +507,20 @@ export async function validateApiKey(
         UPDATE api_keys SET last_used = datetime('now') WHERE id = ?
       `).run(key.id);
 
-      // Guard against a malformed allowed_indexes row 500-ing the auth path.
-      // An unparseable value is treated as unscoped (null = all indexes).
-      let allowedIndexes: string[] | null = null;
-      if (key.allowed_indexes) {
-        try {
-          allowedIndexes = JSON.parse(key.allowed_indexes);
-        } catch {
-          allowedIndexes = null;
-        }
-      }
+      // SQL NULL = every index; a JSON list of index names = those; anything
+      // else is damaged and the key lock refuses the key (key-policy.ts
+      // parseStoredAllowedIndexes): never a 500, never unlimited.
+      const allowedIndexes = parseStoredAllowedIndexes(key.allowed_indexes);
 
+      // A key never does more than its owner may (key-policy.ts), and a key
+      // whose owner is gone or switched off does nothing at all. Every caller
+      // gets this, including /mcp/sse, which reads the key itself.
+      const owner = getUserById(key.user_id);
+      if (!owner || !owner.is_active) return null;
       return {
         userId: key.user_id,
-        permissions: JSON.parse(key.permissions),
+        keyId: key.id,
+        permissions: effectiveKeyPermissions(parseStoredKeyPermissions(key.permissions), owner?.role),
         allowedIndexes,
       };
     }
@@ -559,19 +560,21 @@ export function logAuthEvent(
   ipAddress?: string,
   userAgent?: string,
   details?: Record<string, unknown>
-): void {
+): string {
   const db = getSQLiteDB();
+  const id = uuidv4();
   db.prepare(`
     INSERT INTO auth_audit_log (id, user_id, event_type, ip_address, user_agent, details)
     VALUES (?, ?, ?, ?, ?, ?)
   `).run(
-    uuidv4(),
+    id,
     userId,
     eventType,
     ipAddress || null,
     userAgent || null,
     details ? JSON.stringify(details) : null
   );
+  return id;
 }
 
 export function getAuthAuditLog(

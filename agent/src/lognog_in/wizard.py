@@ -390,7 +390,7 @@ class SetupWizard:
             "3. Click 'API Keys' section",
             "4. Click 'New Key' button",
             "5. Name it (e.g., 'My PC Agent')",
-            "6. Select 'write' permission",
+            "6. Tick 'send logs' (write); for alert pop-ups also tick 'read'",
             "7. Copy the key (shown only once!)"
         ]
 
