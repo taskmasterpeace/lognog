@@ -1718,22 +1718,26 @@ describe('round 7: repeated refusals, the permission names, and pop-ups per read
     expect(d.needed).toBe('write');
     expect(d.missing).toEqual(['read']);
 
-    // a different path, a different method, and a different key each get their own row
+    // a different path, a different method on the same path, another
+    // path again, and a different key each get their own row
     expect((await request(realSrv).get('/alerts').set({ Authorization: `ApiKey ${keyA}`, 'User-Agent': ua })).status).toBe(403);
+    expect(denialRows(ua)).toHaveLength(2);
+    expect((await request(realSrv).post('/alerts').set({ Authorization: `ApiKey ${keyA}`, 'User-Agent': ua }).send({})).status).toBe(403);
+    expect(denialRows(ua)).toHaveLength(3);
     expect((await request(realSrv).post('/ingest/notifications/kl-none/ack').set({ Authorization: `ApiKey ${keyA}`, 'User-Agent': ua }).send({})).status).toBe(403);
     expect((await request(realSrv).get('/ingest/notifications').set({ Authorization: `ApiKey ${keyB}`, 'User-Agent': ua })).status).toBe(403);
     rows = denialRows(ua);
-    expect(rows).toHaveLength(4);
+    expect(rows).toHaveLength(5);
 
     // path spellings count as the same route
     expect((await request(realSrv).get('/INGEST//notifications/').set({ Authorization: `ApiKey ${keyA}`, 'User-Agent': ua })).status).toBe(403);
-    expect(denialRows(ua)).toHaveLength(4);
+    expect(denialRows(ua)).toHaveLength(5);
     expect(JSON.parse(denialRows(ua)[0].details).repeats).toBe(20);
 
     // an admin who clears the row gets a fresh one on the next refusal
     getSQLiteDB().prepare('DELETE FROM auth_audit_log WHERE id = ?').run(rows[0].id);
     expect((await request(realSrv).get('/ingest/notifications').set({ Authorization: `ApiKey ${keyA}`, 'User-Agent': ua })).status).toBe(403);
-    expect(denialRows(ua)).toHaveLength(4);
+    expect(denialRows(ua)).toHaveLength(5);
 
     // after the window the next refusal writes a fresh row again
     const now = Date.now();
@@ -1743,7 +1747,32 @@ describe('round 7: repeated refusals, the permission names, and pop-ups per read
     } finally {
       spy.mockRestore();
     }
-    expect(denialRows(ua)).toHaveLength(5);
+    expect(denialRows(ua)).toHaveLength(6);
+  });
+
+  it('the same key, method and path from another address gets its own row', async () => {
+    (resetDenialRowsForTest as (() => void) | undefined)?.();
+    const key = await newKey('kl-r7 poller C', ['write']);
+    const ua = 'kl-r7-poller-ip';
+    // production sits behind one proxy (index.ts: trust proxy 1), so the
+    // caller's address is the last X-Forwarded-For hop
+    const proxied = express();
+    proxied.set('trust proxy', 1);
+    proxied.use(apiKeyGate);
+    proxied.all('*', (_req, res) => {
+      res.status(299).json({ reached: true });
+    });
+    const from = async (ip: string) =>
+      (await request(proxied).get('/ingest/notifications').set({ Authorization: `ApiKey ${key}`, 'User-Agent': ua, 'X-Forwarded-For': ip })).status;
+    expect(await from('203.0.113.7')).toBe(403);
+    expect(await from('203.0.113.7')).toBe(403);
+    expect(denialRows(ua)).toHaveLength(1);
+    expect(await from('198.51.100.9')).toBe(403);
+    const rows = getSQLiteDB()
+      .prepare("SELECT ip_address, details FROM auth_audit_log WHERE event_type = 'apikey_permission_denied' AND user_agent = ? ORDER BY rowid")
+      .all(ua) as Array<{ ip_address: string; details: string }>;
+    expect(rows.map((r) => r.ip_address)).toEqual(['203.0.113.7', '198.51.100.9']);
+    expect(JSON.parse(rows[0].details).repeats).toBe(1);
   });
 
   it("a refusal names the permission a person can tick: 'write' (send logs), never 'ingest'", async () => {
