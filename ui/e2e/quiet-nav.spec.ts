@@ -31,6 +31,7 @@ const MAIN: Array<[string, string]> = [
 const MORE: Array<[string, string]> = [
   ['Anomaly Detection', '/anomaly'],
   ['Synthetic', '/synthetic'],
+  ['Lab Lights', '/lights'],
   ['Saved Searches', '/saved-searches'],
   ['Analytics', '/stats'],
   ['Data Models', '/cim'],

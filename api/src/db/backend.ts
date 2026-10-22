@@ -11,6 +11,7 @@
 
 import * as clickhouse from './clickhouse.js';
 import * as sqliteLogs from './sqlite-logs.js';
+import { ageSecondsFrom, parseServerTime, sourceStatusFromAge, type SourceStatus } from '../services/source-status.js';
 import { parseToAST } from '../dsl/index.js';
 import { expandMacros } from '../services/macros.js';
 import { resolveMacroDefinition } from './sqlite-macros.js';
@@ -914,6 +915,10 @@ export interface ActiveSource {
   log_count: number;
   last_seen: string;
   error_count: number;
+  /** Seconds since the newest log, measured on the log store's own clock. */
+  age_seconds: number;
+  /** Data Sources freshness word (services/source-status.ts). */
+  status: SourceStatus;
 }
 
 export interface IndexSummary {
@@ -976,8 +981,12 @@ export async function getActiveSources(allowedIndexes?: string[]): Promise<Activ
       ORDER BY count DESC
     `);
 
+    const nowMs = Date.now();
     return {
-      sources: sourcesResult,
+      sources: sourcesResult.map(s => {
+        const age_seconds = ageSecondsFrom(s.last_seen, nowMs);
+        return { ...s, age_seconds, status: sourceStatusFromAge(age_seconds) };
+      }),
       by_index: indexResult,
     };
   } else {
@@ -990,6 +999,7 @@ export async function getActiveSources(allowedIndexes?: string[]): Promise<Activ
       log_count: number;
       last_seen: string;
       error_count: number;
+      age_seconds: number;
     }>(`
       SELECT
         COALESCE(app_name, 'unknown') as app_name,
@@ -998,7 +1008,8 @@ export async function getActiveSources(allowedIndexes?: string[]): Promise<Activ
         any(COALESCE(protocol, 'unknown')) as protocol,
         count() as log_count,
         max(timestamp) as last_seen,
-        countIf(severity <= 3) as error_count
+        countIf(severity <= 3) as error_count,
+        dateDiff('second', max(timestamp), now64(3)) as age_seconds
       FROM lognog.logs
       WHERE timestamp >= now() - INTERVAL 7 DAY${scopeAnd}
       GROUP BY app_name, index_name
@@ -1022,11 +1033,18 @@ export async function getActiveSources(allowedIndexes?: string[]): Promise<Activ
     `);
 
     return {
-      sources: sourcesResult.map(s => ({
-        ...s,
-        log_count: Number(s.log_count),
-        error_count: Number(s.error_count),
-      })),
+      sources: sourcesResult.map(s => {
+        // Age comes from ClickHouse's own clock: last_seen has no zone, so
+        // parsing it here would depend on the server's time zone.
+        const age_seconds = Number(s.age_seconds);
+        return {
+          ...s,
+          log_count: Number(s.log_count),
+          error_count: Number(s.error_count),
+          age_seconds,
+          status: sourceStatusFromAge(age_seconds),
+        };
+      }),
       by_index: indexResult.map(i => ({
         ...i,
         count: Number(i.count),
@@ -1034,4 +1052,127 @@ export async function getActiveSources(allowedIndexes?: string[]): Promise<Activ
       })),
     };
   }
+}
+
+/**
+ * Per-app activity for the lab lights (services/lab-lights.ts).
+ *
+ * One row per app name over the same 7-day window as the Data Sources list:
+ * which indexes it logs to, how old its newest log is, and log / error counts
+ * for the last 15 minutes plus errors over the 24 hours before that (the
+ * "normal" an error spike is measured against). Errors are severity 0-3, the
+ * same definition as the Data Sources "Errors" column.
+ */
+export interface AppActivity {
+  app: string;
+  indexes: string[];
+  last_seen: string | null;
+  age_seconds: number;
+  logs_15m: number;
+  errors_15m: number;
+  errors_prev_24h: number;
+}
+
+export const APP_ACTIVITY_WINDOW = {
+  recentMinutes: 15,
+  baselineHours: 24,
+  listDays: 7,
+  /** Logs stamped further ahead than this are a sender's bad clock: ignored, so they can't keep a dead app "fine". */
+  futureSkewMinutes: 5,
+  /** At most this many apps, the ones that logged most recently. */
+  maxApps: 1000,
+} as const;
+
+/**
+ * The SQL behind getAppActivity, exposed so unit tests can check the
+ * ClickHouse text without a ClickHouse server. `scope` is an
+ * indexScopeSqlClause() result (null = unscoped). Lite compares against ISO
+ * strings built from `nowMs` because Lite stores ISO text ("...T..." with or
+ * without the Z), which compares correctly with an ISO bound but not with
+ * SQLite's datetime('now') text ("... ...", a space instead of the T).
+ */
+export function appActivitySql(backend: Backend, scope: string | null, nowMs: number = Date.now()): string {
+  const scopeAnd = scope ? ` AND ${scope}` : '';
+  const { recentMinutes, baselineHours, listDays, futureSkewMinutes, maxApps } = APP_ACTIVITY_WINDOW;
+  if (backend === 'sqlite') {
+    const iso = (msAgo: number) => new Date(nowMs - msAgo).toISOString();
+    const t15 = iso(recentMinutes * 60_000);
+    const t24 = iso(baselineHours * 3_600_000);
+    const t7 = iso(listDays * 86_400_000);
+    const tAhead = iso(-futureSkewMinutes * 60_000);
+    // The 15-min counts stop at now, like the Search they link to (latest=now);
+    // logs stamped a little ahead still count for last_seen.
+    const tNow = iso(0);
+    return `
+      SELECT
+        COALESCE(NULLIF(app_name, ''), 'unknown') AS app,
+        GROUP_CONCAT(DISTINCT COALESCE(NULLIF(index_name, ''), 'main')) AS indexes,
+        MAX(timestamp) AS last_seen,
+        SUM(CASE WHEN timestamp >= '${t15}' AND timestamp <= '${tNow}' THEN 1 ELSE 0 END) AS logs_15m,
+        SUM(CASE WHEN severity <= 3 AND timestamp >= '${t15}' AND timestamp <= '${tNow}' THEN 1 ELSE 0 END) AS errors_15m,
+        SUM(CASE WHEN severity <= 3 AND timestamp >= '${t24}' AND timestamp < '${t15}' THEN 1 ELSE 0 END) AS errors_prev_24h
+      FROM logs
+      WHERE timestamp >= '${t7}' AND timestamp <= '${tAhead}'${scopeAnd}
+      GROUP BY COALESCE(NULLIF(app_name, ''), 'unknown')
+      ORDER BY MAX(timestamp) DESC, app
+      LIMIT ${maxApps}
+    `;
+  }
+  // ClickHouse: every window is measured on the server's own clock (now64),
+  // and the age comes back as a number, so the zone-less DateTime64 text never
+  // has to be parsed in Node.
+  const since = (unit: string, n: number) => `now64(3) - INTERVAL ${n} ${unit}`;
+  return `
+      SELECT
+        if(app_name = '', 'unknown', app_name) AS app,
+        arraySort(groupUniqArray(if(index_name = '', 'main', index_name))) AS indexes,
+        toUnixTimestamp64Milli(max(timestamp)) AS last_seen_ms,
+        dateDiff('second', max(timestamp), now64(3)) AS age_seconds,
+        countIf(timestamp >= ${since('MINUTE', recentMinutes)} AND timestamp <= now64(3)) AS logs_15m,
+        countIf(severity <= 3 AND timestamp >= ${since('MINUTE', recentMinutes)} AND timestamp <= now64(3)) AS errors_15m,
+        countIf(severity <= 3 AND timestamp >= ${since('HOUR', baselineHours)} AND timestamp < ${since('MINUTE', recentMinutes)}) AS errors_prev_24h
+      FROM lognog.logs
+      WHERE timestamp >= ${since('DAY', listDays)} AND timestamp <= now64(3) + INTERVAL ${futureSkewMinutes} MINUTE${scopeAnd}
+      GROUP BY app
+      ORDER BY max(timestamp) DESC, app
+      LIMIT ${maxApps}
+    `;
+}
+
+/** The SQL keeps the most recent apps; callers get them by name. */
+const byApp = (a: { app: string }, b: { app: string }) => (a.app < b.app ? -1 : a.app > b.app ? 1 : 0);
+
+export async function getAppActivity(allowedIndexes?: string[] | null, nowMs: number = Date.now()): Promise<AppActivity[]> {
+  const scope = indexScopeSqlClause(allowedIndexes);
+  if (isLiteMode()) {
+    const rows = await sqliteLogs.executeQuery<{
+      app: string; indexes: string | null; last_seen: string | null;
+      logs_15m: number; errors_15m: number; errors_prev_24h: number;
+    }>(appActivitySql('sqlite', scope, nowMs));
+    return rows.sort(byApp).map(r => ({
+      app: r.app,
+      indexes: (r.indexes ?? '').split(',').filter(Boolean).sort(),
+      last_seen: (() => { const ms = parseServerTime(r.last_seen); return ms === null ? null : new Date(ms).toISOString(); })(),
+      age_seconds: ageSecondsFrom(r.last_seen, nowMs),
+      logs_15m: Number(r.logs_15m) || 0,
+      errors_15m: Number(r.errors_15m) || 0,
+      errors_prev_24h: Number(r.errors_prev_24h) || 0,
+    }));
+  }
+  const rows = await clickhouse.executeQuery<{
+    app: string; indexes: string[]; last_seen_ms: string | number; age_seconds: string | number;
+    logs_15m: string | number; errors_15m: string | number; errors_prev_24h: string | number;
+  }>(appActivitySql('clickhouse', scope, nowMs));
+  return rows.sort(byApp).map(r => {
+    const ms = Number(r.last_seen_ms);
+    return {
+      app: r.app,
+      indexes: Array.isArray(r.indexes) ? r.indexes : [],
+      last_seen: Number.isFinite(ms) && ms > 0 ? new Date(ms).toISOString() : null,
+      age_seconds: Number(r.age_seconds),
+      logs_15m: Number(r.logs_15m) || 0,
+      errors_15m: Number(r.errors_15m) || 0,
+      errors_prev_24h: Number(r.errors_prev_24h) || 0,
+    };
+  });
 }

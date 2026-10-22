@@ -1,0 +1,610 @@
+/**
+ * Lab alert lights: one green / yellow / red light per app.
+ *
+ * Read by GET /status/lights (routes/status.ts): the round ESP32 screens on
+ * the lab shelf (hardware/lab-lights/), the /lights page in the UI and the
+ * Mac's spoken-red watcher all poll it, so it is built to be cheap: one log
+ * query per key scope at most every 15 s, shared by every caller.
+ *
+ * The rule, in plain words:
+ *   red     a high or critical alert about the app is firing,
+ *           or the app has gone quiet (no logs for an hour: Data Sources says
+ *           "Inactive" or "Stale"),
+ *           or its errors spiked (10+ in 15 min and 3x its normal rate)
+ *   yellow  a medium / warning / low alert about the app is firing,
+ *           or the app is quiet 15-60 min (Data Sources says "Recent"),
+ *           or errors are up (3+ in 15 min and 2x normal)
+ *   green   everything else (Data Sources "Active", errors at their usual rate)
+ * An alert counts for an app when its search names that app (app_name= or
+ * the DSL's app= / program= / sourcetype=), or,
+ * naming no app, when it searches an index the app logs to. A rule that names
+ * neither (e.g. `search severity<=3`) lights nothing: it isn't about one app.
+ * Freshness comes from services/source-status.ts, the same minutes the Data
+ * Sources page uses. Data Sources has one row per app and index; a light is
+ * per app and goes by the app's newest log in any of its indexes.
+ */
+import { APP_ACTIVITY_WINDOW, getAppActivity, type AppActivity } from '../db/backend.js';
+import { getSQLiteDB } from '../db/sqlite.js';
+import { isIndexAllowed } from '../auth/index-scope.js';
+import { expandMacros } from './macros.js';
+import { resolveMacroDefinition } from '../db/sqlite-macros.js';
+import { parseToAST, FIELD_MAP, isLogicGroup, type Condition, type SimpleCondition } from '../dsl/index.js';
+import { SOURCE_STATUS_MINUTES, sourceStatusFromAge, parseServerTime } from './source-status.js';
+
+export type LightState = 'green' | 'yellow' | 'red';
+
+export interface AppLight {
+  app: string;
+  /** Display name for a screen: "directors-palette" -> "Directors Palette", "hyh" -> "HYH". */
+  label: string;
+  state: LightState;
+  /**
+   * One short line in plain words, always "<Headline>: <detail>" so a small
+   * screen can show the headline big (see WHY_HEADLINES), e.g.
+   * "Error spike: 47 in 15 min, 4x normal".
+   */
+  why: string;
+  /**
+   * ISO time this colour began: an alert's fire time, the minute the logs ran out,
+   * or when this server saw the colour change. Null when it was already this
+   * colour when the server started watching (the memory resets on API restart).
+   */
+  since: string | null;
+  logs_last_15m: number;
+  errors_last_15m: number;
+  /** Errors in the 24 h before the last 15 min: the "usual" the spike is measured against. */
+  errors_usual_24h: number;
+  /** ISO time of the newest log (null = none in 7 days). */
+  last_seen: string | null;
+  /** Indexes the app logs to, so a caller can open the logs behind a number. */
+  indexes: string[];
+}
+
+export interface LightsResult {
+  generated_at: string;
+  refresh_seconds: number;
+  apps: AppLight[];
+}
+
+export const LIGHTS_RULES = {
+  /** Error spike: at least this many errors in 15 min... */
+  spikeMinErrors: 10,
+  /** ...and at least this many times the app's normal 15-minute error count. */
+  spikeRatio: 3,
+  /** Errors up (yellow): at least this many in 15 min... */
+  warnMinErrors: 3,
+  /** ...and at least this many times normal. */
+  warnRatio: 2,
+  /** An alert's "firing" state is ignored when its last evaluation is older than this. */
+  alertFreshHours: 25,
+  /** Server-side cache: one log query per key scope at most this often. */
+  cacheMs: 15_000,
+  /** What the ESP32s and the page poll at. */
+  refreshSeconds: 30,
+  /** Longest `why` sent to a screen. */
+  maxWhyChars: 80,
+} as const;
+
+/** Every `why` starts with one of these, then ": ". */
+export const WHY_HEADLINES = ['Fine', 'Alert', 'Gone quiet', 'Error spike', 'Quiet', 'Errors up'] as const;
+
+const RED_ALERT = new Set(['critical', 'high']);
+const YELLOW_ALERT = new Set(['medium', 'warning', 'low']);
+
+// ---------------------------------------------------------------------------
+// Alerts: which rules are firing, and which apps they are about
+// ---------------------------------------------------------------------------
+
+export interface FiringAlert {
+  id: string;
+  name: string;
+  severity: string;
+  /** ISO time it last fired. */
+  fired_at: string;
+  indexes: string[];
+  apps: string[];
+  /**
+   * True when the rule may read logs outside the indexes it names: no index,
+   * an index matched by a wildcard, an OR branch with no index, a subsearch,
+   * or an index test after a stage that can change the fields (rename, eval,
+   * stats...). Only a key that can read every index may see it.
+   */
+  openIndexes?: boolean;
+}
+
+/**
+ * Which indexes / app names a rule's search is about, read the way the
+ * scheduler runs it: `macro` / saved-search references expanded first, then
+ * the DSL's own parser, so the DSL's field names count: `app=`, `program=`,
+ * `sourcetype=` and `app_name=` are the app; `index=` and `index_name=` are the
+ * index; `IN (...)` lists count too. Only the leading search / filter / where
+ * stages are read: after any other stage (rename, eval, stats...) a field
+ * called index_name may no longer be the log's index.
+ *
+ * indexes / apps: the plain values the rule asks for (`=` or IN, not negated,
+ * no wildcard). They decide which apps the rule lights.
+ * openIndexes: the rule may read indexes it does not name, so a key limited to
+ * some indexes must not see it. That is the case when the rule names no index,
+ * when an OR has a branch with no plain index, when an index is matched by a
+ * wildcard, `!=` or NOT (a negated index next to a plain one still counts
+ * as bounded by the plain one), when it has a subsearch (append), or when the
+ * index test comes after a stage that can change fields. A rule that can't be
+ * expanded or parsed (the scheduler can't run it either) names nothing, so it
+ * lights nothing at all.
+ */
+export function alertTargets(searchQuery: string): { indexes: string[]; apps: string[]; openIndexes: boolean } {
+  const column = (field: string) => {
+    const f = field.toLowerCase();
+    return FIELD_MAP[f] ?? f;
+  };
+  const values = (c: SimpleCondition): string[] | null => {
+    if (c.negate) return null;
+    let vs: unknown[];
+    if (c.operator === '=') vs = [c.value];
+    else if (c.operator === 'IN') {
+      try {
+        const parsed = JSON.parse(String(c.value));
+        vs = Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return null;
+      }
+    } else return null;
+    const out = vs.map((v) => String(v ?? '').trim().toLowerCase());
+    return out.length > 0 && out.every((v) => v && !v.includes('*')) ? out : null;
+  };
+  const indexes = new Set<string>();
+  const apps = new Set<string>();
+  const collect = (c: Condition) => {
+    if (isLogicGroup(c)) return c.conditions.forEach(collect);
+    const col = column(c.field);
+    if (col !== 'index_name' && col !== 'app_name') return;
+    const v = values(c);
+    if (v) v.forEach((x) => (col === 'index_name' ? indexes : apps).add(x));
+  };
+  /** The only indexes this condition can match, or null when it can match any. */
+  const bound = (c: Condition): Set<string> | null => {
+    if (isLogicGroup(c)) {
+      const parts = c.conditions.map(bound);
+      if (c.logic === 'OR') {
+        if (parts.some((p) => p === null)) return null;
+        return new Set(parts.flatMap((p) => [...p!]));
+      }
+      const set = parts.filter((p): p is Set<string> => p !== null);
+      return set.length ? new Set(set.flatMap((p) => [...p])) : null;
+    }
+    if (column(c.field) !== 'index_name') return null;
+    const v = values(c);
+    return v ? new Set(v) : null;
+  };
+  let stages: Array<{ type: string; conditions?: Condition[] }>;
+  try {
+    stages = parseToAST(expandMacros(searchQuery, resolveMacroDefinition)).stages as Array<{ type: string; conditions?: Condition[] }>;
+  } catch {
+    return { indexes: [], apps: [], openIndexes: true };
+  }
+  let open = stages.some((st) => st.type === 'append' || st.type === 'inputlookup');
+  let bounded = false;
+  for (const st of stages) {
+    // rename / eval / stats ... can turn any field into "index_name" or "app_name": stop reading here.
+    if (st.type !== 'search' && st.type !== 'filter' && st.type !== 'where') break;
+    for (const c of st.conditions ?? []) {
+      collect(c);
+      if (bound(c) !== null) bounded = true;
+    }
+  }
+  // No stage pins the search to plainly named indexes: it can read any.
+  if (!bounded) open = true;
+  return { indexes: [...indexes], apps: [...apps], openIndexes: open };
+}
+
+interface AlertRow {
+  id: string;
+  name: string;
+  severity: string;
+  search_query: string;
+  last_run: string | null;
+  last_triggered: string | null;
+  last_status: string | null;
+  throttle_enabled: number | null;
+  throttle_window_seconds: number | null;
+  last_ack: number | null;
+  /** How the rule judges a run (alerts.trigger_type / trigger_condition / trigger_threshold). */
+  trigger_type?: string | null;
+  trigger_condition?: string | null;
+  trigger_threshold?: number | null;
+  /** The value the latest run compared (alerts.last_value), written on every run. */
+  last_value?: number | null;
+  /** 1 when a global or alert-level silence covers the rule right now. */
+  silenced?: number | null;
+}
+
+const PLAIN_CONDITIONS = new Set(['greater_than', 'less_than', 'equal_to', 'not_equal_to']);
+
+/**
+ * Did the latest run still meet the rule's condition? The scheduler writes
+ * last_status 'ok' both when a run found nothing and when it was throttled,
+ * but it writes last_value on every run, so for plain count rules the value
+ * tells the two apart. null = can't tell from the stored row (custom
+ * conditions, drops_by / rises_by): the throttle window decides.
+ */
+export function latestRunStillMet(row: AlertRow): boolean | null {
+  const value = row.last_value;
+  if (typeof value !== 'number' || !Number.isFinite(value)) return null;
+  const type = String(row.trigger_type || 'number_of_results').toLowerCase();
+  if (['no_data', 'nodata', 'no_results'].includes(type)) return value === 0;
+  if (['custom_condition', 'custom'].includes(type)) return null;
+  const cond = String(row.trigger_condition || 'greater_than');
+  if (!PLAIN_CONDITIONS.has(cond)) return null;
+  const t = Number(row.trigger_threshold ?? 0);
+  if (cond === 'greater_than') return value > t;
+  if (cond === 'less_than') return value < t;
+  if (cond === 'equal_to') return value === t;
+  return value !== t;
+}
+
+/**
+ * An enabled rule is firing when its latest evaluation fired, or it fired
+ * inside its throttle window (a throttled re-check records "ok" even while
+ * the condition still holds) and its latest run still met the condition,
+ * and nobody has acknowledged or silenced it.
+ */
+export function isFiring(row: AlertRow, nowMs: number): boolean {
+  if (row.last_ack || row.silenced) return false;
+  const triggered = parseServerTime(row.last_triggered);
+  const ran = parseServerTime(row.last_run);
+  if (triggered === null || ran === null) return false;
+  if (nowMs - ran > LIGHTS_RULES.alertFreshHours * 3_600_000) return false;
+  if (row.last_status === 'triggered') return true;
+  const windowMs = (row.throttle_enabled ? Number(row.throttle_window_seconds) || 0 : 0) * 1000;
+  if (!(windowMs > 0 && nowMs - triggered <= windowMs)) return false;
+  // Inside the window: a run that no longer met the condition means it cleared.
+  return latestRunStillMet(row) !== false;
+}
+
+export function loadFiringAlerts(nowMs: number = Date.now()): FiringAlert[] {
+  const rows = getSQLiteDB()
+    .prepare(
+      `SELECT a.id, a.name, a.severity, a.search_query, a.last_run, a.last_triggered, a.last_status,
+              a.throttle_enabled, a.throttle_window_seconds,
+              a.trigger_type, a.trigger_condition, a.trigger_threshold, a.last_value,
+              (SELECT h.acknowledged FROM alert_history h
+                 WHERE h.alert_id = a.id ORDER BY h.triggered_at DESC LIMIT 1) AS last_ack,
+              EXISTS (SELECT 1 FROM alert_silences s
+                       WHERE julianday(s.starts_at) <= julianday('now')
+                         AND (s.ends_at IS NULL OR julianday(s.ends_at) > julianday('now'))
+                         AND (s.level = 'global' OR (s.level = 'alert' AND s.target_id = a.id))) AS silenced
+         FROM alerts a
+        WHERE a.enabled = 1 AND a.last_triggered IS NOT NULL`,
+    )
+    .all() as AlertRow[];
+  return rows
+    .filter((r) => isFiring(r, nowMs))
+    .map((r) => ({
+      id: r.id,
+      name: r.name,
+      severity: String(r.severity || '').toLowerCase(),
+      fired_at: new Date(parseServerTime(r.last_triggered)!).toISOString(),
+      ...alertTargets(r.search_query || ''),
+    }));
+}
+
+/**
+ * Alerts about this app. A rule that names apps (app_name=, app=, program=,
+ * sourcetype=) is about those apps only, never their neighbours in the same
+ * index. A rule that names no app is about every app in the indexes it
+ * searches. Either way a key limited to some indexes sees it only when the
+ * rule can read nothing but indexes the key may read (see alertTargets'
+ * openIndexes), so such a key never sees the name of a rule that also
+ * watches another index.
+ *
+ * Silences: alert-level and global silences darken a rule (loadFiringAlerts).
+ * Host-level silences are not applied here: a light is per app, not per host.
+ */
+export function alertsForApp(
+  activity: Pick<AppActivity, 'app' | 'indexes'>,
+  alerts: FiringAlert[],
+  allowedIndexes?: string[] | null,
+): FiringAlert[] {
+  const app = activity.app.toLowerCase();
+  const idx = new Set(activity.indexes.map((i) => i.toLowerCase()));
+  return alerts.filter((a) => {
+    if (a.apps.length > 0) {
+      if (!a.apps.includes(app)) return false;
+      // A rule that names no index searches every index: only a key that can
+      // read every index may see it. Otherwise every index it names must be readable.
+      if (a.indexes.length === 0 || a.openIndexes) return isUnscoped(allowedIndexes);
+      return a.indexes.every((i) => isIndexAllowed(allowedIndexes, i));
+    }
+    if (!a.indexes.some((i) => idx.has(i))) return false;
+    // A rule that can read indexes it doesn't name (index=a OR index=b*):
+    // only a key that can read every index sees it.
+    if (a.openIndexes) return isUnscoped(allowedIndexes);
+    return a.indexes.every((i) => isIndexAllowed(allowedIndexes, i));
+  });
+}
+
+// ---------------------------------------------------------------------------
+// The decision
+// ---------------------------------------------------------------------------
+
+/** "40 min", "3 h", "2 days". */
+export function plainAge(seconds: number): string {
+  const min = Math.floor(Math.max(0, seconds) / 60);
+  if (min < 60) return `${min} min`;
+  const h = Math.floor(min / 60);
+  if (h < 48) return `${h} h`;
+  return `${Math.floor(h / 24)} days`;
+}
+
+/** The app's normal error count for a 15-minute slice, from the 24 h before it. */
+export function normalErrorsPer15m(errorsPrev24h: number): number {
+  return (errorsPrev24h * 15) / (24 * 60 - 15);
+}
+
+/**
+ * How far above normal, in words: "4x normal" when the app usually has errors
+ * every 15 minutes, "usually 46 a day" when it has a few a day (a ratio would
+ * read as a silly "94x"), "usually none" only when there were none at all.
+ */
+function errorsVsNormal(errors: number, errorsPrev24h: number): string {
+  if (errorsPrev24h <= 0) return 'usually none';
+  const normal = normalErrorsPer15m(errorsPrev24h);
+  if (normal < 0.5) return `usually ${errorsPrev24h.toLocaleString('en-US')} a day`;
+  // Rounded down, so "3x" only ever means at least three times normal.
+  return `${Math.floor(errors / normal)}x normal`;
+}
+
+export function displayLabel(app: string): string {
+  // Syslog-style names carry a process id and punctuation ("kernel:", "sshd[123]:"): drop both.
+  const trimmed = app.replace(/\[[^\]]*\]/g, '').replace(/^[^\p{L}\p{N}]+|[^\p{L}\p{N}]+$/gu, '') || app;
+  const words = trimmed.split(/[-_\s.:]+/).filter(Boolean);
+  if (words.length === 0) return app;
+  if (words.length === 1 && words[0].length <= 3) return words[0].toUpperCase();
+  return words.map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+}
+
+function clip(s: string): string {
+  return s.length > LIGHTS_RULES.maxWhyChars ? `${s.slice(0, LIGHTS_RULES.maxWhyChars - 1)}…` : s;
+}
+
+export interface Decision {
+  state: LightState;
+  why: string;
+  /** Exact start of this state when the data says it (quiet, alert); otherwise null. */
+  since_hint: string | null;
+  /** Which rule decided it (stable key, used to restart `since` when the reason changes). */
+  reason: string;
+}
+
+export function decideLight(activity: AppActivity, alerts: FiringAlert[]): Decision {
+  const lastSeenMs = parseServerTime(activity.last_seen);
+  const quietSince = (minutes: number) =>
+    lastSeenMs === null ? null : new Date(lastSeenMs + minutes * 60_000).toISOString();
+  const freshness = sourceStatusFromAge(activity.age_seconds);
+  const normal = normalErrorsPer15m(activity.errors_prev_24h);
+  const errors = activity.errors_15m;
+
+  const byTime = (a: FiringAlert, b: FiringAlert) => a.fired_at.localeCompare(b.fired_at);
+  const red = alerts.filter((a) => RED_ALERT.has(a.severity)).sort(byTime);
+  const yellow = alerts.filter((a) => YELLOW_ALERT.has(a.severity)).sort(byTime);
+  const alertWhy = (list: FiringAlert[]) =>
+    `Alert: ${list[0].name}${list.length > 1 ? ` (+${list.length - 1} more)` : ''}`;
+
+  // RED
+  if (red.length) return { state: 'red', why: clip(alertWhy(red)), since_hint: red[0].fired_at, reason: `alert:${red[0].id}` };
+  if (lastSeenMs === null || !Number.isFinite(activity.age_seconds)) {
+    return { state: 'red', why: 'Gone quiet: no logs in 7 days', since_hint: null, reason: 'quiet' };
+  }
+  if (freshness === 'inactive' || freshness === 'stale') {
+    return {
+      state: 'red',
+      why: `Gone quiet: no logs for ${plainAge(activity.age_seconds)}`,
+      since_hint: quietSince(SOURCE_STATUS_MINUTES.recent),
+      reason: 'quiet',
+    };
+  }
+  if (errors >= LIGHTS_RULES.spikeMinErrors && errors >= LIGHTS_RULES.spikeRatio * normal) {
+    return {
+      state: 'red',
+      why: `Error spike: ${errors} in 15 min, ${errorsVsNormal(errors, activity.errors_prev_24h)}`,
+      since_hint: null,
+      reason: 'spike',
+    };
+  }
+
+  // YELLOW
+  if (yellow.length) return { state: 'yellow', why: clip(alertWhy(yellow)), since_hint: yellow[0].fired_at, reason: `alert:${yellow[0].id}` };
+  if (freshness === 'recent') {
+    return {
+      state: 'yellow',
+      why: `Quiet: no logs for ${plainAge(activity.age_seconds)}`,
+      since_hint: quietSince(SOURCE_STATUS_MINUTES.active),
+      reason: 'quiet-short',
+    };
+  }
+  if (errors >= LIGHTS_RULES.warnMinErrors && errors >= LIGHTS_RULES.warnRatio * normal) {
+    return {
+      state: 'yellow',
+      why: `Errors up: ${errors} in 15 min, ${errorsVsNormal(errors, activity.errors_prev_24h)}`,
+      since_hint: null,
+      reason: 'errors-up',
+    };
+  }
+
+  // GREEN
+  const logs = activity.logs_15m;
+  const why =
+    errors > 0
+      ? `Fine: ${logs} logs, ${errors} error${errors === 1 ? '' : 's'} in 15 min`
+      : `Fine: ${logs} log${logs === 1 ? '' : 's'} in 15 min, no errors`;
+  return { state: 'green', why, since_hint: null, reason: 'fine' };
+}
+
+// ---------------------------------------------------------------------------
+// Cached read, shared by every caller
+// ---------------------------------------------------------------------------
+
+type Computed = { apps: AppLight[]; generated_at: string; capped: boolean };
+
+interface CacheEntry {
+  at: number;
+  value?: Computed;
+  pending?: Promise<Computed>;
+}
+
+const cache = new Map<string, CacheEntry>();
+/** When each app entered its current state: `${scope}|${app}` -> state + reason + since. */
+const transitions = new Map<string, { state: LightState; reason: string; since: string | null; seen: number }>();
+/** Forget an app this server hasn't been asked about for a week, so the memory can't only grow. */
+const TRANSITION_FORGET_MS = 7 * 24 * 3_600_000;
+
+function pruneTransitions(nowMs: number): void {
+  for (const [key, t] of transitions) if (nowMs - t.seen > TRANSITION_FORGET_MS) transitions.delete(key);
+}
+let logQueries = 0;
+let clock: () => number = () => Date.now();
+
+function isUnscoped(allowedIndexes?: string[] | null): boolean {
+  return !allowedIndexes || allowedIndexes.length === 0;
+}
+
+function scopeKey(allowedIndexes?: string[] | null): string {
+  if (!allowedIndexes || allowedIndexes.length === 0) return '*';
+  return [...new Set(allowedIndexes.map((i) => i.toLowerCase()))].sort().join(',');
+}
+
+/**
+ * When the light took its colour, as best this server knows. While the colour
+ * holds, the start holds (an alert firing again, or a new reason for the same
+ * colour, doesn't move it). When the colour changes, or on the first look, a
+ * rule that knows its own start gives it (the alert's fire time, the minute the
+ * logs ran out); otherwise it is the moment this server saw the change. A light
+ * that was already this colour when the server started watching, with no rule
+ * start, is null rather than pretending it began at the API's start-up.
+ */
+function sinceFor(key: string, d: Decision, nowIso: string): string | null {
+  const prev = transitions.get(key);
+  let since: string | null;
+  if (prev && prev.state === d.state) since = prev.since ?? d.since_hint; // colour held: keep its start
+  else if (d.since_hint) since = d.since_hint;
+  else if (!prev) since = null; // first look: it was already like this, start unknown
+  else since = nowIso; // the colour changed while we watched
+  transitions.set(key, { state: d.state, reason: d.reason, since, seen: Date.parse(nowIso) });
+  return since;
+}
+
+async function compute(allowedIndexes: string[] | null | undefined): Promise<Computed> {
+  const nowMs = clock();
+  pruneTransitions(nowMs);
+  const nowIso = new Date(nowMs).toISOString();
+  logQueries += 1;
+  const activity = await getAppActivity(allowedIndexes ?? undefined, nowMs);
+  const firing = loadFiringAlerts(nowMs);
+  const sk = scopeKey(allowedIndexes);
+  const apps = activity.map((a) => lightFor(a, firing, allowedIndexes, sk, nowIso));
+  return { apps, generated_at: nowIso, capped: activity.length >= APP_ACTIVITY_WINDOW.maxApps };
+}
+
+function lightFor(
+  a: AppActivity,
+  firing: FiringAlert[],
+  allowedIndexes: string[] | null | undefined,
+  sk: string,
+  nowIso: string,
+): AppLight {
+  const d = decideLight(a, alertsForApp(a, firing, allowedIndexes));
+  return {
+    app: a.app,
+    label: displayLabel(a.app),
+    state: d.state,
+    why: d.why,
+    since: sinceFor(`${sk}|${a.app.toLowerCase()}`, d, nowIso),
+    logs_last_15m: a.logs_15m,
+    errors_last_15m: a.errors_15m,
+    errors_usual_24h: a.errors_prev_24h,
+    last_seen: a.last_seen,
+    indexes: a.indexes,
+  };
+}
+
+async function cachedLights(allowedIndexes?: string[] | null) {
+  const key = scopeKey(allowedIndexes);
+  const now = clock();
+  const hit = cache.get(key);
+  if (hit?.value && now - hit.at < LIGHTS_RULES.cacheMs) return hit.value;
+  if (hit?.pending) return hit.pending;
+  const pending = compute(allowedIndexes);
+  cache.set(key, { at: hit?.at ?? 0, value: hit?.value, pending });
+  try {
+    const value = await pending;
+    cache.set(key, { at: clock(), value });
+    return value;
+  } catch (err) {
+    // Keep serving nothing stale on failure: drop the entry so the next call retries.
+    cache.delete(key);
+    throw err;
+  }
+}
+
+/**
+ * Lights for every app the key can see (7-day list, minus rows with no app
+ * name), or for the asked-for apps in the order asked (asking for an app by
+ * name and by index gives it once). An asked-for app with no logs the key can
+ * read is red "Gone quiet: no logs in 7 days" (the same answer whether it
+ * doesn't exist or the key can't see it). The list keeps the 1000 apps that
+ * logged most recently; when there are more, an asked-for app outside them
+ * logged less recently than all 1000 and says "no recent logs" instead.
+ */
+export async function getLabLights(
+  allowedIndexes?: string[] | null,
+  apps?: string[],
+): Promise<LightsResult> {
+  const { apps: all, generated_at, capped } = await cachedLights(allowedIndexes);
+  let out: AppLight[];
+  if (apps && apps.length) {
+    const seen = new Set<string>();
+    out = apps.map((wanted) => {
+      const w = wanted.toLowerCase();
+      const found =
+        all.find((l) => l.app.toLowerCase() === w) ??
+        all.find((l) => l.app !== 'unknown' && l.indexes.some((i) => i.toLowerCase() === w));
+      if (found) return seen.has(found.app) ? null : (seen.add(found.app), found);
+      return {
+        app: wanted,
+        label: displayLabel(wanted),
+        state: 'red' as const,
+        why: capped ? 'Gone quiet: no recent logs' : 'Gone quiet: no logs in 7 days',
+        since: null,
+        logs_last_15m: 0,
+        errors_last_15m: 0,
+        errors_usual_24h: 0,
+        last_seen: null,
+        indexes: [],
+      };
+    }).filter((l): l is AppLight => l !== null);
+  } else {
+    out = all.filter((l) => l.app !== 'unknown');
+  }
+  return { generated_at, refresh_seconds: LIGHTS_RULES.refreshSeconds, apps: out };
+}
+
+/** Test hooks: reset the cache and state memory, read the query count, pin the clock. */
+export const _labLightsTesting = {
+  reset(): void {
+    cache.clear();
+    transitions.clear();
+    logQueries = 0;
+    clock = () => Date.now();
+  },
+  queries(): number {
+    return logQueries;
+  },
+  setClock(fn: () => number): void {
+    clock = fn;
+  },
+  sinceFor,
+  pruneTransitions,
+  remembered(): number {
+    return transitions.size;
+  },
+};

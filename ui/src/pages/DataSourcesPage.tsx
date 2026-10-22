@@ -32,7 +32,7 @@ import AddDataSourceWizard from '../components/AddDataSourceWizard';
 import SourceConfigList from '../components/source-config/SourceConfigList';
 import { useMute } from '../contexts/MuteContext';
 import { canDrillDown, searchUrl, sourceLogsQuery, sourceErrorsQuery } from '../utils/sourceDrilldown';
-import { getStatusInfo, formatRelativeTime } from '../utils/sourceStatus';
+import { ageAgo, sourceStatusInfo } from '../utils/sourceStatus';
 
 type TabId = 'active' | 'templates' | 'config';
 
@@ -378,7 +378,7 @@ export default function DataSourcesPage() {
                   </thead>
                   <tbody className="divide-y divide-nog-100 dark:divide-nog-700">
                     {activeSources.sources.map((source, idx) => {
-                      const status = getStatusInfo(source.last_seen);
+                      const status = sourceStatusInfo(source.status);
                       // Search hides muted indexes and apps, so say so before the click.
                       const mutedNote =
                         isMuted('index_name', source.index_name || 'main') || isMuted('app_name', source.app_name)
@@ -450,7 +450,7 @@ export default function DataSourcesPage() {
                           <td className="px-4 py-3 text-right">
                             <div className="flex items-center justify-end gap-1 text-sm text-nog-500 dark:text-nog-400">
                               <Clock className="w-3 h-3" />
-                              {formatRelativeTime(source.last_seen)}
+                              {ageAgo(source.age_seconds)}
                             </div>
                           </td>
                           <td className="px-4 py-3">

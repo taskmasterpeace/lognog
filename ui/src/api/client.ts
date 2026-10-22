@@ -707,6 +707,10 @@ export interface ActiveSource {
   log_count: number;
   last_seen: string;
   error_count: number;
+  /** Seconds since the newest log, measured by the log store. */
+  age_seconds: number;
+  /** Freshness from the API's one rule (api/src/services/source-status.ts). */
+  status: 'active' | 'recent' | 'inactive' | 'stale';
 }
 
 export interface IndexSummary {
@@ -901,6 +905,34 @@ export interface WeeklyReport {
 export async function getWeeklyReport(week?: string | null): Promise<WeeklyReport> {
   const qs = week ? `?${new URLSearchParams({ week }).toString()}` : '';
   return request(`/reports/weekly${qs}`);
+}
+
+// Lab lights: one green / yellow / red light per app (GET /status/lights)
+export type LabLightState = 'green' | 'yellow' | 'red';
+
+export interface LabLight {
+  app: string;
+  label: string;
+  state: LabLightState;
+  why: string;
+  since: string | null;
+  logs_last_15m: number;
+  errors_last_15m: number;
+  /** Errors in the 24 h before the last 15 min (what "usual" means on the screen). */
+  errors_usual_24h: number;
+  last_seen: string | null;
+  indexes: string[];
+}
+
+export interface LabLightsResult {
+  generated_at: string;
+  refresh_seconds: number;
+  apps: LabLight[];
+}
+
+export async function getLabLights(apps?: string[]): Promise<LabLightsResult> {
+  const q = apps && apps.length ? `?apps=${encodeURIComponent(apps.join(','))}` : '';
+  return request(`/status/lights${q}`);
 }
 
 // Reports API

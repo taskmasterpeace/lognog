@@ -80,6 +80,7 @@ import SettingsPage from './pages/SettingsPage';
 import AlertsPage from './pages/AlertsPage';
 import SilencesPage from './pages/SilencesPage';
 import DataSourcesPage from './pages/DataSourcesPage';
+import LabLightsPage from './pages/LabLightsPage';
 import AnomalyPage from './pages/AnomalyPage';
 import AssetsPage from './pages/AssetsPage';
 import IdentitiesPage from './pages/IdentitiesPage';
@@ -304,8 +305,7 @@ function Layout({ children }: { children: React.ReactNode }) {
 
         {/* Navigation */}
         <nav className="flex-1 p-4 overflow-y-auto" aria-label="Main">
-          {/* Main group (quiet mode). HOME SLOT for Builder 2's /home: add it
-              as the first entry of MAIN_NAV in nav/navItems.ts. */}
+          {/* Main group (quiet mode): MAIN_NAV in nav/navItems.ts, Home first. */}
           <div className="space-y-1" data-testid="nav-main">
             {MAIN_NAV.map(item => (
               <NavLink key={item.to} to={item.to} icon={item.icon} onClick={closeSidebar}>{item.label}</NavLink>
@@ -602,6 +602,18 @@ function AppRoutes() {
             <Layout>
               <AnimatedPage>
                 <SilencesPage />
+              </AnimatedPage>
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/lights"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <AnimatedPage>
+                <LabLightsPage />
               </AnimatedPage>
             </Layout>
           </ProtectedRoute>

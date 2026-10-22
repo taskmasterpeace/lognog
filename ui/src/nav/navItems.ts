@@ -28,6 +28,7 @@ import {
   Sparkles,
   Bookmark,
   BarChart3,
+  Lightbulb,
 } from 'lucide-react';
 
 export interface NavItem {
@@ -59,6 +60,7 @@ export const MORE_NAV: NavSection[] = [
     items: [
       { to: '/anomaly', label: 'Anomaly Detection', icon: Radar },
       { to: '/synthetic', label: 'Synthetic', icon: Activity },
+      { to: '/lights', label: 'Lab Lights', icon: Lightbulb },
     ],
   },
   {
