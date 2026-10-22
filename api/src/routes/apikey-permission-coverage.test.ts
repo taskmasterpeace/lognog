@@ -617,16 +617,20 @@ describe('requireAdmin checks the key, not just its owner', () => {
   function run(perms: string[]) {
     let status: number | null = null;
     let nexted = false;
-    const res = { status(c: number) { status = c; return this; }, json() { return this; } };
+    let body: unknown;
+    const res = { status(c: number) { status = c; return this; }, json(b: unknown) { body = b; return this; } };
     requireAdmin(
       { user: { id: 'u', username: 'admin', role: 'admin' }, authMethod: 'apikey', apiKeyPermissions: perms,
         ip: '127.0.0.1', path: '/x', get: () => undefined } as never,
       res as never,
       () => { nexted = true; },
     );
-    return { status, nexted };
+    return { status, nexted, body };
   }
-  it('refuses a read key owned by the admin', () => expect(run(['read'])).toEqual({ status: 403, nexted: false }));
+  it('refuses a read key owned by the admin', () => expect(run(['read'])).toMatchObject({ status: 403, nexted: false }));
+  it("its refusal names what the key lacks, like the gate's (round 7)", () => {
+    expect(run(['read', 'write']).body).toEqual({ error: 'API key lacks required permissions', needed: 'admin', missing: ['admin'] });
+  });
   it("allows an 'admin' key and a '*' key", () => {
     expect(run(['admin']).nexted).toBe(true);
     expect(run(['*']).nexted).toBe(true);
@@ -1795,6 +1799,18 @@ describe('round 7: repeated refusals, the permission names, and pop-ups per read
     expect((await request(gateSrv).get('/alerts/kl-cap-0').set(hdr)).status).toBe(403);
     expect(rowsFor('/alerts/kl-cap-0')).toBe(2);
   }, 120_000);
+
+  it("the MCP stream's own check (a key in X-API-Key next to a non-ApiKey Authorization header) names what the key lacks", async () => {
+    // The gate reads the Authorization header first, so this key reaches the
+    // MCP route, which checks it itself.
+    const asked = async (key: string) => {
+      const r = await request(realSrv).get('/mcp/sse').set({ Authorization: 'Bearer kl-not-a-token', 'X-API-Key': key }).timeout({ response: 5_000 });
+      expect(r.status).toBe(403);
+      return { error: r.body.error, needed: r.body.needed, missing: r.body.missing };
+    };
+    expect(await asked(K.read)).toEqual({ error: REFUSED, needed: 'admin', missing: ['admin'] });
+    expect(await asked(K.search)).toEqual({ error: REFUSED, needed: 'admin', missing: ['admin'] });
+  });
 
   it("a refusal names the permission a person can tick: 'write' (send logs), never 'ingest'", async () => {
     const ua = 'kl-r7-names';
