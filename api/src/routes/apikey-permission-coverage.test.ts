@@ -2756,3 +2756,124 @@ describe('round 10: a damaged stored permission list grants nothing', () => {
     }
   });
 });
+
+describe("round 10: requirePermission's second read-only lock and the agent's write routes", () => {
+  // The key's permissions are normally cut to what a read-only owner may do
+  // (effectiveKeyPermissions), so the second lock in requirePermission only
+  // matters if that cut is ever missed. Here the request arrives with the
+  // permissions NOT cut, to check the second lock on its own.
+  const serve = async (role: string, perms: string[]) => {
+    const { requirePermission } = await import('../auth/middleware.js');
+    const ok = (_req: unknown, res: { status: (c: number) => { json: (b: unknown) => void } }) => res.status(299).json({ reached: true });
+    const a = express();
+    a.use(express.json());
+    a.use((req, _res, next) => {
+      (req as unknown as Record<string, unknown>).user = { id: 'kl-r10-uncut', username: 'kl-r10-uncut', email: 'kl-r10-uncut@example.invalid', role };
+      (req as unknown as Record<string, unknown>).authMethod = 'apikey';
+      (req as unknown as Record<string, unknown>).apiKeyId = 'kl-r10-uncut-key';
+      (req as unknown as Record<string, unknown>).apiKeyPermissions = perms;
+      next();
+    });
+    a.get('/read', requirePermission('read'), ok as never);
+    a.get('/search', requirePermission('search'), ok as never);
+    a.get('/read-or-admin', requirePermission('read', 'admin'), ok as never);
+    a.get('/admin', requirePermission('admin'), ok as never);
+    a.post('/alerts-write', requirePermission('alerts:write'), ok as never);
+    a.post('/write', requirePermission('write'), ok as never);
+    const srv = a.listen(0, '::1');
+    await new Promise<void>((r) => srv.once('listening', () => r()));
+    return { srv, base: `http://[::1]:${(srv.address() as AddressInfo).port}` };
+  };
+  const roRefusal = (r: { status: number; body: Record<string, unknown>; text: string }, what: string) => {
+    expect(r.status, `${what}: ${r.text}`).toBe(403);
+    expect(r.body.error, what).toBe('Read-only account cannot perform write operations');
+    return { needed: r.body.needed, missing: r.body.missing };
+  };
+
+  for (const role of ['readonly', 'viewer', 'read-only']) {
+    it(`a ${role} owner's uncut key still can't use a write-type permission, and still reads`, async () => {
+      const { srv, base } = await serve(role, ['read', 'search', 'write', 'alerts:write', 'admin']);
+      try {
+        expect(roRefusal(await request(base).post('/alerts-write').send({}), 'alerts:write')).toEqual({ needed: 'alerts:write', missing: ['alerts:write'] });
+        expect(roRefusal(await request(base).post('/write').send({}), 'write')).toEqual({ needed: 'write', missing: ['write'] });
+        expect(roRefusal(await request(base).get('/admin'), 'admin')).toEqual({ needed: 'admin', missing: ['admin'] });
+        // read and search are not write-type; a route that takes read OR admin
+        // is a read route, so a key meeting both still reads
+        expect((await request(base).get('/read')).status).toBe(299);
+        expect((await request(base).get('/search')).status).toBe(299);
+        expect((await request(base).get('/read-or-admin')).status).toBe(299);
+      } finally {
+        srv.closeAllConnections();
+        await new Promise((r) => srv.close(r));
+      }
+    });
+  }
+
+  it("a read-only owner's uncut admin-only key: refused on admin, reads on read OR admin; search-only key searches", async () => {
+    const one = await serve('readonly', ['admin']);
+    try {
+      expect(roRefusal(await request(one.base).get('/admin'), 'admin only')).toEqual({ needed: 'admin', missing: ['admin'] });
+      expect((await request(one.base).get('/read-or-admin')).status).toBe(299);
+    } finally {
+      one.srv.closeAllConnections();
+      await new Promise((r) => one.srv.close(r));
+    }
+    const two = await serve('readonly', ['search']);
+    try {
+      expect((await request(two.base).get('/search')).status).toBe(299);
+      expect((await request(two.base).get('/read')).status).toBe(299);
+    } finally {
+      two.srv.closeAllConnections();
+      await new Promise((r) => two.srv.close(r));
+    }
+  });
+
+  it('a user-role or admin-role uncut key is not touched by the read-only lock', async () => {
+    for (const role of ['user', 'admin']) {
+      const { srv, base } = await serve(role, ['read', 'write', 'alerts:write', 'admin']);
+      try {
+        expect((await request(base).post('/alerts-write').send({})).status, role).toBe(299);
+        expect((await request(base).post('/write').send({})).status, role).toBe(299);
+        expect((await request(base).get('/admin')).status, role).toBe(299);
+      } finally {
+        srv.closeAllConnections();
+        await new Promise((r) => srv.close(r));
+      }
+    }
+  });
+
+  it("the agent's write routes need alerts:write even with no gate in front; its read routes need read", async () => {
+    // the agent router itself (its default export), with no API-key gate in front
+    const agentRouter = (await import('./agent.js')).default as unknown as Router;
+    const bare = express();
+    bare.use(express.json());
+    bare.use('/agent', agentRouter);
+    const srv = bare.listen(0, '::1');
+    await new Promise<void>((r) => srv.once('listening', () => r()));
+    const base = `http://[::1]:${(srv.address() as AddressInfo).port}`;
+    try {
+      const owner = await createUser('kl-r10-agent', 'kl-r10-agent@example.invalid', 'kl-r10-agent-pass-1', 'user');
+      const readKey = (await createApiKey(owner.id, 'kl r10 agent read', ['read'])).apiKey;
+      const writeKey = (await createApiKey(owner.id, 'kl r10 agent alerts', ['read', 'alerts:write'])).apiKey;
+      const ingestKey = (await createApiKey(owner.id, 'kl r10 agent ingest', ['write'])).apiKey;
+      const h = (k: string) => ({ Authorization: `ApiKey ${k}` });
+      const body = { name: 'kl r10 agent alert', search_query: 'search *', trigger_type: 'number_of_results', trigger_condition: 'greater_than', trigger_threshold: 0 };
+      for (const [m, p] of [['post', '/agent/alerts'], ['patch', '/agent/alerts/kl-r10-none'], ['post', '/agent/alerts/kl-r10-none/evaluate'], ['delete', '/agent/alerts/kl-r10-none']] as const) {
+        const r = await request(base)[m](p).set(h(readKey)).send(body);
+        expect(r.status, `${m} ${p} read key: ${r.text}`).toBe(403);
+        expect(r.body.needed, `${m} ${p}`).toBe('alerts:write');
+        expect(r.body.missing, `${m} ${p}`).toEqual(['alerts:write']);
+        // a key with alerts:write gets past the lock (the route then answers for itself)
+        const w = await request(base)[m](p).set(h(writeKey)).send(body);
+        expect(w.status, `${m} ${p} alerts key: ${w.text}`).not.toBe(403);
+      }
+      expect((await request(base).get('/agent').set(h(readKey))).status).toBe(200);
+      const refused = await request(base).get('/agent').set(h(ingestKey));
+      expect(refused.status).toBe(403);
+      expect(refused.body.needed).toBe('read');
+    } finally {
+      srv.closeAllConnections();
+      await new Promise((r) => srv.close(r));
+    }
+  });
+});
