@@ -87,7 +87,7 @@ const INGEST_SCHEMA = {
   },
   auth: {
     how: 'Create a key in the LogNog UI (Settings -> API Keys). Send it as `X-API-Key: <key>` or `Authorization: ApiKey <key>`.',
-    permissions: '`write` = send logs only (the /api/ingest/* endpoints); `read` (or `search`) = search and read; `alerts:write` = create/manage alerts and `dashboards:write` = create/change dashboards, each only together with `read`; `admin` = everything except sending logs (only an admin user can make an `admin` key). Any other request answers 403 with `needed` naming the missing permission. Choose when creating the key.',
+    permissions: '`write` = send logs only (the /api/ingest/* endpoints; alert pop-ups for the desktop agent at /api/ingest/notifications need `write` together with `read` and no index limit); `read` (or `search`) = search and read; `alerts:write` = create/manage alerts and `dashboards:write` = create/change dashboards, each only together with `read`; `admin` = everything except sending logs (only an admin user can make an `admin` key). Any other request answers 403 with `needed` naming the missing permission. Choose when creating the key.',
     index_scoping: 'A key can optionally be restricted to specific indexes (allowed_indexes); searches and ingest are then limited to those.',
     note: 'The key is server-side only. Reading these public docs needs NO key; calling the APIs does.',
   },

@@ -10,7 +10,7 @@ import { useConfirm } from '../../../components/ui/ConfirmDialog';
  * against these (api/src/auth/key-policy.ts); browser sign-ins are not affected.
  */
 const API_KEY_PERMISSIONS: { value: string; label: string; hint: string }[] = [
-  { value: 'write', label: 'send logs', hint: 'Send logs to the ingest endpoints. Nothing else.' },
+  { value: 'write', label: 'send logs', hint: "Send logs to the ingest endpoints. Nothing else. (The desktop agent's alert pop-ups need read as well, because they carry alert text from every index.)" },
   { value: 'read', label: 'read', hint: 'Search logs and view stats, dashboards and alerts (webhook addresses stay hidden). Changes nothing.' },
   { value: 'alerts:write', label: 'alerts:write', hint: 'Create, change and delete alerts and silences. Comes with read (alerts send search results). Cannot add or run script actions; that needs admin.' },
   { value: 'dashboards:write', label: 'dashboards:write', hint: 'Create, change and delete dashboards and panels. Comes with read. Cannot share a public link or change a shared dashboard; that needs admin.' },

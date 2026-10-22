@@ -5,7 +5,7 @@ import { executeDSLQuery, replayIngestSpool } from '../db/backend.js';
 import { recordReportRun } from '../db/sqlite-report-runs.js';
 import { parseAndCompile } from '../dsl/index.js';
 import { evaluateAlert } from './alerts.js';
-import { logReportGenerated } from './internal-logger.js';
+import { logReportGenerated, reportErrorSummary } from './internal-logger.js';
 import { getStaleSources, markStaleNotified, markSourceUnexpected } from './heartbeat.js';
 import { getPullCollectors, runPullCollector } from './pull-collector.js';
 import { insertLogs } from '../db/backend.js';
@@ -498,7 +498,8 @@ async function runReportInner(
         sent_to: recipients,
       });
 
-      console.log(`Report "${report.name}" sent to ${recipients.join(', ')}`);
+      // Count only: container logs may be shipped into a searchable index; the addresses stay in run history (admins).
+      console.log(`Report "${report.name}" sent to ${recipients.length} recipient${recipients.length === 1 ? '' : 's'}`);
       outcome = { status: 'sent', row_count: results.length, recipients, duration_ms, html };
     } else {
       const duration_ms = Math.round(performance.now() - startTime);
@@ -538,7 +539,8 @@ async function runReportInner(
       error: errorMessage,
     });
 
-    console.error(`Error running report "${report.name}":`, error);
+    // Summary only (no addresses); the full error is in the report's run history, shown to admins.
+    console.error(`Error running report "${report.name}": ${reportErrorSummary(errorMessage)}`);
 
     // Bug #41-8: even on failure, advance last_run so the scheduler's
     // shouldRunNow() no longer sees this report as due every tick. Without this,

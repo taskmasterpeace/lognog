@@ -101,6 +101,7 @@ class HTTPShipper:
         self._last_send_time: Optional[float] = None
         self._last_error: Optional[str] = None
         self._last_notification_check: Optional[float] = None
+        self._notifications_refused_logged = False
         self._last_heartbeat: Optional[float] = None
         self._heartbeats_sent = 0
 
@@ -594,6 +595,14 @@ class HTTPShipper:
 
                 if notifications:
                     logger.info(f"Received {len(notifications)} alert notification(s)")
+            elif response.status_code == 403 and not self._notifications_refused_logged:
+                # Said once, not every 30 seconds: logs still ship with this key.
+                self._notifications_refused_logged = True
+                logger.warning(
+                    "Alert pop-ups are off: the server refused this API key for them. "
+                    "Pop-ups need a key with both 'send logs' (write) and 'read' and no index "
+                    "limit (Settings > API Keys). Sending logs is not affected."
+                )
 
         except Exception as e:
             logger.debug(f"Notification check failed: {e}")

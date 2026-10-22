@@ -169,7 +169,7 @@ const ADMIN_CHANGES = new Set([
   'POST /dashboards/kl-none/share', 'PUT /dashboards/kl-none/share', 'DELETE /dashboards/kl-none/share', // public link
 ]);
 
-/** Ingest routes an index-scoped key may not use (alert pop-ups carry any index). */
+/** Ingest routes (alert pop-ups, which carry any index) that need an unscoped key with read as well as write. */
 const INGEST_UNSCOPED = new Set(['GET /ingest/notifications', 'POST /ingest/notifications/kl-none/ack']);
 
 const isPublic = (r: RouteRow) => PUBLIC.has(key(r));
@@ -334,9 +334,9 @@ describe('route table', () => {
 });
 
 describe('key lock: every route x every kind of key', () => {
-  it('an ingest-only key can only ingest', async () => {
+  it('an ingest-only key can only ingest (alert pop-ups need read as well)', async () => {
     const m = await refusedMap(K.ingest);
-    expect(mismatches(m, (r) => !isPublic(r) && !isIngest(r))).toEqual([]);
+    expect(mismatches(m, (r) => !isPublic(r) && (!isIngest(r) || INGEST_UNSCOPED.has(key(r))))).toEqual([]);
   });
 
   it('an index-scoped ingest key can only ingest (and gets no alert pop-ups)', async () => {
@@ -1052,8 +1052,43 @@ describe('round 3: the gate fails closed, and alert pop-ups need an unscoped key
     expect((await request(realSrv).post('/ingest/notifications/kl-none/ack').set(scoped).send({})).status).toBe(403);
     expect((await request(realSrv).get('/INGEST//notifications?hostname=kl-host').set(scoped)).status).toBe(403);
     expect((await request(realSrv).get('/ingest/notifications?hostname=kl-host').set('X-API-Key', K.ingestScoped)).status).toBe(403);
-    const b = await request(realSrv).get('/ingest/notifications?hostname=kl-host').set('Authorization', `ApiKey ${K.ingest}`);
+    // An unscoped key with send logs AND read (the desktop agent's key) gets them.
+    const b = await request(realSrv).get('/ingest/notifications?hostname=kl-host').set('Authorization', `ApiKey ${K.search}`);
     expect(b.status, JSON.stringify(b.body)).toBe(200);
+  });
+
+  it('round 6: a send-logs-only key cannot read or clear alert pop-ups; a read-only key cannot clear them', async () => {
+    const { createAgentNotification } = await import('../db/sqlite-notifications.js');
+    const n = createAgentNotification('kl-r6 secret alert', 'kl-r6 pop-up title', 'kl-r6 rows from another index', { hostname: 'kl-r6-host', severity: 'high' });
+    const writeOnly = { Authorization: `ApiKey ${K.ingest}` };
+    const g = await request(realSrv).get('/ingest/notifications?hostname=kl-r6-host').set(writeOnly);
+    expect(g.status, JSON.stringify(g.body)).toBe(403);
+    expect(g.body.message).toMatch(/together with 'read'/);
+    expect(g.text).not.toContain('kl-r6 pop-up title');
+    expect((await request(realSrv).get('/ingest/notifications?hostname=kl-r6-host').set('X-API-Key', K.ingest)).status).toBe(403);
+    expect((await request(realSrv).post(`/ingest/notifications/${n.id}/ack`).set(writeOnly).send({ hostname: 'kl-r6-host' })).status).toBe(403);
+    // read without write: may not clear a pop-up either (it is the agent's job)
+    expect((await request(realSrv).post(`/ingest/notifications/${n.id}/ack`).set({ Authorization: `ApiKey ${K.read}` }).send({ hostname: 'kl-r6-host' })).status).toBe(403);
+    // still pending: nothing above cleared it, and the agent's key (write + read) sees it, then clears it
+    const agent = { Authorization: `ApiKey ${K.search}` };
+    const seen = await request(realSrv).get('/ingest/notifications?hostname=kl-r6-host').set(agent);
+    expect(seen.status).toBe(200);
+    expect(seen.body.notifications.map((x: { id: string }) => x.id)).toContain(n.id);
+    expect((await request(realSrv).post(`/ingest/notifications/${n.id}/ack`).set(agent).send({ hostname: 'kl-r6-host' })).status).toBe(200);
+    const after = await request(realSrv).get('/ingest/notifications?hostname=kl-r6-host').set(agent);
+    expect(after.body.notifications.map((x: { id: string }) => x.id)).not.toContain(n.id);
+    // the rule itself, path tricks included
+    for (const [m, p] of [['GET', '/ingest/notifications'], ['GET', '/INGEST//notifications/'], ['POST', '/ingest/notifications/x/ack']] as const) {
+      expect(decideApiKey(m, p, ['write'], null).allowed, `${m} ${p} write`).toBe(false);
+      expect(decideApiKey(m, p, ['read'], null).allowed, `${m} ${p} read`).toBe(false);
+      expect(decideApiKey(m, p, ['write', 'read'], ['money']).allowed, `${m} ${p} scoped`).toBe(false);
+      expect(decideApiKey(m, p, ['write', 'read'], null).allowed, `${m} ${p} write+read`).toBe(true);
+      expect(decideApiKey(m, p, ['write', 'search'], null).allowed, `${m} ${p} write+search`).toBe(true);
+      expect(decideApiKey(m, p, ['*'], null).allowed, `${m} ${p} star`).toBe(true);
+    }
+    // sending logs still needs only write
+    expect(decideApiKey('POST', '/ingest/http', ['write'], null).allowed).toBe(true);
+    expect(decideApiKey('POST', '/ingest/agent', ['write'], ['money']).allowed).toBe(true);
   });
 });
 

@@ -21,7 +21,7 @@ vi.mock('../db/backend.js', () => ({
 }));
 
 import { evaluateAlert, webhookHost } from './alerts.js';
-import { logAlertAction, actionLogSummary, shutdown } from './internal-logger.js';
+import { logAlertAction, actionLogSummary, logReportGenerated, reportErrorSummary, shutdown } from './internal-logger.js';
 import { createAlert, getAlertHistory } from '../db/sqlite-alerts.js';
 import { setSystemSetting } from '../db/sqlite-settings.js';
 
@@ -34,6 +34,7 @@ let base = '';
 beforeAll(async () => {
   setSystemSetting('internal_logging_enabled', 'true');
   setSystemSetting('internal_logging_level', 'INFO');
+  setSystemSetting('internal_logging_categories', 'auth,alert,system,report');
   srv = http.createServer((_req, res) => {
     res.statusCode = 200;
     res.end('ok');
@@ -108,5 +109,45 @@ describe('alert action results carry no secrets', () => {
     expect(text).toContain('Webhook failed');
     expect(text).not.toContain('kl-secret');
     expect(actionLogSummary('webhook', true, 'Webhook POST hooks.example.com - 200')).toBe('Webhook POST hooks.example.com - 200');
+  });
+});
+
+describe('scheduled report runs carry no addresses or mail-server text (key lock round 6)', () => {
+  it('a sent report logs how many people, never who', async () => {
+    mockInsertLogs.mockClear();
+    logReportGenerated({ report_id: 'r1', report_name: 'kl weekly', duration_ms: 5, row_count: 3,
+      sent_to: ['kl-secret-a@example.com', 'kl-secret-b@example.org'] });
+    await shutdown();
+    const sent = logged().filter((e) => e.action === 'report.sent');
+    expect(sent.length).toBe(1);
+    const text = JSON.stringify(sent);
+    expect(text).toContain('sent to 2 recipients');
+    expect(text).toContain('recipient_count');
+    expect(text).not.toContain('kl-secret');
+    expect(text).not.toContain('@example');
+  });
+
+  it('a failed report logs the kind of failure only, not the mail server reply', async () => {
+    mockInsertLogs.mockClear();
+    logReportGenerated({ report_id: 'r2', report_name: 'kl broken', duration_ms: 5, row_count: 0,
+      error: 'Invalid login: 535 5.7.8 kl-secret-user@example.com password rejected' });
+    logReportGenerated({ report_id: 'r3', report_name: 'kl bounced', duration_ms: 5, row_count: 0,
+      error: 'Can not send mail to kl-secret-c@example.net: mailbox full' });
+    await shutdown();
+    const failed = logged().filter((e) => e.action === 'report.error');
+    expect(failed.length).toBe(2);
+    const text = JSON.stringify(failed);
+    expect(text).toContain('Invalid login');
+    expect(text).toContain('Can not send mail to [hidden]');
+    expect(text).not.toContain('kl-secret');
+    expect(text).not.toContain('535');
+    expect(text).not.toContain('mailbox full');
+  });
+
+  it('reportErrorSummary keeps the first clause and hides any address in it', () => {
+    expect(reportErrorSummary('Connection timeout')).toBe('Connection timeout');
+    expect(reportErrorSummary('Message failed: 550 no such user x@y.z')).toBe('Message failed');
+    expect(reportErrorSummary('Mail to a@b.c bounced')).toBe('Mail to [hidden] bounced');
+    expect(reportErrorSummary(': only detail')).toBe('Report failed');
   });
 });

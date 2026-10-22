@@ -655,7 +655,19 @@ export function logAlertAction(data: {
 // ============================================
 
 /**
- * Log report generation
+ * A report error, safe for the lognog-internal index (any API key that can
+ * read can search it): only the part before the first ':' (an SMTP error such
+ * as "550 5.1.1 <boss@example.com>: Recipient address rejected" names the
+ * address after it), and any e-mail address left is replaced by [hidden].
+ */
+export function reportErrorSummary(error: string): string {
+  return String(error).split(':')[0].replace(/[^\s<>"'(),;]+@[^\s<>"'(),;]+/g, '[hidden]').trim() || 'Report failed';
+}
+
+/**
+ * Log report generation. Recipients are never written to the index (only how
+ * many there were): report e-mail addresses are hidden from keys without
+ * 'admin' on /reports, so they must not be searchable either.
  */
 export function logReportGenerated(data: {
   report_id: string;
@@ -669,13 +681,15 @@ export function logReportGenerated(data: {
                               data.sent_to?.length ? 'report.sent' :
                               'report.generated';
 
+  const error = data.error ? reportErrorSummary(data.error) : undefined;
+  const sentCount = data.sent_to?.length ?? 0;
   logInternalEvent({
     action,
     category: 'report',
-    message: data.error
-      ? `Report "${data.report_name}" failed: ${data.error}`
-      : data.sent_to?.length
-        ? `Report "${data.report_name}" sent to ${data.sent_to.join(', ')}`
+    message: error
+      ? `Report "${data.report_name}" failed: ${error}`
+      : sentCount
+        ? `Report "${data.report_name}" sent to ${sentCount} recipient${sentCount === 1 ? '' : 's'}`
         : `Report "${data.report_name}" generated (${data.row_count} rows)`,
     success: !data.error,
     duration_ms: data.duration_ms,
@@ -683,8 +697,8 @@ export function logReportGenerated(data: {
       report_id: data.report_id,
       report_name: data.report_name,
       row_count: data.row_count,
-      recipients: data.sent_to,
-      ...(data.error && { error: data.error }),
+      recipient_count: sentCount,
+      ...(error && { error }),
     },
     severity: data.error ? SEVERITY.ERROR : SEVERITY.INFO,
   }).catch(() => {});

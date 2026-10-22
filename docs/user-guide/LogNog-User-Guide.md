@@ -612,7 +612,7 @@ Then confirm with `search index=my-app` on the Search page.
 **Example use case:** Connect My App by creating a key named "MyApp Production," setting `X-Index: my-app`, and posting batched events — they appear under Data Sources within seconds.
 **Inputs:** An API key and log payloads.
 **Outputs:** Searchable logs, an auto-created index, and a listed source.
-**Admin notes:** A key gets one or more permissions: **send logs** (`write`, the ingest endpoints only), **read**, **alerts:write**, **dashboards:write** and **admin** (admin users only); see **Settings → API Keys** below. In production the `/api/ingest` path is exempt from the Cloudflare Access login so machines can ship logs.
+**Admin notes:** A key gets one or more permissions: **send logs** (`write`, the ingest endpoints only; the desktop agent's alert pop-ups need read as well), **read**, **alerts:write**, **dashboards:write** and **admin** (admin users only); see **Settings → API Keys** below. In production the `/api/ingest` path is exempt from the Cloudflare Access login so machines can ship logs.
 **Limitations:** A key limited to some indexes may only send logs to those indexes and read them through search, stats and the agent API; every other route refuses it. Syslog is unauthenticated by design (network-restricted).
 
 ![data-sources](/guide-screenshots/data-sources.jpg)
@@ -626,7 +626,7 @@ Then confirm with `search index=my-app` on the Search page.
 **Installing & first run:**
 1. Download and run the agent (Windows `lognog-in.exe --install`; Linux/macOS packages also available).
 2. It appears in the **system tray**. Right-click → **Configure**.
-3. Enter your **LogNog server URL** and paste an **API key** (from Settings → API Keys).
+3. Enter your **LogNog server URL** and paste an **API key** (from Settings → API Keys). A **send logs** key ships logs. For **alert pop-ups** on this machine the key also needs **read** and no index limit (pop-ups carry alert text from every index, and read lets the key search every log, so only on machines you trust); without it the agent writes one "Alert pop-ups are off" warning to its log and keeps shipping.
 4. Add **Watch Paths** (files/globs to ship) and, optionally, **FIM paths** to monitor for changes.
 5. Save. The tray icon shows **🟢 connected**, **🟡 buffering** (server unreachable, will retry), or **🔴 error**.
 
@@ -777,7 +777,7 @@ On a brand-new LogNog with no accounts, the login page becomes a **Setup** scree
 
 ### API keys (Settings → API Keys, also under Account)
 
-- **Create a key:** click **New Key**, give it a descriptive **Name** (e.g. "LogNog In Agent – Server 1"), choose **Permissions**, and optionally an **expiry in days**. The permissions: **send logs** (`write`, the ingest endpoints only), **read** (search, dashboards, alerts list), **alerts:write** (create and change alerts) and **dashboards:write** (create and change dashboards), the last two only together with read (the form ticks read for you), and **admin** (everything except sending logs, offered only to admin users). A key never does more than its owner: an `admin` key made by a non-admin user does not count as admin. Alerts with a script action, public share links and the MCP stream need an admin key. The Add-Data-Source wizard makes a send-logs (`write`) key.
+- **Create a key:** click **New Key**, give it a descriptive **Name** (e.g. "LogNog In Agent – Server 1"), choose **Permissions**, and optionally an **expiry in days**. The permissions: **send logs** (`write`, the ingest endpoints only), **read** (search, dashboards, alerts list), **alerts:write** (create and change alerts) and **dashboards:write** (create and change dashboards), the last two only together with read (the form ticks read for you), and **admin** (everything except sending logs, offered only to admin users). A key never does more than its owner: an `admin` key made by a non-admin user does not count as admin. Alerts with a script action, public share links and the MCP stream need an admin key. The Add-Data-Source wizard makes a send-logs (`write`) key. The desktop agent's alert pop-ups carry alert text from every index, so they need a key with **send logs and read** and no index limit; with a send-logs-only key the agent still ships logs, writes one "Alert pop-ups are off" warning to its log, and shows no pop-ups.
 - **Save it immediately:** the full key is shown **once** in a banner (*"This is the only time you'll see this key"*) with a copy button. After that only a masked prefix is visible.
 - **Restrict by index (optional):** keys can be scoped to some indexes: such a key can only send logs to those indexes and read them through search, stats and the agent API (plus `/auth/me` and report generation); other routes answer 403.
 - **What a key without admin sees:** secret settings show as `[hidden]`: alert action settings (webhook URLs and headers, Apprise URLs, e-mail addresses, script commands), the action messages in alert history, and a scheduled report's recipients and run messages. Signed-in users and admin keys see them as before.
@@ -807,7 +807,7 @@ Enable geographic IP lookups (country/city/ASN) using MaxMind GeoLite2 databases
 
 ### System (Settings → System)
 
-Read-only system info (API version, Node version, uptime, memory) and configuration (retention, rate limit, max batch size). Also configure **Internal Logging** — LogNog logging its own operations to the `lognog-internal` index (toggle self-monitoring, set a minimum level and categories). Query it with `search app_name="lognog-internal"`.
+Read-only system info (API version, Node version, uptime, memory) and configuration (retention, rate limit, max batch size). Also configure **Internal Logging** — LogNog logging its own operations to the `lognog-internal` index (toggle self-monitoring, set a minimum level and categories). Query it with `search app_name="lognog-internal"`. It is off by default. Anyone who can search sees it (every signed-in user and every API key with read), and sign-in events carry user names and IP addresses; alert actions and scheduled reports are logged without secrets (webhook host only, no e-mail addresses, no script output or mail-server replies).
 
 ### AI (Settings → AI)
 

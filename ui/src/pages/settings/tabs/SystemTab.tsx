@@ -178,6 +178,9 @@ export default function SystemTab() {
                     <p className="text-xs text-nog-500 dark:text-nog-400">
                       Log LogNog's own events to the database
                     </p>
+                    <p className="text-xs text-nog-500 dark:text-nog-400">
+                      Anyone who can search sees them (every signed-in user and every API key with read), and sign-in events carry user names and IP addresses.
+                    </p>
                   </div>
                   <button
                     onClick={() => saveInternalLogging({ enabled: !internalLogging.enabled })}

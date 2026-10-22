@@ -7,7 +7,8 @@
  * here; they are still authorized by role exactly as before.
  *
  * Permission strings a key can hold:
- *   'write'             send logs (the ingest endpoints). Nothing else.
+ *   'write'             send logs (the ingest endpoints). Nothing else. (The desktop
+ *                       agent's alert pop-ups need 'write' together with 'read'.)
  *   'read' / 'search'   read: search, stats, dashboards, alerts list...
  *   'alerts:write'      create / change / delete alerts and silences (only together with 'read')
  *   'dashboards:write'  create / change / delete dashboards and panels (only together with 'read')
@@ -210,11 +211,17 @@ export function apiKeyNeed(method: string, rawPath: string): KeyNeed {
 }
 
 /**
- * Ingest routes a SCOPED key may not use: the alert pop-ups the desktop agent
- * polls carry alert text and log lines from whatever index the alert watched,
- * and nothing ties a pop-up to an index, so only an unscoped key gets them.
+ * The alert pop-ups the desktop agent polls (GET /ingest/notifications) and
+ * clears (POST /ingest/notifications/:id/ack) carry alert text and log lines
+ * from whatever index the alert watched, and nothing ties a pop-up to an
+ * index. So they need 'write' (the agent's own permission) together with
+ * 'read' (it is reading alert results), and a SCOPED key may not use them.
+ * Without the 'read' rule a send-logs-only key, which may be pasted into a
+ * browser app or a log drain, could read every alert's text and quietly clear
+ * the pop-ups before the real agent shows them.
  */
 const INGEST_UNSCOPED_ONLY: readonly RegExp[] = [/^\/ingest\/notifications(\/|$)/];
+const INGEST_NEEDS_READ: readonly RegExp[] = INGEST_UNSCOPED_ONLY;
 
 export function isScopeAwareRead(rawPath: string): boolean {
   const path = normalizeKeyPath(rawPath);
@@ -243,6 +250,14 @@ export function decideApiKey(
       reason: WRITES_THAT_READ.has(need)
         ? `This API key can't do that: it needs the '${need}' permission together with 'read' (it has ${JSON.stringify(permissions ?? [])}).`
         : `This API key can't do that: it needs the '${need}' permission (it has ${JSON.stringify(permissions ?? [])}).`,
+    };
+  }
+
+  if (need === 'ingest' && INGEST_NEEDS_READ.some((re) => re.test(normalizeKeyPath(path))) && !keyHasNeed(permissions, 'read')) {
+    return {
+      allowed: false,
+      need,
+      reason: `This API key can't do that: alert pop-ups carry alert text from every index, so fetching or clearing them needs the 'write' permission together with 'read' (it has ${JSON.stringify(permissions ?? [])}).`,
     };
   }
 

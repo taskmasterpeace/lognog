@@ -578,6 +578,11 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
                   <p className="text-sm text-honey-600 dark:text-honey-400">
                     Download the LogNog In agent for Windows or Linux to collect log files and Windows Event Logs.
                   </p>
+                  <p className="text-sm text-honey-600 dark:text-honey-400 mt-2">
+                    The key made here sends logs only. For alert pop-ups on that machine, make a key in Settings &rarr; API Keys
+                    with <strong>send logs</strong> and <strong>read</strong> and no index limit. Read lets the key search every log,
+                    so only use it on machines you trust.
+                  </p>
                   <a
                     href="https://github.com/machinekinglabs/lognog/releases"
                     target="_blank"
