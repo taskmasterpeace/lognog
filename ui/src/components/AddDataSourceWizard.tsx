@@ -262,7 +262,8 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
     setCreatingKey(true);
     setCreateKeyError(null);
     try {
-      const result = await createApiKey(newApiKeyName.trim(), ['write']) // 'write' = send logs only; there is no 'ingest' permission (an ['ingest'] key could not send logs);
+      // 'write' = send logs only; there is no 'ingest' permission (an ['ingest'] key could not send logs).
+      const result = await createApiKey(newApiKeyName.trim(), ['write']);
       setSelectedApiKey(result.apiKey);
       setShowCreateKey(false);
       setNewApiKeyName('');
@@ -454,13 +455,13 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
                 </label>
                 {showCreateKey ? (
                   <div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <input
                       type="text"
                       value={newApiKeyName}
                       onChange={(e) => setNewApiKeyName(e.target.value)}
                       placeholder="Enter key name (e.g., my-app)"
-                      className="flex-1 px-4 py-2 border border-nog-200 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-900 text-nog-900 dark:text-nog-100"
+                      className="flex-1 min-w-0 basis-48 px-4 py-2 border border-nog-200 dark:border-nog-600 rounded-lg bg-white dark:bg-nog-900 text-nog-900 dark:text-nog-100"
                     />
                     <button
                       onClick={handleCreateApiKey}
