@@ -60,7 +60,7 @@ import type { AddressInfo } from 'node:net';
 import supertest from 'supertest';
 import http from 'node:http';
 import { createUser, createApiKey, generateTokenPair, getApiKeys, validateApiKey, deactivateUser, updateUserRole, revokeApiKey } from '../auth/auth.js';
-import { apiKeyGate, resetDenialRowsForTest, DENIAL_ROW_WINDOW_MS } from '../auth/api-key-gate.js';
+import { apiKeyGate, resetDenialRowsForTest, DENIAL_ROW_WINDOW_MS, refuseAdminOnly } from '../auth/api-key-gate.js';
 import { requireAdmin } from '../auth/middleware.js';
 import { apiKeyNeed, decideApiKey, keyHasNeed, effectiveKeyPermissions, permissionsAboveOwner, permissionNameForNeed } from '../auth/key-policy.js';
 import { mayUseScripts } from '../auth/alert-action-guard.js';
@@ -2109,6 +2109,8 @@ describe('round 8: every key refusal answers and is audited the same way, wherev
     a.post('/ro', authenticate, denyReadonly, ok as never);
     a.get('/admin', authenticate, requireAdmin, ok as never);
     a.get('/role', authenticate, requireRole('admin'), ok as never);
+    // an admin-only lock inside a route (script alerts, shared objects, someone else's object)
+    a.put('/lock', authenticate, (req, res) => refuseAdminOnly(req as never, res as never, 'kl r8 only an admin may change this'));
     const b = Router();
     b.post('/same', authenticate, requirePermission('write'), ok as never);
     const bare = express();
@@ -2144,6 +2146,14 @@ describe('round 8: every key refusal answers and is audited the same way, wherev
       // requireRole: refused for its owner's role, not its own permissions
       const role = await request(base).get('/kl-bare-a/role').set(h(plainKey));
       expect(refusal(role, 'requireRole')).toEqual({ needed: 'admin', missing: [] });
+      // refuseAdminOnly: 'missing' is what the key lacks, so an admin key refused by a route's
+      // own lock is told nothing is missing, and a read key is told 'admin'
+      const lockRead = await request(base).put('/kl-bare-a/lock').set(h(K.read)).send({});
+      expect(refusal(lockRead, 'refuseAdminOnly read key')).toEqual({ needed: 'admin', missing: ['admin'] });
+      expect(lockRead.body.error).toBe('kl r8 only an admin may change this');
+      expect(lockRead.body.message).toBe('kl r8 only an admin may change this');
+      expect(refusal(await request(base).put('/kl-bare-a/lock').set(h(K.admin)).send({}), 'refuseAdminOnly admin key'))
+        .toEqual({ needed: 'admin', missing: [] });
       // authenticateIngestion (OTLP style): a key without 'write'
       expect(refusal(await request(base).post('/kl-bare-ingest').set(h(K.read)).send({}), 'authenticateIngestion'))
         .toEqual({ needed: 'write', missing: ['write'] });
@@ -2156,6 +2166,8 @@ describe('round 8: every key refusal answers and is audited the same way, wherev
         'permission_denied /kl-bare-a/ro',
         'admin_access_denied /kl-bare-a/admin',
         'access_denied /kl-bare-a/role',
+        'apikey_permission_denied /kl-bare-a/lock',
+        'apikey_permission_denied /kl-bare-a/lock',
         'ingestion_permission_denied /kl-bare-ingest',
         'permission_denied /kl-bare-b/same',
       ]);
@@ -2166,6 +2178,9 @@ describe('round 8: every key refusal answers and is audited the same way, wherev
       expect((await request(base).post('/kl-bare-a/ro').set(roJwt).send({})).body).toEqual({ error: 'Read-only account cannot perform write operations' });
       expect((await request(base).get('/kl-bare-a/admin').set(roJwt)).body).toEqual({ error: 'Admin access required' });
       expect((await request(base).get('/kl-bare-a/role').set(roJwt)).body).toEqual({ error: 'Insufficient permissions' });
+      const lockJwt = await request(base).put('/kl-bare-a/lock').set(roJwt).send({});
+      expect(lockJwt.status).toBe(403);
+      expect(lockJwt.body).toEqual({ error: 'kl r8 only an admin may change this' });
       expect((await request(base).get('/kl-bare-a/admin').set('Authorization', `Bearer ${jwtAdmin}`)).status).toBe(299);
     } finally {
       srv.closeAllConnections();
