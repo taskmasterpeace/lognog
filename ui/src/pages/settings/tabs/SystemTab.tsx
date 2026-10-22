@@ -172,20 +172,23 @@ export default function SystemTab() {
             ) : internalLogging ? (
               <div className="space-y-4">
                 {/* Enable/Disable Toggle */}
-                <div className="flex items-center justify-between py-2">
-                  <div>
+                <div className="flex items-center justify-between gap-4 py-2">
+                  <div className="min-w-0">
                     <span className="text-nog-700 dark:text-nog-300">Self-Monitoring</span>
                     <p className="text-xs text-nog-500 dark:text-nog-400">
                       Log LogNog's own events to the database
                     </p>
-                    <p className="text-xs text-nog-500 dark:text-nog-400">
+                    <p className="text-xs text-nog-500 dark:text-nog-400 mt-1">
                       Anyone who can search sees them (every signed-in user and every API key with read), and sign-in events carry user names and IP addresses.
                     </p>
                   </div>
                   <button
                     onClick={() => saveInternalLogging({ enabled: !internalLogging.enabled })}
                     disabled={internalLoggingSaving}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    role="switch"
+                    aria-checked={internalLogging.enabled}
+                    aria-label="Self-Monitoring"
+                    className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${
                       internalLogging.enabled
                         ? 'bg-honey-500'
                         : 'bg-nog-300 dark:bg-nog-600'
