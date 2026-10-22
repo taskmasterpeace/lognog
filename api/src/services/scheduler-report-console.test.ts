@@ -12,7 +12,7 @@ const h = vi.hoisted(() => {
   process.env.SMTP_HOST = 'smtp.kl-test.invalid';
   process.env.SMTP_USER = 'kl-test-user';
   process.env.SMTP_PASS = 'kl-test-pass';
-  return { sendMail: vi.fn(), executeDSLQuery: vi.fn() };
+  return { sendMail: vi.fn(), executeDSLQuery: vi.fn(), renderError: null as Error | null };
 });
 
 vi.mock('nodemailer', () => ({
@@ -26,6 +26,17 @@ vi.mock('../db/backend.js', () => ({
   isLiteMode: () => true,
   insertLogs: vi.fn().mockResolvedValue(undefined),
 }));
+
+vi.mock('./report-renderer.js', async (importOriginal) => {
+  const real = await importOriginal<typeof import('./report-renderer.js')>();
+  return {
+    ...real,
+    renderHtml: (...args: Parameters<typeof real.renderHtml>) => {
+      if (h.renderError) throw h.renderError;
+      return real.renderHtml(...args);
+    },
+  };
+});
 
 import { triggerReport } from './scheduler.js';
 import { listReportRuns } from '../db/sqlite-report-runs.js';
@@ -54,6 +65,7 @@ beforeEach(() => {
   vi.spyOn(console, 'warn').mockImplementation(capture);
   h.sendMail.mockReset();
   h.executeDSLQuery.mockReset();
+  h.renderError = null;
   h.executeDSLQuery.mockResolvedValue({ sql: 'SELECT 1', results: [{ hostname: 'web-01', count: 3 }] });
 });
 afterEach(() => {
@@ -140,5 +152,18 @@ describe('scheduler report console lines (key lock round 7)', () => {
     const id = createReport();
     expect((await triggerReport(id)).status).toBe('error');
     expect(lines.join('\n')).toContain('Error running report "Console check": Could not reach the mail server');
+  });
+
+  it('a failure while building the e-mail is "Report failed", even when its text sounds like the mail server (round 8)', async () => {
+    const raw = 'template helper timed out on socket reading password field';
+    h.renderError = new Error(raw);
+    const id = createReport();
+    const result = await triggerReport(id);
+    expect(result.status).toBe('error');
+    expect(h.sendMail).not.toHaveBeenCalled();
+    const text = lines.join('\n');
+    expect(text).toContain('Error running report "Console check": Report failed (details in the run history)');
+    expect(text).not.toMatch(/mail server/i);
+    expect(listReportRuns(id)[0].reason).toBe(raw);
   });
 });

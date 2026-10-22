@@ -60,7 +60,7 @@ import type { AddressInfo } from 'node:net';
 import supertest from 'supertest';
 import http from 'node:http';
 import { createUser, createApiKey, generateTokenPair, getApiKeys, validateApiKey, deactivateUser, updateUserRole, revokeApiKey } from '../auth/auth.js';
-import { apiKeyGate, resetDenialRowsForTest, DENIAL_ROW_WINDOW_MS, refuseAdminOnly } from '../auth/api-key-gate.js';
+import { apiKeyGate, resetDenialRowsForTest, DENIAL_ROW_WINDOW_MS, refuseAdminOnly, refuseApiKey } from '../auth/api-key-gate.js';
 import { requireAdmin } from '../auth/middleware.js';
 import { apiKeyNeed, decideApiKey, keyHasNeed, effectiveKeyPermissions, permissionsAboveOwner, permissionNameForNeed } from '../auth/key-policy.js';
 import { mayUseScripts } from '../auth/alert-action-guard.js';
@@ -2111,6 +2111,12 @@ describe('round 8: every key refusal answers and is audited the same way, wherev
     a.get('/role', authenticate, requireRole('admin'), ok as never);
     // an admin-only lock inside a route (script alerts, shared objects, someone else's object)
     a.put('/lock', authenticate, (req, res) => refuseAdminOnly(req as never, res as never, 'kl r8 only an admin may change this'));
+    // requirePermission for a permission that also needs 'read' (alerts:write)
+    a.post('/alerts-write', authenticate, requirePermission('alerts:write'), ok as never);
+    // two kinds of refusal on one route (the kind is chosen by a test header)
+    a.post('/two-kinds', authenticate, (req, res) => refuseApiKey(req as never, res as never, {
+      event: String(req.headers['x-kl-event']), needed: 'admin', missing: ['admin'], message: 'kl r8 two kinds',
+    }));
     const b = Router();
     b.post('/same', authenticate, requirePermission('write'), ok as never);
     const bare = express();
@@ -2139,6 +2145,10 @@ describe('round 8: every key refusal answers and is audited the same way, wherev
       expect(roRes.body.error).toBe('Read-only account cannot perform write operations');
       expect(typeof roRef.needed).toBe('string');
       expect(roRef.missing).toEqual([roRef.needed]);
+      // requirePermission names everything the key lacks, not just the permission it asked for
+      const dashOnly = await newKey('kl r8 dashboards only', ['dashboards:write']);
+      expect(refusal(await request(base).post('/kl-bare-a/alerts-write').set(h(dashOnly)).send({}), 'requirePermission alerts:write'))
+        .toEqual({ needed: 'alerts:write', missing: ['alerts:write', 'read'] });
       // requireAdmin: a key whose owner is not an admin
       const adm = await request(base).get('/kl-bare-a/admin').set(h(plainKey));
       expect(refusal(adm, 'requireAdmin role')).toEqual({ needed: 'admin', missing: ['admin'] });
@@ -2164,6 +2174,7 @@ describe('round 8: every key refusal answers and is audited the same way, wherev
       expect(rows.map((r) => `${r.event} ${r.path}`)).toEqual([
         'permission_denied /kl-bare-a/same',
         'permission_denied /kl-bare-a/ro',
+        'permission_denied /kl-bare-a/alerts-write',
         'admin_access_denied /kl-bare-a/admin',
         'access_denied /kl-bare-a/role',
         'apikey_permission_denied /kl-bare-a/lock',
@@ -2171,6 +2182,14 @@ describe('round 8: every key refusal answers and is audited the same way, wherev
         'ingestion_permission_denied /kl-bare-ingest',
         'permission_denied /kl-bare-b/same',
       ]);
+
+      // the event type is part of the dedupe: same key, address, method and path, two kinds -> two rows;
+      // a repeat of either kind adds none
+      const ua2 = 'kl-r8-two-kinds';
+      const two = (ev: string) => request(base).post('/kl-bare-a/two-kinds')
+        .set({ Authorization: `ApiKey ${K.read}`, 'User-Agent': ua2, 'X-KL-Event': ev }).send({});
+      for (const ev of ['kl_r8_kind_one', 'kl_r8_kind_two', 'kl_r8_kind_one', 'kl_r8_kind_two']) expect((await two(ev)).status).toBe(403);
+      expect(rowsFor(ua2).map((r) => r.event_type)).toEqual(['kl_r8_kind_one', 'kl_r8_kind_two']);
 
       // browser sessions: the same bodies as before the lock
       const roJwt = { Authorization: `Bearer ${(await generateTokenPair(ro)).accessToken}` };
