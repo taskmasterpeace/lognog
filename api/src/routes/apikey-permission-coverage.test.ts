@@ -1941,4 +1941,39 @@ describe('round 7: repeated refusals, the permission names, and pop-ups per read
     await ask(T0 + 61 * 60 * 1000);
     expect(getAgentNotification(later.id)).toBeUndefined();
   });
+
+  it('signed-in users are readers of their own, and a host name that is not one string counts as no host', async () => {
+    const { createAgentNotification } = await import('../db/sqlite-notifications.js');
+    const u1 = await createUser('kl-r7-reader-1', 'kl-r7-reader-1@example.invalid', 'kl-r7-reader-pass-1', 'user');
+    const u2 = await createUser('kl-r7-reader-2', 'kl-r7-reader-2@example.invalid', 'kl-r7-reader-pass-2', 'user');
+    const J1 = { Authorization: `Bearer ${(await generateTokenPair(u1)).accessToken}` };
+    const J2 = { Authorization: `Bearer ${(await generateTokenPair(u2)).accessToken}` };
+    const K1 = { Authorization: `ApiKey ${await newKey('kl-r7 reader key', ['write', 'read'])}` };
+    const all = createAgentNotification('kl-r7 alert', 'kl-r7 users', 'm', {});
+    const hostOnly = createAgentNotification('kl-r7 alert', 'kl-r7 host only', 'm', { hostname: 'kl-r7-u' });
+    const ids = async (h: Record<string, string>, query: string) => {
+      const res = await request(realSrv).get(`/ingest/notifications${query}`).set(h);
+      expect(res.status, res.text).toBe(200);
+      return (res.body.notifications as Array<{ id: string }>).map((x) => x.id);
+    };
+    expect(await ids(J1, '?hostname=kl-r7-u')).toEqual(expect.arrayContaining([all.id, hostOnly.id]));
+    expect((await request(realSrv).post(`/ingest/notifications/${all.id}/ack`).set(J1).send({ hostname: 'kl-r7-u' })).status).toBe(200);
+    expect(await ids(J1, '?hostname=kl-r7-u')).not.toContain(all.id);
+    // another signed-in user, and a key, still have it
+    expect(await ids(J2, '?hostname=kl-r7-u')).toContain(all.id);
+    expect(await ids(K1, '?hostname=kl-r7-u')).toContain(all.id);
+
+    // ?hostname=a&hostname=b (an array) is no host: pop-ups for every host only, no error
+    const two = await ids(J2, '?hostname=kl-r7-u&hostname=kl-r7-v');
+    expect(two).toContain(all.id);
+    expect(two).not.toContain(hostOnly.id);
+    // a host name sent as a list in the ack body is no host either: a pop-up for one host can't be cleared with it
+    expect((await request(realSrv).post(`/ingest/notifications/${hostOnly.id}/ack`).set(J2).send({ hostname: ['kl-r7-u'] })).status).toBe(404);
+    expect(await ids(J2, '?hostname=kl-r7-u')).toContain(hostOnly.id);
+    // ...and clearing a pop-up for every host with it clears it for "no host" only
+    const all2 = createAgentNotification('kl-r7 alert', 'kl-r7 users two', 'm', {});
+    expect((await request(realSrv).post(`/ingest/notifications/${all2.id}/ack`).set(J2).send({ hostname: ['kl-r7-u'] })).status).toBe(200);
+    expect(await ids(J2, '')).not.toContain(all2.id);
+    expect(await ids(J2, '?hostname=kl-r7-u')).toContain(all2.id);
+  });
 });
