@@ -47,12 +47,19 @@ vi.mock('../auth/api-key-cache.js', async (importOriginal) => {
   };
 });
 
+// createMCPServer is the real one, wrapped so a test can see which user the
+// MCP stream route hands it (whatever MCP creates belongs to that user).
+vi.mock('../mcp/server.js', async (importOriginal) => {
+  const real = await importOriginal<typeof import('../mcp/server.js')>();
+  return { ...real, createMCPServer: vi.fn(real.createMCPServer) };
+});
+
 import express, { Express, Router } from 'express';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import supertest from 'supertest';
 import http from 'node:http';
-import { createUser, createApiKey, generateTokenPair, getApiKeys, validateApiKey, deactivateUser, updateUserRole } from '../auth/auth.js';
+import { createUser, createApiKey, generateTokenPair, getApiKeys, validateApiKey, deactivateUser, updateUserRole, revokeApiKey } from '../auth/auth.js';
 import { apiKeyGate } from '../auth/api-key-gate.js';
 import { requireAdmin } from '../auth/middleware.js';
 import { apiKeyNeed, decideApiKey, keyHasNeed, effectiveKeyPermissions, permissionsAboveOwner } from '../auth/key-policy.js';
@@ -1371,5 +1378,209 @@ describe('round 3, last gaps: run-all, read-only accounts, switched-off owners, 
     expect((await request(realSrv).get(`/search/saved/${id}`).set(jwt())).status).toBe(200);
     expect((await request(realSrv).put(`/search/saved/${id}`).set(c.uaJ).send({ name: 'kl legacy 2', query: 'search *' })).status).toBe(200);
     expect((await request(realSrv).delete(`/search/saved/${id}`).set(jwt())).status).toBe(204);
+  });
+});
+
+describe('round 4: saved-search lists, private dashboards, strict key permissions, provisioned sources, the MCP stream', () => {
+  const jwt = () => ({ Authorization: `Bearer ${jwtAdmin}` });
+  const c = {} as { userA: string; uaJ: Record<string, string>; ubJ: Record<string, string> };
+  beforeAll(async () => {
+    const a = await createUser('kl-user8', 'kl-user8@example.invalid', 'kl-user8-test-pass-1', 'user');
+    const b = await createUser('kl-user9', 'kl-user9@example.invalid', 'kl-user9-test-pass-1', 'user');
+    c.userA = a.id;
+    c.uaJ = { Authorization: `Bearer ${(await generateTokenPair(a)).accessToken}` };
+    c.ubJ = { Authorization: `Bearer ${(await generateTokenPair(b)).accessToken}` };
+  });
+
+  it("the saved-search list, tags and folders show only the caller's own and shared searches, and need sign-in", async () => {
+    for (const path of ['/saved-searches', '/saved-searches/tags', '/saved-searches/folders']) {
+      expect((await request(realSrv).get(path)).status, `${path} without credentials`).toBe(401);
+    }
+    const priv = await request(realSrv).post('/saved-searches').set(c.uaJ)
+      .send({ name: 'kl-r4-private-name', query: 'search kl-none', tags: ['kl-r4-secret-tag'], folder: 'kl-r4-secret-folder' });
+    expect(priv.status, priv.text).toBe(201);
+    const shared = await request(realSrv).post('/saved-searches').set(c.uaJ)
+      .send({ name: 'kl-r4-shared-name', query: 'search kl-none', is_shared: true, tags: ['kl-r4-shared-tag'], folder: 'kl-r4-shared-folder' });
+    expect(shared.status, shared.text).toBe(201);
+
+    const view = async (h: Record<string, string>) => {
+      const list = await request(realSrv).get('/saved-searches').set(h);
+      const tags = await request(realSrv).get('/saved-searches/tags').set(h);
+      const folders = await request(realSrv).get('/saved-searches/folders').set(h);
+      for (const r of [list, tags, folders]) expect(r.status, r.text).toBe(200);
+      return {
+        ids: (list.body.searches as Array<{ id: string }>).map((x) => x.id),
+        text: JSON.stringify(list.body),
+        tags: tags.body.tags as string[],
+        folders: folders.body.folders as string[],
+      };
+    };
+    const b = await view(c.ubJ);
+    expect(b.ids).not.toContain(priv.body.id);
+    expect(b.text).not.toContain('kl-r4-private-name');
+    expect(b.tags).not.toContain('kl-r4-secret-tag');
+    expect(b.folders).not.toContain('kl-r4-secret-folder');
+    expect(b.ids).toContain(shared.body.id);
+    expect(b.tags).toContain('kl-r4-shared-tag');
+    expect(b.folders).toContain('kl-r4-shared-folder');
+    // asking for someone else's searches by owner id does not get around it
+    const byOwner = await request(realSrv).get(`/saved-searches?owner_id=${c.userA}`).set(c.ubJ);
+    expect((byOwner.body.searches as Array<{ id: string }>).map((x) => x.id)).not.toContain(priv.body.id);
+
+    for (const h of [c.uaJ, jwt()]) {
+      const v = await view(h);
+      expect(v.ids).toContain(priv.body.id);
+      expect(v.ids).toContain(shared.body.id);
+      expect(v.tags).toContain('kl-r4-secret-tag');
+      expect(v.folders).toContain('kl-r4-secret-folder');
+    }
+  });
+
+  it("export, duplicate and every change of someone else's private dashboard answer 404, as its GET does", async () => {
+    const d = await request(realSrv).post('/dashboards').set(c.uaJ).send({ name: 'kl-r4 private board' });
+    expect(d.status, d.text).toBe(201);
+    expect((await request(realSrv).put(`/dashboards/${d.body.id}`).set(c.uaJ).send({ visibility: 'private' })).status).toBe(200);
+    const id = d.body.id as string;
+    const tries: Array<[string, Awaited<ReturnType<ReturnType<typeof request>['get']>>]> = [
+      ['GET', await request(realSrv).get(`/dashboards/${id}`).set(c.ubJ)],
+      ['export', await request(realSrv).post(`/dashboards/${id}/export`).set(c.ubJ).send({})],
+      ['duplicate', await request(realSrv).post(`/dashboards/${id}/duplicate`).set(c.ubJ).send({})],
+      ['PUT', await request(realSrv).put(`/dashboards/${id}`).set(c.ubJ).send({ name: 'kl taken' })],
+      ['DELETE', await request(realSrv).delete(`/dashboards/${id}`).set(c.ubJ)],
+      ['add panel', await request(realSrv).post(`/dashboards/${id}/panels`).set(c.ubJ).send({ title: 'kl p', query: 'search *' })],
+    ];
+    for (const [label, t] of tries) {
+      expect(t.status, `${label}: ${t.status} ${t.text}`).toBe(404);
+      expect(t.text).not.toContain('kl-r4 private board');
+    }
+    expect(getDashboard(id)?.name).toBe('kl-r4 private board');
+    // a shared (non-private) dashboard of someone else still says 403 to a change
+    const pub = await request(realSrv).post('/dashboards').set(c.uaJ).send({ name: 'kl-r4 team board' });
+    expect((await request(realSrv).put(`/dashboards/${pub.body.id}`).set(c.ubJ).send({ name: 'kl taken' })).status).toBe(403);
+    // the owner and an administrator still can export it
+    expect((await request(realSrv).post(`/dashboards/${id}/export`).set(c.uaJ).send({})).status).toBe(200);
+    expect((await request(realSrv).post(`/dashboards/${id}/export`).set(jwt()).send({})).status).toBe(200);
+  });
+
+  it('a new key only takes permissions LogNog knows (no typos, no empty list)', async () => {
+    for (const permissions of [['read '], [], ['ingest'], ['READ'], ['read', 'alerts'], ['admin:*']]) {
+      const res = await request(realSrv).post('/auth/api-keys').set(jwt()).send({ name: 'kl-r4 junk', permissions });
+      expect(res.status, `${JSON.stringify(permissions)}: ${res.status} ${String(res.body?.error ?? '')}`).toBe(400);
+      expect(res.text).not.toContain('lnog_');
+    }
+    expect((await getApiKeys((await validateApiKey(K.admin))!.userId)).some((k) => k.name === 'kl-r4 junk')).toBe(false);
+    // the known ones still work (and leaving it out still makes a read key)
+    for (const permissions of [['write'], ['read', 'alerts:write'], undefined]) {
+      const res = await request(realSrv).post('/auth/api-keys').set(jwt()).send({ name: 'kl-r4 good', permissions });
+      expect(res.status, `${JSON.stringify(permissions)}: ${res.status} ${String(res.body?.error ?? '')}`).toBe(201);
+    }
+  });
+
+  it('a source set up by the wizard gives its heartbeat alert and dashboard to the admin who set it up', async () => {
+    const adminId = (await validateApiKey(K.admin))!.userId;
+    const res = await request(realSrv).post('/sources/provision').set(jwt()).send({ name: 'kl-r4 source', index: 'kl-r4-idx' });
+    // never put the response text in the message: it carries the new key
+    expect(res.status, String(res.body?.error ?? '')).toBe(200);
+    expect(getAlert(res.body.alertId)?.owner_id).toBe(adminId);
+    expect(getDashboard(res.body.dashboardId)?.owner_id).toBe(adminId);
+    // so another (non-admin) user cannot change them
+    expect((await request(realSrv).put(`/alerts/${res.body.alertId}`).set(c.ubJ).send({ name: 'kl taken' })).status).toBe(403);
+    expect((await request(realSrv).put(`/dashboards/${res.body.dashboardId}`).set(c.ubJ).send({ name: 'kl taken' })).status).toBe(403);
+    // and a non-admin cannot set up a source at all
+    expect((await request(realSrv).post('/sources/provision').set(c.uaJ).send({ name: 'kl-r4 nope', index: 'kl-r4-nope' })).status).toBe(403);
+  });
+
+  /** Opens GET /mcp/sse and resolves once the response headers arrive. */
+  const openSse = (apiKey: string) =>
+    new Promise<{ status: number; body: () => string; ended: Promise<void>; close: () => void }>((resolve, reject) => {
+      const port = Number(new URL(realSrv).port);
+      const req = http.request({ host: '::1', port, path: '/mcp/sse', method: 'GET', headers: { 'X-API-Key': apiKey } }, (res) => {
+        let text = '';
+        let done!: () => void;
+        const ended = new Promise<void>((r) => { done = r; });
+        res.on('data', (chunk) => { text += String(chunk); });
+        res.on('end', () => done());
+        res.on('close', () => done());
+        res.on('error', () => done());
+        resolve({ status: res.statusCode ?? 0, body: () => text, ended, close: () => req.destroy() });
+      });
+      req.on('error', reject);
+      req.end();
+    });
+
+  it("the MCP stream route hands the key's own user to the MCP server", async () => {
+    const owner = await createUser('kl-mcp-owner', 'kl-mcp-owner@example.invalid', 'kl-mcp-owner-test-pass-1', 'admin');
+    const ownerKey = (await createApiKey(owner.id, 'kl mcp owner admin', ['admin'])).apiKey;
+    const made = vi.mocked(createMCPServer);
+    made.mockClear();
+    const sse = await openSse(ownerKey);
+    try {
+      expect(sse.status).toBe(200);
+      await vi.waitFor(() => expect(made).toHaveBeenCalled(), { timeout: 5_000 });
+      expect(made.mock.calls.map((call) => call[0])).toEqual([owner.id]);
+    } finally {
+      sse.close();
+    }
+    // a read key never gets that far
+    made.mockClear();
+    const refused = await openSse(K.read);
+    refused.close();
+    expect(refused.status).toBe(403);
+    expect(made).not.toHaveBeenCalled();
+  });
+
+  it('an open MCP stream is cut on the next message once its key is revoked or its owner demoted', async () => {
+    // loaded here so that, run against code without the re-check, only this test fails
+    const { mcpKeyStillAllowed } = (await import('./mcp.js')) as unknown as { mcpKeyStillAllowed: (k: string) => Promise<boolean> };
+    expect(typeof mcpKeyStillAllowed).toBe('function');
+    expect(await mcpKeyStillAllowed(K.admin)).toBe(true);
+    expect(await mcpKeyStillAllowed(K.star)).toBe(true);
+    for (const k of [K.read, K.alerts, K.dashboards, K.ingest, 'lnog_kl_not_a_key_00000000000000000000000000000']) {
+      expect(await mcpKeyStillAllowed(k)).toBe(false);
+    }
+    const scopedAdmin = (await createApiKey((await validateApiKey(K.admin))!.userId, 'kl mcp scoped admin', ['admin'], undefined, ['money'])).apiKey;
+    expect(await mcpKeyStillAllowed(scopedAdmin)).toBe(false);
+
+    const logs = vi.spyOn(console, 'log');
+    try {
+      for (const how of ['revoke', 'demote', 'switch off'] as const) {
+        const u = await createUser(`kl-mcp-${how.replace(' ', '-')}`, `kl-mcp-${how.replace(' ', '-')}@example.invalid`, 'kl-mcp-test-pass-1', 'admin');
+        const made = await createApiKey(u.id, `kl mcp ${how}`, ['admin']);
+        expect(await mcpKeyStillAllowed(made.apiKey)).toBe(true);
+        const sse = await openSse(made.apiKey);
+        try {
+          expect(sse.status).toBe(200);
+          let connectionId = '';
+          await vi.waitFor(() => {
+            const line = logs.mock.calls.map((call) => String(call[0]))
+              .find((l) => l.startsWith('[MCP] SSE client connected:') && l.includes(`(userId: ${u.id})`));
+            expect(line).toBeTruthy();
+            connectionId = /connected: (\S+)/.exec(line!)![1];
+          }, { timeout: 5_000 });
+
+          if (how === 'revoke') expect(revokeApiKey(made.keyData.id, u.id)).toBe(true);
+          if (how === 'demote') updateUserRole(u.id, 'user');
+          if (how === 'switch off') deactivateUser(u.id);
+          expect(await mcpKeyStillAllowed(made.apiKey)).toBe(false);
+
+          const msg = { jsonrpc: '2.0', id: 1, method: 'ping' };
+          const cut = await request(realSrv).post(`/mcp/messages?connectionId=${encodeURIComponent(connectionId)}`)
+            .set('Content-Type', 'application/json').send(msg);
+          expect(cut.status, `${how}: ${cut.status} ${cut.text}`).toBe(403);
+          // the connection is gone and the stream is closed
+          const again = await request(realSrv).post(`/mcp/messages?connectionId=${encodeURIComponent(connectionId)}`)
+            .set('Content-Type', 'application/json').send(msg);
+          expect(again.status, `${how}: ${again.status}`).toBe(404);
+          await Promise.race([
+            sse.ended,
+            new Promise((_, rej) => setTimeout(() => rej(new Error(`${how}: the SSE stream stayed open`)), 5_000)),
+          ]);
+        } finally {
+          sse.close();
+        }
+      }
+    } finally {
+      logs.mockRestore();
+    }
   });
 });

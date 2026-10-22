@@ -612,8 +612,8 @@ Then confirm with `search index=my-app` on the Search page.
 **Example use case:** Connect My App by creating a key named "MyApp Production," setting `X-Index: my-app`, and posting batched events — they appear under Data Sources within seconds.
 **Inputs:** An API key and log payloads.
 **Outputs:** Searchable logs, an auto-created index, and a listed source.
-**Admin notes:** Keys can be scoped to `ingest`/`read`/`write`/`admin`; in production the `/api/ingest` path is exempt from the Cloudflare Access login so machines can ship logs.
-**Limitations:** Only the HTTP ingest path currently enforces per-key **index scoping**; syslog is unauthenticated by design (network-restricted).
+**Admin notes:** A key gets one or more permissions: **send logs** (`write`, the ingest endpoints only), **read**, **alerts:write**, **dashboards:write** and **admin** (admin users only); see **Settings → API Keys** below. In production the `/api/ingest` path is exempt from the Cloudflare Access login so machines can ship logs.
+**Limitations:** A key limited to some indexes may only send logs to those indexes and read them through search, stats and the agent API; every other route refuses it. Syslog is unauthenticated by design (network-restricted).
 
 ![data-sources](/guide-screenshots/data-sources.jpg)
 
@@ -754,8 +754,8 @@ search source_type=windows_events event_id=7045 | table timestamp computer messa
 
 **Inputs:** Natural-language prompts in Claude Desktop.
 **Outputs:** Searches, dashboards, alerts, silences, ingested logs, and reports created in LogNog.
-**Admin notes:** MCP respects LogNog roles (admin full, user read + create, readonly read); all traffic stays on your network.
-**Limitations:** Requires Claude Desktop and a valid API key; SSE connections can drop behind aggressive reverse proxies.
+**Admin notes:** MCP needs an **admin** key that is not limited to some indexes, made by an admin user (other keys get 403), and what it creates belongs to that key's owner. All traffic stays on your network.
+**Limitations:** Requires Claude Desktop and an admin API key; SSE connections can drop behind aggressive reverse proxies. Known issue (older than the key lock): the `/mcp/sse` stream does not finish opening (the server tries to send its headers twice) and `/mcp/messages` looks for a `connectionId` the client never gets, so Claude Desktop cannot call LogNog tools yet.
 
 ---
 

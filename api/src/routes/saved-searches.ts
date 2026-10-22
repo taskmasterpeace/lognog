@@ -9,8 +9,6 @@ import {
   updateSavedSearchCache,
   updateSavedSearchError,
   clearSavedSearchCache,
-  getSavedSearchTags,
-  getSavedSearchFolders,
   duplicateSavedSearch,
   SavedSearchFilters,
 } from '../db/sqlite.js';
@@ -19,7 +17,7 @@ import { createAlert } from '../db/sqlite.js';
 import { createDashboardPanel, getDashboard } from '../db/sqlite.js';
 import { getSQLiteDB } from '../db/sqlite.js';
 import { v4 as uuidv4 } from 'uuid';
-import { authenticate, optionalAuth, denyReadonly } from '../auth/middleware.js';
+import { authenticate, denyReadonly } from '../auth/middleware.js';
 import { scriptActionForbidden, restoreHiddenActions } from '../auth/alert-action-guard.js';
 import { requireOwnerOrAdmin, sharedDashboardLocked } from '../auth/ownership.js';
 import { reseedSavedSearches } from '../data/seed-templates.js';
@@ -149,7 +147,18 @@ function parseTimeRange(timeRange: string): number {
 }
 
 // GET /saved-searches - List all saved searches with filters
-router.get('/', optionalAuth, (req: Request, res: Response) => {
+// A list only shows what GET /:id would open for this caller: an admin sees
+// every saved search, anyone else their own and shared ones (the same rule as
+// enforceOwnership with allowShared). It was optionalAuth with no filter, so
+// a caller who was not even signed in got every private search's name and query.
+function mayListSavedSearch(req: Request, s: SavedSearch): boolean {
+  if (!req.user) return false;
+  if (req.user.role === 'admin') return true;
+  if (s.owner_id && s.owner_id === req.user.id) return true;
+  return !!s.is_shared;
+}
+
+router.get('/', authenticate, (req: Request, res: Response) => {
   try {
     const filters: SavedSearchFilters = {};
 
@@ -176,7 +185,7 @@ router.get('/', optionalAuth, (req: Request, res: Response) => {
       filters.folder = req.query.folder as string;
     }
 
-    const searches = getSavedSearches(filters);
+    const searches = getSavedSearches(filters).filter((s) => mayListSavedSearch(req, s));
 
     // Parse JSON fields and add computed properties
     const enrichedSearches = searches.map(s => ({
@@ -199,9 +208,14 @@ router.get('/', optionalAuth, (req: Request, res: Response) => {
 });
 
 // GET /saved-searches/tags - Get all unique tags
-router.get('/tags', optionalAuth, (_req: Request, res: Response) => {
+router.get('/tags', authenticate, (req: Request, res: Response) => {
   try {
-    const tags = getSavedSearchTags();
+    // Only the tags of saved searches this caller may list.
+    const tagSet = new Set<string>();
+    for (const row of getSavedSearches({}).filter((r) => mayListSavedSearch(req, r))) {
+      for (const t of JSON.parse(row.tags || '[]') as string[]) tagSet.add(t);
+    }
+    const tags = Array.from(tagSet).sort();
     return res.json({ tags });
   } catch (error) {
     console.error('Error fetching tags:', error);
@@ -210,9 +224,12 @@ router.get('/tags', optionalAuth, (_req: Request, res: Response) => {
 });
 
 // GET /saved-searches/folders - Get all unique folders
-router.get('/folders', optionalAuth, (_req: Request, res: Response) => {
+router.get('/folders', authenticate, (req: Request, res: Response) => {
   try {
-    const folders = getSavedSearchFolders();
+    // Only the folders of saved searches this caller may list.
+    const folders = Array.from(new Set(getSavedSearches({})
+      .filter((r) => mayListSavedSearch(req, r) && r.folder)
+      .map((r) => r.folder as string))).sort();
     return res.json({ folders });
   } catch (error) {
     console.error('Error fetching folders:', error);

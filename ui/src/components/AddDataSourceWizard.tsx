@@ -165,6 +165,8 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
   const [sourceType, setSourceType] = useState<SourceType>(null);
   const [selectedApiKey, setSelectedApiKey] = useState<string>('');
   const [newApiKeyName, setNewApiKeyName] = useState('');
+  // Why the server refused to make the key (e.g. a read-only account cannot make a send-logs key).
+  const [createKeyError, setCreateKeyError] = useState<string | null>(null);
   const [showCreateKey, setShowCreateKey] = useState(false);
   const [creatingKey, setCreatingKey] = useState(false);
   const [indexName, setIndexName] = useState('');
@@ -258,6 +260,7 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
     if (!newApiKeyName.trim()) return;
 
     setCreatingKey(true);
+    setCreateKeyError(null);
     try {
       const result = await createApiKey(newApiKeyName.trim(), ['write']) // 'write' = send logs only; there is no 'ingest' permission (an ['ingest'] key could not send logs);
       setSelectedApiKey(result.apiKey);
@@ -266,6 +269,7 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
       refetchApiKeys();
     } catch (error) {
       console.error('Failed to create API key:', error);
+      setCreateKeyError(error instanceof Error && error.message ? error.message : 'Could not create the API key');
     } finally {
       setCreatingKey(false);
     }
@@ -449,6 +453,7 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
                   API Key
                 </label>
                 {showCreateKey ? (
+                  <div>
                   <div className="flex items-center gap-2">
                     <input
                       type="text"
@@ -470,11 +475,18 @@ export default function AddDataSourceWizard({ isOpen, onClose, onComplete }: Add
                       Create
                     </button>
                     <button
-                      onClick={() => setShowCreateKey(false)}
+                      onClick={() => { setShowCreateKey(false); setCreateKeyError(null); }}
                       className="px-4 py-2 text-nog-600 hover:text-nog-900 dark:text-nog-400 dark:hover:text-nog-100"
                     >
                       Cancel
                     </button>
+                  </div>
+                  {createKeyError && (
+                    <p role="alert" className="mt-2 flex items-center gap-1 text-sm text-red-600 dark:text-red-400">
+                      <AlertCircle className="w-4 h-4 flex-shrink-0" />
+                      {createKeyError}
+                    </p>
+                  )}
                   </div>
                 ) : selectedApiKey ? (
                   <div className="flex items-center gap-2">

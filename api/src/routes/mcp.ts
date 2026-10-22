@@ -14,8 +14,25 @@ import { decideApiKey } from '../auth/key-policy.js';
 
 const router = Router();
 
-// Store active SSE connections
-const activeConnections: Map<string, SSEServerTransport> = new Map();
+// Store active SSE connections, each with the key that opened it.
+interface McpConnection {
+  transport: SSEServerTransport;
+  apiKey: string;
+  stream: Response; // the open SSE response, ended when the key is refused
+}
+const activeConnections: Map<string, McpConnection> = new Map();
+
+/**
+ * May this key (still) use the MCP stream? The same check GET /sse makes: the key
+ * exists, is not revoked or expired, its owner is still active, and it is an
+ * unscoped admin key whose owner is still an admin. POST /messages asks again on
+ * every message, so revoking the key or demoting its owner stops an open stream.
+ */
+export async function mcpKeyStillAllowed(apiKey: string): Promise<boolean> {
+  const keyInfo = await validateApiKey(apiKey);
+  if (!keyInfo) return false;
+  return decideApiKey('GET', '/mcp/sse', keyInfo.permissions, keyInfo.allowedIndexes).allowed;
+}
 
 /**
  * GET /mcp/sse
@@ -60,7 +77,7 @@ router.get('/sse', async (req: Request, res: Response) => {
 
     // Create SSE transport
     const transport = new SSEServerTransport('/mcp/messages', res);
-    activeConnections.set(connectionId, transport);
+    activeConnections.set(connectionId, { transport, apiKey, stream: res });
 
     console.log(`[MCP] SSE client connected: ${connectionId} (userId: ${keyInfo.userId})`);
 
@@ -94,14 +111,26 @@ router.post('/messages', async (req: Request, res: Response) => {
     return;
   }
 
-  const transport = activeConnections.get(connectionId);
-  if (!transport) {
+  const connection = activeConnections.get(connectionId);
+  if (!connection) {
     res.status(404).json({ error: 'Connection not found' });
     return;
   }
 
   try {
-    await transport.handlePostMessage(req, res);
+    // The key lock: re-check the key that opened the stream on every message.
+    if (!(await mcpKeyStillAllowed(connection.apiKey))) {
+      activeConnections.delete(connectionId);
+      try {
+        await connection.transport.close();
+      } catch {
+        /* already closed */
+      }
+      if (!connection.stream.writableEnded) connection.stream.end();
+      res.status(403).json({ error: 'API key lacks required permissions', message: 'The API key that opened this MCP stream was revoked, expired or no longer has admin rights.' });
+      return;
+    }
+    await connection.transport.handlePostMessage(req, res);
   } catch (error) {
     console.error('[MCP] Message handling error:', error);
     res.status(500).json({ error: 'Failed to process message' });

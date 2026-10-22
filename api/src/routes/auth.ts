@@ -26,7 +26,7 @@ import {
 } from '../db/sqlite.js';
 import { authenticate, requireAdmin, requireRole, rateLimit, accountLockoutRemaining, recordLoginFailure, clearLoginFailures } from '../auth/middleware.js';
 import { logAuthLogin, logAuthLoginFailed, logAuthLogout, logAuthSetup } from '../services/internal-logger.js';
-import { ADMIN_ONLY_KEY_PERMISSIONS, permissionsAboveOwner } from '../auth/key-policy.js';
+import { ADMIN_ONLY_KEY_PERMISSIONS, KNOWN_KEY_PERMISSIONS, permissionsAboveOwner } from '../auth/key-policy.js';
 
 const router = Router();
 
@@ -49,7 +49,9 @@ const changePasswordSchema = z.object({
 
 const createApiKeySchema = z.object({
   name: z.string().min(1).max(100),
-  permissions: z.array(z.string()).optional(),
+  // Only permissions the key lock understands, and at least one: a typo such as
+  // 'read ' or an empty list used to make a key that silently did nothing.
+  permissions: z.array(z.enum(KNOWN_KEY_PERMISSIONS)).min(1).optional(),
   expiresInDays: z.number().positive().optional(),
   allowed_indexes: z.array(z.string()).optional(),
 });

@@ -105,6 +105,10 @@ export default function AccountTab() {
 
   const handleCreateKey = async () => {
     if (!newKeyName.trim()) return;
+    if (newKeyPermissions.length === 0) {
+      setError('Pick at least one permission for the key');
+      return;
+    }
 
     setCreatingKey(true);
     setError(null);
@@ -446,7 +450,8 @@ export default function AccountTab() {
               <div className="flex gap-2">
                 <button
                   onClick={handleCreateKey}
-                  disabled={creatingKey || !newKeyName.trim()}
+                  disabled={creatingKey || !newKeyName.trim() || newKeyPermissions.length === 0}
+                  title={newKeyPermissions.length === 0 ? 'Pick at least one permission' : undefined}
                   className="flex items-center gap-2 px-4 py-2 bg-honey-500 hover:bg-honey-600 text-nog-900 font-medium rounded-lg transition-colors disabled:opacity-50"
                 >
                   {creatingKey ? (

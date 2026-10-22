@@ -260,11 +260,13 @@ router.use('/:id', (req: Request, res: Response, next) => {
     }
     return next();
   }
-  if (!requireOwnerOrAdmin(req, res, dashboard, 'dashboard')) return;
-  // A private dashboard with no owner (legacy) passes the owner check above;
-  // it still answers 404, as its GET does, to anyone who may not open it
-  // (e.g. POST /:id/export or /:id/duplicate would hand over its panels).
+  // A private dashboard the caller may not open answers 404 to every method,
+  // as its GET does, BEFORE the owner check: a 403 "only the owner can change
+  // it" would confirm that someone else's private dashboard exists. This also
+  // covers a private dashboard with no owner (legacy), which the owner check
+  // lets through (e.g. POST /:id/export or /:id/duplicate would hand over its panels).
   if (!canReadDashboard(req, dashboard)) return res.status(404).json({ error: 'Dashboard not found' });
+  if (!requireOwnerOrAdmin(req, res, dashboard, 'dashboard')) return;
   // A dashboard shared by public link runs its panel queries for anyone, on
   // every index. An API key without 'admin' may not change what it shows.
   const sharedLock = sharedDashboardLocked(req, dashboard);

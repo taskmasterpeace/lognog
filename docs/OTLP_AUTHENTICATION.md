@@ -74,7 +74,7 @@ API keys used for OTLP ingestion must have the `write` permission. Keys with onl
 3. Click **Create API Key**
 4. Fill in the details:
    - **Name**: "OTLP Ingestion" (or any descriptive name)
-   - **Permissions**: Select `write` (or `*` for all permissions)
+   - **Permissions**: Select **send logs** (`write`). That is all an ingestion key needs. (`*`, all permissions, can only be given by an admin user and is not offered in the form.)
    - **Expiration**: Optional (e.g., 365 days)
 5. Click **Create**
 6. Copy the API key immediately (it won't be shown again)
@@ -335,7 +335,7 @@ Always set expiration dates for API keys:
 
 ### 6. Restrict Permissions
 
-Only grant `write` permission for ingestion keys. Avoid using `*` (all permissions) unless necessary.
+Only grant `write` permission for ingestion keys. Avoid `*` (all permissions); only an admin user can make such a key, and a key never does more than its owner.
 
 ## Audit Logging
 
@@ -375,7 +375,7 @@ Events logged:
 
 **Cause**: API key only has `read` permission
 
-**Solution**: Create a new API key with `write` or `*` permission
+**Solution**: Create a new API key with `write` (send logs) permission. An admin user's `*` key also works.
 
 ### Error: "User account is disabled"
 
