@@ -2,7 +2,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import { getSQLiteDB } from '../db/sqlite.js';
-import { effectiveKeyPermissions } from './key-policy.js';
+import { effectiveKeyPermissions, parseStoredKeyPermissions } from './key-policy.js';
 
 // Environment configuration
 // SECURITY: JWT secrets must be configured via environment variables in production
@@ -526,7 +526,7 @@ export async function validateApiKey(
       return {
         userId: key.user_id,
         keyId: key.id,
-        permissions: effectiveKeyPermissions(JSON.parse(key.permissions), owner?.role),
+        permissions: effectiveKeyPermissions(parseStoredKeyPermissions(key.permissions), owner?.role),
         allowedIndexes,
       };
     }

@@ -8,6 +8,7 @@ import random
 import threading
 import time
 import uuid
+from collections import OrderedDict
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Callable, Optional
@@ -27,6 +28,12 @@ SERVER_MAX_BATCH = 10_000
 # How long to wait before asking for alert pop-ups again after the server
 # refuses this API key for them (403).
 NOTIFICATIONS_REFUSED_RETRY_SECONDS = 3600
+# Pop-up ids this agent has shown since it started (the newest this many).
+# The server keeps a pop-up pending for a host until that host's clear is
+# recorded; when a clear isn't recorded (the ack failed, or one key already
+# cleared the pop-up on the server's limit of hosts), the next check returns
+# it again and the agent clears it again without showing it a second time.
+MAX_SHOWN_NOTIFICATION_IDS = 1000
 
 
 class ConnectionStatus(Enum):
@@ -116,6 +123,7 @@ class HTTPShipper:
         self._notifications_refused_for: Optional[tuple[str, str]] = None
         self._last_heartbeat: Optional[float] = None
         self._heartbeats_sent = 0
+        self._shown_notification_ids: "OrderedDict[str, None]" = OrderedDict()
 
     def update_config(self, config: Config) -> None:
         """Use settings saved in the agent's settings window.
@@ -626,13 +634,23 @@ class HTTPShipper:
                 data = response.json()
                 notifications = data.get("notifications", [])
 
+                # Pop-ups still pending are the newest in the memory, so a
+                # new one never pushes out one the server is still returning.
                 for notif in notifications:
-                    # Show notification
-                    self.on_notification(
-                        notif.get("title", "LogNog Alert"),
-                        notif.get("message", ""),
-                        notif.get("severity", "medium"),
-                    )
+                    if notif.get("id") in self._shown_notification_ids:
+                        self._shown_notification_ids.move_to_end(notif["id"])
+                for notif in notifications:
+                    notif_id = notif.get("id")
+                    # Show each pop-up once per run: one returned again
+                    # (its clear was not recorded) is only cleared again.
+                    if notif_id is None or notif_id not in self._shown_notification_ids:
+                        self.on_notification(
+                            notif.get("title", "LogNog Alert"),
+                            notif.get("message", ""),
+                            notif.get("severity", "medium"),
+                        )
+                        if notif_id is not None:
+                            self._remember_shown_notification(notif_id)
 
                     # Acknowledge delivery
                     await self._ack_notification(client, notif["id"])
@@ -655,6 +673,12 @@ class HTTPShipper:
 
         except Exception as e:
             logger.debug(f"Notification check failed: {e}")
+
+    def _remember_shown_notification(self, notification_id: str) -> None:
+        """Remember a shown pop-up id (the newest MAX_SHOWN_NOTIFICATION_IDS)."""
+        self._shown_notification_ids[notification_id] = None
+        while len(self._shown_notification_ids) > MAX_SHOWN_NOTIFICATION_IDS:
+            self._shown_notification_ids.popitem(last=False)
 
     async def _ack_notification(self, client: httpx.AsyncClient, notification_id: str) -> None:
         """Acknowledge a notification as delivered."""

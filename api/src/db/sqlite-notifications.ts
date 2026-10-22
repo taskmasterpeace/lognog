@@ -86,19 +86,21 @@ function sweepExpiredNotifications(): void {
 
 /**
  * How many host names one reader (one API key or one signed-in user) can
- * clear one pop-up on. Each clear is a row, kept until the pop-up expires; a
- * key that sends made-up host names could otherwise add rows without limit.
- * Once a reader has cleared a pop-up on this many hosts, it counts as cleared
- * for that reader everywhere (it stops showing, and no more rows are added).
+ * have a clear recorded on for one pop-up. Each clear is a row, kept until
+ * the pop-up expires; a key that sends made-up host names could otherwise add
+ * rows without limit. Past this many, a clear is answered but not recorded:
+ * the pop-up stays pending for that host (nothing is hidden), and the desktop
+ * agent shows a pop-up once per run, so it clears it again without showing it
+ * again. Made-up names can't hide a pop-up from a real host: they only use up
+ * rows, and that host's pop-up still comes.
  */
 export const MAX_POPUP_HOSTS_PER_READER = 1000;
 
 /**
  * Pop-ups this reader has not shown yet: not expired, meant for every host
  * or for this reader's host, and not already cleared by this reader on this
- * host (or on MAX_POPUP_HOSTS_PER_READER hosts). A pop-up marked delivered
- * before per-reader delivery existed stays delivered for everyone (no old
- * pop-ups come back after an upgrade).
+ * host. A pop-up marked delivered before per-reader delivery existed stays
+ * delivered for everyone (no old pop-ups come back after an upgrade).
  */
 export function getPendingNotifications(who: NotificationReader): AgentNotification[] {
   const database = getSQLiteDB();
@@ -112,34 +114,32 @@ export function getPendingNotifications(who: NotificationReader): AgentNotificat
       SELECT 1 FROM agent_notification_deliveries d
       WHERE d.notification_id = n.id AND d.reader = ? AND d.hostname = ?
     )
-    AND (
-      SELECT COUNT(*) FROM agent_notification_deliveries d3
-      WHERE d3.notification_id = n.id AND d3.reader = ?
-    ) < ?
     -- Shown before per-reader delivery existed (no delivery rows): done.
     AND NOT (n.delivered = 1 AND NOT EXISTS (
       SELECT 1 FROM agent_notification_deliveries d2 WHERE d2.notification_id = n.id
     ))
     ORDER BY n.created_at ASC
-  `).all(hostname, who.reader, hostname, who.reader, MAX_POPUP_HOSTS_PER_READER) as AgentNotification[];
+  `).all(hostname, who.reader, hostname) as AgentNotification[];
 }
 
 /**
- * Mark a pop-up as shown for this reader on this host only. Returns false
- * (the route answers 404) when the pop-up does not exist, has expired, or is
- * meant for a different host: a reader can only clear what it could fetch.
+ * Mark a pop-up as shown for this reader on this host only. Returns
+ * { found: false } (the route answers 404) when the pop-up does not exist,
+ * has expired, or is meant for a different host: a reader can only clear what
+ * it could fetch. `recorded` says whether this host's clear is kept (false
+ * once the reader has clears on MAX_POPUP_HOSTS_PER_READER other hosts).
  */
-export function markNotificationDelivered(id: string, who: NotificationReader): boolean {
+export function markNotificationDelivered(id: string, who: NotificationReader): { found: boolean; recorded: boolean } {
   const database = getSQLiteDB();
   const hostname = who.hostname ?? '';
   const notification = database.prepare(`
     SELECT * FROM agent_notifications WHERE id = ? AND ${NOT_EXPIRED}
   `).get(id) as AgentNotification | undefined;
-  if (!notification) return false;
-  if (notification.hostname && notification.hostname !== hostname) return false;
+  if (!notification) return { found: false, recorded: false };
+  if (notification.hostname && notification.hostname !== hostname) return { found: false, recorded: false };
 
   // At most MAX_POPUP_HOSTS_PER_READER rows per reader and pop-up: past that
-  // the pop-up already counts as cleared for this reader everywhere.
+  // the clear is not kept, and the pop-up stays pending for this host.
   database.prepare(`
     INSERT OR IGNORE INTO agent_notification_deliveries (notification_id, reader, hostname)
     SELECT ?, ?, ?
@@ -155,7 +155,10 @@ export function markNotificationDelivered(id: string, who: NotificationReader): 
     SET delivered = 1, delivered_at = COALESCE(delivered_at, datetime('now'))
     WHERE id = ?
   `).run(id);
-  return true;
+  const recorded = !!database.prepare(`
+    SELECT 1 FROM agent_notification_deliveries WHERE notification_id = ? AND reader = ? AND hostname = ?
+  `).get(id, who.reader, hostname);
+  return { found: true, recorded };
 }
 
 export function deleteExpiredNotifications(): number {

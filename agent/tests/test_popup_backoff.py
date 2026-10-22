@@ -280,3 +280,89 @@ def test_settings_window_says_what_popups_need(tmp_path):
     gui = (Path(shipper_mod.__file__).parent / "gui.py").read_text(encoding="utf-8")
     assert "Alert pop-ups need an API key with both 'send logs' (write) and 'read', " in gui
     assert "and no index limit. A send-logs-only key still ships logs, but gets no pop-ups." in gui
+
+
+class _PopupClient:
+    """Returns the same pending pop-ups on every check (as the server does
+    while a host's clear is not recorded); records what is cleared."""
+
+    def __init__(self, ids):
+        self.ids = list(ids)
+        self.acks: list[str] = []
+        self.ack_bodies: list[dict] = []
+
+    async def get(self, url, params=None, headers=None, **kwargs):
+        resp = _Resp(200)
+        resp.json = lambda: {"notifications": [
+            {"id": i, "title": f"t-{i}", "message": "m", "severity": "high"} for i in self.ids
+        ]}
+        return resp
+
+    async def post(self, url, json=None, **kwargs):
+        self.acks.append(url.rsplit("/", 2)[-2])
+        self.ack_bodies.append(json or {})
+        return _Resp(200)
+
+
+def _setup_popups(tmp_path: Path, ids):
+    clock = [2_000_000.0]
+    real_time = shipper_mod.time.time
+    shipper_mod.time.time = lambda: clock[0]
+    shown: list[str] = []
+    config = Config(api_key="kl-key", server_url="http://localhost:4000", hostname="kl-host")
+    shipper = HTTPShipper(config, EventBuffer(Path(tmp_path) / "buffer.db"),
+                          on_notification=lambda title, *a: shown.append(title))
+    client = _PopupClient(ids)
+
+    def tick(seconds: float) -> None:
+        clock[0] += seconds
+        asyncio.run(shipper._check_notifications(client))
+
+    def restore() -> None:
+        shipper_mod.time.time = real_time
+
+    return shipper, client, shown, tick, restore
+
+
+def test_a_popup_returned_again_is_cleared_again_but_shown_once(tmp_path):
+    # The server keeps a pop-up pending for this host while its clear is not
+    # recorded (the ack failed, or the key is past the server's host limit).
+    shipper, client, shown, tick, restore = _setup_popups(tmp_path, ["p1"])
+    try:
+        tick(0)
+        assert shown == ["t-p1"]
+        assert client.acks == ["p1"]
+        assert client.ack_bodies == [{"hostname": "kl-host"}]
+        for _ in range(5):
+            tick(31)
+        assert shown == ["t-p1"]
+        assert client.acks == ["p1"] * 6
+        # a new pop-up is still shown
+        client.ids.append("p2")
+        tick(31)
+        assert shown == ["t-p1", "t-p2"]
+        assert client.acks[-2:] == ["p1", "p2"]
+    finally:
+        restore()
+
+
+def test_the_shown_popup_memory_keeps_the_newest_1000(tmp_path):
+    shipper, client, shown, tick, restore = _setup_popups(tmp_path, [])
+    try:
+        assert shipper_mod.MAX_SHOWN_NOTIFICATION_IDS == 1000
+        client.ids = [f"q{i}" for i in range(1001)]
+        tick(0)
+        assert len(shown) == 1001
+        assert len(shipper._shown_notification_ids) == 1000
+        assert "q0" not in shipper._shown_notification_ids
+        assert "q1" in shipper._shown_notification_ids and "q1000" in shipper._shown_notification_ids
+        # only the forgotten (oldest) one is shown again; the ones still
+        # returned stay remembered, so it pushes out one no longer returned
+        client.ids = ["q0", "q1", "q1000"]
+        tick(31)
+        assert shown[1001:] == ["t-q0"]
+        assert "q1" in shipper._shown_notification_ids and "q2" not in shipper._shown_notification_ids
+        tick(31)
+        assert shown[1001:] == ["t-q0"]
+    finally:
+        restore()

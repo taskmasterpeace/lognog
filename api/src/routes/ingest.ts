@@ -520,8 +520,9 @@ function notificationReader(req: Request): string {
 
 /**
  * A host name for alert pop-ups: at most 255 characters (the longest a DNS
- * name can be), so each per-reader delivery row stays small. Characters are
- * counted as people count them (an emoji is one, not two UTF-16 units).
+ * name can be), so each per-reader delivery row stays small. Counted in
+ * Unicode code points, not UTF-16 units: a plain emoji is one, while a flag,
+ * a skin-tone emoji or a joined emoji (a family) is 2 to 7.
  * Anything that is not one string counts as no host.
  */
 const MAX_POPUP_HOSTNAME = 255;
@@ -586,10 +587,13 @@ router.post(
       const host = popupHostname(req.body?.hostname, res);
       if (!host.ok) return;
 
-      const success = markNotificationDelivered(id, { reader: notificationReader(req), hostname: host.hostname });
+      const result = markNotificationDelivered(id, { reader: notificationReader(req), hostname: host.hostname });
 
-      if (success) {
-        res.json({ success: true });
+      if (result.found) {
+        // recorded: false when this key already has clears kept on the most
+        // hosts one key may (MAX_POPUP_HOSTS_PER_READER): the pop-up stays
+        // pending for this host, and the agent shows it once per run.
+        res.json({ success: true, recorded: result.recorded });
       } else {
         res.status(404).json({ error: 'Notification not found' });
       }

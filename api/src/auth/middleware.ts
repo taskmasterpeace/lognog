@@ -254,6 +254,14 @@ function isReadonlyRole(role: string | undefined): boolean {
 }
 
 /**
+ * A permission that changes or sends something (or is admin): a read-only
+ * account's key may never use one. Only 'read' and 'search' are not.
+ */
+function isWriteTypePermission(permission: string): boolean {
+  return permission !== 'read' && permission !== 'search';
+}
+
+/**
  * Map an abstract permission ('read' | 'write' | 'admin') to whether the
  * current user's ROLE grants it. JWT users are authorized by role rather than
  * by an explicit permission list.
@@ -326,9 +334,13 @@ export function requirePermission(...permissions: string[]) {
       }
 
       // ...AND a read-only role must never write, even with a write-scoped key.
-      const needsWrite = permissions.some((p) => p === 'write' || p === 'admin' || p.endsWith(':write'));
-      if (needsWrite && isReadonlyRole(req.user.role)) {
-        refuseReadonlyKey(req, res, permissions[0]);
+      // The key's permissions are already cut to what its owner may do
+      // (effectiveKeyPermissions), so this is a second lock: it refuses only
+      // when every permission the key meets here is a write-type one, so a
+      // read route that also lists 'admin' or '*' still lets a read key read.
+      const met = permissions.filter((p) => keyHasPermission(req.apiKeyPermissions, p));
+      if (isReadonlyRole(req.user.role) && met.every(isWriteTypePermission)) {
+        refuseReadonlyKey(req, res, met[0] ?? permissions[0]);
         return;
       }
     }

@@ -44,9 +44,35 @@ export const KNOWN_KEY_PERMISSIONS = ['read', 'search', 'write', 'alerts:write',
  */
 const WRITES_THAT_READ: ReadonlySet<KeyNeed> = new Set<KeyNeed>(['alerts:write', 'dashboards:write']);
 
+/**
+ * A key's stored permission list, as the key lock reads it. Only a JSON array
+ * whose every item is a string counts; anything else (not JSON, a bare string
+ * such as "*" or "readonly", an object, a list holding a number or null)
+ * means the key has no permissions at all, so a damaged row can never grant
+ * more than it plainly lists (a bare "*" would otherwise spread into ['*'],
+ * and "readonly" would match 'read' by substring).
+ */
+export function parseStoredKeyPermissions(raw: unknown): string[] {
+  let value: unknown = raw;
+  if (typeof raw === 'string') {
+    try {
+      value = JSON.parse(raw);
+    } catch {
+      return [];
+    }
+  }
+  return asPermissionList(value);
+}
+
+/** The permission list itself, or [] when it is not a list of strings. */
+function asPermissionList(value: unknown): string[] {
+  if (!Array.isArray(value) || !value.every((p) => typeof p === 'string')) return [];
+  return [...value];
+}
+
 export function keyHasNeed(permissions: readonly string[] | null | undefined, need: KeyNeed): boolean {
   if (need === 'none') return true;
-  const perms = permissions ?? [];
+  const perms = asPermissionList(permissions);
   if (!KEY_GRANTS[need].some((p) => perms.includes(p))) return false;
   if (WRITES_THAT_READ.has(need) && !KEY_GRANTS.admin.some((p) => perms.includes(p))) {
     return KEY_GRANTS.read.some((p) => perms.includes(p));
@@ -71,8 +97,9 @@ export function keyHasNeed(permissions: readonly string[] | null | undefined, ne
 export const ADMIN_ONLY_KEY_PERMISSIONS: readonly string[] = ['admin', '*'];
 export const READONLY_ROLES: readonly string[] = ['readonly', 'viewer', 'read-only'];
 const READ_PERMISSIONS: readonly string[] = ['read', 'search'];
-export function effectiveKeyPermissions(permissions: readonly string[], ownerRole: string | null | undefined): string[] {
-  if (ownerRole === 'admin') return [...permissions];
+export function effectiveKeyPermissions(stored: readonly string[], ownerRole: string | null | undefined): string[] {
+  const permissions = asPermissionList(stored);
+  if (ownerRole === 'admin') return permissions;
   if (ownerRole && READONLY_ROLES.includes(ownerRole)) {
     const out = permissions.filter((p) => READ_PERMISSIONS.includes(p));
     if (permissions.some((p) => ADMIN_ONLY_KEY_PERMISSIONS.includes(p))) out.push('read');
@@ -260,7 +287,7 @@ function isPopupPath(path: string): boolean {
  * next try, 'read'.
  */
 function missingForNeed(permissions: readonly string[] | null | undefined, need: Exclude<KeyNeed, 'none'>, path: string): string[] {
-  const perms = permissions ?? [];
+  const perms = asPermissionList(permissions);
   const missing: string[] = [];
   if (!KEY_GRANTS[need].some((p) => perms.includes(p))) missing.push(permissionNameForNeed(need));
   const needsRead = WRITES_THAT_READ.has(need) || (need === 'ingest' && isPopupPath(path));
@@ -289,7 +316,7 @@ function needForPermissionName(permission: string): Exclude<KeyNeed, 'none'> | n
  */
 export function missingForPermission(permissions: readonly string[] | null | undefined, permission: string, path: string): string[] {
   const need = needForPermissionName(permission);
-  if (need === null) return (permissions ?? []).includes('*') ? [] : [permission];
+  if (need === null) return asPermissionList(permissions).includes('*') ? [] : [permission];
   return missingForNeed(permissions, need, path);
 }
 
@@ -306,7 +333,7 @@ export function missingForPermission(permissions: readonly string[] | null | und
 export function keyHasPermission(permissions: readonly string[] | null | undefined, permission: string): boolean {
   const need = needForPermissionName(permission);
   if (need !== null) return keyHasNeed(permissions, need);
-  return (permissions ?? []).includes('*');
+  return asPermissionList(permissions).includes('*');
 }
 
 /**

@@ -2510,7 +2510,7 @@ describe('round 9: routes that ask for a permission by name use the gate grants;
     expect(rows[0].details).not.toContain(made.apiKey);
   });
 
-  it('a pop-up host name is counted in characters: 255 emoji are fine, 256 are not', async () => {
+  it('a pop-up host name is counted in Unicode code points: 255 plain emoji are fine, 256 are not; a flag counts as two', async () => {
     const { createAgentNotification } = await import('../db/sqlite-notifications.js');
     const A = { Authorization: `ApiKey ${(await newKey('kl r9 emoji host', ['write', 'read'])).apiKey}` };
     const n = createAgentNotification('kl-r9 alert', 'kl-r9 emoji host', 'm', {});
@@ -2524,9 +2524,13 @@ describe('round 9: routes that ask for a permission by name use the gate grants;
     expect((await request(realSrv).post(`/ingest/notifications/${n.id}/ack`).set(A).send({ hostname: long })).status).toBe(400);
     const hosts = getSQLiteDB().prepare('SELECT hostname FROM agent_notification_deliveries WHERE notification_id = ?').all(n.id) as Array<{ hostname: string }>;
     expect(hosts.map((x) => [...x.hostname].length)).toEqual([255]);
+    // counted in Unicode code points: a flag is two (two regional letters), so 127 flags fit and 128 do not
+    const flag = '\u{1F1FA}\u{1F1F8}';
+    expect((await request(realSrv).get(`/ingest/notifications?hostname=${encodeURIComponent(flag.repeat(127) + 'a')}`).set(A)).status).toBe(200);
+    expect((await request(realSrv).get(`/ingest/notifications?hostname=${encodeURIComponent(flag.repeat(128))}`).set(A)).status).toBe(400);
   });
 
-  it('one reader can clear one pop-up on at most 1000 hosts; then it is cleared for that reader everywhere, not for others', async () => {
+  it('one reader has clears kept on at most 1000 hosts per pop-up; past that a clear is not kept and the pop-up stays pending (never hidden)', async () => {
     const { createAgentNotification, markNotificationDelivered, getPendingNotifications, MAX_POPUP_HOSTS_PER_READER } =
       await import('../db/sqlite-notifications.js');
     expect(MAX_POPUP_HOSTS_PER_READER).toBe(1000);
@@ -2538,24 +2542,108 @@ describe('round 9: routes that ask for a permission by name use the gate grants;
     const count = () => (getSQLiteDB()
       .prepare('SELECT COUNT(*) AS c FROM agent_notification_deliveries WHERE notification_id = ? AND reader = ?')
       .get(n.id, `key:${made.keyData.id}`) as { c: number }).c;
-    const pendingFor = async (hdr: Record<string, string>, host: string) =>
-      ((await request(realSrv).get(`/ingest/notifications?hostname=${host}`).set(hdr)).body.notifications as Array<{ id: string }>)
-        .some((x) => x.id === n.id);
-    for (let i = 0; i < MAX_POPUP_HOSTS_PER_READER - 1; i++) markNotificationDelivered(n.id, who(`kl-r9-host-${i}`));
+    const pendingFor = async (hdr: Record<string, string>, host: string) => {
+      const r = await request(realSrv).get(`/ingest/notifications?hostname=${host}`).set(hdr);
+      expect(r.status, r.text).toBe(200);
+      return (r.body.notifications as Array<{ id: string }>).some((x) => x.id === n.id);
+    };
+    const ack = async (host: string) => {
+      const r = await request(realSrv).post(`/ingest/notifications/${n.id}/ack`).set(A).send({ hostname: host });
+      expect(r.status, r.text).toBe(200);
+      return r.body;
+    };
+    for (let i = 0; i < MAX_POPUP_HOSTS_PER_READER - 1; i++) {
+      expect(markNotificationDelivered(n.id, who(`kl-r9-host-${i}`))).toEqual({ found: true, recorded: true });
+    }
     expect(count()).toBe(MAX_POPUP_HOSTS_PER_READER - 1);
-    // one host short of the cap: still pending on a host it was not cleared on
+    expect(await pendingFor(A, 'kl-r9-fresh-host')).toBe(true);
+    // the 1000th clear, through the route: kept
+    expect(await ack('kl-r9-host-last')).toEqual({ success: true, recorded: true });
+    expect(count()).toBe(MAX_POPUP_HOSTS_PER_READER);
+    expect(await pendingFor(A, 'kl-r9-host-last')).toBe(false);
+    // a host with no clear still gets it: the limit hides nothing
     expect(await pendingFor(A, 'kl-r9-fresh-host')).toBe(true);
     expect(getPendingNotifications(who('kl-r9-fresh-host')).some((x) => x.id === n.id)).toBe(true);
-    // the 1000th clear, through the route
-    expect((await request(realSrv).post(`/ingest/notifications/${n.id}/ack`).set(A).send({ hostname: 'kl-r9-host-last' })).status).toBe(200);
+    // a clear past the limit is answered, not kept, and the pop-up stays pending for that host
+    expect(await ack('kl-r9-one-more')).toEqual({ success: true, recorded: false });
+    expect(markNotificationDelivered(n.id, who('kl-r9-and-another'))).toEqual({ found: true, recorded: false });
     expect(count()).toBe(MAX_POPUP_HOSTS_PER_READER);
-    // now cleared for this reader on every host, and no more rows are added
-    expect(await pendingFor(A, 'kl-r9-fresh-host')).toBe(false);
-    expect((await request(realSrv).post(`/ingest/notifications/${n.id}/ack`).set(A).send({ hostname: 'kl-r9-one-more' })).status).toBe(200);
-    markNotificationDelivered(n.id, who('kl-r9-and-another'));
+    expect(await pendingFor(A, 'kl-r9-one-more')).toBe(true);
+    // hosts whose clear was kept stay cleared, and clearing one again says so
+    expect(await pendingFor(A, 'kl-r9-host-0')).toBe(false);
+    expect(await ack('kl-r9-host-0')).toEqual({ success: true, recorded: true });
     expect(count()).toBe(MAX_POPUP_HOSTS_PER_READER);
-    // another key still sees it
+    // another key still sees it, also on a host this key cleared
     expect(await pendingFor(B, 'kl-r9-host-0')).toBe(true);
+    // a pop-up that is not there is still 404
+    expect(markNotificationDelivered('kl-r9-no-such-popup', who('kl-r9-host-0'))).toEqual({ found: false, recorded: false });
+    expect((await request(realSrv).post('/ingest/notifications/kl-r9-no-such-popup/ack').set(A).send({ hostname: 'x' })).status).toBe(404);
+  });
+
+  it("round 10: a read-only account's read, search or '*' key reads through /agent, and still changes nothing there", async () => {
+    const ro = await createUser('kl-r10-readonly', 'kl-r10-readonly@example.invalid', 'kl-r10-readonly-pass-1', 'readonly');
+    const keys = {
+      read: (await newKey('kl r10 readonly read', ['read'], ro.id)).apiKey,
+      search: (await newKey('kl r10 readonly search', ['search'], ro.id)).apiKey,
+      // made straight in the database, as an older key could be
+      star: (await newKey('kl r10 readonly star', ['*'], ro.id)).apiKey,
+    };
+    const ua = 'kl-r10-readonly-agent';
+    for (const [name, k] of Object.entries(keys)) {
+      const h = { Authorization: `ApiKey ${k}`, 'User-Agent': ua };
+      for (const p of ['/agent', '/agent/summary', '/agent/indexes', '/agent/fields', '/agent/alerts']) {
+        const r = await request(realSrv).get(p).set(h);
+        expect(r.status, `${name} GET ${p}: ${r.text}`).toBe(200);
+      }
+      const s1 = await request(realSrv).post('/agent/search').set(h).send({ query: 'search * | head 1' });
+      expect(s1.status, `${name} POST /agent/search: ${s1.text}`).not.toBe(403);
+      expect(s1.status, `${name} POST /agent/search: ${s1.text}`).toBeLessThan(500);
+      // changes are still refused, naming what the key lacks
+      const w = await request(realSrv).post('/agent/alerts').set(h).send({ name: 'kl r10 ro', search_query: 'search *' });
+      expect(refusal(w, `${name} POST /agent/alerts`)).toEqual({ needed: 'alerts:write', missing: ['alerts:write'] });
+      const d = await request(realSrv).delete('/agent/alerts/kl-none').set(h);
+      expect(d.status, `${name} DELETE /agent/alerts/:id`).toBe(403);
+    }
+    // the reads above left no refusal rows; the changes did
+    const refusedPaths = new Set(rowsFor(ua).map((r) => JSON.parse(r.details).path as string));
+    expect([...refusedPaths].sort()).toEqual(['/agent/alerts', '/agent/alerts/kl-none']);
+  });
+
+  it('round 10: the second read-only lock refuses only when every permission the key meets on the route is a write-type one', async () => {
+    const { requirePermission, authenticate } = await import('../auth/middleware.js');
+    const ro = await createUser('kl-r10-ro-bare', 'kl-r10-ro-bare@example.invalid', 'kl-r10-ro-bare-pass-1', 'readonly');
+    const roRead = (await newKey('kl r10 ro bare read', ['read'], ro.id)).apiKey;
+    const roStar = (await newKey('kl r10 ro bare star', ['*'], ro.id)).apiKey;
+    const a = express();
+    a.use(express.json());
+    const ok = (_req: unknown, res: { status: (n: number) => { json: (b: unknown) => void } }) => res.status(299).json({ ok: true });
+    a.get('/kl-r10/read-or-admin', authenticate, requirePermission('read', 'admin'), ok as never);
+    a.get('/kl-r10/admin-or-read', authenticate, requirePermission('admin', 'read'), ok as never);
+    a.get('/kl-r10/star-list', authenticate, requirePermission('read', 'search', 'admin', '*'), ok as never);
+    a.get('/kl-r10/admin', authenticate, requirePermission('admin'), ok as never);
+    a.get('/kl-r10/write', authenticate, requirePermission('write'), ok as never);
+    a.get('/kl-r10/alerts', authenticate, requirePermission('alerts:write'), ok as never);
+    const srv = a.listen(0, '::1');
+    await new Promise((r) => srv.once('listening', r));
+    const base = `http://[::1]:${(srv.address() as AddressInfo).port}`;
+    const h = (k: string) => ({ Authorization: `ApiKey ${k}` });
+    try {
+      for (const k of [roRead, roStar]) {
+        for (const p of ['/kl-r10/read-or-admin', '/kl-r10/admin-or-read', '/kl-r10/star-list']) {
+          expect((await request(base).get(p).set(h(k))).status, p).toBe(299);
+        }
+        expect(refusal(await request(base).get('/kl-r10/admin').set(h(k)), 'admin')).toEqual({ needed: 'admin', missing: ['admin'] });
+        expect(refusal(await request(base).get('/kl-r10/write').set(h(k)), 'write')).toEqual({ needed: 'write', missing: ['write'] });
+        expect(refusal(await request(base).get('/kl-r10/alerts').set(h(k)), 'alerts:write'))
+          .toEqual({ needed: 'alerts:write', missing: ['alerts:write'] });
+      }
+      // the same routes for an admin's keys
+      expect((await request(base).get('/kl-r10/admin').set(h(K.admin))).status).toBe(299);
+      expect((await request(base).get('/kl-r10/read-or-admin').set(h(K.read))).status).toBe(299);
+    } finally {
+      srv.closeAllConnections();
+      await new Promise((r) => srv.close(r));
+    }
   });
 
   it('the kinds of refusal whose audit-down line was said are capped at 5000: the oldest is said again, the rest stay quiet', async () => {
@@ -2622,5 +2710,49 @@ describe('round 9: routes that ask for a permission by name use the gate grants;
       db.exec('DROP TRIGGER IF EXISTS kl_r9_audit_down');
     }
     expect(rowsFor(ua)).toHaveLength(0);
+  });
+});
+
+describe('round 10: a damaged stored permission list grants nothing', () => {
+  it('only a JSON list of strings counts; anything else is no permissions at all', async () => {
+    const { parseStoredKeyPermissions, keyHasPermission } = await import('../auth/key-policy.js');
+    expect(parseStoredKeyPermissions('["read","alerts:write"]')).toEqual(['read', 'alerts:write']);
+    expect(parseStoredKeyPermissions('[]')).toEqual([]);
+    expect(parseStoredKeyPermissions(['admin'])).toEqual(['admin']);
+    for (const raw of ['"*"', '"readonly"', '"read"', 'not json', '', '{"0":"*","length":1}', '["*",1]', '[null]', '["read",["*"]]', 'null', '5', 'true']) {
+      expect(parseStoredKeyPermissions(raw), JSON.stringify(raw)).toEqual([]);
+    }
+    // a bare string handed to the checks is not a list: 'readonly' never meets 'read' by substring
+    const bad = 'readonly' as unknown as string[];
+    expect(keyHasNeed(bad, 'read')).toBe(false);
+    expect(keyHasPermission(bad, 'read')).toBe(false);
+    expect(keyHasPermission('*' as unknown as string[], 'kl-unknown')).toBe(false);
+    const { missingForPermission } = await import('../auth/key-policy.js');
+    expect(missingForPermission(bad, 'read', '/alerts')).toEqual(['read']);
+    expect(missingForPermission('*' as unknown as string[], 'kl-unknown', '/alerts')).toEqual(['kl-unknown']);
+    expect(missingForPermission('write' as unknown as string[], 'alerts:write', '/alerts')).toEqual(['alerts:write', 'read']);
+    expect(effectiveKeyPermissions('*' as unknown as string[], 'admin')).toEqual([]);
+    expect(effectiveKeyPermissions('readonly' as unknown as string[], 'readonly')).toEqual([]);
+    expect(effectiveKeyPermissions(['read', 7] as unknown as string[], 'user')).toEqual([]);
+  });
+
+  it("an admin's key whose stored list is damaged is refused everywhere, an intact one is not", async () => {
+    const owner = await createUser('kl-r10-damaged', 'kl-r10-damaged@example.invalid', 'kl-r10-damaged-pass-1', 'admin');
+    const db = getSQLiteDB();
+    const intact = await createApiKey(owner.id, 'kl r10 intact star', ['*']);
+    expect((await request(realSrv).get('/alerts').set('Authorization', `ApiKey ${intact.apiKey}`)).status).toBe(200);
+    for (const stored of ['"*"', '"readonly"', 'not json', '{"0":"*","length":1}', '["*",1]', '"admin"']) {
+      const k = await createApiKey(owner.id, `kl r10 damaged ${stored}`, ['*']);
+      db.prepare('UPDATE api_keys SET permissions = ? WHERE id = ?').run(stored, k.keyData.id);
+      const v = await validateApiKey(k.apiKey);
+      expect(v?.permissions, stored).toEqual([]);
+      const h = { Authorization: `ApiKey ${k.apiKey}` };
+      const read = await request(realSrv).get('/alerts').set(h);
+      expect(read.status, `${stored} GET /alerts`).toBe(403);
+      expect(read.body.needed).toBe('read');
+      expect((await request(realSrv).post('/ingest/http').set(h).send([{ message: 'kl r10' }])).status, `${stored} ingest`).toBe(403);
+      expect((await request(realSrv).get('/agent').set(h)).status, `${stored} GET /agent`).toBe(403);
+      expect((await request(realSrv).get('/auth/api-keys').set(h)).status, `${stored} GET /auth/api-keys`).toBe(403);
+    }
   });
 });
