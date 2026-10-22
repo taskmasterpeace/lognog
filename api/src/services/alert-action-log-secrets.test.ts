@@ -25,7 +25,7 @@ import { logAlertAction, actionLogSummary, logReportGenerated, reportErrorSummar
 import { createAlert, getAlertHistory } from '../db/sqlite-alerts.js';
 import { setSystemSetting } from '../db/sqlite-settings.js';
 
-type Logged = { action: string; message: string; structured_data: string };
+type Logged = { action: string; message: string; structured_data: string; timestamp?: string; received_at?: string; proc_id?: string };
 const logged = (): Logged[] => mockInsertLogs.mock.calls.flatMap((c) => c[0] as Logged[]);
 
 let srv: http.Server;
@@ -136,19 +136,23 @@ describe('scheduled report runs carry no addresses or mail-server text (key lock
     await shutdown();
     const failed = logged().filter((e) => e.action === 'report.error');
     expect(failed.length).toBe(2);
-    const text = JSON.stringify(failed);
-    // Fixed phrases only (round 7): the first clause of a mail error can
-    // itself be the server's reply, so nothing from the error is copied.
-    expect(text).toContain(REPORT_ERROR_PHRASES.login);
-    expect(text).toContain(REPORT_ERROR_PHRASES.recipient);
+    // Drop the fields the logger fills from the clock and the process id: a
+    // pid like 55354 or a time ending .535 is not a mail-server reply code.
+    const text = JSON.stringify(failed.map(({ timestamp, received_at, proc_id, ...rest }) => rest));
+    // Nothing from the mail server's reply is copied (checked first, so old
+    // code fails on the leaked text itself) ...
     expect(text).not.toContain('kl-secret');
-    expect(text).not.toContain('535');
+    expect(text).not.toMatch(/\b535\b/);
     expect(text).not.toContain('mailbox');
     expect(text).not.toContain('Invalid login');
+    // ... only fixed phrases (round 7): the first clause of a mail error can
+    // itself be the server's reply.
+    expect(text).toContain(REPORT_ERROR_PHRASES.login);
+    expect(text).toContain(REPORT_ERROR_PHRASES.recipient);
   });
 
   it('reportErrorSummary only ever answers with one of its fixed phrases (round 7)', () => {
-    const phrases = Object.values(REPORT_ERROR_PHRASES) as string[];
+    const phrases = Object.values(REPORT_ERROR_PHRASES ?? {}) as string[];
     const nasty = [
       'Message failed 550 5.1.1 User unknown in virtual mailbox table b@x.y',
       'x'.repeat(5000) + ' kl-secret-long@example.com',
@@ -165,9 +169,9 @@ describe('scheduled report runs carry no addresses or mail-server text (key lock
     ];
     for (const raw of nasty) {
       const out = reportErrorSummary(raw);
-      expect(phrases).toContain(out);
-      expect(out).not.toMatch(/@|%40|\uFF20|kl-secret|\d{3}/);
+      expect(out, raw.slice(0, 60)).not.toMatch(/@|%40|\uFF20|kl-secret|\d{3}/);
       expect(out.length).toBeLessThan(60);
+      expect(phrases).toContain(out);
     }
     expect(reportErrorSummary(nasty[0])).toBe(REPORT_ERROR_PHRASES.recipient);
     expect(reportErrorSummary(nasty[2])).toBe(REPORT_ERROR_PHRASES.recipient);

@@ -1700,7 +1700,8 @@ describe('round 7: repeated refusals, the permission names, and pop-ups per read
       .all(ua) as Array<{ id: string; details: string }>;
 
   it('an agent polling pop-ups with a send-logs-only key writes one audit row, counting the repeats', async () => {
-    resetDenialRowsForTest();
+    // optional call: on code without the dedupe the test then fails on the row count itself
+    (resetDenialRowsForTest as (() => void) | undefined)?.();
     const keyA = await newKey('kl-r7 poller A', ['write']);
     const keyB = await newKey('kl-r7 poller B', ['write']);
     const ua = 'kl-r7-poller';

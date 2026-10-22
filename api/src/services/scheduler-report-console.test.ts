@@ -64,8 +64,11 @@ function expectClean(text: string) {
   expect(text).not.toMatch(/@|%40|＠/);
   expect(text).not.toContain('kl-alice');
   expect(text).not.toContain('kl-bob');
-  expect(text).not.toContain('550');
-  expect(text).not.toContain('535');
+  // Reply codes as whole numbers, so a stray count or id that merely
+  // contains the digits cannot fail the check.
+  expect(text).not.toMatch(/\b550\b/);
+  expect(text).not.toMatch(/\b535\b/);
+  expect(text).not.toMatch(/\b5\.[0-9]\.[0-9]\b/);
   expect(text).not.toMatch(/mailbox/i);
   expect(text).not.toContain('kl-secret');
 }
