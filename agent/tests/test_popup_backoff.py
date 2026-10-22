@@ -93,6 +93,8 @@ def test_new_key_saved_in_settings_is_asked_at_once(tmp_path):
         client.code = 200
         shipper.update_config(replace(shipper.config, api_key="kl-new-key"))
         assert shipper.config.api_key == "kl-new-key"
+        # the wait ends when the key is saved, not at the next check
+        assert shipper.get_stats()["notifications_refused"] is False
         tick(1)
         assert client.calls == 2
         assert client.keys[-1] == "ApiKey kl-new-key"
@@ -174,6 +176,75 @@ def test_key_changed_while_the_refused_request_was_out_is_asked_at_once(tmp_path
         tick(1)
         assert client.calls == 2
         assert client.keys[-1] == "ApiKey kl-saved-meanwhile"
+    finally:
+        restore()
+
+
+def test_new_key_whose_check_fails_keeps_the_30_second_tick(tmp_path):
+    # A new key ends the hourly wait once. If that first check fails (the
+    # server can't be reached), the agent goes back to every 30 seconds; it
+    # does not ask on every pass of the loop.
+    shipper, client, tick, restore = _setup(tmp_path)
+    try:
+        tick(0)
+        assert client.calls == 1
+        real_get = client.get
+
+        async def get_then_fail(*args, **kwargs):
+            await real_get(*args, **kwargs)
+            raise ConnectionError("kl-r9 server not reachable")
+
+        client.get = get_then_fail
+        shipper.update_config(replace(shipper.config, api_key="kl-new-key"))
+        tick(1)
+        assert client.calls == 2
+        client.get = real_get
+        tick(5)
+        tick(5)
+        assert client.calls == 2
+        tick(21)
+        assert client.calls == 3
+        assert client.keys[-1] == "ApiKey kl-new-key"
+    finally:
+        restore()
+
+
+def test_key_accepted_after_the_hour_is_no_longer_treated_as_refused(tmp_path):
+    # The refused key is asked again after the hour and now accepted (its
+    # permissions were fixed on the server). A later key change is an
+    # ordinary change: the next check comes on the 30-second tick.
+    shipper, client, tick, restore = _setup(tmp_path)
+    try:
+        tick(0)
+        client.code = 200
+        tick(3600)
+        assert client.calls == 2
+        assert shipper.get_stats()["notifications_refused"] is False
+        shipper.config.api_key = "kl-new-key"
+        shipper.update_config(shipper.config)
+        tick(5)
+        assert client.calls == 2
+        tick(26)
+        assert client.calls == 3
+        assert client.keys[-1] == "ApiKey kl-new-key"
+    finally:
+        restore()
+
+
+def test_settings_saved_with_no_refusal_keep_the_30_second_tick(tmp_path):
+    # With no refusal there is no wait to end: saving settings adds no
+    # extra request.
+    shipper, client, tick, restore = _setup(tmp_path)
+    try:
+        client.code = 200
+        tick(0)
+        assert client.calls == 1
+        shipper.update_config(replace(shipper.config, api_key="kl-new-key"))
+        tick(5)
+        assert client.calls == 1
+        tick(26)
+        assert client.calls == 2
+        assert client.keys[-1] == "ApiKey kl-new-key"
     finally:
         restore()
 
