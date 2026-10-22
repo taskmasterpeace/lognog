@@ -33,10 +33,17 @@ describe('#41-3 dedup is a real dedup, not a silent no-op', () => {
     expect(result.sql).toMatch(/LIMIT 1 BY JSONExtractString\(structured_data, 'request_id'\)/);
   });
 
-  it('SQLite: collapses to GROUP BY on the dedup keys while keeping all columns', () => {
+  it('SQLite: one row per dedup key while keeping all columns', () => {
     const result = compileDSLToSQLite(parseToAST('search * | dedup hostname'));
     expect(result.sql).toContain('message');
-    expect(result.sql).toContain('GROUP BY hostname');
+    expect(result.sql).toContain('PARTITION BY hostname');
+  });
+
+  it('SQLite: keeps the NEWEST row per key, like ClickHouse (not an arbitrary one)', () => {
+    const result = compileDSLToSQLite(parseToAST('search * | dedup hostname'));
+    expect(result.sql).toContain("ROW_NUMBER() OVER (PARTITION BY hostname ORDER BY replace(timestamp, 'T', ' ') DESC, rowid DESC)");
+    expect(result.sql).toContain('WHERE __dedup_rn = 1');
+    expect(result.sql).not.toContain('GROUP BY hostname');
   });
 
   it('does not emit DISTINCT-less no-op that drops columns anymore (CH)', () => {
@@ -66,6 +73,18 @@ describe('#41-4 SQLite relative time normalizes the T separator', () => {
     expect(rowNormalized <= nowIso).toBe(true);
     // And demonstrate the OLD behavior would have failed:
     expect(rowIsoWithT <= nowIso).toBe(false);
+  });
+
+  it('an absolute ISO bound drops its trailing Z, so a row stored exactly at that instant matches', () => {
+    // Lite stores UTC without the Z (ingest strips it). '...04:00:00.000Z' sorts after
+    // the stored '...04:00:00.000', so an absolute earliest used to skip that row.
+    const result = compileDSLToSQLite(parseToAST('search *'), undefined, {
+      earliest: '2026-10-19T04:00:00.000Z',
+      latest: '2026-10-26T03:59:59.999Z',
+    });
+    expect(result.sql).toContain("'2026-10-19 04:00:00.000'");
+    expect(result.sql).toContain("'2026-10-26 03:59:59.999'");
+    expect(result.sql).not.toMatch(/\d{3}Z'/);
   });
 });
 

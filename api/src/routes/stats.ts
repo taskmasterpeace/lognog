@@ -4,6 +4,7 @@ import { getActiveSources } from '../db/backend.js';
 import { getSQLiteDB } from '../db/sqlite.js';
 import { authenticate } from '../auth/middleware.js';
 import { isIndexAllowed, indexScopeSqlClause } from '../auth/index-scope.js';
+import { getHomeSummary } from '../services/home-summary.js';
 
 const router = Router();
 
@@ -343,6 +344,18 @@ router.get('/sources', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error fetching active sources:', error);
     return res.status(500).json({ error: 'Failed to fetch active sources' });
+  }
+});
+
+// Home page ("Needs you"): money, what needs you, every app. Counts cover the
+// indexes the caller can see (a scoped key gets its own indexes only).
+router.get('/home', async (req: Request, res: Response) => {
+  try {
+    const data = await getHomeSummary({ allowedIndexes: req.allowedIndexes ?? null });
+    return res.json(data);
+  } catch (error) {
+    console.error('Error building home summary:', error);
+    return res.status(500).json({ error: 'Failed to build the home summary' });
   }
 });
 

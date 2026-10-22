@@ -724,6 +724,185 @@ export async function getActiveSources(): Promise<ActiveSourcesResult> {
   return request('/stats/sources');
 }
 
+// Home ("Needs you") API: GET /stats/home (api/src/services/home-summary.ts)
+/** 'sparse' = older than a day but too few logs in 14 days to judge quiet. */
+export type HomeAppState = 'errors' | 'quiet' | 'fine' | 'new' | 'sparse';
+
+export interface HomeApp {
+  app_name: string;
+  index_name: string;
+  state: HomeAppState;
+  label: string;
+  detail: string;
+  logs_today: number;
+  errors_today: number;
+  /** Today's errors are a spike, whatever the state (a quiet app can have one). */
+  error_spike: boolean;
+  /** The error sentence when error_spike, else null. */
+  spike_detail: string | null;
+  logs_window: number;
+  baseline_errors_per_day: number | null;
+  baseline_days: number;
+  error_ratio: number | null;
+  last_seen: string | null;
+  silent_ms: number | null;
+  longest_gap_ms: number | null;
+  /** The silence this app normally has (its 3rd-longest gap in 14 days); quiet is judged against it. */
+  normal_gap_ms: number | null;
+  quiet_after_ms: number | null;
+}
+
+export interface HomeBankSpend {
+  index: string;
+  status: 'ok' | 'no_events' | 'no_snapshot' | 'not_visible' | 'failed';
+  as_of: string | null;
+  out_24h: number | null;
+  out_7d: number | null;
+  events: number;
+  last_event_at: string | null;
+}
+
+export interface HomeAiSpend {
+  field: string;
+  status: 'ok' | 'none' | 'failed';
+  today: number;
+  week: number;
+  events: number;
+  by_app: { app_name: string; index_name: string; spend_recent: number; spend_total: number; events: number }[];
+}
+
+export type HomeNeedsYouItem =
+  | { kind: 'alert_unreachable'; alert_id: string; alert_name: string; problems: string[] }
+  | { kind: 'error_spike'; app: HomeApp }
+  | { kind: 'quiet'; app: HomeApp };
+
+export interface HomeSummary {
+  generated_at: string;
+  backend: 'clickhouse' | 'sqlite';
+  thresholds: {
+    spikeMultiplier: number;
+    spikeMinErrors: number;
+    quietMultiplier: number;
+    quietFloorMs: number;
+    quietMinActiveMinutes: number;
+  };
+  money: { bank: HomeBankSpend; ai: HomeAiSpend };
+  needs_you: HomeNeedsYouItem[];
+  apps: HomeApp[];
+  scoped: boolean;
+  /** The indexes a scoped login can read (null when it reads all). */
+  scope_indexes: string[] | null;
+  /** True for a scoped login: alert rules aren't tied to an index, so none are shown. */
+  alerts_hidden: boolean;
+  /** Parts whose query failed; the rest of Home is still current. */
+  failed: Array<'apps' | 'bank' | 'ai'>;
+}
+
+export async function getHomeSummary(): Promise<HomeSummary> {
+  return request('/stats/home');
+}
+
+// The LogNog Weekly (GET /reports/weekly; api/src/services/weekly-report.ts)
+export type WeeklyAppState = 'shaky' | 'quiet' | 'silent' | 'new' | 'fine';
+
+export interface WeeklyApp {
+  app_name: string;
+  index_name: string;
+  state: WeeklyAppState;
+  logs_this: number;
+  logs_prev: number;
+  logs_change_pct: number | null;
+  errors_this: number;
+  errors_prev: number;
+  errors_change_pct: number | null;
+  quiet: { from: string; to: string | null; ms: number } | null;
+  last_seen: string | null;
+  words: string;
+}
+
+export type WeeklyBrokeItem =
+  | { kind: 'app_errors'; app_name: string; index_name: string; errors_this: number; errors_prev: number; top_message: string | null; top_count: number; words: string }
+  | { kind: 'new_error'; app_name: string; index_name: string; message: string; errors_this: number; words: string }
+  | { kind: 'app_quiet'; app_name: string; index_name: string; quiet: { from: string; to: string | null; ms: number }; words: string }
+  | { kind: 'app_silent'; app_name: string; index_name: string; words: string }
+  | { kind: 'alert_fired'; alert_id: string; alert_name: string; fired: number; reached: number; lost: number; no_route: number; last_at: string; words: string };
+
+export type WeeklyFixedItem =
+  | { kind: 'app_errors_stopped'; app_name: string; index_name: string; errors_before: number; last_error: string; words: string }
+  | { kind: 'error_stopped'; app_name: string; index_name: string; message: string; errors_before: number; last_at: string; words: string }
+  | { kind: 'alert_quiet'; alert_id: string; alert_name: string; fired_before: number; last_at: string; words: string };
+
+export interface WeeklyBank {
+  index: string;
+  status: 'ok' | 'no_days' | 'not_visible';
+  this_week: number | null;
+  last_week: number | null;
+  change_pct: number | null;
+  days_counted: number;
+  days_prev_counted: number;
+  prev_days: string[];
+  span: { earliest: string; latest: string };
+  days: { day: string; out: number }[];
+  biggest_day: { day: string; out: number } | null;
+}
+
+export interface WeeklyAi {
+  field: string;
+  status: 'ok' | 'none';
+  this_week: number;
+  last_week: number;
+  change_pct: number | null;
+  events: number;
+  by_app: HomeAiSpend['by_app'];
+}
+
+export interface WeeklyCount {
+  this_week: number;
+  last_week: number;
+  change_pct: number | null;
+}
+
+export interface WeeklyReport {
+  week: string;
+  tz: string;
+  label: string;
+  monday: string;
+  start: string;
+  end: string;
+  complete: boolean;
+  prev_week: string;
+  next_week: string | null;
+  range: { earliest: string; latest: string };
+  prev_range: { earliest: string; latest: string };
+  generated_at: string;
+  backend: 'clickhouse' | 'sqlite';
+  scoped: boolean;
+  scope_indexes: string[] | null;
+  alerts_hidden: boolean;
+  thresholds: { minErrors: number; errorRise: number; quietMultiplier: number; quietFloorMs: number };
+  money: { bank: WeeklyBank; ai: WeeklyAi };
+  tiles: {
+    logs: WeeklyCount;
+    errors: WeeklyCount;
+    alerts: { fired: number; reached: number; lost: number; no_route: number; fired_prev: number };
+  };
+  apps: WeeklyApp[];
+  broke: WeeklyBrokeItem[];
+  fixed: WeeklyFixedItem[];
+  needs_you: HomeNeedsYouItem[];
+  needs_you_as_of: string;
+  /** Home's app check failed, so the list can't say an app needs you. */
+  needs_you_apps_failed?: boolean;
+  headline: string;
+  spoken: string;
+}
+
+/** The LogNog Weekly for an ISO week (YYYY-Www); this week when omitted. */
+export async function getWeeklyReport(week?: string | null): Promise<WeeklyReport> {
+  const qs = week ? `?${new URLSearchParams({ week }).toString()}` : '';
+  return request(`/reports/weekly${qs}`);
+}
+
 // Reports API
 export interface ScheduledReport {
   id: string;

@@ -275,11 +275,26 @@ export default function AlertsPage() {
     });
   }, [alerts, sortBy, sortDir]);
 
-  const { data: alertHistory } = useQuery<LocalAlertHistory[]>({
-    queryKey: ['alertHistory', selectedAlertId],
-    queryFn: () => getAlertHistory(selectedAlertId || undefined) as Promise<LocalAlertHistory[]>,
+  // A span from the Weekly paper's links; null = the newest firings as before.
+  const [historyWindow, setHistoryWindow] = useState<{ from: number; to: number } | null>(null);
+  const { data: fetchedHistory } = useQuery<LocalAlertHistory[]>({
+    queryKey: ['alertHistory', selectedAlertId, historyWindow !== null],
+    queryFn: () => getAlertHistory(selectedAlertId || undefined, historyWindow ? 1000 : undefined) as Promise<LocalAlertHistory[]>,
     enabled: showHistoryModal,
   });
+  const alertHistory = useMemo(() => {
+    if (!fetchedHistory || !historyWindow) return fetchedHistory;
+    return fetchedHistory.filter((entry) => {
+      // Server times carry no zone and are UTC.
+      const raw = String(entry.triggered_at);
+      const at = Date.parse(/[zZ]|[+-]\d\d:?\d\d$/.test(raw) ? raw : `${raw.replace(' ', 'T')}Z`);
+      return at >= historyWindow.from && at <= historyWindow.to;
+    });
+  }, [fetchedHistory, historyWindow]);
+  const closeHistory = () => {
+    setShowHistoryModal(false);
+    setHistoryWindow(null);
+  };
 
   const ackMutation = useMutation({
     mutationFn: (entryId: string) => acknowledgeAlertHistory(entryId),
@@ -444,6 +459,40 @@ export default function AlertsPage() {
     });
     setShowCreateModal(true);
   };
+
+  // ?edit=<alert id> (Home's "Fix the alert"): open that alert's editor once the list is in.
+  const editParam = searchParams.get('edit');
+  useEffect(() => {
+    if (!editParam || !alerts) return;
+    const target = alerts.find((a) => a.id === editParam);
+    if (target) {
+      handleEdit(target);
+    } else {
+      toast.error('Alert not found', 'That alert is not in this list. It may be deleted or outside the app filter.');
+    }
+    const next = new URLSearchParams(searchParams);
+    next.delete('edit');
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editParam, alerts]);
+
+  // ?history=all|<alert id>[&from=ISO&to=ISO] (the Weekly paper): open the
+  // history of every alert or one alert, showing only firings in that span.
+  const historyParam = searchParams.get('history');
+  useEffect(() => {
+    if (!historyParam) return;
+    setSelectedAlertId(historyParam === 'all' ? null : historyParam);
+    const from = Date.parse(searchParams.get('from') ?? '');
+    const to = Date.parse(searchParams.get('to') ?? '');
+    setHistoryWindow(Number.isFinite(from) && Number.isFinite(to) ? { from, to } : null);
+    setShowHistoryModal(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete('history');
+    next.delete('from');
+    next.delete('to');
+    setSearchParams(next, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [historyParam]);
 
   const handleTest = async () => {
     setTesting(true);
@@ -1889,8 +1938,26 @@ export default function AlertsPage() {
                 <History className="w-5 h-5" />
                 Alert History
               </h2>
+              {historyWindow && (
+                <span className="ml-auto mr-3 flex flex-wrap items-center gap-2 text-sm text-nog-600 dark:text-nog-300">
+                  <span>
+                    {selectedAlertId ? `${alerts?.find((a) => a.id === selectedAlertId)?.name ?? 'This alert'}, ` : ''}
+                    {formatDate(new Date(historyWindow.from).toISOString())} – {formatDate(new Date(historyWindow.to).toISOString())}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setHistoryWindow(null);
+                      setSelectedAlertId(null);
+                    }}
+                    className="rounded-[0.625rem] px-2 py-1 text-xs font-semibold text-amber-700 transition-colors hover:bg-nog-100 dark:text-amber-400 dark:hover:bg-nog-700"
+                  >
+                    Show all firings
+                  </button>
+                </span>
+              )}
               <button
-                onClick={() => setShowHistoryModal(false)}
+                onClick={closeHistory}
                 className="p-2 hover:bg-nog-100 dark:hover:bg-nog-700 rounded-lg"
               >
                 <X className="w-5 h-5" />
@@ -1977,7 +2044,7 @@ export default function AlertsPage() {
                 </div>
               ) : (
                 <div className="text-center py-12 text-nog-500">
-                  No alert history yet
+                  {historyWindow ? 'No firings in this span' : 'No alert history yet'}
                 </div>
               )}
             </div>

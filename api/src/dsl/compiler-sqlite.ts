@@ -209,8 +209,8 @@ export class SQLiteCompiler {
           // Bug #41-3: dedup was a silent no-op (overwrote selectFields with
           // just the keys, emitted no DISTINCT). Keep one row per distinct key
           // combination while preserving ALL columns. SQLite has no LIMIT BY, so
-          // we pick the newest row per key via a rowid subquery (see below) and
-          // keep the full select list. Map keys with the same select-mapping so
+          // we pick the newest row per key with a ROW_NUMBER() window (see below)
+          // and keep the full select list. Map keys with the same select-mapping so
           // structured_data fields dedup correctly.
           dedupFields = stage.fields.map(f => this.mapFieldForSelect(f));
           break;
@@ -486,16 +486,24 @@ export class SQLiteCompiler {
       sql = `SELECT * FROM (${inner}) WHERE __rn <= ${perGroupLimit.count} ` +
         `ORDER BY ${perGroupLimit.byExpr}, count ${perGroupLimit.direction}`;
     } else {
-      sql += whereClause;
+      if (groupByFields.length === 0 && dedupFields.length > 0 && !isAggregation) {
+        // dedup keeps the NEWEST row per key, like ClickHouse's
+        // `ORDER BY timestamp DESC LIMIT 1 BY`. (It used to GROUP BY the keys and
+        // read bare columns, but SQLite takes those from an arbitrary row of the
+        // group, so a re-sent value could lose to the older one.) Rank each row
+        // within its key, newest first, and keep the first.
+        const ranked =
+          `SELECT *, ROW_NUMBER() OVER (PARTITION BY ${dedupFields.join(', ')} ` +
+          `ORDER BY replace(timestamp, 'T', ' ') DESC, rowid DESC) AS __dedup_rn FROM logs${whereClause}`;
+        sql = `SELECT ${selectFields.join(', ')} FROM (${ranked}) WHERE __dedup_rn = 1`;
+      } else {
+        sql += whereClause;
+      }
 
       if (groupByFields.length > 0) {
         sql += ' GROUP BY ' + groupByFields.join(', ');
-      } else if (dedupFields.length > 0) {
-        // Bug #41-3: real dedup on SQLite. GROUP BY the dedup keys collapses each
-        // distinct combination to a single row while the bare (non-aggregated)
-        // select list still returns every column. SQLite (3.7.11+) resolves each
-        // bare column from the max(rowid) row of the group, so we deterministically
-        // keep the most-recently-inserted row per key.
+      } else if (dedupFields.length > 0 && isAggregation) {
+        // dedup followed by stats: collapse each key to one row (bare columns).
         sql += ' GROUP BY ' + dedupFields.join(', ');
       }
 
@@ -1251,9 +1259,12 @@ export function parseRelativeTimeSQLite(timeStr: string): string | null {
 
   // If it looks like an absolute datetime, use it directly. Normalize any 'T'
   // separator to a space so it lexicographically compares against the (also
-  // space-normalized) timestamp column (#41-4).
+  // space-normalized) timestamp column (#41-4). Lite stores UTC without a
+  // trailing 'Z' (ingest strips it), so drop it here too, as the ClickHouse
+  // compiler does: '...04:00:00.000Z' sorts after a row stored at exactly
+  // '...04:00:00.000', which made an absolute `earliest` skip that row.
   if (/^\d{4}-\d{2}-\d{2}/.test(timeStr)) {
-    return `'${timeStr.replace(/'/g, "''").replace('T', ' ')}'`;
+    return `'${timeStr.replace(/'/g, "''").replace('T', ' ').replace(/Z$/i, '')}'`;
   }
 
   return null;

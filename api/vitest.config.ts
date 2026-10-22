@@ -8,8 +8,11 @@ export default defineConfig({
     // file-level parallelism (one isolated process per file) is preserved.
     setupFiles: ['./vitest.setup.ts'],
     testTimeout: 15000,
-    // The UTC-time test pins TZ at run time; Node only honours that in a
-    // process's main thread, so that one file runs in a forked process.
-    poolMatchGlobs: [['**/format-date-utc.test.ts', 'forks']],
+    // The UTC-time tests pin TZ at run time; Node only honours that in a
+    // process's main thread, so those files run in a forked process.
+    poolMatchGlobs: [
+      ['**/format-date-utc.test.ts', 'forks'],
+      ['**/source-status-utc.test.ts', 'forks'],
+    ],
   },
 });

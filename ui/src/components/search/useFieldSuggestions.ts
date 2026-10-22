@@ -102,7 +102,12 @@ export function useFieldSuggestions() {
     // Check cache
     const cached = valueCacheRef.current[normalizedField];
     if (cached && Date.now() - cached.timestamp < VALUE_CACHE_TTL) {
-      setFieldValues((prev) => ({ ...prev, [normalizedField]: cached.values }));
+      // Keep the same object when nothing changed. A fresh object here re-runs
+      // useAutocomplete's effect, which calls this again: an endless render loop
+      // whenever the cursor sits on a field value (e.g. a /search?q=...severity<=3 link).
+      setFieldValues((prev) =>
+        prev[normalizedField] === cached.values ? prev : { ...prev, [normalizedField]: cached.values }
+      );
       return;
     }
 
