@@ -2444,6 +2444,59 @@ describe('round 9: routes that ask for a permission by name use the gate grants;
     }
   });
 
+  it('a permission name the key lock does not know fails closed: only a * key meets it', async () => {
+    const { requirePermission, authenticate } = await import('../auth/middleware.js');
+    const { keyHasPermission, missingForPermission } = await import('../auth/key-policy.js');
+    // the rule itself, with no route in front
+    for (const name of ['kl-unknown', 'toString', '__proto__', 'constructor', 'hasOwnProperty']) {
+      for (const perms of [['read'], ['admin'], ['write'], ['search'], ['alerts:write', 'read'], [name], [name, 'admin'], [], null]) {
+        expect(keyHasPermission(perms, name), `${name} with ${JSON.stringify(perms)}`).toBe(false);
+        expect(missingForPermission(perms, name, '/kl-r9'), `${name} missing with ${JSON.stringify(perms)}`).toEqual([name]);
+      }
+      expect(keyHasPermission(['*'], name), `${name} with *`).toBe(true);
+      expect(missingForPermission(['*'], name, '/kl-r9')).toEqual([]);
+    }
+    // the names the key lock knows go through its grants
+    expect(keyHasPermission(['write'], 'write')).toBe(true);
+    expect(keyHasPermission(['admin'], 'write')).toBe(false);
+    expect(keyHasPermission(['read'], 'search')).toBe(true);
+    expect(keyHasPermission(['admin'], 'search')).toBe(true);
+    expect(keyHasPermission(['write'], 'search')).toBe(false);
+    expect(missingForPermission(['write'], 'search', '/kl-r9')).toEqual(['read']);
+    expect(keyHasPermission(['search'], 'read')).toBe(true);
+    expect(keyHasPermission(['alerts:write'], 'alerts:write')).toBe(false);
+
+    // and through a route
+    const ok = (_req: unknown, res: { status: (c: number) => { json: (b: unknown) => void } }) => res.status(299).json({ reached: true });
+    const bare = express();
+    bare.use(express.json());
+    bare.get('/kl-r9u/unknown', authenticate, requirePermission('kl-unknown'), ok as never);
+    bare.get('/kl-r9u/inherited', authenticate, requirePermission('toString'), ok as never);
+    bare.get('/kl-r9u/search', authenticate, requirePermission('search'), ok as never);
+    const srv = bare.listen(0, '::1');
+    await new Promise<void>((r) => srv.once('listening', () => r()));
+    const base = `http://[::1]:${(srv.address() as AddressInfo).port}`;
+    const h = (k: string) => ({ Authorization: `ApiKey ${k}`, 'User-Agent': 'kl-r9-unknown-name' });
+    // a key stored with the same odd string (only possible by writing the row past the key form)
+    const oddKey = (await newKey('kl r9 odd-name key', ['kl-unknown', 'toString'])).apiKey;
+    try {
+      for (const [path, name] of [['/kl-r9u/unknown', 'kl-unknown'], ['/kl-r9u/inherited', 'toString']] as const) {
+        for (const k of [K.read, K.admin, K.search, K.ingest, oddKey]) {
+          expect(refusal(await request(base).get(path).set(h(k)), `${name} by name`)).toEqual({ needed: name, missing: [name] });
+        }
+        expect((await request(base).get(path).set(h(K.star))).status).toBe(299);
+      }
+      for (const k of [K.read, K.search, K.admin, K.star]) {
+        expect((await request(base).get('/kl-r9u/search').set(h(k))).status).toBe(299);
+      }
+      expect(refusal(await request(base).get('/kl-r9u/search').set(h(K.ingest)), 'search by name, ingest key'))
+        .toEqual({ needed: 'search', missing: ['read'] });
+    } finally {
+      srv.closeAllConnections();
+      await new Promise((r) => srv.close(r));
+    }
+  });
+
   it('the audit row of a refused key names the key by its id (never the key)', async () => {
     (resetDenialRowsForTest as (() => void) | undefined)?.();
     const made = await newKey('kl r9 audited key', ['write']);

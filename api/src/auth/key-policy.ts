@@ -271,29 +271,42 @@ function missingForNeed(permissions: readonly string[] | null | undefined, need:
 }
 
 /**
+ * The key-lock need behind a permission name a route checks: 'write' is the
+ * send-logs need, 'search' is read (as at the gate), and the needs are their
+ * own names. Only KEY_GRANTS' own names count (Object.hasOwn), so an inherited
+ * name such as 'toString' or '__proto__' is never taken for a need. Any other
+ * name is null: the key lock doesn't know it.
+ */
+function needForPermissionName(permission: string): Exclude<KeyNeed, 'none'> | null {
+  const need = permission === 'write' ? 'ingest' : permission === 'search' ? 'read' : permission;
+  return Object.hasOwn(KEY_GRANTS, need) ? (need as Exclude<KeyNeed, 'none'>) : null;
+}
+
+/**
  * What a key lacks for a permission a route checks by name (requirePermission,
  * the ingest routes, the admin-only locks). 'write' is the send-logs need;
- * a name the key lock doesn't know is missing as itself.
+ * a name the key lock doesn't know is missing as itself unless the key has '*'.
  */
 export function missingForPermission(permissions: readonly string[] | null | undefined, permission: string, path: string): string[] {
-  const need = (permission === 'write' ? 'ingest' : permission) as Exclude<KeyNeed, 'none'>;
-  if (!(need in KEY_GRANTS)) return (permissions ?? []).includes(permission) ? [] : [permission];
+  const need = needForPermissionName(permission);
+  if (need === null) return (permissions ?? []).includes('*') ? [] : [permission];
   return missingForNeed(permissions, need, path);
 }
 
 /**
  * Does this key hold a permission a route checks by name (requirePermission)?
  * The same grants as the gate: 'read' is met by 'read', 'search', 'admin' or
- * '*'; 'write' (send logs) by 'write' or '*'; 'alerts:write' and
- * 'dashboards:write' also need read unless the key has 'admin'. A name the
- * key lock doesn't know is met by itself or '*'. Without this, a route that
- * asks for 'read' by name would refuse an 'admin' key the gate lets through.
+ * '*'; 'write' (send logs) by 'write' or '*'; 'search' like 'read';
+ * 'alerts:write' and 'dashboards:write' also need read unless the key has
+ * 'admin'. A name the key lock doesn't know (a typo, an inherited name like
+ * 'toString') fails closed: only a '*' key meets it, never a key that merely
+ * lists the same string. Without this, a route that asks for 'read' by name
+ * would refuse an 'admin' key the gate lets through.
  */
 export function keyHasPermission(permissions: readonly string[] | null | undefined, permission: string): boolean {
-  const need = permission === 'write' ? 'ingest' : permission;
-  if (need in KEY_GRANTS) return keyHasNeed(permissions, need as Exclude<KeyNeed, 'none'>);
-  const perms = permissions ?? [];
-  return perms.includes(permission) || perms.includes('*');
+  const need = needForPermissionName(permission);
+  if (need !== null) return keyHasNeed(permissions, need);
+  return (permissions ?? []).includes('*');
 }
 
 /**
