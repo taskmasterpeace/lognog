@@ -1775,6 +1775,27 @@ describe('round 7: repeated refusals, the permission names, and pop-ups per read
     expect(JSON.parse(rows[0].details).repeats).toBe(1);
   });
 
+  it('the refusals it remembers are capped at 5000: the oldest is forgotten, the rest still count as repeats', async () => {
+    (resetDenialRowsForTest as (() => void) | undefined)?.();
+    const key = await newKey('kl-r7 path walker', ['write']);
+    const ua = 'kl-r7-cap';
+    const hdr = { Authorization: `ApiKey ${key}`, 'User-Agent': ua };
+    const rowsFor = (path: string) =>
+      (getSQLiteDB()
+        .prepare("SELECT COUNT(*) AS n FROM auth_audit_log WHERE event_type = 'apikey_permission_denied' AND user_agent = ? AND json_extract(details, '$.path') = ?")
+        .get(ua, path) as { n: number }).n;
+    // 5001 different routes, oldest first: one past the cap
+    for (let i = 0; i <= 5000; i++) {
+      expect((await request(gateSrv).get(`/alerts/kl-cap-${i}`).set(hdr)).status).toBe(403);
+    }
+    // the second-oldest is still remembered: its repeat updates its row
+    expect((await request(gateSrv).get('/alerts/kl-cap-1').set(hdr)).status).toBe(403);
+    expect(rowsFor('/alerts/kl-cap-1')).toBe(1);
+    // the oldest was forgotten: its next refusal writes a fresh row
+    expect((await request(gateSrv).get('/alerts/kl-cap-0').set(hdr)).status).toBe(403);
+    expect(rowsFor('/alerts/kl-cap-0')).toBe(2);
+  }, 120_000);
+
   it("a refusal names the permission a person can tick: 'write' (send logs), never 'ingest'", async () => {
     const ua = 'kl-r7-names';
     const res = await request(realSrv).post('/ingest/http').set({ Authorization: `ApiKey ${K.read}`, 'User-Agent': ua }).send([{ message: 'kl-r7' }]);
