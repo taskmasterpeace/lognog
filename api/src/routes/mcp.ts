@@ -20,6 +20,11 @@ interface McpConnection {
   transport: SSEServerTransport;
   apiKey: string;
   stream: Response; // the open SSE response, ended when the key is refused
+  // Who opened it, for the audit row when the key is later refused: a revoked
+  // key can no longer be looked up, so its id and owner are kept from here.
+  keyId: string;
+  userId: string;
+  permissions: readonly string[];
 }
 const activeConnections: Map<string, McpConnection> = new Map();
 
@@ -116,7 +121,14 @@ router.get('/sse', async (req: Request, res: Response) => {
 
     // Create SSE transport
     const transport = new SSEServerTransport('/mcp/messages', res);
-    activeConnections.set(connectionId, { transport, apiKey, stream: res });
+    activeConnections.set(connectionId, {
+      transport,
+      apiKey,
+      stream: res,
+      keyId: keyInfo.keyId,
+      userId: keyInfo.userId,
+      permissions: keyInfo.permissions,
+    });
 
     console.log(`[MCP] SSE client connected: ${connectionId} (userId: ${keyInfo.userId})`);
 
@@ -167,7 +179,13 @@ router.post('/messages', async (req: Request, res: Response) => {
         /* already closed */
       }
       if (!connection.stream.writableEnded) connection.stream.end();
-      refuseApiKey(req, res, { needed: 'admin', missing: refusal.missing, message: refusal.message, key: refusal.key ?? {} });
+      refuseApiKey(req, res, {
+        needed: 'admin',
+        missing: refusal.missing,
+        message: refusal.message,
+        // a revoked key can't be looked up any more: name the key that opened the stream
+        key: refusal.key ?? { keyId: connection.keyId, userId: connection.userId, permissions: connection.permissions, scoped: false },
+      });
       return;
     }
     await connection.transport.handlePostMessage(req, res);

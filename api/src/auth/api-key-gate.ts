@@ -41,9 +41,30 @@ export const DENIAL_ROW_WINDOW_MS = 24 * 60 * 60 * 1000;
 const DENIAL_ROW_MAX_TRACKED = 5000;
 const recentDenialRows = new Map<string, { rowId: string; firstAt: number; repeats: number }>();
 
+/**
+ * When the audit row can't be written, the console says so once per kind of
+ * refusal (the same signature as the row) per DENIAL_ROW_WINDOW_MS, not once
+ * per request: a machine retrying every few seconds would otherwise fill the
+ * console. Capped like recentDenialRows.
+ */
+const auditFailureSaid = new Map<string, number>();
+function sayAuditFailureOnce(signature: string, line: string, now: number = Date.now()): void {
+  const said = auditFailureSaid.get(signature);
+  // a clock that jumped back ends the quiet time too
+  if (said !== undefined && now >= said && now - said < DENIAL_ROW_WINDOW_MS) return;
+  auditFailureSaid.delete(signature);
+  auditFailureSaid.set(signature, now);
+  if (auditFailureSaid.size > DENIAL_ROW_MAX_TRACKED) {
+    const oldest = auditFailureSaid.keys().next().value;
+    if (oldest !== undefined) auditFailureSaid.delete(oldest);
+  }
+  console.error(line);
+}
+
 /** Test hook: forget the rows tracked so far. */
 export function resetDenialRowsForTest(): void {
   recentDenialRows.clear();
+  auditFailureSaid.clear();
 }
 
 function recordDenial(
@@ -166,7 +187,7 @@ export interface RefusedKey {
  * - one audit row per key + address + method + path + event per day
  *   (recordDenial), with repeats counted on it;
  * - if that row can't be written the refusal still stands, and one console
- *   line says so (no key, no path, no details).
+ *   line says so, once per kind of refusal a day (no key, no path, no details).
  *
  * `error` defaults to 'API key lacks required permissions'; `body` adds fields
  * a route already sent (attempted_index...). `event` is the audit event type.
@@ -191,12 +212,13 @@ export function refuseApiKey(
   const permissions = opts.key?.permissions ?? req.apiKeyPermissions ?? [];
   const scoped = opts.key?.scoped ?? !!(req.allowedIndexes && req.allowedIndexes.length > 0);
   const path = requestPath(req);
+  const signature = [event, keyId, req.ip ?? '', req.method.toUpperCase(), normalizeKeyPath(path)].join('|');
   try {
-    const signature = [event, keyId, req.ip ?? '', req.method.toUpperCase(), normalizeKeyPath(path)].join('|');
     recordDenial(signature, () =>
       logAuthEvent(userId, event, req.ip, req.get('user-agent'), {
         method: req.method,
         path,
+        apiKeyId: keyId || null, // which key (its id, never the key itself)
         needed: opts.needed,
         missing: opts.missing,
         apiKeyPermissions: permissions,
@@ -206,8 +228,10 @@ export function refuseApiKey(
     );
   } catch (err) {
     // The refusal stands even if the audit log can't be written; say so once
-    // per failure, with only the error's class (never the key or the path).
-    console.error(
+    // per kind of refusal a day, with only the error's class (never the key
+    // or the path).
+    sayAuditFailureOnce(
+      signature,
       `[api-key-gate] could not write the audit row for a refused API key request (${event}): ${err instanceof Error ? err.name : 'unknown error'}`,
     );
   }

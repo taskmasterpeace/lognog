@@ -1630,9 +1630,21 @@ describe('round 4: saved-search lists, private dashboards, strict key permission
           expect(await mcpKeyStillAllowed(made.apiKey)).toBe(false);
 
           handled.mockClear();
+          const ua = `kl-mcp-cut-${how.replace(' ', '-')}`;
           const cut = await request(realSrv).post(`/mcp/messages?connectionId=${encodeURIComponent(connectionId)}`)
-            .set('Content-Type', 'application/json').send(msg);
+            .set('Content-Type', 'application/json').set('User-Agent', ua).send(msg);
           expect(cut.status, `${how}: ${cut.status} ${cut.text}`).toBe(403);
+          // the refusal names what the key lacks, like every other key refusal
+          expect(cut.body, how).toMatchObject({ needed: 'admin', missing: ['admin'] });
+          expect(typeof cut.body.message, how).toBe('string');
+          // and the audit row names the key that opened the stream and its owner,
+          // even when the key was revoked and can't be looked up any more
+          const row = getSQLiteDB()
+            .prepare('SELECT user_id, details FROM auth_audit_log WHERE event_type = ? AND user_agent = ?')
+            .get('apikey_permission_denied', ua) as { user_id: string | null; details: string } | undefined;
+          expect(row, how).toBeTruthy();
+          expect(row!.user_id, how).toBe(u.id);
+          expect(JSON.parse(row!.details), how).toMatchObject({ apiKeyId: made.keyData.id, path: '/mcp/messages', needed: 'admin', missing: ['admin'] });
           // refused before the transport saw it, and the transport was closed
           expect(handled).not.toHaveBeenCalled();
           expect(closed).toHaveBeenCalledTimes(1);
@@ -2338,5 +2350,192 @@ describe('round 8: every key refusal answers and is audited the same way, wherev
       'routes/ingest.ts': 1, // denyIndex's browser-session branch
       'routes/auth.ts': 2, // setup token; a key asked for above its owner's role (refused for everyone)
     });
+  });
+});
+
+describe('round 9: routes that ask for a permission by name use the gate grants; audit, host and delivery limits', () => {
+  const newKey = async (name: string, perms: string[], owner = klAdminId) => createApiKey(owner, name, perms);
+  const rowsFor = (ua: string) =>
+    getSQLiteDB()
+      .prepare('SELECT event_type, user_id, details FROM auth_audit_log WHERE user_agent = ? ORDER BY rowid')
+      .all(ua) as Array<{ event_type: string; user_id: string; details: string }>;
+  const refusal = (r: { status: number; body: Record<string, unknown>; text: string }, what: string) => {
+    expect(r.status, `${what}: ${r.text}`).toBe(403);
+    expect(typeof r.body.error, `${what}: error`).toBe('string');
+    expect(typeof r.body.message, `${what}: message`).toBe('string');
+    return { needed: r.body.needed, missing: r.body.missing };
+  };
+
+  it("an 'admin' key (and a '*' key) can read /demo/stats and /demo/export, as the gate already allowed", async () => {
+    for (const k of [K.admin, K.star]) {
+      const s = await request(realSrv).get('/demo/stats').set('Authorization', `ApiKey ${k}`);
+      expect(s.status, s.text).toBe(200);
+      const e = await request(realSrv).get('/demo/export').set('Authorization', `ApiKey ${k}`);
+      expect(e.status, e.text).not.toBe(403);
+      expect(e.status, e.text).not.toBe(401);
+    }
+    // the gate keeps /demo for admin keys: read and send-logs keys are still refused there
+    for (const k of [K.read, K.ingest]) {
+      expect(refusal(await request(realSrv).get('/demo/stats').set('Authorization', `ApiKey ${k}`), 'demo stats non-admin'))
+        .toEqual({ needed: 'admin', missing: ['admin'] });
+    }
+  });
+
+  it('with no gate in front, requirePermission and requireRole grant and refuse like the gate', async () => {
+    const { requirePermission, requireRole, authenticate } = await import('../auth/middleware.js');
+    const ok = (_req: unknown, res: { status: (c: number) => { json: (b: unknown) => void } }) => res.status(299).json({ reached: true });
+    const a = Router();
+    a.get('/read', authenticate, requirePermission('read'), ok as never);
+    a.post('/alerts-write', authenticate, requirePermission('alerts:write'), ok as never);
+    a.post('/dashboards-write', authenticate, requirePermission('dashboards:write'), ok as never);
+    a.post('/write', authenticate, requirePermission('write'), ok as never);
+    a.get('/writer-role', authenticate, requireRole('user', 'admin'), ok as never);
+    a.get('/reader-role', authenticate, requireRole('readonly'), ok as never);
+    const bare = express();
+    bare.use(express.json());
+    bare.use('/kl-r9', a);
+    // the pop-up path: 'write' there also needs read
+    bare.get('/ingest/notifications', authenticate, requirePermission('write'), ok as never);
+    const srv = bare.listen(0, '::1');
+    await new Promise<void>((r) => srv.once('listening', () => r()));
+    const base = `http://[::1]:${(srv.address() as AddressInfo).port}`;
+    const h = (k: string) => ({ Authorization: `ApiKey ${k}`, 'User-Agent': 'kl-r9-bare' });
+    try {
+      // read by name: read, search, admin and '*' keys pass; send-logs-only and X-only keys don't
+      for (const k of [K.read, K.admin, K.star, K.search]) {
+        expect((await request(base).get('/kl-r9/read').set(h(k))).status).toBe(299);
+      }
+      expect(refusal(await request(base).get('/kl-r9/read').set(h(K.ingest)), 'read by name, ingest key'))
+        .toEqual({ needed: 'read', missing: ['read'] });
+      expect(refusal(await request(base).get('/kl-r9/read').set(h(K.alertsOnly)), 'read by name, alerts:write only'))
+        .toEqual({ needed: 'read', missing: ['read'] });
+      // alerts:write / dashboards:write by name: need read too, unless the key is admin
+      for (const k of [K.alerts, K.searchAlerts, K.admin, K.star]) {
+        expect((await request(base).post('/kl-r9/alerts-write').set(h(k)).send({})).status).toBe(299);
+      }
+      expect(refusal(await request(base).post('/kl-r9/alerts-write').set(h(K.alertsOnly)).send({}), 'alerts:write without read'))
+        .toEqual({ needed: 'alerts:write', missing: ['read'] });
+      expect(refusal(await request(base).post('/kl-r9/dashboards-write').set(h(K.dashboardsOnly)).send({}), 'dashboards:write without read'))
+        .toEqual({ needed: 'dashboards:write', missing: ['read'] });
+      expect((await request(base).post('/kl-r9/dashboards-write').set(h(K.dashboards)).send({})).status).toBe(299);
+      // write by name (send logs): only 'write' or '*'
+      expect((await request(base).post('/kl-r9/write').set(h(K.ingest)).send({})).status).toBe(299);
+      expect(refusal(await request(base).post('/kl-r9/write').set(h(K.admin)).send({}), 'write by name, admin key'))
+        .toEqual({ needed: 'write', missing: ['write'] });
+      // on the pop-up path, a key with neither is told it lacks both
+      expect(refusal(await request(base).get('/ingest/notifications').set(h(K.alertsOnly)), 'pop-up write by name'))
+        .toEqual({ needed: 'write', missing: ['write', 'read'] });
+      expect(refusal(await request(base).get('/ingest/notifications').set(h(K.read)), 'pop-up write by name, read key'))
+        .toEqual({ needed: 'write', missing: ['write'] });
+
+      // requireRole names the permission that matches the roles it allows
+      const ro = await createUser('kl-r9-readonly', 'kl-r9-readonly@example.invalid', 'kl-r9-readonly-pass-1', 'readonly');
+      const roKey = (await newKey('kl r9 readonly owner key', ['read'], ro.id)).apiKey;
+      const plain = await createUser('kl-r9-plain', 'kl-r9-plain@example.invalid', 'kl-r9-plain-pass-1', 'user');
+      const plainKey = (await newKey('kl r9 plain user key', ['read', 'write'], plain.id)).apiKey;
+      expect(refusal(await request(base).get('/kl-r9/writer-role').set(h(roKey)), 'requireRole user/admin'))
+        .toEqual({ needed: 'write', missing: [] });
+      expect(refusal(await request(base).get('/kl-r9/reader-role').set(h(plainKey)), 'requireRole readonly'))
+        .toEqual({ needed: 'read', missing: [] });
+      expect((await request(base).get('/kl-r9/writer-role').set(h(plainKey))).status).toBe(299);
+    } finally {
+      srv.closeAllConnections();
+      await new Promise((r) => srv.close(r));
+    }
+  });
+
+  it('the audit row of a refused key names the key by its id (never the key)', async () => {
+    (resetDenialRowsForTest as (() => void) | undefined)?.();
+    const made = await newKey('kl r9 audited key', ['write']);
+    const ua = 'kl-r9-audit-id';
+    const r = await request(realSrv).get('/alerts').set({ Authorization: `ApiKey ${made.apiKey}`, 'User-Agent': ua });
+    expect(refusal(r, 'gate refusal')).toEqual({ needed: 'read', missing: ['read'] });
+    const rows = rowsFor(ua);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].user_id).toBe(klAdminId);
+    expect(JSON.parse(rows[0].details)).toMatchObject({ apiKeyId: made.keyData.id, path: '/alerts', needed: 'read', missing: ['read'] });
+    expect(rows[0].details).not.toContain(made.apiKey);
+  });
+
+  it('a pop-up host name is counted in characters: 255 emoji are fine, 256 are not', async () => {
+    const { createAgentNotification } = await import('../db/sqlite-notifications.js');
+    const A = { Authorization: `ApiKey ${(await newKey('kl r9 emoji host', ['write', 'read'])).apiKey}` };
+    const n = createAgentNotification('kl-r9 alert', 'kl-r9 emoji host', 'm', {});
+    const ok = '\u{1F600}'.repeat(255); // 510 UTF-16 units
+    const long = '\u{1F600}'.repeat(256);
+    expect((await request(realSrv).get(`/ingest/notifications?hostname=${encodeURIComponent(ok)}`).set(A)).status).toBe(200);
+    expect((await request(realSrv).post(`/ingest/notifications/${n.id}/ack`).set(A).send({ hostname: ok })).status).toBe(200);
+    const g = await request(realSrv).get(`/ingest/notifications?hostname=${encodeURIComponent(long)}`).set(A);
+    expect(g.status).toBe(400);
+    expect(g.body.error).toMatch(/255 characters/);
+    expect((await request(realSrv).post(`/ingest/notifications/${n.id}/ack`).set(A).send({ hostname: long })).status).toBe(400);
+    const hosts = getSQLiteDB().prepare('SELECT hostname FROM agent_notification_deliveries WHERE notification_id = ?').all(n.id) as Array<{ hostname: string }>;
+    expect(hosts.map((x) => [...x.hostname].length)).toEqual([255]);
+  });
+
+  it('one reader can clear one pop-up on at most 1000 hosts; then it is cleared for that reader everywhere, not for others', async () => {
+    const { createAgentNotification, markNotificationDelivered, getPendingNotifications, MAX_POPUP_HOSTS_PER_READER } =
+      await import('../db/sqlite-notifications.js');
+    expect(MAX_POPUP_HOSTS_PER_READER).toBe(1000);
+    const made = await newKey('kl r9 many hosts', ['write', 'read']);
+    const A = { Authorization: `ApiKey ${made.apiKey}` };
+    const B = { Authorization: `ApiKey ${(await newKey('kl r9 other reader', ['write', 'read'])).apiKey}` };
+    const n = createAgentNotification('kl-r9 alert', 'kl-r9 many hosts', 'm', {});
+    const who = (hostname: string) => ({ reader: `key:${made.keyData.id}`, hostname });
+    const count = () => (getSQLiteDB()
+      .prepare('SELECT COUNT(*) AS c FROM agent_notification_deliveries WHERE notification_id = ? AND reader = ?')
+      .get(n.id, `key:${made.keyData.id}`) as { c: number }).c;
+    const pendingFor = async (hdr: Record<string, string>, host: string) =>
+      ((await request(realSrv).get(`/ingest/notifications?hostname=${host}`).set(hdr)).body.notifications as Array<{ id: string }>)
+        .some((x) => x.id === n.id);
+    for (let i = 0; i < MAX_POPUP_HOSTS_PER_READER - 1; i++) markNotificationDelivered(n.id, who(`kl-r9-host-${i}`));
+    expect(count()).toBe(MAX_POPUP_HOSTS_PER_READER - 1);
+    // one host short of the cap: still pending on a host it was not cleared on
+    expect(await pendingFor(A, 'kl-r9-fresh-host')).toBe(true);
+    expect(getPendingNotifications(who('kl-r9-fresh-host')).some((x) => x.id === n.id)).toBe(true);
+    // the 1000th clear, through the route
+    expect((await request(realSrv).post(`/ingest/notifications/${n.id}/ack`).set(A).send({ hostname: 'kl-r9-host-last' })).status).toBe(200);
+    expect(count()).toBe(MAX_POPUP_HOSTS_PER_READER);
+    // now cleared for this reader on every host, and no more rows are added
+    expect(await pendingFor(A, 'kl-r9-fresh-host')).toBe(false);
+    expect((await request(realSrv).post(`/ingest/notifications/${n.id}/ack`).set(A).send({ hostname: 'kl-r9-one-more' })).status).toBe(200);
+    markNotificationDelivered(n.id, who('kl-r9-and-another'));
+    expect(count()).toBe(MAX_POPUP_HOSTS_PER_READER);
+    // another key still sees it
+    expect(await pendingFor(B, 'kl-r9-host-0')).toBe(true);
+  });
+
+  it('when the audit row cannot be written, the console says so once per kind of refusal a day, not once per request', async () => {
+    (resetDenialRowsForTest as (() => void) | undefined)?.();
+    const db = getSQLiteDB();
+    const k = (await newKey('kl r9 audit down', ['write'])).apiKey;
+    const ua = 'kl-r9-audit-down';
+    db.exec("CREATE TEMP TRIGGER kl_r9_audit_down BEFORE INSERT ON auth_audit_log WHEN NEW.user_agent = 'kl-r9-audit-down' BEGIN SELECT RAISE(ABORT, 'kl-r9 audit table down'); END;");
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const said = () => errors.mock.calls.map((c) => c.map(String).join(' ')).filter((l) => /could not write the audit row/.test(l));
+    const at = async (p: string, t?: number) => {
+      const spy = t === undefined ? null : vi.spyOn(Date, 'now').mockReturnValue(t);
+      try {
+        expect((await request(realSrv).get(p).set({ Authorization: `ApiKey ${k}`, 'User-Agent': ua })).status).toBe(403);
+      } finally {
+        spy?.mockRestore();
+      }
+    };
+    try {
+      const now = Date.now();
+      for (let i = 0; i < 3; i++) await at('/alerts', now + i * 1000);
+      expect(said()).toHaveLength(1);
+      await at('/dashboards', now + 4000); // another kind: its own line
+      expect(said()).toHaveLength(2);
+      await at('/alerts', now + 25 * 60 * 60 * 1000); // a day later: said again
+      expect(said()).toHaveLength(3);
+      await at('/alerts', now - 2 * 24 * 60 * 60 * 1000); // clock set back: said again
+      expect(said()).toHaveLength(4);
+      for (const l of said()) expect(l).not.toMatch(/lnog_|\/alerts|\/dashboards|kl-r9 audit table down/);
+    } finally {
+      errors.mockRestore();
+      db.exec('DROP TRIGGER IF EXISTS kl_r9_audit_down');
+    }
+    expect(rowsFor(ua)).toHaveLength(0);
   });
 });

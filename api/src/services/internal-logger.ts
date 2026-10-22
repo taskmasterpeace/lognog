@@ -682,7 +682,12 @@ export const REPORT_ERROR_PHRASES = {
  */
 export type ReportStage = 'search' | 'render' | 'mail' | 'finish';
 
-export function reportErrorSummary(error: string, stage?: ReportStage): string {
+/**
+ * The step must be named: 'unknown' (sort a mail-looking error by its text)
+ * has to be asked for, so no new caller can forget the step and have a
+ * database error called a mail-server problem.
+ */
+export function reportErrorSummary(error: string, stage: ReportStage | 'unknown'): string {
   const e = String(error ?? '');
   if (stage === 'search') return REPORT_ERROR_PHRASES.search;
   if (stage === 'render' || stage === 'finish') return REPORT_ERROR_PHRASES.other;
@@ -706,10 +711,11 @@ export function logReportGenerated(data: {
   duration_ms: number;
   row_count: number;
   sent_to?: string[];
-  error?: string;
-  /** The step that failed; picks the phrase (see reportErrorSummary). */
-  stage?: ReportStage;
-}): void {
+} & (
+  | { error?: undefined; stage?: undefined }
+  /** A failed run names the step that failed; it picks the phrase (see reportErrorSummary). */
+  | { error: string; stage: ReportStage | 'unknown' }
+)): void {
   const action: EventAction = data.error ? 'report.error' :
                               data.sent_to?.length ? 'report.sent' :
                               'report.generated';
@@ -732,7 +738,7 @@ export function logReportGenerated(data: {
       row_count: data.row_count,
       recipient_count: sentCount,
       ...(error && { error }),
-      ...(error && data.stage && { failed_step: data.stage }),
+      ...(error && data.stage && data.stage !== 'unknown' && { failed_step: data.stage }),
     },
     severity: data.error ? SEVERITY.ERROR : SEVERITY.INFO,
   }).catch(() => {});

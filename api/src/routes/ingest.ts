@@ -520,13 +520,14 @@ function notificationReader(req: Request): string {
 
 /**
  * A host name for alert pop-ups: at most 255 characters (the longest a DNS
- * name can be), so each per-reader delivery row stays small. Anything that is
- * not one string counts as no host.
+ * name can be), so each per-reader delivery row stays small. Characters are
+ * counted as people count them (an emoji is one, not two UTF-16 units).
+ * Anything that is not one string counts as no host.
  */
 const MAX_POPUP_HOSTNAME = 255;
 function popupHostname(value: unknown, res: Response): { ok: true; hostname?: string } | { ok: false } {
   if (typeof value !== 'string') return { ok: true, hostname: undefined };
-  if (value.length > MAX_POPUP_HOSTNAME) {
+  if ([...value].length > MAX_POPUP_HOSTNAME) {
     res.status(400).json({ error: `hostname is too long (${MAX_POPUP_HOSTNAME} characters at most)` });
     return { ok: false };
   }

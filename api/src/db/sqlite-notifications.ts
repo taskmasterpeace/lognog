@@ -85,10 +85,20 @@ function sweepExpiredNotifications(): void {
 }
 
 /**
+ * How many host names one reader (one API key or one signed-in user) can
+ * clear one pop-up on. Each clear is a row, kept until the pop-up expires; a
+ * key that sends made-up host names could otherwise add rows without limit.
+ * Once a reader has cleared a pop-up on this many hosts, it counts as cleared
+ * for that reader everywhere (it stops showing, and no more rows are added).
+ */
+export const MAX_POPUP_HOSTS_PER_READER = 1000;
+
+/**
  * Pop-ups this reader has not shown yet: not expired, meant for every host
  * or for this reader's host, and not already cleared by this reader on this
- * host. A pop-up marked delivered before per-reader delivery existed stays
- * delivered for everyone (no old pop-ups come back after an upgrade).
+ * host (or on MAX_POPUP_HOSTS_PER_READER hosts). A pop-up marked delivered
+ * before per-reader delivery existed stays delivered for everyone (no old
+ * pop-ups come back after an upgrade).
  */
 export function getPendingNotifications(who: NotificationReader): AgentNotification[] {
   const database = getSQLiteDB();
@@ -102,12 +112,16 @@ export function getPendingNotifications(who: NotificationReader): AgentNotificat
       SELECT 1 FROM agent_notification_deliveries d
       WHERE d.notification_id = n.id AND d.reader = ? AND d.hostname = ?
     )
+    AND (
+      SELECT COUNT(*) FROM agent_notification_deliveries d3
+      WHERE d3.notification_id = n.id AND d3.reader = ?
+    ) < ?
     -- Shown before per-reader delivery existed (no delivery rows): done.
     AND NOT (n.delivered = 1 AND NOT EXISTS (
       SELECT 1 FROM agent_notification_deliveries d2 WHERE d2.notification_id = n.id
     ))
     ORDER BY n.created_at ASC
-  `).all(hostname, who.reader, hostname) as AgentNotification[];
+  `).all(hostname, who.reader, hostname, who.reader, MAX_POPUP_HOSTS_PER_READER) as AgentNotification[];
 }
 
 /**
@@ -124,10 +138,16 @@ export function markNotificationDelivered(id: string, who: NotificationReader): 
   if (!notification) return false;
   if (notification.hostname && notification.hostname !== hostname) return false;
 
+  // At most MAX_POPUP_HOSTS_PER_READER rows per reader and pop-up: past that
+  // the pop-up already counts as cleared for this reader everywhere.
   database.prepare(`
     INSERT OR IGNORE INTO agent_notification_deliveries (notification_id, reader, hostname)
-    VALUES (?, ?, ?)
-  `).run(id, who.reader, hostname);
+    SELECT ?, ?, ?
+    WHERE (
+      SELECT COUNT(*) FROM agent_notification_deliveries
+      WHERE notification_id = ? AND reader = ?
+    ) < ?
+  `).run(id, who.reader, hostname, id, who.reader, MAX_POPUP_HOSTS_PER_READER);
   // 'delivered' now means "shown on at least one machine" (kept for anything
   // that reads it); who still has it pending is decided per reader above.
   database.prepare(`

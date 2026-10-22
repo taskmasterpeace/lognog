@@ -282,6 +282,21 @@ export function missingForPermission(permissions: readonly string[] | null | und
 }
 
 /**
+ * Does this key hold a permission a route checks by name (requirePermission)?
+ * The same grants as the gate: 'read' is met by 'read', 'search', 'admin' or
+ * '*'; 'write' (send logs) by 'write' or '*'; 'alerts:write' and
+ * 'dashboards:write' also need read unless the key has 'admin'. A name the
+ * key lock doesn't know is met by itself or '*'. Without this, a route that
+ * asks for 'read' by name would refuse an 'admin' key the gate lets through.
+ */
+export function keyHasPermission(permissions: readonly string[] | null | undefined, permission: string): boolean {
+  const need = permission === 'write' ? 'ingest' : permission;
+  if (need in KEY_GRANTS) return keyHasNeed(permissions, need as Exclude<KeyNeed, 'none'>);
+  const perms = permissions ?? [];
+  return perms.includes(permission) || perms.includes('*');
+}
+
+/**
  * The whole decision for one API-key request: does this key's permission list
  * (and index scope) allow this method + path?
  */

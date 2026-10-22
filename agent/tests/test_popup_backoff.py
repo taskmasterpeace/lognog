@@ -4,7 +4,8 @@ The server answers 403 to GET /api/ingest/notifications when the key lacks
 'read' (pop-ups carry alert text from every index). The agent then asks only
 once an hour, so it does not write an audit row on the server every 30
 seconds, and warns once. A new key or server saved in the agent's own
-settings ends that wait at once.
+settings ends that wait at once, also when the settings window writes into
+the Config the shipper already holds (it does: gui.py _save).
 
 No pytest import on purpose: the functions take a temporary directory and
 also run under a plain runner where httpx is stubbed.
@@ -107,6 +108,72 @@ def test_new_server_saved_in_settings_is_asked_at_once(tmp_path):
         shipper.update_config(replace(shipper.config, server_url="http://localhost:4001"))
         tick(1)
         assert client.calls == 2
+    finally:
+        restore()
+
+
+def test_key_changed_in_place_by_the_settings_window_is_asked_at_once(tmp_path):
+    # The settings window sets server_url / api_key on the same Config object
+    # the shipper holds, then calls on_save(self.config): old and new are one
+    # object, so comparing them can never see the change.
+    shipper, client, tick, restore = _setup(tmp_path)
+    try:
+        tick(0)
+        assert client.calls == 1
+        held = shipper.config
+        held.batch_size = held.batch_size + 1  # another setting: the wait stays
+        shipper.update_config(held)
+        tick(31)
+        assert client.calls == 1
+        client.code = 200
+        held.api_key = "kl-new-key"  # what gui.py _save does
+        shipper.update_config(held)
+        assert shipper.config is held
+        tick(1)
+        assert client.calls == 2
+        assert client.keys[-1] == "ApiKey kl-new-key"
+        assert shipper.get_stats()["notifications_refused"] is False
+    finally:
+        restore()
+
+
+def test_key_changed_in_place_without_update_config_is_asked_at_once(tmp_path):
+    # Even if nothing tells the shipper, the next check sees the key is not
+    # the refused one.
+    shipper, client, tick, restore = _setup(tmp_path)
+    try:
+        tick(0)
+        shipper.config.server_url = "http://localhost:4001"
+        tick(1)
+        assert client.calls == 2
+        # refused again with the new server: back to hourly
+        tick(31)
+        assert client.calls == 2
+        tick(3600)
+        assert client.calls == 3
+    finally:
+        restore()
+
+
+def test_key_changed_while_the_refused_request_was_out_is_asked_at_once(tmp_path):
+    # The refusal belongs to the key the request was sent with, not to the
+    # key the settings window saved while it was on its way.
+    shipper, client, tick, restore = _setup(tmp_path)
+    try:
+        real_get = client.get
+
+        async def get_then_change_key(*args, **kwargs):
+            out = await real_get(*args, **kwargs)
+            shipper.config.api_key = "kl-saved-meanwhile"
+            return out
+
+        client.get = get_then_change_key
+        tick(0)
+        assert client.keys == ["ApiKey kl-old-key"]
+        client.get = real_get
+        tick(1)
+        assert client.calls == 2
+        assert client.keys[-1] == "ApiKey kl-saved-meanwhile"
     finally:
         restore()
 

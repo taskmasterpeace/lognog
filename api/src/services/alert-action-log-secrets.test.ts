@@ -130,9 +130,9 @@ describe('scheduled report runs carry no addresses or mail-server text (key lock
   it('a failed report logs the kind of failure only, not the mail server reply', async () => {
     mockInsertLogs.mockClear();
     logReportGenerated({ report_id: 'r2', report_name: 'kl broken', duration_ms: 5, row_count: 0,
-      error: 'Invalid login: 535 5.7.8 kl-secret-user@example.com password rejected' });
+      error: 'Invalid login: 535 5.7.8 kl-secret-user@example.com password rejected', stage: 'mail' });
     logReportGenerated({ report_id: 'r3', report_name: 'kl bounced', duration_ms: 5, row_count: 0,
-      error: 'Can not send mail to kl-secret-c@example.net: mailbox full' });
+      error: 'Can not send mail to kl-secret-c@example.net: mailbox full', stage: 'mail' });
     await shutdown();
     const failed = logged().filter((e) => e.action === 'report.error');
     expect(failed.length).toBe(2);
@@ -168,20 +168,20 @@ describe('scheduled report runs carry no addresses or mail-server text (key lock
       '',
     ];
     for (const raw of nasty) {
-      const out = reportErrorSummary(raw);
+      const out = reportErrorSummary(raw, 'unknown');
       expect(out, raw.slice(0, 60)).not.toMatch(/@|%40|\uFF20|kl-secret|\d{3}/);
       expect(out.length).toBeLessThan(60);
       expect(phrases).toContain(out);
     }
-    expect(reportErrorSummary(nasty[0])).toBe(REPORT_ERROR_PHRASES.recipient);
-    expect(reportErrorSummary(nasty[2])).toBe(REPORT_ERROR_PHRASES.recipient);
-    expect(reportErrorSummary(nasty[4])).toBe(REPORT_ERROR_PHRASES.login);
-    expect(reportErrorSummary(nasty[5])).toBe(REPORT_ERROR_PHRASES.connection);
-    expect(reportErrorSummary(nasty[6])).toBe(REPORT_ERROR_PHRASES.connection);
-    expect(reportErrorSummary(nasty[7])).toBe(REPORT_ERROR_PHRASES.connection);
-    expect(reportErrorSummary(nasty[8])).toBe(REPORT_ERROR_PHRASES.mail);
-    expect(reportErrorSummary(nasty[9])).toBe(REPORT_ERROR_PHRASES.search);
-    expect(reportErrorSummary(nasty[10])).toBe(REPORT_ERROR_PHRASES.other);
+    expect(reportErrorSummary(nasty[0], 'unknown')).toBe(REPORT_ERROR_PHRASES.recipient);
+    expect(reportErrorSummary(nasty[2], 'unknown')).toBe(REPORT_ERROR_PHRASES.recipient);
+    expect(reportErrorSummary(nasty[4], 'unknown')).toBe(REPORT_ERROR_PHRASES.login);
+    expect(reportErrorSummary(nasty[5], 'unknown')).toBe(REPORT_ERROR_PHRASES.connection);
+    expect(reportErrorSummary(nasty[6], 'unknown')).toBe(REPORT_ERROR_PHRASES.connection);
+    expect(reportErrorSummary(nasty[7], 'unknown')).toBe(REPORT_ERROR_PHRASES.connection);
+    expect(reportErrorSummary(nasty[8], 'unknown')).toBe(REPORT_ERROR_PHRASES.mail);
+    expect(reportErrorSummary(nasty[9], 'unknown')).toBe(REPORT_ERROR_PHRASES.search);
+    expect(reportErrorSummary(nasty[10], 'unknown')).toBe(REPORT_ERROR_PHRASES.other);
   });
 
   it('the step that failed picks the phrase: a database error is never called a mail-server problem (round 8)', async () => {
@@ -215,5 +215,27 @@ describe('scheduled report runs carry no addresses or mail-server text (key lock
     expect(failed[0].message).toContain(REPORT_ERROR_PHRASES.search);
     expect(failed[0].message).not.toContain(REPORT_ERROR_PHRASES.connection);
     expect(JSON.parse(failed[0].structured_data).details).toMatchObject({ failed_step: 'search', error: REPORT_ERROR_PHRASES.search });
+  });
+
+  it('a failed run has to name its step: leaving it out does not compile, and "unknown" is asked for by name (round 9)', async () => {
+    // Checked by tsc (the API's tsc covers the tests): if the step became
+    // optional again, these @ts-expect-error lines would fail the type check.
+    const check = () => {
+      // @ts-expect-error the step is required
+      reportErrorSummary('connect ECONNREFUSED 127.0.0.1:8123');
+      // @ts-expect-error a failed run must name its step
+      logReportGenerated({ report_id: 'r9', report_name: 'kl r9', duration_ms: 1, row_count: 0, error: 'boom' });
+    };
+    expect(typeof check).toBe('function');
+    expect(reportErrorSummary('connect ECONNREFUSED 127.0.0.1:8123', 'unknown')).toBe(REPORT_ERROR_PHRASES.connection);
+    mockInsertLogs.mockClear();
+    logReportGenerated({ report_id: 'r9', report_name: 'kl r9 unknown', duration_ms: 1, row_count: 0, error: 'boom', stage: 'unknown' });
+    await shutdown();
+    const failed = logged().filter((e) => e.action === 'report.error');
+    expect(failed.length).toBe(1);
+    const details = JSON.parse(failed[0].structured_data).details;
+    expect(details.error).toBe(REPORT_ERROR_PHRASES.other);
+    // 'unknown' is not a step, so it is not written as one
+    expect(details).not.toHaveProperty('failed_step');
   });
 });

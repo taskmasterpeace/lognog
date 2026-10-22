@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyAccessToken, getUserById, JwtPayload, logAuthEvent } from './auth.js';
 import { resolveApiKeyCached } from './api-key-cache.js';
-import { keyHasNeed, missingForPermission, apiKeyNeed, permissionNameForNeed } from './key-policy.js';
+import { keyHasNeed, keyHasPermission, missingForPermission, apiKeyNeed, permissionNameForNeed } from './key-policy.js';
 import { refuseApiKey, requestPath } from './api-key-gate.js';
 
 // Extend Express Request to include auth info
@@ -307,9 +307,9 @@ export function requirePermission(...permissions: string[]) {
 
     // API keys must have specific permissions...
     if (req.authMethod === 'apikey') {
-      const hasPermission = permissions.some(
-        (p) => req.apiKeyPermissions?.includes(p) || req.apiKeyPermissions?.includes('*')
-      );
+      // The same grants as the gate (key-policy.ts keyHasPermission): an
+      // 'admin' key reads, and alerts:write / dashboards:write need read.
+      const hasPermission = permissions.some((p) => keyHasPermission(req.apiKeyPermissions, p));
 
       if (!hasPermission) {
         // Any one of `permissions` would do; name the first (the one the key
