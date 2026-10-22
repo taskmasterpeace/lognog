@@ -53,6 +53,7 @@ import { authenticate, denyReadonly, rateLimit } from '../auth/middleware.js';
 import { requireOwnerOrAdmin, withOwnership, sharedDashboardLocked } from '../auth/ownership.js';
 import { apiKeyNeed } from '../auth/key-policy.js';
 import { executeDSLQuery } from '../db/backend.js';
+import { refuseAdminOnly } from '../auth/api-key-gate.js';
 
 const router = Router();
 
@@ -275,7 +276,7 @@ router.use('/:id', (req: Request, res: Response, next) => {
     apiKeyNeed(req.method, `/dashboards/${req.params.id}${req.path}`) !== 'read' &&
     !/^\/duplicate\/?$/i.test(req.path) // copies it into a new dashboard with no share link, owned by the caller
   ) {
-    return res.status(403).json({ error: sharedLock });
+    return refuseAdminOnly(req, res, sharedLock);
   }
   next();
 });

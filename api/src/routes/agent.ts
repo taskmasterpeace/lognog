@@ -36,6 +36,7 @@ import {
   presentActions,
   restoreHiddenActions,
 } from '../auth/alert-action-guard.js';
+import { refuseAdminOnly } from '../auth/api-key-gate.js';
 
 const router = Router();
 
@@ -252,7 +253,7 @@ router.post('/alerts', WRITE, (req: Request, res: Response) => {
       return res.status(400).json({ error: '`name` and `search_query` are required.' });
     }
     const forbidden = scriptActionForbidden(req, actions);
-    if (forbidden) return res.status(403).json({ error: forbidden });
+    if (forbidden) return refuseAdminOnly(req, res, forbidden);
     const restored = restoreHiddenActions(actions, null);
     if ('error' in restored) return res.status(400).json({ error: restored.error });
     const alert = createAlert(name, search_query, {
@@ -283,10 +284,10 @@ router.patch('/alerts/:id', WRITE, (req: Request, res: Response) => {
     if (!existing) return res.status(404).json({ error: 'Alert not found' });
     if (!requireOwnerOrAdmin(req, res, existing, 'alert')) return;
     const locked = scriptAlertLocked(req, existing);
-    if (locked) return res.status(403).json({ error: locked });
+    if (locked) return refuseAdminOnly(req, res, locked);
     const b = req.body || {};
     const forbidden = scriptActionForbidden(req, b.actions);
-    if (forbidden) return res.status(403).json({ error: forbidden });
+    if (forbidden) return refuseAdminOnly(req, res, forbidden);
     const restored = restoreHiddenActions(b.actions, existing.actions);
     if ('error' in restored) return res.status(400).json({ error: restored.error });
     const alert = updateAlert(req.params.id, {
@@ -306,7 +307,7 @@ router.post('/alerts/:id/evaluate', WRITE, async (req: Request, res: Response) =
     if (!existing) return res.status(404).json({ error: 'Alert not found' });
     if (!requireOwnerOrAdmin(req, res, existing, 'alert')) return;
     const locked = scriptAlertLocked(req, existing);
-    if (locked) return res.status(403).json({ error: locked });
+    if (locked) return refuseAdminOnly(req, res, locked);
     const result = await evaluateAlert(req.params.id);
     return res.json(result);
   } catch (error) {
@@ -319,7 +320,7 @@ router.delete('/alerts/:id', WRITE, (req: Request, res: Response) => {
   if (!existing) return res.status(404).json({ error: 'Alert not found' });
   if (!requireOwnerOrAdmin(req, res, existing, 'alert')) return;
   const locked = scriptAlertLocked(req, existing);
-  if (locked) return res.status(403).json({ error: locked });
+  if (locked) return refuseAdminOnly(req, res, locked);
   const deleted = deleteAlert(req.params.id);
   if (!deleted) return res.status(404).json({ error: 'Alert not found' });
   return res.json({ success: true });

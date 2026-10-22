@@ -5,6 +5,7 @@ import path from 'node:path';
 import type { Request, Response } from 'express';
 import { authenticate, requirePermission, authenticateIngestion, rateLimit } from '../auth/middleware.js';
 import { logAuthEvent } from '../auth/auth.js';
+import { refuseApiKey } from '../auth/api-key-gate.js';
 import { firstDisallowedIndex } from '../auth/index-scope.js';
 import { insertLogs, getBackendInfo } from '../db/backend.js';
 import { getPendingNotifications, markNotificationDelivered, AgentNotification } from '../db/sqlite.js';
@@ -87,7 +88,7 @@ const INGEST_SCHEMA = {
   },
   auth: {
     how: 'Create a key in the LogNog UI (Settings -> API Keys). Send it as `X-API-Key: <key>` or `Authorization: ApiKey <key>`.',
-    permissions: '`write` = send logs only (the /api/ingest/* endpoints; alert pop-ups for the desktop agent at /api/ingest/notifications need `write` together with `read` and no index limit); `read` (or `search`) = search and read; `alerts:write` = create/manage alerts and `dashboards:write` = create/change dashboards, each only together with `read`; `admin` = everything except sending logs (only an admin user can make an `admin` key). Any other request answers 403 with `needed` (the permission the route needs) and `missing` (the permissions this key lacks; empty when the key is refused for its index limit). Choose when creating the key.',
+    permissions: '`write` = send logs only (the /api/ingest/* endpoints; alert pop-ups for the desktop agent at /api/ingest/notifications need `write` together with `read` and no index limit); `read` (or `search`) = search and read; `alerts:write` = create/manage alerts and `dashboards:write` = create/change dashboards, each only together with `read`; `admin` = everything except sending logs (only an admin user can make an `admin` key). Every 403 that refuses a key for what it may do (its permissions, its owner\'s role, its index limit, an admin-only action) answers with `error`, `message`, `needed` (the permission the route needs) and `missing` (the permissions this key lacks; empty when the key is refused for its index limit). Choose when creating the key.',
     index_scoping: 'A key can optionally be restricted to specific indexes (allowed_indexes); searches and ingest are then limited to those.',
     note: 'The key is server-side only. Reading these public docs needs NO key; calling the APIs does.',
   },
@@ -189,6 +190,20 @@ router.get('/schema', (_req: Request, res: Response) => res.json(INGEST_SCHEMA))
  * identically everywhere. Returns the Response so callers can `return denyIndex(...)`.
  */
 function denyIndex(req: Request, res: Response, offendingIndex: string): Response {
+  const message = `This key may only write to: ${(req.allowedIndexes ?? []).join(', ') || '(all)'}`;
+  if (req.authMethod === 'apikey') {
+    // The key has 'write'; its index limit is the reason, so nothing is missing.
+    refuseApiKey(req, res, {
+      event: 'ingest_index_denied',
+      error: 'API key not authorized for this index',
+      needed: 'write',
+      missing: [],
+      message,
+      body: { attempted_index: offendingIndex },
+      details: { attempted_index: offendingIndex, allowed_indexes: req.allowedIndexes },
+    });
+    return res;
+  }
   logAuthEvent(req.user?.id ?? null, 'ingest_index_denied', req.ip, req.get('user-agent'), {
     attempted_index: offendingIndex,
     allowed_indexes: req.allowedIndexes,
@@ -196,7 +211,7 @@ function denyIndex(req: Request, res: Response, offendingIndex: string): Respons
   });
   return res.status(403).json({
     error: 'API key not authorized for this index',
-    message: `This key may only write to: ${(req.allowedIndexes ?? []).join(', ') || '(all)'}`,
+    message,
     attempted_index: offendingIndex,
   });
 }
@@ -504,6 +519,21 @@ function notificationReader(req: Request): string {
 }
 
 /**
+ * A host name for alert pop-ups: at most 255 characters (the longest a DNS
+ * name can be), so each per-reader delivery row stays small. Anything that is
+ * not one string counts as no host.
+ */
+const MAX_POPUP_HOSTNAME = 255;
+function popupHostname(value: unknown, res: Response): { ok: true; hostname?: string } | { ok: false } {
+  if (typeof value !== 'string') return { ok: true, hostname: undefined };
+  if (value.length > MAX_POPUP_HOSTNAME) {
+    res.status(400).json({ error: `hostname is too long (${MAX_POPUP_HOSTNAME} characters at most)` });
+    return { ok: false };
+  }
+  return { ok: true, hostname: value };
+}
+
+/**
  * GET /api/ingest/notifications
  *
  * Get pending notifications for the agent.
@@ -515,8 +545,9 @@ router.get(
   authenticate,
   async (req, res) => {
     try {
-      const hostname = typeof req.query.hostname === 'string' ? req.query.hostname : undefined;
-      const notifications = getPendingNotifications({ reader: notificationReader(req), hostname });
+      const host = popupHostname(req.query.hostname, res);
+      if (!host.ok) return;
+      const notifications = getPendingNotifications({ reader: notificationReader(req), hostname: host.hostname });
 
       res.json({
         notifications: notifications.map((n: AgentNotification) => ({
@@ -551,9 +582,10 @@ router.post(
   async (req, res) => {
     try {
       const { id } = req.params;
-      const hostname = typeof req.body?.hostname === 'string' ? req.body.hostname : undefined;
+      const host = popupHostname(req.body?.hostname, res);
+      if (!host.ok) return;
 
-      const success = markNotificationDelivered(id, { reader: notificationReader(req), hostname });
+      const success = markNotificationDelivered(id, { reader: notificationReader(req), hostname: host.hostname });
 
       if (success) {
         res.json({ success: true });

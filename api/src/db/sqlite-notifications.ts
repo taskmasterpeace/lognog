@@ -72,12 +72,15 @@ const NOT_EXPIRED = "(expires_at IS NULL OR datetime(expires_at) > datetime('now
 let lastExpiredSweep = 0;
 function sweepExpiredNotifications(): void {
   const now = Date.now();
-  if (now - lastExpiredSweep < 60 * 60 * 1000) return;
+  // A clock that jumped back (now before the last sweep) sweeps again rather
+  // than waiting until the clock catches up, which could be days.
+  if (now >= lastExpiredSweep && now - lastExpiredSweep < 60 * 60 * 1000) return;
   lastExpiredSweep = now;
   try {
     deleteExpiredNotifications();
-  } catch {
-    // A failed sweep only means old rows stay a little longer.
+  } catch (err) {
+    // A failed sweep only means old rows stay a little longer; say so.
+    console.error(`[notifications] could not remove expired pop-ups: ${err instanceof Error ? err.name : 'unknown error'}`);
   }
 }
 

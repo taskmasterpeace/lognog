@@ -183,4 +183,37 @@ describe('scheduled report runs carry no addresses or mail-server text (key lock
     expect(reportErrorSummary(nasty[9])).toBe(REPORT_ERROR_PHRASES.search);
     expect(reportErrorSummary(nasty[10])).toBe(REPORT_ERROR_PHRASES.other);
   });
+
+  it('the step that failed picks the phrase: a database error is never called a mail-server problem (round 8)', async () => {
+    const dbErrors = [
+      'connect ECONNREFUSED 127.0.0.1:8123',
+      'Query timed out after 30000 ms',
+      'Code: 62. DB::Exception: Syntax error: failed at position 412',
+      'Code: 516. DB::Exception: default: Authentication failed: password is incorrect',
+      'getaddrinfo ENOTFOUND clickhouse',
+      'socket hang up',
+    ];
+    for (const raw of dbErrors) {
+      expect((reportErrorSummary as (e: string, s?: string) => string)(raw, 'search'), raw).toBe(REPORT_ERROR_PHRASES.search);
+    }
+    const s = reportErrorSummary as (e: string, s?: string) => string;
+    expect(s('connect ECONNREFUSED 10.0.0.5:587', 'mail')).toBe(REPORT_ERROR_PHRASES.connection);
+    expect(s('Invalid login: 535 5.7.8 rejected', 'mail')).toBe(REPORT_ERROR_PHRASES.login);
+    expect(s('Can not send mail to b@x.y', 'mail')).toBe(REPORT_ERROR_PHRASES.recipient);
+    // an unknown error while sending is not guessed to be a search problem
+    expect(s('Unexpected index in response', 'mail')).toBe(REPORT_ERROR_PHRASES.other);
+    // building the e-mail, or anything after sending it
+    expect(s('connect ECONNREFUSED 127.0.0.1:8123', 'render')).toBe(REPORT_ERROR_PHRASES.other);
+    expect(s('Invalid login', 'finish')).toBe(REPORT_ERROR_PHRASES.other);
+
+    mockInsertLogs.mockClear();
+    (logReportGenerated as (d: Record<string, unknown>) => void)({ report_id: 'r8', report_name: 'kl search down', duration_ms: 5, row_count: 0,
+      error: 'connect ECONNREFUSED 127.0.0.1:8123', stage: 'search' });
+    await shutdown();
+    const failed = logged().filter((e) => e.action === 'report.error');
+    expect(failed.length).toBe(1);
+    expect(failed[0].message).toContain(REPORT_ERROR_PHRASES.search);
+    expect(failed[0].message).not.toContain(REPORT_ERROR_PHRASES.connection);
+    expect(JSON.parse(failed[0].structured_data).details).toMatchObject({ failed_step: 'search', error: REPORT_ERROR_PHRASES.search });
+  });
 });

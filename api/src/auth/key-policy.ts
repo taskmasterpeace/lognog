@@ -247,15 +247,38 @@ export type KeyDecision =
   | { allowed: true; need: KeyNeed }
   | { allowed: false; need: KeyNeed; reason: string; missing: string[] };
 
-/** The permissions this key lacks for a need it does not have. */
-function missingForNeed(permissions: readonly string[] | null | undefined, need: Exclude<KeyNeed, 'none'>): string[] {
+/** True when this path is an alert pop-up route (needs 'write' AND 'read'). */
+function isPopupPath(path: string): boolean {
+  const p = normalizeKeyPath(path);
+  return INGEST_NEEDS_READ.some((re) => re.test(p));
+}
+
+/**
+ * Every permission this key lacks for a need, so one refusal names them all
+ * and fixing what it lists is enough: an alerts:write-only key on an alert
+ * pop-up is told it lacks 'write' AND 'read', not 'write' and then, on the
+ * next try, 'read'.
+ */
+function missingForNeed(permissions: readonly string[] | null | undefined, need: Exclude<KeyNeed, 'none'>, path: string): string[] {
   const perms = permissions ?? [];
   const missing: string[] = [];
   if (!KEY_GRANTS[need].some((p) => perms.includes(p))) missing.push(permissionNameForNeed(need));
-  if (WRITES_THAT_READ.has(need) && !KEY_GRANTS.admin.some((p) => perms.includes(p)) && !KEY_GRANTS.read.some((p) => perms.includes(p))) {
+  const needsRead = WRITES_THAT_READ.has(need) || (need === 'ingest' && isPopupPath(path));
+  if (needsRead && !KEY_GRANTS.admin.some((p) => perms.includes(p)) && !KEY_GRANTS.read.some((p) => perms.includes(p))) {
     missing.push('read');
   }
   return missing;
+}
+
+/**
+ * What a key lacks for a permission a route checks by name (requirePermission,
+ * the ingest routes, the admin-only locks). 'write' is the send-logs need;
+ * a name the key lock doesn't know is missing as itself.
+ */
+export function missingForPermission(permissions: readonly string[] | null | undefined, permission: string, path: string): string[] {
+  const need = (permission === 'write' ? 'ingest' : permission) as Exclude<KeyNeed, 'none'>;
+  if (!(need in KEY_GRANTS)) return (permissions ?? []).includes(permission) ? [] : [permission];
+  return missingForNeed(permissions, need, path);
 }
 
 /**
@@ -275,16 +298,18 @@ export function decideApiKey(
     return {
       allowed: false,
       need,
-      missing: missingForNeed(permissions, need),
+      missing: missingForNeed(permissions, need, path),
       reason: WRITES_THAT_READ.has(need)
         ? `This API key can't do that: it needs the '${need}' permission together with 'read' (it has ${JSON.stringify(permissions ?? [])}).`
-        : need === 'ingest'
+        : need === 'ingest' && isPopupPath(path)
+          ? `This API key can't do that: alert pop-ups need the 'write' (send logs) permission together with 'read' (it has ${JSON.stringify(permissions ?? [])}).`
+          : need === 'ingest'
           ? `This API key can't do that: it needs the 'write' (send logs) permission (it has ${JSON.stringify(permissions ?? [])}).`
           : `This API key can't do that: it needs the '${need}' permission (it has ${JSON.stringify(permissions ?? [])}).`,
     };
   }
 
-  if (need === 'ingest' && INGEST_NEEDS_READ.some((re) => re.test(normalizeKeyPath(path))) && !keyHasNeed(permissions, 'read')) {
+  if (need === 'ingest' && isPopupPath(path) && !keyHasNeed(permissions, 'read')) {
     return {
       allowed: false,
       need,

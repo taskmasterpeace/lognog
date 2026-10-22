@@ -1,7 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyAccessToken, getUserById, JwtPayload, logAuthEvent } from './auth.js';
 import { resolveApiKeyCached } from './api-key-cache.js';
-import { keyHasNeed } from './key-policy.js';
+import { keyHasNeed, missingForPermission, apiKeyNeed, permissionNameForNeed } from './key-policy.js';
+import { refuseApiKey, requestPath } from './api-key-gate.js';
 
 // Extend Express Request to include auth info
 declare global {
@@ -158,6 +159,21 @@ export function requireRole(...roles: string[]) {
     }
 
     if (!roles.includes(req.user.role)) {
+      if (req.authMethod === 'apikey') {
+        // No route uses requireRole today; if one does, a key refused for its
+        // owner's role answers like every other key refusal (audited, deduped,
+        // with needed/missing). The key's own permissions are not what is
+        // missing, so `missing` is empty.
+        const needed = roles.includes('readonly') ? 'read' : roles.includes('user') ? 'write' : 'admin';
+        refuseApiKey(req, res, {
+          event: 'access_denied',
+          needed,
+          missing: [],
+          message: `This API key can't do that: its owner's role (${req.user.role}) is not allowed here (allowed: ${roles.join(', ')}).`,
+          details: { requiredRoles: roles, userRole: req.user.role },
+        });
+        return;
+      }
       logAuthEvent(req.user.id, 'access_denied', req.ip, req.get('user-agent'), {
         requiredRoles: roles,
         userRole: req.user.role,
@@ -181,6 +197,17 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction): v
   }
 
   if (req.user.role !== 'admin') {
+    if (req.authMethod === 'apikey') {
+      // A key never does more than its owner, and its owner is not an admin.
+      refuseApiKey(req, res, {
+        event: 'admin_access_denied',
+        error: 'Admin access required',
+        needed: 'admin',
+        missing: ['admin'],
+        message: "This API key can't do that: it needs the 'admin' permission, and only an administrator's key can have it.",
+      });
+      return;
+    }
     logAuthEvent(req.user.id, 'admin_access_denied', req.ip, req.get('user-agent'), {
       path: req.path,
     });
@@ -191,11 +218,12 @@ export function requireAdmin(req: Request, res: Response, next: NextFunction): v
   // Every API key belongs to a user (today, the admin), so the role check above
   // alone let ANY key through. A key must also carry 'admin' (or '*') itself.
   if (req.authMethod === 'apikey' && !keyHasNeed(req.apiKeyPermissions, 'admin')) {
-    logAuthEvent(req.user.id, 'admin_access_denied', req.ip, req.get('user-agent'), {
-      path: req.path,
-      apiKeyPermissions: req.apiKeyPermissions,
+    refuseApiKey(req, res, {
+      event: 'admin_access_denied',
+      needed: 'admin',
+      missing: ['admin'],
+      message: `This API key can't do that: it needs the 'admin' permission (it has ${JSON.stringify(req.apiKeyPermissions ?? [])}).`,
     });
-    res.status(403).json({ error: 'API key lacks required permissions', needed: 'admin', missing: ['admin'] });
     return;
   }
 
@@ -284,30 +312,45 @@ export function requirePermission(...permissions: string[]) {
       );
 
       if (!hasPermission) {
-        logAuthEvent(req.user.id, 'permission_denied', req.ip, req.get('user-agent'), {
-          requiredPermissions: permissions,
-          apiKeyPermissions: req.apiKeyPermissions,
-          path: req.path,
+        // Any one of `permissions` would do; name the first (the one the key
+        // form offers for this route) and everything the key lacks for it.
+        const needed = permissions[0] ?? 'admin';
+        refuseApiKey(req, res, {
+          event: 'permission_denied',
+          needed,
+          missing: missingForPermission(req.apiKeyPermissions, needed, requestPath(req)),
+          message: `This API key can't do that: it needs the '${needed}' permission (it has ${JSON.stringify(req.apiKeyPermissions ?? [])}).`,
+          details: { requiredPermissions: permissions },
         });
-        res.status(403).json({ error: 'API key lacks required permissions' });
         return;
       }
 
       // ...AND a read-only role must never write, even with a write-scoped key.
       const needsWrite = permissions.some((p) => p === 'write' || p === 'admin' || p.endsWith(':write'));
       if (needsWrite && isReadonlyRole(req.user.role)) {
-        logAuthEvent(req.user.id, 'permission_denied', req.ip, req.get('user-agent'), {
-          requiredPermissions: permissions,
-          userRole: req.user.role,
-          path: req.path,
-        });
-        res.status(403).json({ error: 'Read-only account cannot perform write operations' });
+        refuseReadonlyKey(req, res, permissions[0]);
         return;
       }
     }
 
     next();
   };
+}
+
+/**
+ * A key whose owner is a read-only account may not change anything: its
+ * write-type permissions don't count (key-policy.ts effectiveKeyPermissions),
+ * so the permission the route needs is what it lacks.
+ */
+function refuseReadonlyKey(req: Request, res: Response, needed: string): void {
+  refuseApiKey(req, res, {
+    event: 'permission_denied',
+    error: 'Read-only account cannot perform write operations',
+    needed,
+    missing: [needed],
+    message: `This API key belongs to a read-only account, so it can't use the '${needed}' permission.`,
+    details: { reason: 'readonly_write_blocked', userRole: req.user?.role },
+  });
 }
 
 /**
@@ -330,6 +373,10 @@ export function denyReadonly(req: Request, res: Response, next: NextFunction): v
   }
 
   if (isReadonlyRole(req.user.role)) {
+    if (req.authMethod === 'apikey') {
+      refuseReadonlyKey(req, res, permissionNameForNeed(apiKeyNeed(method, requestPath(req))));
+      return;
+    }
     logAuthEvent(req.user.id, 'permission_denied', req.ip, req.get('user-agent'), {
       reason: 'readonly_write_blocked',
       method,
@@ -517,11 +564,19 @@ export async function authenticateIngestion(req: Request, res: Response, next: N
     // Check if API key has write permission
     const hasWritePermission = result.permissions.includes('write') || result.permissions.includes('*');
     if (!hasWritePermission) {
-      logAuthEvent(user.id, 'ingestion_permission_denied', req.ip, req.get('user-agent'), {
-        apiKeyPermissions: result.permissions,
-        path: req.path,
+      refuseApiKey(req, res, {
+        event: 'ingestion_permission_denied',
+        error: 'API key requires write permission for ingestion',
+        needed: 'write',
+        missing: missingForPermission(result.permissions, 'write', requestPath(req)),
+        message: `This API key can't do that: it needs the 'write' (send logs) permission (it has ${JSON.stringify(result.permissions)}).`,
+        key: {
+          keyId: result.keyId,
+          userId: user.id,
+          permissions: result.permissions,
+          scoped: !!(result.allowedIndexes && result.allowedIndexes.length > 0),
+        },
       });
-      res.status(403).json({ error: 'API key requires write permission for ingestion' });
       return;
     }
 
@@ -537,7 +592,7 @@ export async function authenticateIngestion(req: Request, res: Response, next: N
 
     // Log successful authentication
     logAuthEvent(user.id, 'otlp_ingest_auth', req.ip, req.get('user-agent'), {
-      path: req.path,
+      path: requestPath(req),
     });
 
     next();

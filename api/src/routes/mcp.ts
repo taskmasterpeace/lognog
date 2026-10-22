@@ -11,6 +11,7 @@ import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
 import { createMCPServer } from '../mcp/server.js';
 import { validateApiKey } from '../auth/auth.js';
 import { decideApiKey } from '../auth/key-policy.js';
+import { refuseApiKey, type RefusedKey } from '../auth/api-key-gate.js';
 
 const router = Router();
 
@@ -29,9 +30,37 @@ const activeConnections: Map<string, McpConnection> = new Map();
  * every message, so revoking the key or demoting its owner stops an open stream.
  */
 export async function mcpKeyStillAllowed(apiKey: string): Promise<boolean> {
+  return (await mcpKeyRefusal(apiKey)) === null;
+}
+
+/**
+ * Why this key may no longer use the MCP stream (null when it still may):
+ * what it lacks, in the same form as every other API-key 403. A key that was
+ * revoked or expired (or whose owner was disabled) has no permission left, so
+ * it lacks 'admin'.
+ */
+export async function mcpKeyRefusal(
+  apiKey: string,
+): Promise<{ missing: string[]; message: string; key?: RefusedKey } | null> {
   const keyInfo = await validateApiKey(apiKey);
-  if (!keyInfo) return false;
-  return decideApiKey('GET', '/mcp/sse', keyInfo.permissions, keyInfo.allowedIndexes).allowed;
+  if (!keyInfo) {
+    return {
+      missing: ['admin'],
+      message: 'The API key that opened this MCP stream was revoked or expired, or its owner was disabled, so it has no permission left.',
+    };
+  }
+  const decision = decideApiKey('GET', '/mcp/sse', keyInfo.permissions, keyInfo.allowedIndexes);
+  if (decision.allowed) return null;
+  return {
+    missing: decision.missing,
+    message: `The API key that opened this MCP stream may no longer use it. ${decision.reason}`,
+    key: {
+      keyId: keyInfo.keyId,
+      userId: keyInfo.userId,
+      permissions: keyInfo.permissions,
+      scoped: !!(keyInfo.allowedIndexes && keyInfo.allowedIndexes.length > 0),
+    },
+  };
 }
 
 /**
@@ -61,7 +90,17 @@ router.get('/sse', async (req: Request, res: Response) => {
     // this too, but the key can arrive here by header or query param).
     const mcpDecision = decideApiKey('GET', '/mcp/sse', keyInfo.permissions, keyInfo.allowedIndexes);
     if (!mcpDecision.allowed) {
-      res.status(403).json({ error: 'API key lacks required permissions', needed: 'admin', missing: mcpDecision.missing, message: mcpDecision.reason });
+      refuseApiKey(req, res, {
+        needed: 'admin',
+        missing: mcpDecision.missing,
+        message: mcpDecision.reason,
+        key: {
+          keyId: keyInfo.keyId,
+          userId: keyInfo.userId,
+          permissions: keyInfo.permissions,
+          scoped: !!(keyInfo.allowedIndexes && keyInfo.allowedIndexes.length > 0),
+        },
+      });
       return;
     }
 
@@ -119,7 +158,8 @@ router.post('/messages', async (req: Request, res: Response) => {
 
   try {
     // The key lock: re-check the key that opened the stream on every message.
-    if (!(await mcpKeyStillAllowed(connection.apiKey))) {
+    const refusal = await mcpKeyRefusal(connection.apiKey);
+    if (refusal) {
       activeConnections.delete(connectionId);
       try {
         await connection.transport.close();
@@ -127,7 +167,7 @@ router.post('/messages', async (req: Request, res: Response) => {
         /* already closed */
       }
       if (!connection.stream.writableEnded) connection.stream.end();
-      res.status(403).json({ error: 'API key lacks required permissions', message: 'The API key that opened this MCP stream was revoked, expired or no longer has admin rights.' });
+      refuseApiKey(req, res, { needed: 'admin', missing: refusal.missing, message: refusal.message, key: refusal.key ?? {} });
       return;
     }
     await connection.transport.handlePostMessage(req, res);

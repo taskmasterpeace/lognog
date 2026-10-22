@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express';
 import { keyHasNeed } from './key-policy.js';
+import { refuseAdminOnly } from './api-key-gate.js';
 
 /**
  * Ownership gate for team objects (alerts, reports, dashboards).
@@ -24,7 +25,9 @@ export function requireOwnerOrAdmin(
   }
   if (user.role === 'admin') return true;
   if (!row?.owner_id || row.owner_id === user.id) return true;
-  res.status(403).json({ error: `Only the owner of this ${what} (or an admin) can change it` });
+  // For an API key this names needed 'admin' like every other key refusal: an
+  // administrator's 'admin' key may change it, this key may not.
+  refuseAdminOnly(req, res, `Only the owner of this ${what} (or an admin) can change it`);
   return false;
 }
 

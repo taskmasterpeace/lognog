@@ -39,6 +39,7 @@ import {
   presentActionResults,
   restoreHiddenActions,
 } from '../auth/alert-action-guard.js';
+import { refuseAdminOnly } from '../auth/api-key-gate.js';
 
 const router = Router();
 
@@ -224,7 +225,7 @@ router.post('/test', async (req: Request, res: Response) => {
 // only an admin may call it: a signed-in admin or an admin user's 'admin' key.
 router.post('/evaluate-all', async (req: Request, res: Response) => {
   if (!mayUseScripts(req)) {
-    return res.status(403).json({ error: 'Only an administrator can run every alert at once (some alerts run scripts on the server)' });
+    return refuseAdminOnly(req, res, 'Only an administrator can run every alert at once (some alerts run scripts on the server)');
   }
   try {
     const result = await evaluateAllAlerts();
@@ -315,7 +316,7 @@ router.post('/', (req: Request, res: Response) => {
 
     const forbidden = scriptActionForbidden(req, actions);
     if (forbidden) {
-      return res.status(403).json({ error: forbidden });
+      return refuseAdminOnly(req, res, forbidden);
     }
     // A new alert has no saved settings for a "[hidden]" value to come from.
     const restored = restoreHiddenActions(actions, null);
@@ -417,11 +418,11 @@ router.put('/:id', (req: Request, res: Response) => {
 
     const locked = scriptAlertLocked(req, existing);
     if (locked) {
-      return res.status(403).json({ error: locked });
+      return refuseAdminOnly(req, res, locked);
     }
     const forbidden = scriptActionForbidden(req, actions);
     if (forbidden) {
-      return res.status(403).json({ error: forbidden });
+      return refuseAdminOnly(req, res, forbidden);
     }
     // An API key without 'admin' saw secret settings as "[hidden]"; keep the
     // saved values for those instead of overwriting them with the marker.
@@ -479,7 +480,7 @@ router.delete('/:id', (req: Request, res: Response) => {
     if (!requireOwnerOrAdmin(req, res, existing, 'alert')) return;
     const scriptLock = scriptAlertLocked(req, existing);
     if (scriptLock) {
-      return res.status(403).json({ error: scriptLock });
+      return refuseAdminOnly(req, res, scriptLock);
     }
     const deleted = deleteAlert(req.params.id);
     if (!deleted) {
@@ -503,7 +504,7 @@ router.post('/:id/toggle', (req: Request, res: Response) => {
 
     const scriptLock = scriptAlertLocked(req, existing);
     if (scriptLock) {
-      return res.status(403).json({ error: scriptLock });
+      return refuseAdminOnly(req, res, scriptLock);
     }
     const alert = updateAlert(req.params.id, {
       enabled: !existing.enabled,
@@ -534,7 +535,7 @@ router.post('/:id/evaluate', async (req: Request, res: Response) => {
     if (!requireOwnerOrAdmin(req, res, existing, 'alert')) return;
     const scriptLock = scriptAlertLocked(req, existing);
     if (scriptLock) {
-      return res.status(403).json({ error: scriptLock });
+      return refuseAdminOnly(req, res, scriptLock);
     }
     const result = await evaluateAlert(req.params.id);
     res.json(result);

@@ -5,7 +5,7 @@ import { executeDSLQuery, replayIngestSpool } from '../db/backend.js';
 import { recordReportRun } from '../db/sqlite-report-runs.js';
 import { parseAndCompile } from '../dsl/index.js';
 import { evaluateAlert } from './alerts.js';
-import { logReportGenerated, reportErrorSummary } from './internal-logger.js';
+import { logReportGenerated, reportErrorSummary, type ReportStage } from './internal-logger.js';
 import { getStaleSources, markStaleNotified, markSourceUnexpected } from './heartbeat.js';
 import { getPullCollectors, runPullCollector } from './pull-collector.js';
 import { insertLogs } from '../db/backend.js';
@@ -371,6 +371,9 @@ async function runReportInner(
   const elapsed = () => Math.round(performance.now() - startTime);
   // Rows fetched so far — a send-time failure still knows what the query returned.
   let fetchedRows = 0;
+  // The step in progress when an error is thrown; it picks the phrase that
+  // goes to the console and the internal index (see reportErrorSummary).
+  let stage: ReportStage = 'search';
 
   try {
     // Query window: the report's explicit time_range when set, otherwise
@@ -391,6 +394,7 @@ async function runReportInner(
       latest: 'now',
     });
     fetchedRows = results.length;
+    stage = 'render';
     const executionTimeMs = Math.round(performance.now() - startTime);
 
     // Check send condition (Phase 5: Smart Reports)
@@ -487,7 +491,9 @@ async function runReportInner(
         ];
       }
 
+      stage = 'mail';
       await transporter.sendMail(mailOptions);
+      stage = 'finish';
 
       const duration_ms = Math.round(performance.now() - startTime);
       logReportGenerated({
@@ -502,6 +508,7 @@ async function runReportInner(
       console.log(`Report "${report.name}" sent to ${recipients.length} recipient${recipients.length === 1 ? '' : 's'}`);
       outcome = { status: 'sent', row_count: results.length, recipients, duration_ms, html };
     } else {
+      stage = 'finish';
       const duration_ms = Math.round(performance.now() - startTime);
       logReportGenerated({
         report_id: report.id,
@@ -537,10 +544,11 @@ async function runReportInner(
       duration_ms,
       row_count: 0,
       error: errorMessage,
+      stage,
     });
 
     // Summary only (no addresses); the full error is in the report's run history, shown to admins.
-    console.error(`Error running report "${report.name}": ${reportErrorSummary(errorMessage)}`);
+    console.error(`Error running report "${report.name}": ${reportErrorSummary(errorMessage, stage)}`);
 
     // Bug #41-8: even on failure, advance last_run so the scheduler's
     // shouldRunNow() no longer sees this report as due every tick. Without this,

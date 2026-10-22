@@ -115,4 +115,30 @@ describe('scheduler report console lines (key lock round 7)', () => {
       expect(listReportRuns(id)[0].reason).toBe(raw);
     }
   });
+
+  it("a failed search is logged as the search failing, never as a mail-server problem (round 8)", async () => {
+    for (const raw of [
+      'connect ECONNREFUSED 127.0.0.1:8123',
+      'Code: 516. DB::Exception: default: Authentication failed: password is incorrect',
+      'Query timed out after 30000 ms',
+      'getaddrinfo ENOTFOUND clickhouse',
+    ]) {
+      lines = [];
+      h.executeDSLQuery.mockRejectedValueOnce(new Error(raw));
+      const id = createReport();
+      const result = await triggerReport(id);
+      expect(result.status).toBe('error');
+      expect(h.sendMail).not.toHaveBeenCalled();
+      const text = lines.join('\n');
+      expect(text, raw).toContain(`Error running report "Console check": The report's search failed`);
+      expect(text, raw).not.toMatch(/mail server/i);
+      expect(listReportRuns(id)[0].reason).toBe(raw);
+    }
+    // the same kind of error from the mail step is still the mail server's
+    lines = [];
+    h.sendMail.mockRejectedValueOnce(new Error('connect ECONNREFUSED 10.0.0.5:587'));
+    const id = createReport();
+    expect((await triggerReport(id)).status).toBe('error');
+    expect(lines.join('\n')).toContain('Error running report "Console check": Could not reach the mail server');
+  });
 });

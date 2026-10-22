@@ -107,10 +107,26 @@ class HTTPShipper:
         self._notifications_refused_logged = False
         # After the server refuses this key for pop-ups, ask again only hourly
         # (each refusal is an audit entry on the server; a key fixed in
-        # Settings > API Keys is picked up within the hour or on restart).
+        # Settings > API Keys is picked up within the hour or on restart, and
+        # a new key or server saved in the agent's own settings at once:
+        # update_config).
         self._notifications_refused_until: Optional[float] = None
         self._last_heartbeat: Optional[float] = None
         self._heartbeats_sent = 0
+
+    def update_config(self, config: Config) -> None:
+        """Use settings saved in the agent's settings window or setup wizard.
+
+        A new API key or server ends the hourly wait after a pop-up refusal,
+        so a key fixed here is asked about on the next check, not up to an
+        hour later.
+        """
+        old = self.config
+        self.config = config
+        if config.api_key != old.api_key or config.server_url != old.server_url:
+            self._notifications_refused_until = None
+            self._notifications_refused_logged = False
+            self._last_notification_check = None
 
     @property
     def status(self) -> ConnectionStatus:
@@ -616,7 +632,7 @@ class HTTPShipper:
                         "Alert pop-ups are off: the server refused this API key for them. "
                         "Pop-ups need a key with both 'send logs' (write) and 'read' and no index "
                         "limit (Settings > API Keys). Sending logs is not affected. "
-                        "The agent asks again every hour."
+                        "The agent asks again every hour, or at once when a new key is saved in its settings."
                     )
 
         except Exception as e:

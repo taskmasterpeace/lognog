@@ -672,12 +672,25 @@ export const REPORT_ERROR_PHRASES = {
   other: 'Report failed (details in the run history)',
 } as const;
 
-export function reportErrorSummary(error: string): string {
+/**
+ * Which step of a report run failed. The step picks the phrase: an error from
+ * the search step is always "The report's search failed" (a database error
+ * such as "connect ECONNREFUSED 127.0.0.1:8123" or "Authentication failed"
+ * must not be reported as a mail-server problem), an error while building the
+ * e-mail is "Report failed", and only an error from sending is sorted into
+ * the mail phrases. Anything a mail error does not match says "Report failed".
+ */
+export type ReportStage = 'search' | 'render' | 'mail' | 'finish';
+
+export function reportErrorSummary(error: string, stage?: ReportStage): string {
   const e = String(error ?? '');
+  if (stage === 'search') return REPORT_ERROR_PHRASES.search;
+  if (stage === 'render' || stage === 'finish') return REPORT_ERROR_PHRASES.other;
   if (/\b(EAUTH|535|534|530)\b|invalid login|authenticat|credential|password|username/i.test(e)) return REPORT_ERROR_PHRASES.login;
   if (/\b(ECONNECTION|ECONNREFUSED|ECONNRESET|ETIMEDOUT|EHOSTUNREACH|ENETUNREACH|ENOTFOUND|EDNS|ESOCKET|ETLS)\b|getaddrinfo|timed? ?out|greeting|socket|certificate|\btls\b|\bssl\b/i.test(e)) return REPORT_ERROR_PHRASES.connection;
   if (/\b(EENVELOPE|550|551|553)\b|recipient|mailbox|user unknown|no such user|can ?not send mail to|cannot send mail to|address rejected/i.test(e)) return REPORT_ERROR_PHRASES.recipient;
   if (/\b(EMESSAGE|552|554|5\d\d|4\d\d)\b|smtp|mail server|message (failed|rejected)/i.test(e)) return REPORT_ERROR_PHRASES.mail;
+  if (stage === 'mail') return REPORT_ERROR_PHRASES.other;
   if (/\b(query|search|dsl|parse|syntax|index)\b/i.test(e)) return REPORT_ERROR_PHRASES.search;
   return REPORT_ERROR_PHRASES.other;
 }
@@ -694,12 +707,14 @@ export function logReportGenerated(data: {
   row_count: number;
   sent_to?: string[];
   error?: string;
+  /** The step that failed; picks the phrase (see reportErrorSummary). */
+  stage?: ReportStage;
 }): void {
   const action: EventAction = data.error ? 'report.error' :
                               data.sent_to?.length ? 'report.sent' :
                               'report.generated';
 
-  const error = data.error ? reportErrorSummary(data.error) : undefined;
+  const error = data.error ? reportErrorSummary(data.error, data.stage) : undefined;
   const sentCount = data.sent_to?.length ?? 0;
   logInternalEvent({
     action,
@@ -717,6 +732,7 @@ export function logReportGenerated(data: {
       row_count: data.row_count,
       recipient_count: sentCount,
       ...(error && { error }),
+      ...(error && data.stage && { failed_step: data.stage }),
     },
     severity: data.error ? SEVERITY.ERROR : SEVERITY.INFO,
   }).catch(() => {});

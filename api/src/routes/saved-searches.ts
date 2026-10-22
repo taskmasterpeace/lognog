@@ -22,6 +22,7 @@ import { scriptActionForbidden, restoreHiddenActions } from '../auth/alert-actio
 import { requireOwnerOrAdmin, sharedDashboardLocked } from '../auth/ownership.js';
 import { reseedSavedSearches } from '../data/seed-templates.js';
 import type { SavedSearch } from '../db/sqlite-saved-searches.js';
+import { refuseAdminOnly } from '../auth/api-key-gate.js';
 
 const router = Router();
 
@@ -519,7 +520,7 @@ router.post('/:id/create-alert', authenticate, denyReadonly, (req: Request, res:
     // API key, only a key that carries 'admin'). This route used to skip it.
     const forbidden = scriptActionForbidden(req, data.actions);
     if (forbidden) {
-      return res.status(403).json({ error: forbidden });
+      return refuseAdminOnly(req, res, forbidden);
     }
     const restored = restoreHiddenActions(data.actions, null);
     if ('error' in restored) {
@@ -576,7 +577,7 @@ router.post('/:id/create-panel', authenticate, denyReadonly, (req: Request, res:
     // only by an admin key, since its share link runs the panel's query).
     if (!requireOwnerOrAdmin(req, res, dashboard, 'dashboard')) return;
     const sharedLock = sharedDashboardLocked(req, dashboard);
-    if (sharedLock) return res.status(403).json({ error: sharedLock });
+    if (sharedLock) return refuseAdminOnly(req, res, sharedLock);
 
     const panel = createDashboardPanel(
       data.dashboard_id,

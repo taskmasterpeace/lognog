@@ -562,7 +562,7 @@ The agent provides a visual system tray icon with status indicators:
 
 LogNog In can play audio notifications when alert notifications are received from the server. This helps ensure you never miss critical alerts.
 
-> **Key needed:** alert pop-ups (and their sounds) need an API key with both **send logs** (`write`) and **read**, and no index limit. Pop-ups carry alert text from every index, so the server refuses them to a send-logs-only key. With a send-logs-only key the agent still ships logs, writes one warning ("Alert pop-ups are off") to its log, and asks again every hour. See [Generate an API Key](#generate-an-api-key).
+> **Key needed:** alert pop-ups (and their sounds) need an API key with both **send logs** (`write`) and **read**, and no index limit. Pop-ups carry alert text from every index, so the server refuses them to a send-logs-only key. With a send-logs-only key the agent still ships logs, writes one warning ("Alert pop-ups are off") to its log, and asks again every hour, or at once when you save a new key in the agent's settings. See [Generate an API Key](#generate-an-api-key).
 
 ### Features
 
@@ -883,7 +883,7 @@ To authenticate with your LogNog server, you need an API key.
 3. Click **Create API Key**
 4. Enter a name: `lognog-in-agent`
 5. Tick **send logs** (stored as `write`). A send-logs key can send logs and nothing else.
-   For alert pop-ups on this machine, also tick **read** and set no index limit: pop-ups carry alert text from every index, so the server refuses them to a send-logs-only key. Read lets the key search every log, so only do this on machines you trust. Without read the agent still ships logs, writes one warning ("Alert pop-ups are off") to its log, and asks for pop-ups again every hour.
+   For alert pop-ups on this machine, also tick **read** and set no index limit: pop-ups carry alert text from every index, so the server refuses them to a send-logs-only key. Read lets the key search every log, so only do this on machines you trust. Without read the agent still ships logs, writes one warning ("Alert pop-ups are off") to its log, and asks for pop-ups again every hour, or at once when you save a new key in the agent's settings.
 6. Copy the generated key: `lnog_abc123def456...`
 
 ### Use the API Key
