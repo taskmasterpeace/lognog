@@ -1890,4 +1890,55 @@ describe('round 7: repeated refusals, the permission names, and pop-ups per read
     expect(await ids(B, 'kl-r7-two')).not.toContain(legacy.id);
     expect(getAgentNotification(all.id)?.delivered).toBe(1);
   });
+
+  it('expired pop-ups and their per-reader rows are deleted when agents ask, at most once an hour', async () => {
+    const { createAgentNotification, getAgentNotification } = await import('../db/sqlite-notifications.js');
+    const A = { Authorization: `ApiKey ${await newKey('kl-r7 sweeper', ['write', 'read'])}` };
+    const db = getSQLiteDB();
+    const real = Date.now();
+    const pastIso = new Date(real - 60_000).toISOString();
+    const T0 = real + 10 * 60 * 60 * 1000; // well past any earlier sweep in this file
+    const ask = async (at: number) => {
+      const spy = vi.spyOn(Date, 'now').mockReturnValue(at);
+      try {
+        expect((await request(realSrv).get('/ingest/notifications?hostname=kl-r7-sweep').set(A)).status).toBe(200);
+      } finally {
+        spy.mockRestore();
+      }
+    };
+    const deliveries = (id: string) =>
+      (db.prepare('SELECT COUNT(*) AS n FROM agent_notification_deliveries WHERE notification_id = ?').get(id) as { n: number }).n;
+
+    const shown = createAgentNotification('kl-r7 alert', 'kl-r7 still valid', 'm', {});
+    const gone = createAgentNotification('kl-r7 alert', 'kl-r7 cleared then expired', 'm', { expires_at: new Date(real + 60_000).toISOString() });
+    for (const n of [shown, gone]) {
+      expect((await request(realSrv).post(`/ingest/notifications/${n.id}/ack`).set(A).send({ hostname: 'kl-r7-sweep' })).status).toBe(200);
+      expect(deliveries(n.id)).toBe(1);
+    }
+    db.prepare('UPDATE agent_notifications SET expires_at = ? WHERE id = ?').run(pastIso, gone.id);
+    const stale = createAgentNotification('kl-r7 alert', 'kl-r7 expired', 'm', { expires_at: pastIso });
+    const future = createAgentNotification('kl-r7 alert', 'kl-r7 expires in an hour', 'm', { expires_at: new Date(real + 60 * 60 * 1000).toISOString() });
+
+    // The sweep deletes the per-reader rows itself, not only through the
+    // table's ON DELETE CASCADE, so check it with foreign keys off.
+    db.pragma('foreign_keys = OFF');
+    try {
+      await ask(T0);
+    } finally {
+      db.pragma('foreign_keys = ON');
+    }
+    expect(getAgentNotification(stale.id)).toBeUndefined();
+    expect(getAgentNotification(gone.id)).toBeUndefined();
+    expect(deliveries(gone.id)).toBe(0);
+    expect(getAgentNotification(shown.id)).toBeDefined();
+    expect(getAgentNotification(future.id)).toBeDefined();
+    expect(deliveries(shown.id)).toBe(1);
+
+    // within the hour no second sweep runs; after it, one does
+    const later = createAgentNotification('kl-r7 alert', 'kl-r7 expired later', 'm', { expires_at: pastIso });
+    await ask(T0 + 30 * 60 * 1000);
+    expect(getAgentNotification(later.id)).toBeDefined();
+    await ask(T0 + 61 * 60 * 1000);
+    expect(getAgentNotification(later.id)).toBeUndefined();
+  });
 });
