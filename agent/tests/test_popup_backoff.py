@@ -346,23 +346,55 @@ def test_a_popup_returned_again_is_cleared_again_but_shown_once(tmp_path):
         restore()
 
 
-def test_the_shown_popup_memory_keeps_the_newest_1000(tmp_path):
+def test_the_shown_popup_memory_never_forgets_a_pending_one(tmp_path):
+    # Round 11: more than MAX_SHOWN_NOTIFICATION_IDS pending at once used to
+    # push the oldest pending id out, so it was shown again on the next check.
     shipper, client, shown, tick, restore = _setup_popups(tmp_path, [])
     try:
         assert shipper_mod.MAX_SHOWN_NOTIFICATION_IDS == 1000
         client.ids = [f"q{i}" for i in range(1001)]
         tick(0)
         assert len(shown) == 1001
-        assert len(shipper._shown_notification_ids) == 1000
-        assert "q0" not in shipper._shown_notification_ids
-        assert "q1" in shipper._shown_notification_ids and "q1000" in shipper._shown_notification_ids
-        # only the forgotten (oldest) one is shown again; the ones still
-        # returned stay remembered, so it pushes out one no longer returned
-        client.ids = ["q0", "q1", "q1000"]
+        assert len(shipper._shown_notification_ids) == 1001
+        assert "q0" in shipper._shown_notification_ids
+        # the same 1001 on two more checks: cleared again, never shown again
         tick(31)
-        assert shown[1001:] == ["t-q0"]
-        assert "q1" in shipper._shown_notification_ids and "q2" not in shipper._shown_notification_ids
         tick(31)
-        assert shown[1001:] == ["t-q0"]
+        assert len(shown) == 1001
+        assert client.acks.count("q0") == 3 and client.acks.count("q1000") == 3
+        assert len(client.acks) == 3 * 1001
+        # 1500 pending: only the 499 new ones are shown, all 1500 remembered
+        client.ids = [f"q{i}" for i in range(1500)]
+        tick(31)
+        assert shown[1001:] == [f"t-q{i}" for i in range(1001, 1500)]
+        assert len(shipper._shown_notification_ids) == 1500
+        tick(31)
+        assert len(shown) == 1500
+    finally:
+        restore()
+
+
+def test_the_shown_popup_memory_forgets_only_ids_no_longer_returned(tmp_path):
+    shipper, client, shown, tick, restore = _setup_popups(tmp_path, [])
+    try:
+        client.ids = [f"q{i}" for i in range(1500)]
+        tick(0)
+        assert len(shown) == 1500
+        # the server now returns only q0 (the oldest) and a new one, z
+        client.ids = ["q0", "z"]
+        tick(31)
+        assert shown[1500:] == ["t-z"]
+        memory = shipper._shown_notification_ids
+        assert len(memory) == 1000
+        # the ids still returned are kept; of the others, the oldest went first
+        assert "q0" in memory and "z" in memory
+        assert "q501" not in memory and "q502" in memory and "q1499" in memory
+        tick(31)
+        assert shown[1500:] == ["t-z"]
+        # with no more than 1000 pending, the memory stays at 1000
+        client.ids = ["q0", "z", "y"]
+        tick(31)
+        assert shown[1500:] == ["t-z", "t-y"]
+        assert len(memory) == 1000 and "q502" not in memory and "q503" in memory
     finally:
         restore()

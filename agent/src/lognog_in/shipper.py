@@ -9,6 +9,7 @@ import threading
 import time
 import uuid
 from collections import OrderedDict
+from collections.abc import Hashable
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Callable, Optional
@@ -28,11 +29,14 @@ SERVER_MAX_BATCH = 10_000
 # How long to wait before asking for alert pop-ups again after the server
 # refuses this API key for them (403).
 NOTIFICATIONS_REFUSED_RETRY_SECONDS = 3600
-# Pop-up ids this agent has shown since it started (the newest this many).
-# The server keeps a pop-up pending for a host until that host's clear is
-# recorded; when a clear isn't recorded (the ack failed, or one key already
-# cleared the pop-up on the server's limit of hosts), the next check returns
-# it again and the agent clears it again without showing it a second time.
+# Pop-up ids this agent has shown since it started. The server keeps a pop-up
+# pending for a host until that host's clear is recorded; when a clear isn't
+# recorded (the ack failed, or one key already cleared the pop-up on the
+# server's limit of hosts), the next check returns it again and the agent
+# clears it again without showing it a second time. Every id the server still
+# returns is kept, however many; of the ids it no longer returns, only the
+# newest this many are kept (a pop-up the server no longer returns is not
+# pending, so it does not come back).
 MAX_SHOWN_NOTIFICATION_IDS = 1000
 
 
@@ -634,8 +638,14 @@ class HTTPShipper:
                 data = response.json()
                 notifications = data.get("notifications", [])
 
-                # Pop-ups still pending are the newest in the memory, so a
-                # new one never pushes out one the server is still returning.
+                # Pop-ups still pending are the newest in the memory, and the
+                # memory never forgets one the server is still returning (even
+                # with more than MAX_SHOWN_NOTIFICATION_IDS pending), so none
+                # of them is shown twice.
+                pending_ids = {
+                    notif.get("id") for notif in notifications
+                    if isinstance(notif.get("id"), Hashable)
+                }
                 for notif in notifications:
                     if notif.get("id") in self._shown_notification_ids:
                         self._shown_notification_ids.move_to_end(notif["id"])
@@ -650,7 +660,7 @@ class HTTPShipper:
                             notif.get("severity", "medium"),
                         )
                         if notif_id is not None:
-                            self._remember_shown_notification(notif_id)
+                            self._remember_shown_notification(notif_id, keep=pending_ids)
 
                     # Acknowledge delivery
                     await self._ack_notification(client, notif["id"])
@@ -674,10 +684,19 @@ class HTTPShipper:
         except Exception as e:
             logger.debug(f"Notification check failed: {e}")
 
-    def _remember_shown_notification(self, notification_id: str) -> None:
-        """Remember a shown pop-up id (the newest MAX_SHOWN_NOTIFICATION_IDS)."""
+    def _remember_shown_notification(self, notification_id: str, keep: "frozenset | set" = frozenset()) -> None:
+        """Remember a shown pop-up id.
+
+        Past MAX_SHOWN_NOTIFICATION_IDS the oldest ids are forgotten, but
+        never one in `keep` (the ids the server returned on this check). The
+        ids in `keep` are the newest in the memory (moved to the end, or just
+        added), so once the oldest is one of them, all the rest are too.
+        """
         self._shown_notification_ids[notification_id] = None
         while len(self._shown_notification_ids) > MAX_SHOWN_NOTIFICATION_IDS:
+            oldest = next(iter(self._shown_notification_ids))
+            if oldest in keep:
+                break
             self._shown_notification_ids.popitem(last=False)
 
     async def _ack_notification(self, client: httpx.AsyncClient, notification_id: str) -> None:

@@ -90,8 +90,8 @@ function sweepExpiredNotifications(): void {
  * the pop-up expires; a key that sends made-up host names could otherwise add
  * rows without limit. Past this many, a clear is answered but not recorded:
  * the pop-up stays pending for that host (nothing is hidden), and the desktop
- * agent shows a pop-up once per run, so it clears it again without showing it
- * again. Made-up names can't hide a pop-up from a real host: they only use up
+ * agent remembers every pop-up id it showed that the server still returns, so
+ * it clears it again without showing it again (once per agent run). Made-up names can't hide a pop-up from a real host: they only use up
  * rows, and that host's pop-up still comes.
  */
 export const MAX_POPUP_HOSTS_PER_READER = 1000;

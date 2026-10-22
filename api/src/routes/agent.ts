@@ -55,7 +55,7 @@ router.use(rateLimit(120, 60000));
 
 // Same grants as the key lock (requirePermission uses key-policy.ts
 // keyHasPermission): 'read' is met by a read, search, admin or '*' key, and
-// 'alerts:write' needs read too unless the key is admin. An ingest-only
+// 'alerts:write' needs read too unless the key is admin or '*'. An ingest-only
 // 'write' key can't read or change alerts here; the API-key gate in front of
 // every router enforces this too. A read-only account's read key reads here.
 const READ = requirePermission('read');

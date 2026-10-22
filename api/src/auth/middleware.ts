@@ -369,6 +369,13 @@ function refuseReadonlyKey(req: Request, res: Response, needed: string): void {
  * Deny write/mutating HTTP verbs (POST/PUT/PATCH/DELETE) for read-only roles.
  * Safe (GET/HEAD/OPTIONS) requests always pass through. Intended as a
  * router-level guard so read endpoints stay open while mutations are protected.
+ *
+ * An API key on a POST the key lock counts as a read (apiKeyNeed 'read': it
+ * runs a search or a test and changes nothing, such as POST /alerts/test or
+ * /reports/generate) passes too, the same as POST /search/query and
+ * /agent/search, which have no such guard: the gate already checked that the
+ * key may read, and a read-only owner's key keeps its read permissions.
+ * A signed-in read-only user is still refused there (unchanged).
  */
 export function denyReadonly(req: Request, res: Response, next: NextFunction): void {
   const method = req.method.toUpperCase();
@@ -386,7 +393,12 @@ export function denyReadonly(req: Request, res: Response, next: NextFunction): v
 
   if (isReadonlyRole(req.user.role)) {
     if (req.authMethod === 'apikey') {
-      refuseReadonlyKey(req, res, permissionNameForNeed(apiKeyNeed(method, requestPath(req))));
+      const need = apiKeyNeed(method, requestPath(req));
+      if (need === 'read') {
+        next();
+        return;
+      }
+      refuseReadonlyKey(req, res, permissionNameForNeed(need));
       return;
     }
     logAuthEvent(req.user.id, 'permission_denied', req.ip, req.get('user-agent'), {

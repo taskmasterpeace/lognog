@@ -2877,3 +2877,138 @@ describe("round 10: requirePermission's second read-only lock and the agent's wr
     }
   });
 });
+
+describe('round 11: read-class POSTs for a read-only owner, damaged index limits, and the agent audit rows', () => {
+  const rowsFor = (ua: string) =>
+    getSQLiteDB()
+      .prepare('SELECT event_type, details FROM auth_audit_log WHERE user_agent = ? ORDER BY rowid')
+      .all(ua) as Array<{ event_type: string; details: string }>;
+  // The 8 POSTs that only read but sit behind denyReadonly (before round 11 a
+  // read-only owner's read key got the read-only 403 there).
+  const GUARDED_READ_POSTS = [
+    '/alerts/test', '/reports/generate', '/dashboards/kl-none/export', '/cim/normalize',
+    '/routing-rules/evaluate', '/field-extractions/test', '/templates/kl-none/test',
+    '/knowledge/field-extractions/kl-none/test',
+  ];
+  const RO_ERROR = 'Read-only account cannot perform write operations';
+
+  it("a read-only owner's read, search or '*' key gets the same answer as an admin's read key on every read-class POST", async () => {
+    const ro = await createUser('kl-r11-readonly', 'kl-r11-readonly@example.invalid', 'kl-r11-readonly-pass-1', 'readonly');
+    const keys = {
+      read: (await createApiKey(ro.id, 'kl r11 ro read', ['read'])).apiKey,
+      search: (await createApiKey(ro.id, 'kl r11 ro search', ['search'])).apiKey,
+      star: (await createApiKey(ro.id, 'kl r11 ro star', ['*'])).apiKey,
+    };
+    const routes = [...READ_POSTS].map((r) => r.replace(/^POST /, ''));
+    for (const p of GUARDED_READ_POSTS) expect(routes, p).toContain(p);
+    for (const p of routes) {
+      const ref = await request(realSrv).post(p).set({ Authorization: `ApiKey ${K.read}` }).send({});
+      expect(ref.status, `admin read key POST ${p}: ${ref.text}`).not.toBe(403);
+      for (const [name, k] of Object.entries(keys)) {
+        const r = await request(realSrv).post(p).set({ Authorization: `ApiKey ${k}` }).send({});
+        expect(r.body?.error, `${name} POST ${p}: ${r.text}`).not.toBe(RO_ERROR);
+        expect(r.status, `${name} POST ${p}: ${r.text}`).not.toBe(403);
+        expect(r.status, `${name} POST ${p}: ${r.text}`).toBeLessThan(500);
+        expect(r.status, `${name} POST ${p} (admin read key got ${ref.status})`).toBe(ref.status);
+      }
+    }
+  });
+
+  it("a read-only owner's key still changes nothing, and a read-only browser session is still refused on the read-class POSTs", async () => {
+    const ro = await createUser('kl-r11-ro-writes', 'kl-r11-ro-writes@example.invalid', 'kl-r11-ro-writes-pass-1', 'readonly');
+    // made straight in the database with write-type permissions, as an older key could be
+    const k = (await createApiKey(ro.id, 'kl r11 ro writes', ['read', 'alerts:write', 'dashboards:write', 'admin'])).apiKey;
+    const h = { Authorization: `ApiKey ${k}` };
+    for (const [m, p] of [
+      ['post', '/alerts'], ['post', '/silences'], ['post', '/dashboards'], ['post', '/saved-searches'],
+      ['delete', '/alerts/kl-none'], ['post', '/routing-rules'], ['post', '/templates'],
+    ] as const) {
+      const r = await request(realSrv)[m](p).set(h).send({ name: 'kl r11', search_query: 'search *' });
+      expect(r.status, `${m} ${p}: ${r.text}`).toBe(403);
+    }
+    const jwt = { Authorization: `Bearer ${(await generateTokenPair(ro)).accessToken}` };
+    for (const p of GUARDED_READ_POSTS) {
+      const r = await request(realSrv).post(p).set(jwt).send({});
+      expect(r.status, `JWT POST ${p}: ${r.text}`).toBe(403);
+      expect(r.body.error, `JWT POST ${p}`).toBe(RO_ERROR);
+    }
+  });
+
+  it('a stored index limit counts only as SQL NULL (every index) or a non-empty JSON list of names; anything else is damaged', async () => {
+    const { parseStoredAllowedIndexes, isDamagedIndexLimit } = await import('../auth/key-policy.js');
+    expect(parseStoredAllowedIndexes(null)).toBeNull();
+    expect(parseStoredAllowedIndexes(undefined)).toBeNull();
+    expect(parseStoredAllowedIndexes('["money"]')).toEqual(['money']);
+    expect(parseStoredAllowedIndexes('["money","uptime"]')).toEqual(['money', 'uptime']);
+    const damaged = ['money', '"money"', '{"0":"money"}', '[]', '[1]', '["money",1]', 'null', '[""]', 'not json', '', '5', 'true', '[null]', '[["money"]]'];
+    for (const raw of damaged) {
+      const parsed = parseStoredAllowedIndexes(raw);
+      expect(Array.isArray(parsed), raw).toBe(true);
+      expect(isDamagedIndexLimit(parsed), raw).toBe(true);
+    }
+    expect(isDamagedIndexLimit(null)).toBe(false);
+    expect(isDamagedIndexLimit(['money'])).toBe(false);
+    expect(isDamagedIndexLimit('money')).toBe(true);
+    expect(isDamagedIndexLimit(['money', 1])).toBe(true);
+  });
+
+  it('a key whose stored index limit is damaged is refused with 403 on reads, search, the agent and ingest; SQL NULL reads every index; an intact list stays scoped', async () => {
+    const damaged = ['money', '"money"', '{"0":"money"}', '[]', '[1]', '["money",1]', 'null', '[""]', 'not json', '', '5', 'true', '[null]', '[["money"]]'];
+    const db = getSQLiteDB();
+    const probe = async (stored: string | null) => {
+      const k = await createApiKey(klAdminId, `kl r11 index limit ${String(stored)}`, ['read', 'write'], undefined, ['money']);
+      db.prepare('UPDATE api_keys SET allowed_indexes = ? WHERE id = ?').run(stored, k.keyData.id);
+      const h = { Authorization: `ApiKey ${k.apiKey}` };
+      return {
+        alerts: await request(realSrv).get('/alerts').set(h),
+        agent: await request(realSrv).get('/agent').set(h),
+        search: await request(realSrv).post('/search/query').set(h).send({ query: 'search * | head 1' }),
+        ingest: await request(realSrv).post('/ingest/http').set(h).send([{ message: 'kl r11', index: 'other' }]),
+      };
+    };
+    for (const stored of damaged) {
+      const r = await probe(stored);
+      for (const [what, res] of Object.entries(r)) {
+        expect(res.status, `${JSON.stringify(stored)} ${what}: ${res.text}`).toBe(403);
+        expect(String(res.body.message), `${JSON.stringify(stored)} ${what}`).toMatch(/index limit is damaged/);
+      }
+    }
+    // SQL NULL: every index
+    const open = await probe(null);
+    expect(open.alerts.status).toBe(200);
+    expect(open.agent.status).toBe(200);
+    expect(open.ingest.status, open.ingest.text).toBeLessThan(300);
+    // an intact list stays scoped: other indexes and unscoped reads are refused
+    const scoped = await probe('["money"]');
+    expect(scoped.ingest.status, scoped.ingest.text).toBe(403);
+    expect(String(scoped.ingest.body.error ?? scoped.ingest.body.message)).not.toMatch(/damaged/);
+    expect(scoped.alerts.status).toBe(403);
+    expect(scoped.agent.status).toBe(200);
+  });
+
+  it("the agent's routes ask for exactly 'read' and 'alerts:write' (the audit row names the list)", async () => {
+    const agentRouter = (await import('./agent.js')).default as unknown as Router;
+    const bare = express();
+    bare.use(express.json());
+    bare.use('/agent', agentRouter);
+    const srv = bare.listen(0, '::1');
+    await new Promise<void>((r) => srv.once('listening', () => r()));
+    const base = `http://[::1]:${(srv.address() as AddressInfo).port}`;
+    try {
+      const owner = await createUser('kl-r11-agent', 'kl-r11-agent@example.invalid', 'kl-r11-agent-pass-1', 'user');
+      const readKey = (await createApiKey(owner.id, 'kl r11 agent read', ['read'])).apiKey;
+      const ingestKey = (await createApiKey(owner.id, 'kl r11 agent ingest', ['write'])).apiKey;
+      const ua = 'kl-r11-agent-audit';
+      expect((await request(base).get('/agent').set({ Authorization: `ApiKey ${ingestKey}`, 'User-Agent': ua })).status).toBe(403);
+      expect((await request(base).post('/agent/alerts').set({ Authorization: `ApiKey ${readKey}`, 'User-Agent': ua }).send({})).status).toBe(403);
+      const rows = rowsFor(ua).map((r) => ({ event: r.event_type, ...JSON.parse(r.details) }));
+      expect(rows.map((r) => [r.path, r.requiredPermissions])).toEqual([
+        ['/agent', ['read']],
+        ['/agent/alerts', ['alerts:write']],
+      ]);
+    } finally {
+      srv.closeAllConnections();
+      await new Promise((r) => srv.close(r));
+    }
+  });
+});

@@ -64,6 +64,48 @@ export function parseStoredKeyPermissions(raw: unknown): string[] {
   return asPermissionList(value);
 }
 
+/**
+ * The index limit a damaged `allowed_indexes` row turns into. No index can
+ * have this name (index names are letters, digits, '_' and '-'), so a key
+ * carrying it is limited to no index at all, and decideApiKey refuses it on
+ * every route that needs a permission.
+ */
+export const DAMAGED_INDEX_LIMIT = '\u0000damaged-index-limit';
+
+/**
+ * A key's stored index limit, as the key lock reads it. SQL NULL means the
+ * key is not limited (every index). A JSON list of one or more non-empty
+ * strings limits it to those indexes. Anything else (not JSON, JSON null,
+ * an empty list, a bare string, an object, a list holding a number, null or
+ * an empty string) is damaged: the key is refused (403), never treated as
+ * unlimited and never a server error. A key made through the API stores
+ * NULL or such a list, so only a row changed by hand can be damaged.
+ */
+export function parseStoredAllowedIndexes(raw: unknown): string[] | null {
+  if (raw === null || raw === undefined) return null;
+  let value: unknown;
+  try {
+    value = typeof raw === 'string' ? JSON.parse(raw) : raw;
+  } catch {
+    return [DAMAGED_INDEX_LIMIT];
+  }
+  if (
+    !Array.isArray(value) ||
+    value.length === 0 ||
+    !value.every((i) => typeof i === 'string' && i.length > 0 && i !== DAMAGED_INDEX_LIMIT)
+  ) {
+    return [DAMAGED_INDEX_LIMIT];
+  }
+  return [...value];
+}
+
+/** True when an index limit is damaged (see parseStoredAllowedIndexes). */
+export function isDamagedIndexLimit(allowedIndexes: unknown): boolean {
+  if (allowedIndexes === null || allowedIndexes === undefined) return false;
+  if (!Array.isArray(allowedIndexes)) return true;
+  return allowedIndexes.some((i) => typeof i !== 'string' || i === DAMAGED_INDEX_LIMIT);
+}
+
 /** The permission list itself, or [] when it is not a list of strings. */
 function asPermissionList(value: unknown): string[] {
   if (!Array.isArray(value) || !value.every((p) => typeof p === 'string')) return [];
@@ -348,6 +390,16 @@ export function decideApiKey(
 ): KeyDecision {
   const need = apiKeyNeed(method, path);
   if (need === 'none') return { allowed: true, need };
+
+  if (isDamagedIndexLimit(allowedIndexes)) {
+    return {
+      allowed: false,
+      need,
+      missing: [],
+      reason:
+        "This API key's index limit is damaged in the database (it is not a list of index names), so the key can't be used. Make a new key.",
+    };
+  }
 
   if (!keyHasNeed(permissions, need)) {
     return {

@@ -2,7 +2,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import { getSQLiteDB } from '../db/sqlite.js';
-import { effectiveKeyPermissions, parseStoredKeyPermissions } from './key-policy.js';
+import { effectiveKeyPermissions, parseStoredAllowedIndexes, parseStoredKeyPermissions } from './key-policy.js';
 
 // Environment configuration
 // SECURITY: JWT secrets must be configured via environment variables in production
@@ -507,16 +507,10 @@ export async function validateApiKey(
         UPDATE api_keys SET last_used = datetime('now') WHERE id = ?
       `).run(key.id);
 
-      // Guard against a malformed allowed_indexes row 500-ing the auth path.
-      // An unparseable value is treated as unscoped (null = all indexes).
-      let allowedIndexes: string[] | null = null;
-      if (key.allowed_indexes) {
-        try {
-          allowedIndexes = JSON.parse(key.allowed_indexes);
-        } catch {
-          allowedIndexes = null;
-        }
-      }
+      // SQL NULL = every index; a JSON list of index names = those; anything
+      // else is damaged and the key lock refuses the key (key-policy.ts
+      // parseStoredAllowedIndexes): never a 500, never unlimited.
+      const allowedIndexes = parseStoredAllowedIndexes(key.allowed_indexes);
 
       // A key never does more than its owner may (key-policy.ts), and a key
       // whose owner is gone or switched off does nothing at all. Every caller
