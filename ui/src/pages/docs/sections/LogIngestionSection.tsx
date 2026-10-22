@@ -441,6 +441,7 @@ collectors:
               <li>Navigate to <strong>Settings &rarr; API Keys</strong></li>
               <li>Click "Create API Key"</li>
               <li>Give it a descriptive name (e.g., "Vercel Log Drain", "Production Agent")</li>
+              <li>Tick only <strong>send logs</strong> (stored as <code className="code">write</code>). A send-logs key can send logs and nothing else.</li>
               <li>Copy the key immediately - it won't be shown again</li>
             </ol>
           </div>

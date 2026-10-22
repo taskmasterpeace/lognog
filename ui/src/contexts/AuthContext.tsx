@@ -294,7 +294,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       method: 'POST',
       body: JSON.stringify({ name, permissions, expiresInDays }),
     });
-    if (!response.ok) throw new Error('Failed to create API key');
+    if (!response.ok) {
+      // Show the server's reason (e.g. a permission the account may not give a key)
+      let reason = 'Failed to create API key';
+      try {
+        const body = await response.json();
+        reason = body.message || body.error || reason;
+      } catch {
+        /* not JSON */
+      }
+      throw new Error(reason);
+    }
     return response.json();
   };
 

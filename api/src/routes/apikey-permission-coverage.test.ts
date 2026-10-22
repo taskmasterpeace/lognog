@@ -67,12 +67,14 @@ import { mayUseScripts } from '../auth/alert-action-guard.js';
 import { API_ROUTERS, mountApiRoutes } from './mount.js';
 import { closeDatabase, getSQLiteDB } from '../db/sqlite.js';
 import { createAlertHistoryEntry } from '../db/sqlite-alerts.js';
+import { recordReportRun } from '../db/sqlite-report-runs.js';
 import { createDashboardTemplate, getDashboard } from '../db/sqlite-dashboards.js';
 import { getAlert } from '../db/sqlite-alerts.js';
 import { ALERT_TEMPLATES } from '../data/alert-templates.js';
 import { createMCPServer } from '../mcp/server.js';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js';
 
 // ---------------------------------------------------------------------------
 // Route table, read from the real routers.
@@ -1474,6 +1476,12 @@ describe('round 4: saved-search lists, private dashboards, strict key permission
       const res = await request(realSrv).post('/auth/api-keys').set(jwt()).send({ name: 'kl-r4 good', permissions });
       expect(res.status, `${JSON.stringify(permissions)}: ${res.status} ${String(res.body?.error ?? '')}`).toBe(201);
     }
+    // a permission named twice is stored once
+    const twice = await request(realSrv).post('/auth/api-keys').set(jwt()).send({ name: 'kl-r4 twice', permissions: ['read', 'read', 'alerts:write', 'read'] });
+    expect(twice.status, String(twice.body?.error ?? '')).toBe(201);
+    const stored = (await getApiKeys((await validateApiKey(K.admin))!.userId)).find((k) => k.name === 'kl-r4 twice');
+    const perms = typeof stored?.permissions === 'string' ? JSON.parse(stored.permissions) : stored?.permissions;
+    expect(perms).toEqual(['read', 'alerts:write']);
   });
 
   it('a source set up by the wizard gives its heartbeat alert and dashboard to the admin who set it up', async () => {
@@ -1542,6 +1550,9 @@ describe('round 4: saved-search lists, private dashboards, strict key permission
     expect(await mcpKeyStillAllowed(scopedAdmin)).toBe(false);
 
     const logs = vi.spyOn(console, 'log');
+    // the transport's own methods, watched (they still run): a good message must reach it, a cut stream must close it
+    const handled = vi.spyOn(SSEServerTransport.prototype, 'handlePostMessage');
+    const closed = vi.spyOn(SSEServerTransport.prototype, 'close');
     try {
       for (const how of ['revoke', 'demote', 'switch off'] as const) {
         const u = await createUser(`kl-mcp-${how.replace(' ', '-')}`, `kl-mcp-${how.replace(' ', '-')}@example.invalid`, 'kl-mcp-test-pass-1', 'admin');
@@ -1558,15 +1569,29 @@ describe('round 4: saved-search lists, private dashboards, strict key permission
             connectionId = /connected: (\S+)/.exec(line!)![1];
           }, { timeout: 5_000 });
 
+          // while the key is still good, a message goes through to the MCP transport and the stream stays open
+          const msg = { jsonrpc: '2.0', id: 1, method: 'ping' };
+          handled.mockClear();
+          closed.mockClear();
+          const ok = await request(realSrv).post(`/mcp/messages?connectionId=${encodeURIComponent(connectionId)}`)
+            .set('Content-Type', 'application/json').send(msg);
+          expect(ok.status, `${how} (key still good): ${ok.status} ${ok.text}`).not.toBe(403);
+          expect(ok.status).not.toBe(404);
+          expect(handled).toHaveBeenCalledTimes(1);
+          expect(closed).not.toHaveBeenCalled();
+
           if (how === 'revoke') expect(revokeApiKey(made.keyData.id, u.id)).toBe(true);
           if (how === 'demote') updateUserRole(u.id, 'user');
           if (how === 'switch off') deactivateUser(u.id);
           expect(await mcpKeyStillAllowed(made.apiKey)).toBe(false);
 
-          const msg = { jsonrpc: '2.0', id: 1, method: 'ping' };
+          handled.mockClear();
           const cut = await request(realSrv).post(`/mcp/messages?connectionId=${encodeURIComponent(connectionId)}`)
             .set('Content-Type', 'application/json').send(msg);
           expect(cut.status, `${how}: ${cut.status} ${cut.text}`).toBe(403);
+          // refused before the transport saw it, and the transport was closed
+          expect(handled).not.toHaveBeenCalled();
+          expect(closed).toHaveBeenCalledTimes(1);
           // the connection is gone and the stream is closed
           const again = await request(realSrv).post(`/mcp/messages?connectionId=${encodeURIComponent(connectionId)}`)
             .set('Content-Type', 'application/json').send(msg);
@@ -1581,6 +1606,51 @@ describe('round 4: saved-search lists, private dashboards, strict key permission
       }
     } finally {
       logs.mockRestore();
+      handled.mockRestore();
+      closed.mockRestore();
     }
+  });
+});
+
+describe('round 5: scheduled report recipients', () => {
+  const jwt = () => ({ Authorization: `Bearer ${jwtAdmin}` });
+
+  it("report e-mail addresses are hidden from keys without 'admin', in the list and in run history", async () => {
+    const made = await request(realSrv).post('/reports').set(jwt()).send({
+      name: 'kl-r5 report', query: 'search kl-none', schedule: '0 8 * * 1', recipients: 'kl-r5-boss@example.invalid',
+    });
+    expect(made.status, made.text).toBe(201);
+    const id = made.body.id as string;
+    recordReportRun({
+      report_id: id, started_at: new Date().toISOString(), status: 'error', manual: true, row_count: 0,
+      recipients: ['kl-r5-boss@example.invalid'], reason: 'SMTP 550 kl-r5-boss@example.invalid unknown', duration_ms: 1,
+    });
+
+    const seen = async (h: Record<string, string>) => {
+      const list = await request(realSrv).get('/reports').set(h);
+      const runs = await request(realSrv).get(`/reports/${id}/runs`).set(h);
+      expect(list.status, list.text).toBe(200);
+      expect(runs.status, runs.text).toBe(200);
+      const report = (list.body as Array<{ id: string; recipients: string; name: string }>).find((r) => r.id === id);
+      expect(report?.name).toBe('kl-r5 report');
+      return { report, runs: runs.body as Array<{ recipients: string; reason: string; status: string }>, text: list.text + runs.text };
+    };
+    for (const [label, key] of [['read', K.read], ['search', K.search], ['alerts', K.alerts], ['dashboards', K.dashboards]] as const) {
+      const v = await seen({ Authorization: `ApiKey ${key}` });
+      expect(v.text, `${label} key`).not.toContain('kl-r5-boss@');
+      expect(v.report?.recipients, `${label} key`).toBe('[hidden]');
+      expect(v.runs[0]?.recipients, `${label} key`).toBe('[hidden]');
+      expect(v.runs[0]?.reason, `${label} key`).toBe('[hidden]');
+      expect(v.runs[0]?.status).toBe('error');
+    }
+    // an admin key and a browser session still see them
+    for (const [label, h] of [['admin key', { Authorization: `ApiKey ${K.admin}` }], ['star key', { Authorization: `ApiKey ${K.star}` }], ['admin session', jwt()]] as const) {
+      const v = await seen(h);
+      expect(v.report?.recipients, label).toBe('kl-r5-boss@example.invalid');
+      expect(v.runs[0]?.recipients, label).toBe('kl-r5-boss@example.invalid');
+      expect(v.runs[0]?.reason, label).toContain('550');
+    }
+    // a read key still cannot change a report
+    expect((await request(realSrv).put(`/reports/${id}`).set('Authorization', `ApiKey ${K.read}`).send({ recipients: 'kl-r5-thief@example.invalid' })).status).toBe(403);
   });
 });

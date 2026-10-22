@@ -879,7 +879,7 @@ To authenticate with your LogNog server, you need an API key.
 2. Navigate to **Settings** > **API Keys**
 3. Click **Create API Key**
 4. Enter a name: `lognog-in-agent`
-5. Set permissions: `ingest:write`
+5. Tick only **send logs** (stored as `write`). A send-logs key can send logs and nothing else.
 6. Copy the generated key: `lnog_abc123def456...`
 
 ### Use the API Key

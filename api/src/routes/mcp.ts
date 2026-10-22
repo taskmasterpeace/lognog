@@ -133,7 +133,10 @@ router.post('/messages', async (req: Request, res: Response) => {
     await connection.transport.handlePostMessage(req, res);
   } catch (error) {
     console.error('[MCP] Message handling error:', error);
-    res.status(500).json({ error: 'Failed to process message' });
+    // the MCP transport may already have answered (it writes its own 500 before throwing)
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Failed to process message' });
+    }
   }
 });
 

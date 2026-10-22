@@ -51,7 +51,10 @@ const createApiKeySchema = z.object({
   name: z.string().min(1).max(100),
   // Only permissions the key lock understands, and at least one: a typo such as
   // 'read ' or an empty list used to make a key that silently did nothing.
-  permissions: z.array(z.enum(KNOWN_KEY_PERMISSIONS)).min(1).optional(),
+  // Each permission is stored once (['read','read'] is kept as ['read']).
+  permissions: z.array(z.enum(KNOWN_KEY_PERMISSIONS)).min(1)
+    .transform((list) => [...new Set(list)])
+    .optional(),
   expiresInDays: z.number().positive().optional(),
   allowed_indexes: z.array(z.string()).optional(),
 });

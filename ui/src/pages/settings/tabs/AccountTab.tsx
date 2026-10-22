@@ -165,8 +165,6 @@ export default function AccountTab() {
     return new Date(dateStr).toLocaleString();
   };
 
-  // Only an administrator may make an 'admin' key (the server refuses it for
-  // anyone else, and a key never does more than its owner).
   // A key never does more than its owner (api key-policy.ts): only admins are
   // offered 'admin', and a read-only account is offered 'read' only.
   const readOnlyAccount = ['readonly', 'viewer', 'read-only'].includes(user?.role ?? '');
