@@ -1906,14 +1906,19 @@ describe('round 7: repeated refusals, the permission names, and pop-ups per read
         spy.mockRestore();
       }
     };
-    const deliveries = (id: string) =>
-      (db.prepare('SELECT COUNT(*) AS n FROM agent_notification_deliveries WHERE notification_id = ?').get(id) as { n: number }).n;
+    // Code before round 7 has no per-reader table; count -1 there so the test
+    // goes on to fail on the sweep itself, not on a missing table.
+    const hasDeliveries = !!db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'agent_notification_deliveries'").get();
+    const deliveries = (id: string) => hasDeliveries
+      ? (db.prepare('SELECT COUNT(*) AS n FROM agent_notification_deliveries WHERE notification_id = ?').get(id) as { n: number }).n
+      : -1;
 
     const shown = createAgentNotification('kl-r7 alert', 'kl-r7 still valid', 'm', {});
     const gone = createAgentNotification('kl-r7 alert', 'kl-r7 cleared then expired', 'm', { expires_at: new Date(real + 60_000).toISOString() });
+    const before: number[] = [];
     for (const n of [shown, gone]) {
       expect((await request(realSrv).post(`/ingest/notifications/${n.id}/ack`).set(A).send({ hostname: 'kl-r7-sweep' })).status).toBe(200);
-      expect(deliveries(n.id)).toBe(1);
+      before.push(deliveries(n.id));
     }
     db.prepare('UPDATE agent_notifications SET expires_at = ? WHERE id = ?').run(pastIso, gone.id);
     const stale = createAgentNotification('kl-r7 alert', 'kl-r7 expired', 'm', { expires_at: pastIso });
@@ -1929,6 +1934,7 @@ describe('round 7: repeated refusals, the permission names, and pop-ups per read
     }
     expect(getAgentNotification(stale.id)).toBeUndefined();
     expect(getAgentNotification(gone.id)).toBeUndefined();
+    expect(before).toEqual([1, 1]); // each ack wrote one per-reader row before the sweep
     expect(deliveries(gone.id)).toBe(0);
     expect(getAgentNotification(shown.id)).toBeDefined();
     expect(getAgentNotification(future.id)).toBeDefined();
