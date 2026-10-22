@@ -1766,12 +1766,25 @@ describe('round 7: repeated refusals, the permission names, and pop-ups per read
     proxied.all('*', (_req, res) => {
       res.status(299).json({ reached: true });
     });
+    // One server on ::1 for the whole test, like the shared ones above
+    // (supertest given a bare app opens a new server per request, which timed
+    // out once in six full runs on a busy machine).
+    const proxiedServer = proxied.listen(0, '::1');
+    await new Promise<void>((r) => proxiedServer.once('listening', () => r()));
+    proxiedServer.keepAliveTimeout = 10 * 60_000;
+    proxiedServer.headersTimeout = 10 * 60_000 + 1_000;
+    const proxiedSrv = `http://[::1]:${(proxiedServer.address() as AddressInfo).port}`;
     const from = async (ip: string) =>
-      (await request(proxied).get('/ingest/notifications').set({ Authorization: `ApiKey ${key}`, 'User-Agent': ua, 'X-Forwarded-For': ip })).status;
-    expect(await from('203.0.113.7')).toBe(403);
-    expect(await from('203.0.113.7')).toBe(403);
-    expect(denialRows(ua)).toHaveLength(1);
-    expect(await from('198.51.100.9')).toBe(403);
+      (await request(proxiedSrv).get('/ingest/notifications').set({ Authorization: `ApiKey ${key}`, 'User-Agent': ua, 'X-Forwarded-For': ip })).status;
+    try {
+      expect(await from('203.0.113.7')).toBe(403);
+      expect(await from('203.0.113.7')).toBe(403);
+      expect(denialRows(ua)).toHaveLength(1);
+      expect(await from('198.51.100.9')).toBe(403);
+    } finally {
+      proxiedServer.closeAllConnections();
+      await new Promise((r) => proxiedServer.close(r));
+    }
     const rows = getSQLiteDB()
       .prepare("SELECT ip_address, details FROM auth_audit_log WHERE event_type = 'apikey_permission_denied' AND user_agent = ? ORDER BY rowid")
       .all(ua) as Array<{ ip_address: string; details: string }>;
