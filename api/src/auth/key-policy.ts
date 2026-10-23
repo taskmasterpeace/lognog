@@ -253,6 +253,8 @@ const SCOPE_AWARE_READS: readonly RegExp[] = [
   // services/lab-lights.ts keeps only alerts on allowed indexes;
   // services/weekly-report.ts scopes every query and hides alerts).
   /^\/stats\/home$/,
+  // services/machines.ts: getMachines() ANDs the key's index scope into its query.
+  /^\/stats\/machines$/,
   /^\/status\/lights$/,
   /^\/reports\/weekly$/,
 ];

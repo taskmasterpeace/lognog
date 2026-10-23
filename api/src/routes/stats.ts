@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { executeQuery } from '../db/clickhouse.js';
-import { getActiveSources } from '../db/backend.js';
+import { getActiveSources, getMachines } from '../db/backend.js';
 import { getSQLiteDB } from '../db/sqlite.js';
 import { authenticate } from '../auth/middleware.js';
 import { isIndexAllowed, indexScopeSqlClause } from '../auth/index-scope.js';
@@ -344,6 +344,16 @@ router.get('/sources', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Error fetching active sources:', error);
     return res.status(500).json({ error: 'Failed to fetch active sources' });
+  }
+});
+
+// Machines page: every studio machine, last-seen per source, 24h errors.
+router.get('/machines', async (req: Request, res: Response) => {
+  try {
+    return res.json(await getMachines(req.allowedIndexes ?? undefined));
+  } catch (error) {
+    console.error('Error building machines view:', error);
+    return res.status(500).json({ error: 'Failed to build the machines view' });
   }
 });
 

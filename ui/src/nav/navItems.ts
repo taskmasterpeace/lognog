@@ -49,6 +49,7 @@ export const MAIN_NAV: NavItem[] = [
   { to: '/dashboards', label: 'Dashboards', icon: LayoutDashboard },
   { to: '/alerts', label: 'Alerts', icon: Bell },
   { to: '/data-sources', label: 'Data Sources', icon: Database },
+  { to: '/machines', label: 'Machines', icon: Server },
   { to: '/reports', label: 'Reports', icon: FileBarChart },
   { to: '/settings', label: 'Settings', icon: Settings },
 ];

@@ -728,6 +728,43 @@ export async function getActiveSources(): Promise<ActiveSourcesResult> {
   return request('/stats/sources');
 }
 
+// Machines page: GET /stats/machines (api/src/services/machines.ts)
+export type SourceFreshness = 'active' | 'recent' | 'inactive' | 'stale';
+
+export interface MachineSource {
+  machine: string;
+  index_name: string;
+  hostname: string;
+  app_name: string;
+  events_24h: number;
+  errors_24h: number;
+  last_seen: string;
+  age_seconds: number;
+  status: SourceFreshness;
+}
+
+export interface MachineSummary {
+  machine: string;
+  label: string;
+  what: string;
+  hostname: string | null;
+  sources: number;
+  events_24h: number;
+  errors_24h: number;
+  sources_with_errors: number;
+  age_seconds: number | null;
+  status: SourceFreshness | 'never';
+}
+
+export interface MachinesResult {
+  machines: MachineSummary[];
+  sources: MachineSource[];
+}
+
+export async function getMachines(): Promise<MachinesResult> {
+  return request('/stats/machines');
+}
+
 // Home ("Needs you") API: GET /stats/home (api/src/services/home-summary.ts)
 /** 'sparse' = older than a day but too few logs in 14 days to judge quiet. */
 export type HomeAppState = 'errors' | 'quiet' | 'fine' | 'new' | 'sparse';

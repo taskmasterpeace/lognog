@@ -24,6 +24,7 @@ import { spoolBatch, takeSpooledBatches, deleteSpooledBatch, markSpoolAttempt, s
 import type { ASTNode, LookupNode, Condition, SimpleCondition, QueryAST, AppendNode, InputLookupNode, OutputLookupNode } from '../dsl/types.js';
 import { isLogicGroup } from '../dsl/types.js';
 import { indexScopeSqlClause } from '../auth/index-scope.js';
+import { groupMachines, machineSourcesSql, type MachineSourceRow, type MachinesResult } from '../services/machines.js';
 
 export type Backend = 'clickhouse' | 'sqlite';
 
@@ -1052,6 +1053,22 @@ export async function getActiveSources(allowedIndexes?: string[]): Promise<Activ
       })),
     };
   }
+}
+
+/**
+ * Every machine and every source on it (GET /stats/machines, the Machines page).
+ * See services/machines.ts.
+ */
+export async function getMachines(allowedIndexes?: string[]): Promise<MachinesResult> {
+  const scope = indexScopeSqlClause(allowedIndexes);
+  const scopeAnd = scope ? ` AND ${scope}` : '';
+  if (isLiteMode()) {
+    const rows = await sqliteLogs.executeQuery<Omit<MachineSourceRow, 'age_seconds'>>(machineSourcesSql('sqlite', scopeAnd));
+    const nowMs = Date.now();
+    return groupMachines(rows.map(r => ({ ...r, age_seconds: ageSecondsFrom(r.last_seen, nowMs) })), allowedIndexes);
+  }
+  const rows = await clickhouse.executeQuery<MachineSourceRow>(machineSourcesSql('clickhouse', scopeAnd));
+  return groupMachines(rows, allowedIndexes);
 }
 
 /**
