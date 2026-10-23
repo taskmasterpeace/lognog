@@ -159,6 +159,7 @@ const SCOPED_READS = new Set([
   'GET /search/fields/kl-none/values', 'GET /search/logs/kl-none/full-message', 'GET /search/logs/kl-none/context',
   'GET /stats/overview', 'GET /stats/timeseries', 'GET /stats/severity', 'GET /stats/indexes',
   'GET /stats/indexes/details', 'GET /stats/indexes/kl-none/fields', 'GET /stats/sources', 'GET /stats/storage',
+  'GET /stats/machines',
   'GET /agent', 'POST /agent/search', 'GET /agent/summary', 'GET /agent/indexes', 'GET /agent/fields',
   'GET /auth/me', 'POST /reports/generate',
   // from the release's sibling branches (Home, Weekly paper, Lab Lights); each filters to the key's indexes
