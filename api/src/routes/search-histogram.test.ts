@@ -78,7 +78,44 @@ describe('#41-1 histogram builder escapes DSL string values', () => {
 
     expect(res.status).toBe(200);
     const sql = histogramSql();
-    expect(sql).toContain("ILIKE '%a''b%'");
+    expect(sql).toContain("'a''b'");
+    expect(sql).not.toContain("'a'b'");
+  });
+});
+
+describe('histogram uses the same filter as the results', () => {
+  it('a 2-condition search filters the bars by BOTH conditions', async () => {
+    const res = await request(app)
+      .post('/search/query')
+      .send({ query: 'search index=hetzner app_name=lognog-api' });
+
+    expect(res.status).toBe(200);
+    const sql = histogramSql();
+    expect(sql).toContain("index_name = 'hetzner'");
+    expect(sql).toContain("app_name = 'lognog-api'");
+  });
+
+  it('an OR group reaches the histogram instead of being dropped', async () => {
+    const res = await request(app)
+      .post('/search/query')
+      .send({ query: 'search hostname=mac-mini OR hostname=cupcake' });
+
+    expect(res.status).toBe(200);
+    const sql = histogramSql();
+    expect(sql).toContain("hostname = 'mac-mini'");
+    expect(sql).toContain("hostname = 'cupcake'");
+    expect(sql).toMatch(/hostname = 'mac-mini' OR hostname = 'cupcake'/);
+  });
+
+  it('severity names become numbers like the main query', async () => {
+    const res = await request(app)
+      .post('/search/query')
+      .send({ query: 'search index=mac severity<=error' });
+
+    expect(res.status).toBe(200);
+    const sql = histogramSql();
+    expect(sql).toContain('severity <= 3');
+    expect(sql).not.toContain("severity <= 'error'");
   });
 });
 

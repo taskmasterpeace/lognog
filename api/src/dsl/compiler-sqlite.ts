@@ -539,6 +539,20 @@ export class SQLiteCompiler {
     return result;
   }
 
+  /**
+   * WHERE fragment for the query's leading search stage only, compiled exactly
+   * the way compile() does it (logic groups, severity names, structured_data
+   * fields, escaping). The Search page's histogram uses this so its bars always
+   * match the results list — it used to rebuild the filter itself and skipped
+   * every AND/OR group, so a 2-condition search drew bars for all logs.
+   */
+  compileSearchWhere(): string {
+    const first = this.ast.stages?.[0];
+    if (!first || first.type !== 'search' || !first.conditions?.length) return '1=1';
+    const parts = this.compileConditions(first.conditions).filter(p => p && p !== '1=1');
+    return parts.length ? parts.map(p => `(${p})`).join(' AND ') : '1=1';
+  }
+
   private compileConditions(conditions: Condition[]): string[] {
     return conditions.map(cond => this.compileCondition(cond));
   }

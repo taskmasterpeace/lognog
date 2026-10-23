@@ -1,5 +1,6 @@
 import { Router, Request, Response } from 'express';
-import { parseToAST, validateQuery, ParseError, isSimpleCondition, FIELD_MAP } from '../dsl/index.js';
+import { parseToAST, validateQuery, ParseError, Compiler } from '../dsl/index.js';
+import { SQLiteCompiler } from '../dsl/compiler-sqlite.js';
 import { executeDSLQuery, executeRawQuery, getFields, getFieldValues, getBackendInfo, discoverStructuredDataFields, DiscoveredField, isLiteMode, getLogById } from '../db/backend.js';
 import {
   getSavedSearches,
@@ -19,34 +20,6 @@ import { FilldownNode, TransactionNode, ChartNode, CompareNode, TimewrapNode } f
 import { listLookupTables } from '../services/lookup-tables.js';
 
 const router = Router();
-
-// Top-level log columns (mirrors the DSL compiler's KNOWN_COLUMNS). Any field
-// NOT in this set is queried out of the structured_data JSON blob, exactly like
-// the main compiler does — so the histogram builder never emits a bare column
-// name for a custom field (which ClickHouse rejects as "Unknown identifier").
-const HISTOGRAM_KNOWN_COLUMNS = new Set([
-  'timestamp', 'received_at',
-  'facility', 'severity', 'priority',
-  'hostname', 'app_name', 'proc_id', 'msg_id',
-  'message', 'raw', 'structured_data',
-  'source_ip', 'dest_ip', 'source_port', 'dest_port',
-  'protocol', 'action', 'user',
-  'index_name', 'message_tokens',
-]);
-
-// Reject field names that could break out of a JSON-path / column reference.
-// Matches the compiler's sanitizeFieldName allowlist.
-function histogramSafeFieldName(field: string): string | null {
-  return /^[a-zA-Z0-9_.\-]+$/.test(field) ? field : null;
-}
-
-// Single-quote-escape a string value for safe inline SQL (mirrors the
-// compiler's escape()): double single quotes, and (ClickHouse) backslashes.
-// Bug #41-1: DSL string values were interpolated UNESCAPED into raw SQL.
-function histogramEscapeValue(value: string, liteMode: boolean): string {
-  const escaped = value.replace(/'/g, "''");
-  return liteMode ? escaped : escaped.replace(/\\/g, '\\\\');
-}
 
 // Helper: Parse time string (e.g., "30m", "1h") to milliseconds
 function parseTimeToMs(timeStr: string): number {
@@ -530,71 +503,12 @@ router.post('/query', authenticate, rateLimit(120, 60000), async (req: Request, 
         const ast = parseToAST(query);
         const liteMode = isLiteMode();
 
-        // Build WHERE clause from the search conditions
-        let whereClause = '1=1';
-
-        // Check if the AST has a search node with conditions
-        if (ast.stages && ast.stages.length > 0) {
-          const searchStage = ast.stages[0];
-          if (searchStage.type === 'search' && searchStage.conditions && searchStage.conditions.length > 0) {
-            // Build conditions from the search stage
-            const conditions: string[] = [];
-
-            for (const cond of searchStage.conditions) {
-              if (isSimpleCondition(cond)) {
-                // Skip wildcard search (search *) - it means "all logs"
-                // DSL parser may use '_all' or '*' as the field name for wildcards
-                if ((cond.field === '*' || cond.field === '_all') && cond.value === '*') {
-                  continue;
-                }
-
-                // Bug #41-2: build the field reference the SAME way the main
-                // compiler does. Custom (non-column) fields must be read out of
-                // structured_data via JSONExtract/json_extract, NOT as a bare
-                // column name (ClickHouse) or invalid `structured_data['x']`
-                // syntax on a String column — both raised "Unknown identifier"
-                // and 500'd the whole search.
-                const mappedField = FIELD_MAP[cond.field.toLowerCase()] || cond.field;
-                const isWildcard = cond.field === '*' || cond.field === '_all';
-
-                let field: string;
-                if (mappedField === 'message' || isWildcard) {
-                  field = 'message';
-                } else if (HISTOGRAM_KNOWN_COLUMNS.has(mappedField)) {
-                  field = mappedField;
-                } else {
-                  // Custom field -> structured_data. Sanitize the field name to
-                  // keep a malicious key from breaking out of the string literal.
-                  const safe = histogramSafeFieldName(cond.field);
-                  if (safe === null) {
-                    // Unsafe field name -> skip this condition entirely.
-                    continue;
-                  }
-                  field = liteMode
-                    ? `json_extract(structured_data, '$.${safe}')`
-                    : `JSONExtractString(structured_data, '${safe}')`;
-                }
-
-                // Bug #41-1: escape string values so a value like
-                // `x' OR 1=1` cannot break out of the SQL literal.
-                if (cond.operator === '~') {
-                  const v = histogramEscapeValue(String(cond.value), liteMode);
-                  conditions.push(`${field} ${liteMode ? 'LIKE' : 'ILIKE'} '%${v}%'`);
-                } else {
-                  const quotedValue = typeof cond.value === 'string'
-                    ? `'${histogramEscapeValue(cond.value, liteMode)}'`
-                    : cond.value;
-                  conditions.push(`${field} ${cond.operator} ${quotedValue}`);
-                }
-              }
-              // Skip LogicGroup for now - simple conditions are most common
-            }
-
-            if (conditions.length > 0) {
-              whereClause = conditions.join(' AND ');
-            }
-          }
-        }
+        // Build WHERE clause from the search conditions with the same compiler
+        // the results use, so AND/OR groups, severity names and custom fields
+        // filter the bars exactly like they filter the list.
+        let whereClause = liteMode
+          ? new SQLiteCompiler(ast).compileSearchWhere()
+          : new Compiler(ast).compileSearchWhere();
 
         // Add time range to WHERE clause (different syntax for ClickHouse vs SQLite)
         const startIso = new Date(startMs).toISOString();
