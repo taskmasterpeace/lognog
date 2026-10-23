@@ -438,14 +438,14 @@ if match(message_str, r'\w+=\S+.*\w+=\S+') {
       .dest_ip = to_string!(kv_parsed.dst_ip)
     }
     if exists(kv_parsed.sport) {
-      .source_port = to_int!(kv_parsed.sport)
+      .source_port = to_int(kv_parsed.sport) ?? 0
     } else if exists(kv_parsed.src_port) {
-      .source_port = to_int!(kv_parsed.src_port)
+      .source_port = to_int(kv_parsed.src_port) ?? 0
     }
     if exists(kv_parsed.dport) {
-      .dest_port = to_int!(kv_parsed.dport)
+      .dest_port = to_int(kv_parsed.dport) ?? 0
     } else if exists(kv_parsed.dst_port) {
-      .dest_port = to_int!(kv_parsed.dst_port)
+      .dest_port = to_int(kv_parsed.dst_port) ?? 0
     }
     if exists(kv_parsed.proto) {
       .protocol = to_string!(kv_parsed.proto)
