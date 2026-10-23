@@ -593,9 +593,10 @@ export class Compiler {
   /**
    * WHERE fragment for the query's leading search stage only, compiled exactly
    * the way compile() does it (logic groups, severity names, structured_data
-   * fields, escaping). The Search page's histogram uses this so its bars always
-   * match the results list — it used to rebuild the filter itself and skipped
-   * every AND/OR group, so a 2-condition search drew bars for all logs.
+   * fields, escaping). The Search page's histogram uses this so its bars match
+   * the search part of the query — it used to rebuild the filter itself and
+   * skipped every AND/OR group, so a 2-condition search drew bars for all logs.
+   * Later pipe stages (| where, | stats) still don't narrow the bars.
    */
   compileSearchWhere(): string {
     const first = this.ast.stages?.[0];

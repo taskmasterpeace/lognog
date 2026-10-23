@@ -34,6 +34,12 @@ mode = "tcp"
 type = "docker_logs"
 docker_host = "unix:///var/run/docker.sock"
 exclude_containers = ["vector-", "lognog-vector"]
+# A stack trace is one event: indented lines ("    at foo (x.js:1)",
+# Python's "  File ...") and "Caused by:" / "... 3 more" join the line above.
+multiline.mode = "continue_through"
+multiline.start_pattern = '^[^\s]'
+multiline.condition_pattern = '^(\s+\S|Caused by:|\.\.\. [0-9]+ more)'
+multiline.timeout_ms = 1000
 
 # ============================================
 # TRANSFORMS
@@ -75,6 +81,11 @@ if res != "" {
 
 # Strip terminal colour codes so messages read cleanly and match below.
 msg = replace(to_string(.message) ?? "", r'\x1b\[[0-9;]*m', "")
+# Cap one event at 16 KB: a runaway line (a dumped blob) is stored twice
+# (message + raw), and nobody reads past the first screen of it.
+if strlen(msg) > 16384 {
+  msg = (slice(msg, 0, 16384) ?? msg) + " ...[cut]"
+}
 .message = msg
 .raw_message = msg
 
@@ -85,11 +96,13 @@ status, serr = parse_regex(head, r'HTTP/[0-9.]+" (?P<st>[0-9]{3}) ')
 if serr == null {
   if starts_with(to_string(status.st), "5") { sev = "err" }
 } else {
-  # An explicit level word near the start (INFO, WARN, [error], level=debug)
-  # wins; otherwise scan the line for trouble words.
-  lvl, lerr = parse_regex(slice(head, 0, 80) ?? head, r'(?i)\b(?P<l>fatal|panic|critical|crit|emerg|error|err|warning|warn|info|notice|debug|trace)\b')
+  # An explicit level near the start wins: an upper-case word (INFO, WARN),
+  # or a bracketed / keyed / leading one ([error], level=debug,
+  # "level":"warn", "error: ..."). A lower-case word in a sentence ("Failed
+  # to fetch info") is not a level; the trouble-word scan below handles it.
+  lvl, lerr = parse_regex(slice(head, 0, 80) ?? head, r'(?:\b(?P<u>FATAL|PANIC|CRITICAL|CRIT|EMERG|ERROR|ERR|WARNING|WARN|INFO|NOTICE|DEBUG|TRACE)\b|(?:^|\[|(?i:level|lvl|severity)"?\s*[=:]\s*"?)(?P<l>(?i:fatal|panic|critical|crit|emerg|error|err|warning|warn|info|notice|debug|trace))\b)')
   if lerr == null {
-    l = downcase(to_string(lvl.l))
+    l = downcase(to_string(lvl.u) + to_string(lvl.l))
     if includes(["fatal", "panic", "critical", "crit", "emerg"], l) {
       sev = "crit"
     } else if l == "error" || l == "err" {
@@ -115,9 +128,11 @@ if serr == null {
 .hostname = "${LOGNOG_DOCKER_HOSTNAME:-docker}"
 .app_name = app
 .index_name = "${LOGNOG_DOCKER_INDEX:-docker}"
-.force_host = .hostname
-.force_app = app
-.force_index = .index_name
+# Kept in event metadata, not fields: a syslog sender could otherwise name a
+# structured-data element "force_index" and steer final_route.
+%force_host = .hostname
+%force_app = app
+%force_index = .index_name
 .docker_image = image
 
 del(.container_name)
@@ -130,7 +145,8 @@ del(.source_type)
 '''
 
 # Drop what nobody wants to search: blank lines, Coolify's deploy helper
-# containers, and the Coolify scheduler's every-minute RUNNING/DONE ticks.
+# containers, and the Coolify scheduler's every-minute ticks (RUNNING/DONE
+# and the "⇂ '/usr/local/bin/php' 'artisan' ..." command echoes).
 [transforms.drop_docker_noise]
 type = "filter"
 inputs = ["process_docker_logs"]
@@ -140,13 +156,22 @@ img = to_string(.docker_image) ?? ""
 !(m == "" ||
   contains(img, "coolify-helper") ||
   contains(img, "timberio/vector") ||
-  (.app_name == "coolify" && match(m, r'(RUNNING|DONE)\z')))
+  (.app_name == "coolify" && (match(m, r'(RUNNING|DONE)\z') || starts_with(m, "⇂"))))
 '''
+
+# Per-service cap: a crash-looping container can't flood ClickHouse or the
+# disk. 6000 lines a minute per app (100/s) is ~25x the busiest app today.
+[transforms.throttle_docker]
+type = "throttle"
+inputs = ["drop_docker_noise"]
+key_field = "{{ app_name }}"
+threshold = 6000
+window_secs = 60
 
 # Merge UDP, TCP, and Docker sources
 [transforms.merge_syslog]
 type = "remap"
-inputs = ["syslog_udp", "syslog_tcp", "drop_docker_noise"]
+inputs = ["syslog_udp", "syslog_tcp", "throttle_docker"]
 source = '''
 # Set received timestamp
 .received_at = now()
@@ -610,10 +635,10 @@ if !exists(.kv_data) {
 # Docker events: re-apply the machine/service chosen in process_docker_logs
 # (merge_syslog, parse_web_access, parse_kv and parse_stacktrace may have
 # rewritten them). Severity from the parsers is kept.
-if exists(.force_index) {
-  .index_name = .force_index
-  .hostname = .force_host
-  .app_name = .force_app
+if is_string(%force_index) {
+  .index_name = %force_index
+  .hostname = %force_host
+  .app_name = %force_app
 }
 # Syslog from the studio shippers (Mac, Cupcake, ...) names its machine in
 # RFC5424 structured data: [lognog index="mac"]. Only machine indexes are
@@ -622,6 +647,19 @@ idx = to_string(.lognog.index) ?? ""
 if idx != "" && includes(["mac", "cupcake", "windows", "dominion", "hetzner"], idx) {
   .index_name = idx
 }
+# The source_ip/dest_ip columns are IPv4 and ports UInt16: one bad value
+# makes ClickHouse refuse the WHOLE insert batch (HTTP 400, not retried).
+# Parsers pull "IPs" out of free text (user agents, IPv6, 999.1.1.1), so
+# anything that isn't a real IPv4 becomes 0.0.0.0 and ports outside 0-65535
+# become 0.
+if !is_integer(ip_aton(to_string(.source_ip) ?? "") ?? null) { .source_ip = "0.0.0.0" }
+if !is_integer(ip_aton(to_string(.dest_ip) ?? "") ?? null) { .dest_ip = "0.0.0.0" }
+sp = to_int(.source_port) ?? 0
+if sp < 0 || sp > 65535 { sp = 0 }
+.source_port = sp
+dp = to_int(.dest_port) ?? 0
+if dp < 0 || dp > 65535 { dp = 0 }
+.dest_port = dp
 del(.lognog)
 del(.force_index)
 del(.force_host)
