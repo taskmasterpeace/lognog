@@ -615,6 +615,14 @@ if exists(.force_index) {
   .hostname = .force_host
   .app_name = .force_app
 }
+# Syslog from the studio shippers (Mac, Cupcake, ...) names its machine in
+# RFC5424 structured data: [lognog index="mac"]. Only machine indexes are
+# accepted, so a sender can't write into app indexes like receipts.
+idx = to_string(.lognog.index) ?? ""
+if idx != "" && includes(["mac", "cupcake", "windows", "dominion", "hetzner"], idx) {
+  .index_name = idx
+}
+del(.lognog)
 del(.force_index)
 del(.force_host)
 del(.force_app)
