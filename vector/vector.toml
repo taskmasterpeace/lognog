@@ -24,12 +24,16 @@ mode = "tcp"
 # ============================================
 # Docker Container Logs
 # ============================================
-# Collects logs from LogNog infrastructure containers
+# Collects logs from EVERY container on the host (unified logging), not just
+# LogNog's own. Container names differ per deploy (Coolify names them
+# "<service>-<uuid>-<digits>"), so a fixed include list silently matched
+# nothing in production. Vector's own container is excluded (its console
+# sink would feed back into itself); throwaway Coolify helper containers and
+# scheduler chatter are dropped in drop_docker_noise below.
 [sources.docker_logs]
 type = "docker_logs"
 docker_host = "unix:///var/run/docker.sock"
-# Include specific containers we want to monitor
-include_containers = ["lognog-ollama", "lognog-api", "lognog-ui", "lognog-nginx", "lognog-clickhouse"]
+exclude_containers = ["vector-", "lognog-vector"]
 
 # ============================================
 # TRANSFORMS
@@ -38,62 +42,84 @@ include_containers = ["lognog-ollama", "lognog-api", "lognog-ui", "lognog-nginx"
 # ============================================
 # TRANSFORM: Docker Logs Processing
 # ============================================
+# One machine = one index: every container on this host lands in
+# LOGNOG_DOCKER_INDEX (default "docker") with hostname LOGNOG_DOCKER_HOSTNAME
+# and app_name = the service (Coolify resource name + compose service, else
+# the container name without its generated suffix). Later parsers may rewrite
+# index/host/app (web, errors, kv host=...), so the chosen values are carried
+# in force_* fields and re-applied in final_route.
 [transforms.process_docker_logs]
 type = "remap"
 inputs = ["docker_logs"]
 source = '''
-# Set timestamp
 .received_at = now()
 
-# Extract container metadata
-.hostname = if exists(.container_name) { to_string!(.container_name) } else { "docker" }
-.app_name = if exists(.container_name) { to_string!(.container_name) } else { "docker" }
-
-# Set Docker-specific fields
-.docker_enabled = true
-.docker_container_name = if exists(.container_name) { to_string!(.container_name) } else { "" }
-.docker_container_id = if exists(.container_id) { to_string!(.container_id) } else { "" }
-.docker_image_name = if exists(.image) { to_string!(.image) } else { "" }
-
-# Extract labels if present
-if exists(.label) {
-  .docker_labels = encode_json(.label)
+cname = to_string(.container_name) ?? "docker"
+image = to_string(.image) ?? ""
+res = ""
+svc = ""
+if is_object(.label) {
+  res = to_string(get(.label, ["coolify.resourceName"]) ?? "") ?? ""
+  svc = to_string(get(.label, ["com.docker.compose.service"]) ?? "") ?? ""
 }
-
-# Set default severity (info)
-.severity = 6
-.facility = 1
-
-# Try to detect severity from message
-message_lower = downcase(to_string!(.message))
-if contains(message_lower, "error") || contains(message_lower, "err") || contains(message_lower, "fatal") {
-  .severity = 3
-  .index_name = "errors"
-} else if contains(message_lower, "warn") {
-  .severity = 4
-  .index_name = "main"
-} else if contains(message_lower, "debug") {
-  .severity = 7
-  .index_name = "main"
+app = cname
+if res != "" {
+  app = res
+  if svc != "" && svc != res && !match(svc, r'^[a-z0-9]{24}') {
+    app = res + "-" + svc
+  }
 } else {
-  .index_name = "docker"
+  app = replace(cname, r'-?[a-z0-9]{24}(-[0-9]{12})?\z', "")
+  if app == "" { app = cname }
 }
 
-# Set default values for syslog fields
-.proc_id = ""
-.msg_id = ""
-.raw = to_string!(.message)
-.structured_data = "{}"
-.source_ip = "0.0.0.0"
-.dest_ip = "0.0.0.0"
-.source_port = 0
-.dest_port = 0
-.protocol = ""
-.action = ""
-.user = ""
-.message_tokens = []
+# Strip terminal colour codes so messages read cleanly and match below.
+msg = replace(to_string(.message) ?? "", r'\x1b\[[0-9;]*m', "")
+.message = msg
+.raw_message = msg
 
-# Clean up Docker-specific fields that aren't in our schema
+# Severity as a syslog NAME (merge_syslog maps names to numbers).
+head = slice(msg, 0, 400) ?? msg
+sev = "info"
+status, serr = parse_regex(head, r'HTTP/[0-9.]+" (?P<st>[0-9]{3}) ')
+if serr == null {
+  if starts_with(to_string(status.st), "5") { sev = "err" }
+} else {
+  # An explicit level word near the start (INFO, WARN, [error], level=debug)
+  # wins; otherwise scan the line for trouble words.
+  lvl, lerr = parse_regex(slice(head, 0, 80) ?? head, r'(?i)\b(?P<l>fatal|panic|critical|crit|emerg|error|err|warning|warn|info|notice|debug|trace)\b')
+  if lerr == null {
+    l = downcase(to_string(lvl.l))
+    if includes(["fatal", "panic", "critical", "crit", "emerg"], l) {
+      sev = "crit"
+    } else if l == "error" || l == "err" {
+      sev = "err"
+    } else if l == "warning" || l == "warn" {
+      sev = "warning"
+    } else if l == "debug" || l == "trace" {
+      sev = "debug"
+    } else if l == "notice" {
+      sev = "notice"
+    }
+  } else if match(head, r'(?i)\b(fatal|panic|critical)\b') {
+    sev = "crit"
+  } else if match(head, r'(?i)\b(error|exception|traceback|failed)\b') {
+    sev = "err"
+  } else if match(head, r'(?i)\b(warn|warning)\b') {
+    sev = "warning"
+  }
+}
+.severity = sev
+.facility = "user"
+
+.hostname = "${LOGNOG_DOCKER_HOSTNAME:-docker}"
+.app_name = app
+.index_name = "${LOGNOG_DOCKER_INDEX:-docker}"
+.force_host = .hostname
+.force_app = app
+.force_index = .index_name
+.docker_image = image
+
 del(.container_name)
 del(.container_id)
 del(.container_created_at)
@@ -103,10 +129,24 @@ del(.stream)
 del(.source_type)
 '''
 
+# Drop what nobody wants to search: blank lines, Coolify's deploy helper
+# containers, and the Coolify scheduler's every-minute RUNNING/DONE ticks.
+[transforms.drop_docker_noise]
+type = "filter"
+inputs = ["process_docker_logs"]
+condition = '''
+m = strip_whitespace(to_string(.message) ?? "")
+img = to_string(.docker_image) ?? ""
+!(m == "" ||
+  contains(img, "coolify-helper") ||
+  contains(img, "timberio/vector") ||
+  (.app_name == "coolify" && match(m, r'(RUNNING|DONE)\z')))
+'''
+
 # Merge UDP, TCP, and Docker sources
 [transforms.merge_syslog]
 type = "remap"
-inputs = ["syslog_udp", "syslog_tcp", "process_docker_logs"]
+inputs = ["syslog_udp", "syslog_tcp", "drop_docker_noise"]
 source = '''
 # Set received timestamp
 .received_at = now()
@@ -567,6 +607,19 @@ if !exists(.kv_data) {
   .kv_data = "{}"
 }
 
+# Docker events: re-apply the machine/service chosen in process_docker_logs
+# (merge_syslog, parse_web_access, parse_kv and parse_stacktrace may have
+# rewritten them). Severity from the parsers is kept.
+if exists(.force_index) {
+  .index_name = .force_index
+  .hostname = .force_host
+  .app_name = .force_app
+}
+del(.force_index)
+del(.force_host)
+del(.force_app)
+del(.docker_image)
+
 # Add parsing metadata
 .parsed_at = now()
 '''
@@ -606,8 +659,10 @@ healthcheck.enabled = true
 encoding.timestamp_format = "rfc3339"
 date_time_best_effort = true
 
-# Console sink for debugging (optional, comment out in production)
-[sinks.console]
-type = "console"
-inputs = ["final_route"]
-encoding.codec = "json"
+# Console sink for debugging. Off: it echoed every event into the vector
+# container's own log (disk growth, and a loop risk now that all containers
+# are collected). Uncomment locally when debugging.
+# [sinks.console]
+# type = "console"
+# inputs = ["final_route"]
+# encoding.codec = "json"

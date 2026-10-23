@@ -39,6 +39,12 @@ services:
   vector:
     image: timberio/vector:0.35.0-alpine
     command: ["--config", "/etc/vector/vector.toml"]
+    environment:
+      CLICKHOUSE_PASSWORD: ${CLICKHOUSE_PASSWORD:-}
+      # Unified logging: every container on this box = index "hetzner",
+      # hostname "mkl-dev", app_name = the service.
+      LOGNOG_DOCKER_INDEX: hetzner
+      LOGNOG_DOCKER_HOSTNAME: mkl-dev
     ports:
       - "514:514/udp"
       - "514:514/tcp"
