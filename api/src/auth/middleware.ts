@@ -417,11 +417,20 @@ export function denyReadonly(req: Request, res: Response, next: NextFunction): v
 export const requireWrite = denyReadonly;
 
 /**
- * Rate limiting by user (simple in-memory implementation)
+ * Rate limiting by user (simple in-memory implementation).
+ *
+ * Each rateLimit() call gets its own counters. They used to share one map, so
+ * every limited route counted against whichever limit was smallest. Routes
+ * that run before sign-in are keyed by address, and behind the proxy every
+ * request has the same one: the studio's log shipping (ingest, 300/min) filled
+ * the same counter as /auth/login (10/min) and /auth/refresh (30/min), so login
+ * said "Too many requests" and refresh answered 429 and ended the session.
  */
-const rateLimitStore: Map<string, { count: number; resetTime: number }> = new Map();
+const rateLimitStores: Map<string, { count: number; resetTime: number }>[] = [];
 
 export function rateLimit(maxRequests: number = 100, windowMs: number = 60000) {
+  const rateLimitStore: Map<string, { count: number; resetTime: number }> = new Map();
+  rateLimitStores.push(rateLimitStore);
   return (req: Request, res: Response, next: NextFunction): void => {
     const key = req.user?.id || req.ip || 'anonymous';
     const now = Date.now();
@@ -452,12 +461,14 @@ export function rateLimit(maxRequests: number = 100, windowMs: number = 60000) {
 // Cleanup rate limit store periodically
 setInterval(() => {
   const now = Date.now();
-  for (const [key, record] of rateLimitStore) {
-    if (now > record.resetTime) {
-      rateLimitStore.delete(key);
+  for (const rateLimitStore of rateLimitStores) {
+    for (const [key, record] of rateLimitStore) {
+      if (now > record.resetTime) {
+        rateLimitStore.delete(key);
+      }
     }
   }
-}, 60000);
+}, 60000).unref();
 
 /**
  * Per-account login lockout — defense-in-depth on top of the per-IP rateLimit.

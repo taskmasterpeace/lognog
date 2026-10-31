@@ -103,7 +103,7 @@ export function PaginatedTable({
                   className="text-left p-2 border-b border-nog-200 dark:border-nog-700 font-medium text-nog-600 dark:text-nog-400 cursor-pointer hover:bg-nog-50 dark:hover:bg-nog-700/50 select-none"
                 >
                   <div className="flex items-center gap-1">
-                    <span>{column}</span>
+                    <span>{format?.columnLabels?.[column] ?? column}</span>
                     {sortColumn === column && (
                       sortDirection === 'asc' ? (
                         <ArrowUp className="w-3.5 h-3.5 text-honey-500" />

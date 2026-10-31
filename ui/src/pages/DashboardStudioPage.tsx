@@ -28,6 +28,7 @@ import type { Dashboard } from '../api/client';
 import { useToast } from '../contexts/ToastContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { SearchAutocomplete } from '../components/search';
+import TimePickerEnhanced from '../components/TimePickerEnhanced';
 import {
   PanelChart,
   suggestVisualizations,
@@ -81,11 +82,17 @@ export default function DashboardStudioPage() {
   const isDarkMode = resolvedTheme === 'dark';
 
   const [query, setQuery] = useState('search * | timechart span=1h count');
-  const [timeRange] = useState('-24h');
+  // The preview range was locked to 24h; now it follows the time picker.
+  const [timeRange, setTimeRange] = useState('-24h');
+  const [timeRangeLatest, setTimeRangeLatest] = useState('now');
   const [results, setResults] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasRun, setHasRun] = useState(false);
+  // A query was submitted (maybe still loading): a new time range re-runs it.
+  const submittedRef = useRef(false);
+  // Only the newest request's answer may land on screen.
+  const requestSeq = useRef(0);
   const [viz, setViz] = useState<string>('table');
   const [panelTitle, setPanelTitle] = useState('');
   const [staged, setStaged] = useState<StagedPanel[]>([]);
@@ -139,10 +146,13 @@ export default function DashboardStudioPage() {
 
   const runQueryFor = useCallback(async (q: string) => {
     if (!q.trim()) return;
+    submittedRef.current = true;
+    const seq = ++requestSeq.current;
     setLoading(true);
     setError(null);
     try {
-      const res = await executeSearch(q, timeRange, 'now');
+      const res = await executeSearch(q, timeRange, timeRangeLatest);
+      if (seq !== requestSeq.current) return;
       const rows = res.results || [];
       setResults(rows);
       setHasRun(true);
@@ -150,14 +160,24 @@ export default function DashboardStudioPage() {
       setHintViz(hinted);
       setViz(hinted ?? suggestVisualizations(rows)[0]);
     } catch (err) {
+      if (seq !== requestSeq.current) return;
       setError(err instanceof Error ? err.message : 'Query failed');
       setResults([]);
     } finally {
-      setLoading(false);
+      if (seq === requestSeq.current) setLoading(false);
     }
-  }, [timeRange]);
+  }, [timeRange, timeRangeLatest]);
 
   const runQuery = useCallback(() => runQueryFor(query), [runQueryFor, query]);
+
+  // A new time range re-runs the preview that is on screen (runQueryFor changes with the range).
+  const rerunOnRange = useRef(runQuery);
+  rerunOnRange.current = runQuery;
+  const firstRange = useRef(true);
+  useEffect(() => {
+    if (firstRange.current) { firstRange.current = false; return; }
+    if (submittedRef.current) void rerunOnRange.current();
+  }, [timeRange, timeRangeLatest]);
 
   const smartTitle = useCallback((q: string = query) => {
     if (q === query && panelTitle.trim()) return panelTitle.trim();
@@ -367,7 +387,7 @@ export default function DashboardStudioPage() {
               </button>
             </div>
 
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap items-center gap-1.5">
               {STARTERS.map((s) => (
                 <button
                   key={s.label}
@@ -377,6 +397,15 @@ export default function DashboardStudioPage() {
                   {s.label}
                 </button>
               ))}
+              {/* On this row (right end, so its menu opens on screen) the search box keeps its width; a new range re-runs the preview. */}
+              <TimePickerEnhanced
+                className="ml-auto"
+                onRangeChange={(earliest, latest) => {
+                  setTimeRange(earliest);
+                  setTimeRangeLatest(latest || 'now');
+                }}
+                defaultRange={timeRange}
+              />
             </div>
           </div>
 

@@ -64,8 +64,16 @@ export async function refreshAccessToken(): Promise<boolean> {
       });
 
       if (!response.ok) {
-        clearTokens();
-        if (onAuthFailure) onAuthFailure();
+        // Another tab renewed first: it rotated the token we just sent (so the
+        // server said no) and already stored a fresh pair. Use that pair
+        // instead of logging every tab out.
+        if (getRefreshToken() && getRefreshToken() !== refreshToken) return true;
+        // Only a real "no" (401/403) ends the session. A rate limit or a
+        // server hiccup leaves the login in place for the next try.
+        if (response.status === 401 || response.status === 403) {
+          clearTokens();
+          if (onAuthFailure) onAuthFailure();
+        }
         return false;
       }
 
@@ -73,8 +81,7 @@ export async function refreshAccessToken(): Promise<boolean> {
       setTokens(data.accessToken, data.refreshToken);
       return true;
     } catch {
-      clearTokens();
-      if (onAuthFailure) onAuthFailure();
+      // No answer at all (network blip): keep the login and try again later.
       return false;
     } finally {
       refreshPromise = null;
@@ -306,10 +313,21 @@ async function request<T>(endpoint: string, options?: RequestInit): Promise<T> {
     return headers;
   };
 
-  let response = await fetch(`${API_BASE}${endpoint}`, {
-    ...options,
-    headers: buildHeaders(),
-  });
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE}${endpoint}`, {
+      ...options,
+      headers: buildHeaders(),
+    });
+  } catch (err) {
+    // fetch only throws when no answer arrived at all: the network dropped, or
+    // the Cloudflare sign-in in front of LogNog ran out and its redirect was
+    // blocked. Say that instead of the browser's bare "Failed to fetch".
+    if (err instanceof TypeError) {
+      throw new Error("LogNog didn't answer (connection dropped, or the sign-in ran out). It tries again on its own; reload the page if it keeps happening");
+    }
+    throw err;
+  }
 
   // Transparently refresh once on 401, then retry the original request.
   if (response.status === 401 && getRefreshToken()) {

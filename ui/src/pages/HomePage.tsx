@@ -415,7 +415,14 @@ export default function HomePage() {
           title="Check again now"
         >
           <RefreshCw className={`h-4 w-4 ${isFetching ? 'animate-spin' : ''}`} />
-          {data ? <span className="hidden sm:inline">Updated {clock(data.generated_at)}</span> : <span className="hidden sm:inline">Refresh</span>}
+          {data ? (
+            // A failed background check keeps the last good numbers on screen
+            // (it used to replace the whole page with an error box).
+            // The warning shows on phones too; the plain "Updated" time stays desktop-only.
+            <span className={error ? 'inline text-amber-600 dark:text-amber-400' : 'hidden sm:inline'}>
+              {error ? `Last check missed, showing ${clock(data.generated_at)}` : `Updated ${clock(data.generated_at)}`}
+            </span>
+          ) : <span className="hidden sm:inline">Refresh</span>}
         </button>
       </header>
 
@@ -423,7 +430,7 @@ export default function HomePage() {
         <div className="flex items-center justify-center py-20">
           <Loader2 className="h-8 w-8 animate-spin text-honey-500" />
         </div>
-      ) : error || !data ? (
+      ) : !data ? (
         <div className="rounded-[0.625rem] border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-700 dark:text-red-300">
           Couldn't load Home: {error instanceof Error ? error.message : 'no answer from the server'}.{' '}
           <button type="button" onClick={() => refetch()} className="font-semibold underline">Try again</button>
