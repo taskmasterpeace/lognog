@@ -8,7 +8,7 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "lint": "eslint src --ext ts,tsx",
-    "test:session": "node --experimental-strip-types --test tests/session-refresh.test.ts tests/panel-state.test.ts"
+    "test:session": "node --experimental-strip-types --test tests/session-refresh.test.ts tests/panel-state.test.ts tests/panel-format.test.ts"
   },
   "dependencies": {
     "@floating-ui/react": "^0.27.16",

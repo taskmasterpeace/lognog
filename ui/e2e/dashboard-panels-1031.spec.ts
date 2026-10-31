@@ -7,6 +7,8 @@
  *  - A fullscreen panel keeps the dashboard's accent colour.
  *  - Panel buttons are always shown on touch screens.
  *  - Home's "Last check missed" warning shows on phones.
+ *  - A small gauge stays inside its tile; Studio Machines has friendly column
+ *    names; product logos load; the Studio preview re-runs on a new range.
  *
  * Needs a running LogNog UI + API with the product dashboards (prod, or a copy
  * of prod's SQLite after scripts/dashboards/2026-10-31-real-use.cjs):
@@ -24,6 +26,7 @@ const HYH_REAL_USE = 'be45c6a6-cf41-4d2f-bb80-8180d65a5c9f';
 const TEST_ACCENT = '#FF00FF';
 const TEST_ACCENT_RGB = [0xff, 0x00, 0xff];
 const DP_DAILY = '8b747afe-77e1-4cec-9d4e-905a3c90fb8a';
+const MACHINES = '1497304d-ee98-4a19-a037-1e6c6a718e1d';
 
 let tokens: { a: string; r: string };
 
@@ -147,6 +150,72 @@ test('mouse screen: panel buttons take no room until hover or keyboard focus', a
   await expect.poll(rowWidth).toBeLessThan(2);
   await refresh.focus();
   await expect.poll(rowWidth, { message: 'shown on keyboard focus' }).toBeGreaterThan(40);
+});
+
+test('a small gauge stays inside its tile', async ({ page, context }) => {
+  await signIn(context);
+  // No prod dashboard has a gauge any more; make the 2-row "Events" tile one.
+  await page.route(`**/api/dashboards/${DP_DAILY}`, async (route) => {
+    if (route.request().method() !== 'GET') return route.continue();
+    const res = await route.fetch();
+    const body = await res.json();
+    body.panels = body.panels.map((p: { title: string }) => (p.title === 'Events' ? { ...p, visualization: 'gauge' } : p));
+    await route.fulfill({ response: res, json: body });
+  });
+  await openDashboard(page, DP_DAILY);
+  const card = page.locator('div.group', { has: page.getByText('Events', { exact: true }) }).first();
+  const fit = await card.locator('[aria-busy]').evaluate((body) => {
+    const c = body.querySelector('canvas');
+    const b = body.getBoundingClientRect();
+    const r = c ? c.getBoundingClientRect() : null;
+    return { has: !!c, top: b.top, bottom: b.bottom, cTop: r?.top ?? 0, cBottom: r?.bottom ?? 0 };
+  });
+  expect(fit.has).toBe(true);
+  expect(fit.cTop).toBeGreaterThanOrEqual(fit.top - 1);
+  expect(fit.cBottom).toBeLessThanOrEqual(fit.bottom + 1);
+});
+
+test('Studio Machines tables have friendly column names', async ({ page, context }) => {
+  await signIn(context);
+  await openDashboard(page, MACHINES);
+  for (const name of ['Machine', 'Answering (1 = yes)', 'Ping (ms)', 'Answered', 'Sent']) {
+    await expect(page.locator('th', { hasText: name }).first()).toBeVisible();
+  }
+  await expect(page.locator('th', { hasText: /^product$/ })).toHaveCount(0);
+});
+
+test('product logos load from LogNog itself', async ({ page, context, request }) => {
+  for (const f of ['directors-palette', 'hey-youre-hired', 'presidium', 'cof', 'mkl']) {
+    const r = await request.get(`${BASE_URL}/logos/${f}.png`);
+    expect(r.status(), f).toBe(200);
+    expect(r.headers()['content-type'], f).toContain('image/png');
+  }
+  await signIn(context);
+  await openDashboard(page, HYH_REAL_USE);
+  const logo = page.locator('img[src="/logos/hey-youre-hired.png"]').first();
+  await expect(logo).toBeVisible();
+  expect(await logo.evaluate((i: HTMLImageElement) => i.naturalWidth)).toBeGreaterThan(0);
+});
+
+test('Dashboard Studio: a new time range re-runs the preview', async ({ page, context }) => {
+  await signIn(context);
+  await page.goto(`${BASE_URL}/dashboards/studio`);
+  const sent: Array<{ earliest?: string }> = [];
+  page.on('request', (r) => {
+    if (r.url().includes('/api/search/query') && r.method() === 'POST') sent.push(JSON.parse(r.postData() || '{}'));
+  });
+  await page.getByRole('button', { name: 'Run' }).waitFor();
+  const box = page.locator('textarea, input[placeholder^="search *"]').first();
+  await box.fill('index=uptime | stats count');
+  await page.getByRole('button', { name: 'Run' }).click();
+  await expect.poll(() => sent.length).toBeGreaterThan(0);
+  expect(sent[sent.length - 1].earliest).toBe('-24h');
+
+  await page.locator('button[title="Last 24 hours"]').click();
+  await page.getByRole('button', { name: 'Last 7 days' }).first().click();
+  await expect.poll(() => sent[sent.length - 1]?.earliest, { message: 'preview re-ran with the new range, no Run press' }).toBe('-7d');
+  // The search box keeps its width (the picker is on the row below).
+  expect(await box.evaluate((e) => e.getBoundingClientRect().width)).toBeGreaterThan(300);
 });
 
 test.describe('touch screen', () => {

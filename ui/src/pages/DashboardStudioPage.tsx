@@ -89,6 +89,8 @@ export default function DashboardStudioPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasRun, setHasRun] = useState(false);
+  const hasRunRef = useRef(false);
+  hasRunRef.current = hasRun;
   const [viz, setViz] = useState<string>('table');
   const [panelTitle, setPanelTitle] = useState('');
   const [staged, setStaged] = useState<StagedPanel[]>([]);
@@ -161,6 +163,15 @@ export default function DashboardStudioPage() {
   }, [timeRange, timeRangeLatest]);
 
   const runQuery = useCallback(() => runQueryFor(query), [runQueryFor, query]);
+
+  // A new time range re-runs the preview that is on screen (runQueryFor changes with the range).
+  const rerunOnRange = useRef(runQuery);
+  rerunOnRange.current = runQuery;
+  const firstRange = useRef(true);
+  useEffect(() => {
+    if (firstRange.current) { firstRange.current = false; return; }
+    if (hasRunRef.current) void rerunOnRange.current();
+  }, [timeRange, timeRangeLatest]);
 
   const smartTitle = useCallback((q: string = query) => {
     if (q === query && panelTitle.trim()) return panelTitle.trim();
@@ -364,20 +375,13 @@ export default function DashboardStudioPage() {
                   placeholder="search * | stats count by hostname | sort -count"
                 />
               </div>
-              <TimePickerEnhanced
-                onRangeChange={(earliest, latest) => {
-                  setTimeRange(earliest);
-                  setTimeRangeLatest(latest || 'now');
-                }}
-                defaultRange={timeRange}
-              />
               <button onClick={runQuery} className="btn-primary flex items-center gap-2 px-4" disabled={loading}>
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
                 Run
               </button>
             </div>
 
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap items-center gap-1.5">
               {STARTERS.map((s) => (
                 <button
                   key={s.label}
@@ -387,6 +391,15 @@ export default function DashboardStudioPage() {
                   {s.label}
                 </button>
               ))}
+              {/* On this row (right end, so its menu opens on screen) the search box keeps its width; a new range re-runs the preview. */}
+              <TimePickerEnhanced
+                className="ml-auto"
+                onRangeChange={(earliest, latest) => {
+                  setTimeRange(earliest);
+                  setTimeRangeLatest(latest || 'now');
+                }}
+                defaultRange={timeRange}
+              />
             </div>
           </div>
 

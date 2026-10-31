@@ -15,11 +15,11 @@
  *     "Your own use" table shows what was left out. "HeyYoureHired — Real Use"
  *     leaves him out of job searches; its visit, sign-up and login events carry
  *     no user id, so those panels count everyone and say so.
- *  2. Money goes first on DP Real Use, and tables are shorter, so the page fits.
+ *  2. Money goes first on DP Real Use; tables are tall enough that no row is cut in half.
  *  3. "DP: Daily Overview" searched app_name/message names Directors Palette no
  *     longer sends, so every panel said "No data". It now uses
  *     index=directors-palette + event=..., and its count gauges are stat tiles.
- *  4. "Studio Machines": the two tables are tall enough for every machine, and
+ *  4. "Studio Machines": the two tables get friendly column names, and
  *     the chart (a sideways bar of "machines answering", always the maximum) is
  *     now one line per machine showing the share of pings it answered each hour.
  *  5. The studio's own product dashboards (a fixed list of ids, below) get
@@ -52,6 +52,7 @@ const ROBERT_HYH = 'user_id!="f0ce2d4b-f7ab-4e46-bd05-c61d1367c660"';
 // HYH's visit, sign-up and login events carry no user id (checked 10-31), so
 // those panels cannot leave Robert out and say so.
 const HYH_EVERYONE = 'Counts everyone, you included: HYH sign-up and login events do not say who.';
+const HYH_VISITS = 'Counts everyone, you included: visits and blog reads do not say who.';
 
 const DP = 'index=directors-palette';
 const GEN = `${DP} event=generation_completed ${ROBERT_DP}`;
@@ -102,7 +103,8 @@ const DASH = {
 };
 
 // Panels are matched by their CURRENT title within the dashboard; `title` is
-// the new one. x/y/w/h are grid units (12 columns).
+// the new one. Every rewritten panel gets exactly the description given here
+// (none = cleared), so no text from before the filters survives. x/y/w/h are grid units (12 columns).
 const P = (match, title, query, viz, x, y, w, h, description) => ({ match, title, query, viz, x, y, w, h, description });
 // Panels whose old title changed in an earlier run of this script still match by the new title.
 
@@ -124,32 +126,32 @@ const dpRealUse = [
   P('Who spends the most credits', 'Who spends the most credits', `${SPEND} | stats count as uses, sum(price_cents) as charged_cents by user_email | sort -charged_cents | head 15`, 'table', 0, 9, 6, 4),
   P('How long each model takes', 'How long each model takes (their runs)', `${GEN} | stats count as made, avg(duration_ms) as avg_ms, p95(duration_ms) as slowest_5pct_ms by model_id | sort -made`, 'table', 6, 9, 6, 4),
   // Row 5: problems.
-  P('Why generations failed', 'Why their generations failed', `${DP} event=generation_failed ${ROBERT_DP} | stats count by model_id, error | sort -count | head 15`, 'table', 0, 13, 6, 4),
-  P('Errors (what broke)', 'Errors on the site (everyone)', `${DP} severity<=3 | stats count by message | sort -count | head 15`, 'table', 6, 13, 3, 4, 'Site errors are about the site, not a person, so nobody is left out here.'),
-  P('Warnings', 'Warnings on the site', `${DP} severity=4 | stats count by message | sort -count | head 15`, 'table', 9, 13, 3, 4),
+  P('Why generations failed', 'Why their generations failed', `${DP} event=generation_failed ${ROBERT_DP} | stats count by model_id, error | sort -count | head 15`, 'table', 0, 13, 6, 5),
+  P('Errors (what broke)', 'Errors on the site (everyone)', `${DP} severity<=3 | stats count by message | sort -count | head 15`, 'table', 6, 13, 3, 5, 'Site errors are about the site, not a person, so nobody is left out here.'),
+  P('Warnings', 'Warnings on the site', `${DP} severity=4 | stats count by message | sort -count | head 15`, 'table', 9, 13, 3, 5),
   // Row 6: small tables.
-  P('Sign-ins, sign-ups, payments', 'Sign-ins, sign-ups, payments', `${DP} ${ROBERT_DP} (message="User login" OR message="User signup completed" OR event=payment_completed OR event=checkout_session_created OR event=checkout_session_failed) | stats count by message`, 'table', 0, 17, 3, 3),
-  P('Page views by signed-in people', 'Page views (other people)', `${DP} event=page_view ${ROBERT_DP} | stats count as views, dc(user_id) as people`, 'table', 3, 17, 3, 3),
-  P('Uploads', 'Uploads (other people)', `${DP} event=upload_completed ${ROBERT_DP} | stats count as uploads, dc(user_id) as people, sum(size_bytes) as bytes`, 'table', 6, 17, 3, 3),
-  P('Your own use (left out above)', 'Your own use (left out above)', `${DP} event=credit_event amount<0 ${ROBERT_DP_ONLY} | stats count as uses, sum(cost_cents) as cost_cents, sum(price_cents) as charged_cents`, 'table', 9, 17, 3, 3, "Robert's own account, so you can see what the panels above leave out."),
+  P('Sign-ins, sign-ups, payments', 'Sign-ins, sign-ups, payments', `${DP} ${ROBERT_DP} (message="User login" OR message="User signup completed" OR event=payment_completed OR event=checkout_session_created OR event=checkout_session_failed) | stats count by message`, 'table', 0, 18, 3, 4, 'Other people only, so it is empty when the only sign-ins were yours.'),
+  P('Page views by signed-in people', 'Page views (other people)', `${DP} event=page_view ${ROBERT_DP} | stats count as views, dc(user_id) as people`, 'table', 3, 18, 3, 4),
+  P('Uploads', 'Uploads (other people)', `${DP} event=upload_completed ${ROBERT_DP} | stats count as uploads, dc(user_id) as people, sum(size_bytes) as bytes`, 'table', 6, 18, 3, 4),
+  P('Your own use (left out above)', 'Your own use (left out above)', `${DP} event=credit_event amount<0 ${ROBERT_DP_ONLY} | stats count as uses, sum(cost_cents) as cost, sum(price_cents) as charged`, 'table', 9, 18, 3, 4, "Robert's own account, so you can see what the panels above leave out. Cents."),
 ];
 
 const hyhRealUse = [
-  P('Visitors', 'Visitors', 'index=hey-youre-hired ua_class!="bot" | stats dc(ip_address) as visitors', 'stat', 0, 0, 2, 2),
-  P('Blog views', 'Blog views', 'index=hey-youre-hired message="Blog article viewed" ua_class!="bot" | stats count as views', 'stat', 2, 0, 2, 2),
-  P('Read to the end', 'Read to the end', 'index=hey-youre-hired message="Blog article read completed" | stats count as reads', 'stat', 4, 0, 2, 2),
+  P('Visitors', 'Visitors', 'index=hey-youre-hired ua_class!="bot" | stats dc(ip_address) as visitors', 'stat', 0, 0, 2, 2, HYH_VISITS),
+  P('Blog views', 'Blog views', 'index=hey-youre-hired message="Blog article viewed" ua_class!="bot" | stats count as views', 'stat', 2, 0, 2, 2, HYH_VISITS),
+  P('Read to the end', 'Read to the end', 'index=hey-youre-hired message="Blog article read completed" | stats count as reads', 'stat', 4, 0, 2, 2, HYH_VISITS),
   P('Signups', 'Signups', `index=hey-youre-hired message="Signup attempt" | stats count as signups`, 'stat', 6, 0, 2, 2, HYH_EVERYONE),
   P('Job searches', 'Job searches', `index=hey-youre-hired message="Feature used: job_recommendations" ${ROBERT_HYH} | stats count as searches`, 'stat', 8, 0, 2, 2, 'Your own account is left out.'),
   P('Problems', 'Problems', 'index=hey-youre-hired severity<=4 message!="CSP violation (report-only)" | stats count as problems', 'stat', 10, 0, 2, 2),
   P('Signup funnel', 'Signup funnel', 'index=hey-youre-hired (message="Signup page view" OR message="Signup attempt" OR message="Profile created" OR message="User login") | stats count by message | sort -count', 'bar', 0, 2, 6, 3, HYH_EVERYONE),
   P('Site up? (response time)', 'Site up? (response time)', 'index=uptime product="HeyYoureHired" | timechart span=15m avg(response_ms) as response_ms', 'line', 6, 2, 6, 3),
-  P('Most-read articles', 'Most-read articles', 'index=hey-youre-hired message="Blog article viewed" ua_class!="bot" | stats count as views by blog_title | sort -views | head 15', 'table', 0, 5, 6, 4),
-  P('Activity per day', 'Activity per day', `index=hey-youre-hired message!="CSP violation (report-only)" ${ROBERT_HYH} | timechart span=1d count`, 'line', 6, 5, 6, 4, 'Your job searches are left out; visits, sign-ups and logins count everyone (they do not say who).'),
-  P('What broke (warnings + errors)', 'What broke (warnings + errors)', 'index=hey-youre-hired severity<=4 message!="CSP violation (report-only)" | stats count by message | sort -count | head 15', 'table', 0, 9, 6, 4),
-  P('Job searches: results + speed', 'Job searches: results + speed (not you)', `index=hey-youre-hired message="Feature completed: job_recommendations" ${ROBERT_HYH} | stats count as searches, avg(jobs_found) as avg_jobs, avg(duration_ms) as avg_ms`, 'table', 6, 9, 6, 2),
-  P('Bots', 'Bots', 'index=hey-youre-hired ua_class="bot" | stats count as bot_hits', 'stat', 6, 11, 2, 2),
-  P('Browser security (CSP) reports', 'Browser security (CSP) reports', 'index=hey-youre-hired message="CSP violation (report-only)" | stats count by violated_directive, blocked_uri | sort -count | head 10', 'table', 8, 11, 4, 2),
-  P('Bots by name', 'Bots by name', 'index=hey-youre-hired ua_class="bot" | stats count as hits, dc(ip_address) as ips, latest(ua) as example_ua by bot_name | sort -hits | head 20', 'table', 0, 13, 12, 4),
+  P('Most-read articles', 'Most-read articles', 'index=hey-youre-hired message="Blog article viewed" ua_class!="bot" | stats count as views by blog_title | sort -views | head 15', 'table', 0, 5, 6, 5, HYH_VISITS),
+  P('Activity per day', 'Activity per day', `index=hey-youre-hired message!="CSP violation (report-only)" ${ROBERT_HYH} | timechart span=1d count`, 'line', 6, 5, 6, 5, 'Your job searches are left out; visits, sign-ups and logins count everyone (they do not say who).'),
+  P('What broke (warnings + errors)', 'What broke (warnings + errors)', 'index=hey-youre-hired severity<=4 message!="CSP violation (report-only)" | stats count by message | sort -count | head 15', 'table', 0, 10, 6, 5),
+  P('Job searches: results + speed', 'Job searches: results + speed (not you)', `index=hey-youre-hired message="Feature completed: job_recommendations" ${ROBERT_HYH} | stats count as searches, avg(jobs_found) as avg_jobs, avg(duration_ms) as avg_ms`, 'table', 6, 10, 6, 2, 'Your own account is left out.'),
+  P('Bots', 'Bots', 'index=hey-youre-hired ua_class="bot" | stats count as bot_hits', 'stat', 6, 12, 6, 3),
+  P('Browser security (CSP) reports', 'Browser security (CSP) reports', 'index=hey-youre-hired message="CSP violation (report-only)" | stats count by violated_directive, blocked_uri | sort -count | head 10', 'table', 0, 15, 12, 4),
+  P('Bots by name', 'Bots by name', 'index=hey-youre-hired ua_class="bot" | stats count as hits, dc(ip_address) as ips, latest(ua) as example_ua by bot_name | sort -hits | head 20', 'table', 0, 19, 12, 5),
 ];
 
 const dpDaily = [
@@ -163,10 +165,12 @@ const dpDaily = [
 ];
 
 const machines = [
-  // Tall enough for every machine plus the header row and pager (on the board
-  // at 150% the old tiles showed 4 of 8 rows).
-  P('Answering right now?', 'Answering right now?', 'index=uptime kind=machine | stats latest(message) as status, latest(response_ms) as ping_ms by product | sort product', 'table', 0, 0, 6, 6),
-  P('Pings answered / sent', 'Pings answered / sent', 'index=uptime kind=machine | stats sum(up) as answered, count as sent by product | sort product', 'table', 6, 0, 6, 6),
+  // Friendly column names come from format.columnLabels (the query language
+  // can't rename a field after stats).
+  { ...P('Answering right now?', 'Answering right now?', 'index=uptime kind=machine | stats latest(up) as up_now, latest(response_ms) as ping_ms by product | sort product', 'table', 0, 0, 6, 6, 'Last ping from the Mac Mini (every 5 minutes). 1 = answered, 0 = no answer.'),
+    options: { format: { columnLabels: { product: 'Machine', up_now: 'Answering (1 = yes)', ping_ms: 'Ping (ms)' } } } },
+  { ...P('Pings answered / sent', 'Pings answered / sent', 'index=uptime kind=machine | stats sum(up) as answered, count as sent by product | sort product', 'table', 6, 0, 6, 6),
+    options: { format: { columnLabels: { product: 'Machine', answered: 'Answered', sent: 'Sent' } } } },
   // A line per machine: 1 = answered every ping that hour, a dip = missed some.
   // (It was a sideways bar of "machines answering", always the maximum.)
   { ...P('Machines answering over time', 'Pings answered each hour, per machine (1 = always up)', 'index=uptime kind=machine | timechart span=1h avg(up) as answered by product', 'linechart', 0, 6, 12, 4, 'Each line is one machine. 1 means it answered every ping that hour; a dip means it missed some.'), options: { format: { yMin: 0, yMax: 1 } } },
@@ -190,7 +194,7 @@ function main() {
 function apply() {
   const db = new Database(dbPath, { readonly: dryRun });
   const findPanel = db.prepare('SELECT id FROM dashboard_panels WHERE dashboard_id = ? AND (title = ? OR title = ?)');
-  const update = db.prepare(`UPDATE dashboard_panels SET title = ?, query = ?, visualization = ?, position_x = ?, position_y = ?, width = ?, height = ?, description = COALESCE(?, description), options = COALESCE(?, options) WHERE id = ?`);
+  const update = db.prepare(`UPDATE dashboard_panels SET title = ?, query = ?, visualization = ?, position_x = ?, position_y = ?, width = ?, height = ?, description = ?, options = COALESCE(?, options) WHERE id = ?`);
   const insert = db.prepare(`INSERT INTO dashboard_panels (id, dashboard_id, title, query, visualization, options, position_x, position_y, width, height, description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
   const brand = db.prepare(`UPDATE dashboards SET logo_url = ?, accent_color = ?, header_color = ?, updated_at = datetime('now') WHERE id = ?`);
   const { randomUUID } = require('crypto');

@@ -27,6 +27,8 @@ export interface PanelFormat {
   decimals?: number;
   /** Single value: compare against the previous half of the window and show a sparkline. */
   showTrend?: boolean;
+  /** Table: friendly header per result field (the query language can't rename after stats). */
+  columnLabels?: Record<string, string>;
 }
 
 export const THRESHOLD_COLORS = ['#b45309', '#c2410c', '#b91c1c'];
@@ -63,6 +65,9 @@ export function readPanelFormat(options: unknown): PanelFormat {
     decimals: num(f.decimals),
     // Tri-state: undefined = default (show trend when the data is a series).
     showTrend: typeof f.showTrend === 'boolean' ? f.showTrend : undefined,
+    columnLabels: f.columnLabels && typeof f.columnLabels === 'object'
+      ? Object.fromEntries(Object.entries(f.columnLabels as Record<string, unknown>).filter(([, v]) => typeof v === 'string')) as Record<string, string>
+      : undefined,
   };
 }
 
