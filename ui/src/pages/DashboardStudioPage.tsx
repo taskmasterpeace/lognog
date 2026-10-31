@@ -89,8 +89,10 @@ export default function DashboardStudioPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [hasRun, setHasRun] = useState(false);
-  const hasRunRef = useRef(false);
-  hasRunRef.current = hasRun;
+  // A query was submitted (maybe still loading): a new time range re-runs it.
+  const submittedRef = useRef(false);
+  // Only the newest request's answer may land on screen.
+  const requestSeq = useRef(0);
   const [viz, setViz] = useState<string>('table');
   const [panelTitle, setPanelTitle] = useState('');
   const [staged, setStaged] = useState<StagedPanel[]>([]);
@@ -144,10 +146,13 @@ export default function DashboardStudioPage() {
 
   const runQueryFor = useCallback(async (q: string) => {
     if (!q.trim()) return;
+    submittedRef.current = true;
+    const seq = ++requestSeq.current;
     setLoading(true);
     setError(null);
     try {
       const res = await executeSearch(q, timeRange, timeRangeLatest);
+      if (seq !== requestSeq.current) return;
       const rows = res.results || [];
       setResults(rows);
       setHasRun(true);
@@ -155,10 +160,11 @@ export default function DashboardStudioPage() {
       setHintViz(hinted);
       setViz(hinted ?? suggestVisualizations(rows)[0]);
     } catch (err) {
+      if (seq !== requestSeq.current) return;
       setError(err instanceof Error ? err.message : 'Query failed');
       setResults([]);
     } finally {
-      setLoading(false);
+      if (seq === requestSeq.current) setLoading(false);
     }
   }, [timeRange, timeRangeLatest]);
 
@@ -170,7 +176,7 @@ export default function DashboardStudioPage() {
   const firstRange = useRef(true);
   useEffect(() => {
     if (firstRange.current) { firstRange.current = false; return; }
-    if (hasRunRef.current) void rerunOnRange.current();
+    if (submittedRef.current) void rerunOnRange.current();
   }, [timeRange, timeRangeLatest]);
 
   const smartTitle = useCallback((q: string = query) => {

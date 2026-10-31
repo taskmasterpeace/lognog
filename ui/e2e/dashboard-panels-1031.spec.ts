@@ -164,6 +164,7 @@ test('a small gauge stays inside its tile', async ({ page, context }) => {
   });
   await openDashboard(page, DP_DAILY);
   const card = page.locator('div.group', { has: page.getByText('Events', { exact: true }) }).first();
+  await card.scrollIntoViewIfNeeded(); // so the test's picture shows the gauge
   const fit = await card.locator('[aria-busy]').evaluate((body) => {
     const c = body.querySelector('canvas');
     const b = body.getBoundingClientRect();
@@ -207,6 +208,18 @@ test('Dashboard Studio: a new time range re-runs the preview', async ({ page, co
   await page.getByRole('button', { name: 'Run' }).waitFor();
   const box = page.locator('textarea, input[placeholder^="search *"]').first();
   await box.fill('index=uptime | stats count');
+  // Hold the first (24 h) answer so the range changes while it is still loading,
+  // then check the 7 d answer is the one on screen, not the late 24 h one.
+  let first = true;
+  await page.route('**/api/search/query', async (route) => {
+    const body = JSON.parse(route.request().postData() || '{}');
+    if (first && body.earliest === '-24h') {
+      first = false;
+      await new Promise((r) => setTimeout(r, 3000));
+      return route.fulfill({ json: { results: [{ count: 111 }] } });
+    }
+    return route.fulfill({ json: { results: [{ count: 777 }] } });
+  });
   await page.getByRole('button', { name: 'Run' }).click();
   await expect.poll(() => sent.length).toBeGreaterThan(0);
   expect(sent[sent.length - 1].earliest).toBe('-24h');
@@ -214,6 +227,9 @@ test('Dashboard Studio: a new time range re-runs the preview', async ({ page, co
   await page.locator('button[title="Last 24 hours"]').click();
   await page.getByRole('button', { name: 'Last 7 days' }).first().click();
   await expect.poll(() => sent[sent.length - 1]?.earliest, { message: 'preview re-ran with the new range, no Run press' }).toBe('-7d');
+  await page.waitForTimeout(3500); // the held 24 h answer arrives now
+  await expect(page.getByText('777')).toBeVisible();
+  await expect(page.getByText('111')).toHaveCount(0);
   // The search box keeps its width (the picker is on the row below).
   expect(await box.evaluate((e) => e.getBoundingClientRect().width)).toBeGreaterThan(300);
 });
