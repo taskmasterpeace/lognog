@@ -70,7 +70,9 @@ export function DashboardHeader({
             <img
               src={logoUrl}
               alt="Dashboard logo"
-              className="h-10 w-auto max-w-[6rem] object-contain flex-shrink-0"
+              // A light tile behind the logo: product logos are often black on
+              // transparent and vanished on a dark header.
+              className="h-10 w-auto max-w-[6rem] object-contain flex-shrink-0 rounded-[0.625rem] bg-white p-1 shadow-sm"
             />
           )}
 

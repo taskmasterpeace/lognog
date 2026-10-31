@@ -17,8 +17,9 @@
  *  3. "DP: Daily Overview" searched app_name/message names Directors Palette no
  *     longer sends, so every panel said "No data". It now uses
  *     index=directors-palette + event=..., and its count gauges are stat tiles.
- *  4. "Studio Machines" charted machines answering (always the maximum, so it
- *     never moved). It now charts missed pings, which is flat when all is well.
+ *  4. "Studio Machines": the two tables are tall enough for every machine, and
+ *     the chart (a sideways bar of "machines answering", always the maximum) is
+ *     now one line per machine showing the share of pings it answered each hour.
  *  5. Each product dashboard shows its product logo (served by LogNog itself
  *     from /logos/) and carries its product colour as the accent.
  */
@@ -63,6 +64,7 @@ const DASH = {
 // Panels are matched by their CURRENT title within the dashboard; `title` is
 // the new one. x/y/w/h are grid units (12 columns).
 const P = (match, title, query, viz, x, y, w, h, description) => ({ match, title, query, viz, x, y, w, h, description });
+// Panels whose old title changed in an earlier run of this script still match by the new title.
 
 const dpRealUse = [
   // Row 1: money first, then people.
@@ -121,7 +123,13 @@ const dpDaily = [
 ];
 
 const machines = [
-  P('Machines answering over time', 'Missed pings over time (flat = every machine answering)', 'index=uptime kind=machine up=0 | timechart span=1h count by product', 'bar', 0, 6, 12, 3, 'One bar per machine that missed a ping in that hour. An empty chart means nothing was down.'),
+  // Tall enough for every machine plus the header row and pager (on the board
+  // at 150% the old tiles showed 4 of 8 rows).
+  P('Answering right now?', 'Answering right now?', 'index=uptime kind=machine | stats latest(message) as status, latest(response_ms) as ping_ms by product | sort product', 'table', 0, 0, 6, 6),
+  P('Pings answered / sent', 'Pings answered / sent', 'index=uptime kind=machine | stats sum(up) as answered, count as sent by product | sort product', 'table', 6, 0, 6, 6),
+  // A line per machine: 1 = answered every ping that hour, a dip = missed some.
+  // (It was a sideways bar of "machines answering", always the maximum.)
+  { ...P('Machines answering over time', 'Pings answered each hour, per machine (1 = always up)', 'index=uptime kind=machine | timechart span=1h avg(up) as answered by product', 'linechart', 0, 6, 12, 4, 'Each line is one machine. 1 means it answered every ping that hour; a dip means it missed some.'), options: { format: { yMin: 0, yMax: 1 } } },
 ];
 
 function main() {
@@ -142,8 +150,8 @@ function main() {
 function apply() {
   const db = new Database(dbPath, { readonly: dryRun });
   const findPanel = db.prepare('SELECT id FROM dashboard_panels WHERE dashboard_id = ? AND (title = ? OR title = ?)');
-  const update = db.prepare(`UPDATE dashboard_panels SET title = ?, query = ?, visualization = ?, position_x = ?, position_y = ?, width = ?, height = ?, description = COALESCE(?, description) WHERE id = ?`);
-  const insert = db.prepare(`INSERT INTO dashboard_panels (id, dashboard_id, title, query, visualization, options, position_x, position_y, width, height, description) VALUES (?, ?, ?, ?, ?, '{}', ?, ?, ?, ?, ?)`);
+  const update = db.prepare(`UPDATE dashboard_panels SET title = ?, query = ?, visualization = ?, position_x = ?, position_y = ?, width = ?, height = ?, description = COALESCE(?, description), options = COALESCE(?, options) WHERE id = ?`);
+  const insert = db.prepare(`INSERT INTO dashboard_panels (id, dashboard_id, title, query, visualization, options, position_x, position_y, width, height, description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
   const brand = db.prepare(`UPDATE dashboards SET logo_url = ?, accent_color = COALESCE(?, accent_color), header_color = COALESCE(?, header_color), updated_at = datetime('now') WHERE id = ?`);
   const { randomUUID } = require('crypto');
 
@@ -153,10 +161,10 @@ function apply() {
       for (const p of panels) {
         const row = findPanel.get(dash, p.match, p.title);
         if (row) {
-          if (!dryRun) update.run(p.title, p.query, p.viz, p.x, p.y, p.w, p.h, p.description ?? null, row.id);
+          if (!dryRun) update.run(p.title, p.query, p.viz, p.x, p.y, p.w, p.h, p.description ?? null, p.options ? JSON.stringify(p.options) : null, row.id);
           console.log(`update ${dash.slice(0, 8)} "${p.title}"`);
         } else {
-          if (!dryRun) insert.run(randomUUID(), dash, p.title, p.query, p.viz, p.x, p.y, p.w, p.h, p.description ?? null);
+          if (!dryRun) insert.run(randomUUID(), dash, p.title, p.query, p.viz, JSON.stringify(p.options ?? {}), p.x, p.y, p.w, p.h, p.description ?? null);
           console.log(`insert ${dash.slice(0, 8)} "${p.title}"`);
         }
         changed++;
