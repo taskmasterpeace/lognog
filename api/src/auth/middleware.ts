@@ -423,7 +423,7 @@ export const requireWrite = denyReadonly;
  * every limited route counted against whichever limit was smallest. Routes
  * that run before sign-in are keyed by address, and behind the proxy every
  * request has the same one: the studio's log shipping (ingest, 300/min) filled
- * the same counter as /auth/login (5/min) and /auth/refresh (30/min), so login
+ * the same counter as /auth/login (10/min) and /auth/refresh (30/min), so login
  * said "Too many requests" and refresh answered 429 and ended the session.
  */
 const rateLimitStores: Map<string, { count: number; resetTime: number }>[] = [];

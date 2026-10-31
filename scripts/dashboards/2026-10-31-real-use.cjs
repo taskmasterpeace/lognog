@@ -9,10 +9,12 @@
  *   node scripts/dashboards/2026-10-31-real-use.cjs [--db /data/lognog.db] [--dry-run]
  *
  * What it does:
- *  1. "Directors Palette — Real Use" and "HeyYoureHired — Real Use" leave
- *     Robert's own account out of every use / cost panel. Only two DP tiles did
- *     before, so cost, charged, margin, failures and the per-model tables were
- *     all his own testing. A separate "Your own use" table shows what was left out.
+ *  1. "Directors Palette — Real Use" leaves Robert's own account out of every
+ *     use / cost panel. Only two tiles did before, so cost, charged, margin,
+ *     failures and the per-model tables were all his own testing. A separate
+ *     "Your own use" table shows what was left out. "HeyYoureHired — Real Use"
+ *     leaves him out of job searches; its visit, sign-up and login events carry
+ *     no user id, so those panels count everyone and say so.
  *  2. Money goes first on DP Real Use, and tables are shorter, so the page fits.
  *  3. "DP: Daily Overview" searched app_name/message names Directors Palette no
  *     longer sends, so every panel said "No data". It now uses
@@ -20,9 +22,11 @@
  *  4. "Studio Machines": the two tables are tall enough for every machine, and
  *     the chart (a sideways bar of "machines answering", always the maximum) is
  *     now one line per machine showing the share of pings it answered each hour.
- *  5. Product dashboards with no logo (or one on another site) get their
- *     product logo, served by LogNog itself from /logos/. HYH dashboards get
- *     HYH's #00BCD4 as their accent. Logos and colours someone set by hand are kept.
+ *  5. The studio's own product dashboards (a fixed list of ids, below) get
+ *     their product logo, served by LogNog itself from /logos/, when they have
+ *     no logo or the old DP icon link that now 404s. HYH Real Use gets HYH's
+ *     #00BCD4 accent. Any other logo or colour is left alone, and no other
+ *     dashboard is touched.
  *
  * Deploy: the api image does not include scripts/, so copy it in first:
  *   docker cp scripts/dashboards/2026-10-31-real-use.cjs <api>:/tmp/ && \
@@ -45,6 +49,9 @@ if (!Database) throw new Error('better-sqlite3 not found (run from /app in the a
 const ROBERT_DP = 'user_id!="d3a01f94-671e-483a-89f6-0284f7aaaf85"';
 const ROBERT_DP_ONLY = 'user_id="d3a01f94-671e-483a-89f6-0284f7aaaf85"';
 const ROBERT_HYH = 'user_id!="f0ce2d4b-f7ab-4e46-bd05-c61d1367c660"';
+// HYH's visit, sign-up and login events carry no user id (checked 10-31), so
+// those panels cannot leave Robert out and say so.
+const HYH_EVERYONE = 'Counts everyone, you included: HYH sign-up and login events do not say who.';
 
 const DP = 'index=directors-palette';
 const GEN = `${DP} event=generation_completed ${ROBERT_DP}`;
@@ -61,6 +68,31 @@ const PRODUCTS = {
 };
 
 const DEFAULT_CYAN = '#06B6D4';
+const DEFAULT_HEADER = '#0A0A0E';
+// The DP dashboards' old icon link (directors-palette-v2.vercel.app) returns 404.
+const DEAD_LOGOS = ['https://directors-palette-v2.vercel.app/dp-icon.png'];
+
+// The studio's own dashboards, by id, so a look-alike name never gets branded.
+const BRANDED = {
+  'd7129277-b168-43a1-a8a9-da78bc76b500': 'dp', // Directors Palette — Real Use
+  '8b747afe-77e1-4cec-9d4e-905a3c90fb8a': 'dp', // DP: Daily Overview
+  '0714893d-1f0e-4d90-b3eb-96a502d875ff': 'dp', // DP: Feature Usage
+  '7c74600a-9216-4116-bedd-b5aa6db2b828': 'dp', // DP: Revenue & Credits
+  '66a29a9b-7b91-4703-83b4-cd7bbb9c2777': 'dp', // DP: API Health
+  'a5626f7b-ac0e-472d-b001-d53a5decda30': 'dp', // DP: External Services
+  'be45c6a6-cf41-4d2f-bb80-8180d65a5c9f': 'hyh', // HeyYoureHired — Real Use
+  '3e132db3-6e2d-4a53-8a8b-ec9e3bcbbe89': 'hyh', // HYH: User Acquisition & Funnel
+  'f77f54b2-3c7c-4e54-afe3-1bb8cd7c4c71': 'hyh', // HYH: Feature Usage
+  'fd5b9d19-4657-44e5-8380-49cbf4ca97a9': 'hyh', // HYH: Revenue & Subscriptions
+  'f50641f5-abdc-4348-b33d-93b4c642a82b': 'hyh', // HYH: API & System Health
+  '1bd5f9e1-d010-4787-9c57-d98f4b37207e': 'hyh', // HYH: Job Search Performance
+  'a6cb8a57-9aff-4cb8-a046-f2f843764ce2': 'hyh', // HYH: Blog Performance
+  'e757749d-84bd-4b45-9de6-6e8cb2d0013f': 'hyh', // HYH: Conversion Funnel
+  '5ff76400-acd0-4871-b0fd-75e275d55613': 'presidium', // Presidium + Talk Advantage — Status
+  '21ac1de4-1130-44c9-9b12-85160de0e79c': 'game', // Game — Status
+  '1497304d-ee98-4a19-a037-1e6c6a718e1d': 'studio', // Studio Machines — Status
+  '95ddec6b-f240-4951-8be4-69d37fa91865': 'studio', // Main Suite — Today
+};
 
 const DASH = {
   dpReal: 'd7129277-b168-43a1-a8a9-da78bc76b500',
@@ -106,13 +138,13 @@ const hyhRealUse = [
   P('Visitors', 'Visitors', 'index=hey-youre-hired ua_class!="bot" | stats dc(ip_address) as visitors', 'stat', 0, 0, 2, 2),
   P('Blog views', 'Blog views', 'index=hey-youre-hired message="Blog article viewed" ua_class!="bot" | stats count as views', 'stat', 2, 0, 2, 2),
   P('Read to the end', 'Read to the end', 'index=hey-youre-hired message="Blog article read completed" | stats count as reads', 'stat', 4, 0, 2, 2),
-  P('Signups', 'Signups', `index=hey-youre-hired message="Signup attempt" ${ROBERT_HYH} | stats count as signups`, 'stat', 6, 0, 2, 2),
+  P('Signups', 'Signups', `index=hey-youre-hired message="Signup attempt" | stats count as signups`, 'stat', 6, 0, 2, 2, HYH_EVERYONE),
   P('Job searches', 'Job searches', `index=hey-youre-hired message="Feature used: job_recommendations" ${ROBERT_HYH} | stats count as searches`, 'stat', 8, 0, 2, 2, 'Your own account is left out.'),
   P('Problems', 'Problems', 'index=hey-youre-hired severity<=4 message!="CSP violation (report-only)" | stats count as problems', 'stat', 10, 0, 2, 2),
-  P('Signup funnel', 'Signup funnel', `index=hey-youre-hired ${ROBERT_HYH} (message="Signup page view" OR message="Signup attempt" OR message="Profile created" OR message="User login") | stats count by message | sort -count`, 'bar', 0, 2, 6, 3),
+  P('Signup funnel', 'Signup funnel', 'index=hey-youre-hired (message="Signup page view" OR message="Signup attempt" OR message="Profile created" OR message="User login") | stats count by message | sort -count', 'bar', 0, 2, 6, 3, HYH_EVERYONE),
   P('Site up? (response time)', 'Site up? (response time)', 'index=uptime product="HeyYoureHired" | timechart span=15m avg(response_ms) as response_ms', 'line', 6, 2, 6, 3),
   P('Most-read articles', 'Most-read articles', 'index=hey-youre-hired message="Blog article viewed" ua_class!="bot" | stats count as views by blog_title | sort -views | head 15', 'table', 0, 5, 6, 4),
-  P('Activity per day', 'Activity per day (not you)', `index=hey-youre-hired message!="CSP violation (report-only)" ${ROBERT_HYH} | timechart span=1d count`, 'line', 6, 5, 6, 4),
+  P('Activity per day', 'Activity per day', `index=hey-youre-hired message!="CSP violation (report-only)" ${ROBERT_HYH} | timechart span=1d count`, 'line', 6, 5, 6, 4, 'Your job searches are left out; visits, sign-ups and logins count everyone (they do not say who).'),
   P('What broke (warnings + errors)', 'What broke (warnings + errors)', 'index=hey-youre-hired severity<=4 message!="CSP violation (report-only)" | stats count by message | sort -count | head 15', 'table', 0, 9, 6, 4),
   P('Job searches: results + speed', 'Job searches: results + speed (not you)', `index=hey-youre-hired message="Feature completed: job_recommendations" ${ROBERT_HYH} | stats count as searches, avg(jobs_found) as avg_jobs, avg(duration_ms) as avg_ms`, 'table', 6, 9, 6, 2),
   P('Bots', 'Bots', 'index=hey-youre-hired ua_class="bot" | stats count as bot_hits', 'stat', 6, 11, 2, 2),
@@ -178,27 +210,18 @@ function apply() {
         changed++;
       }
     }
-    // Logos + product colours, by dashboard name.
-    const dashboards = db.prepare('SELECT id, name, logo_url, accent_color, header_color FROM dashboards').all();
-    for (const d of dashboards) {
-      const n = d.name.toLowerCase();
-      const key = n.startsWith('directors palette') || n.startsWith('dp:') ? 'dp'
-        : n.startsWith('hey') || n.startsWith('hyh') ? 'hyh'
-        : n.startsWith('presidium') ? 'presidium'
-        : n.startsWith('game') ? 'game'
-        : n.startsWith('studio machines') || n.startsWith('main suite') ? 'studio'
-        : null;
-      if (!key) continue;
+    // Logos + product colours, for the studio's own dashboards only (by id).
+    const one = db.prepare('SELECT id, name, logo_url, accent_color, header_color FROM dashboards WHERE id = ?');
+    for (const [id, key] of Object.entries(BRANDED)) {
+      const d = one.get(id);
+      if (!d) continue;
       const b = PRODUCTS[key];
-      // Never replace branding someone set by hand: a logo uploaded in the
-      // branding dialog (a data: URL) stays, and so does a colour other than
-      // the studio default cyan these dashboards were created with. An empty
-      // logo, or one pointing at another site (CSP-blocked), gets the local file.
-      const logoIsOwn = d.logo_url && !/^https?:\/\//i.test(d.logo_url);
-      const logo = logoIsOwn ? d.logo_url : b.logo;
-      const keepColour = (cur) => cur && cur.toUpperCase() !== DEFAULT_CYAN;
-      const accent = keepColour(d.accent_color) ? d.accent_color : (b.accent ?? d.accent_color ?? null);
-      const header = keepColour(d.header_color) && d.header_color.toUpperCase() !== '#0A0A0E' ? d.header_color : (b.header ?? d.header_color ?? null);
+      // Only fill what is empty or known broken; a colour other than the
+      // studio default these dashboards were created with was chosen by hand.
+      const logo = !d.logo_url || DEAD_LOGOS.includes(d.logo_url) ? b.logo : d.logo_url;
+      const isDefault = (cur, def) => !cur || cur.toUpperCase() === def;
+      const accent = b.accent && isDefault(d.accent_color, DEFAULT_CYAN) ? b.accent : d.accent_color;
+      const header = b.header && isDefault(d.header_color, DEFAULT_HEADER) ? b.header : d.header_color;
       if (logo === d.logo_url && accent === d.accent_color && header === d.header_color) continue;
       if (!dryRun) brand.run(logo, accent, header, d.id);
       console.log(`brand ${d.name} -> ${key}${logo !== d.logo_url ? ' logo' : ''}${accent !== d.accent_color ? ` accent ${accent}` : ''}`);
