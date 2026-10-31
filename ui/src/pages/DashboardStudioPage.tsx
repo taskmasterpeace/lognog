@@ -28,6 +28,7 @@ import type { Dashboard } from '../api/client';
 import { useToast } from '../contexts/ToastContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { SearchAutocomplete } from '../components/search';
+import TimePickerEnhanced from '../components/TimePickerEnhanced';
 import {
   PanelChart,
   suggestVisualizations,
@@ -81,7 +82,9 @@ export default function DashboardStudioPage() {
   const isDarkMode = resolvedTheme === 'dark';
 
   const [query, setQuery] = useState('search * | timechart span=1h count');
-  const [timeRange] = useState('-24h');
+  // The preview range was locked to 24h; now it follows the time picker.
+  const [timeRange, setTimeRange] = useState('-24h');
+  const [timeRangeLatest, setTimeRangeLatest] = useState('now');
   const [results, setResults] = useState<Record<string, unknown>[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -142,7 +145,7 @@ export default function DashboardStudioPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await executeSearch(q, timeRange, 'now');
+      const res = await executeSearch(q, timeRange, timeRangeLatest);
       const rows = res.results || [];
       setResults(rows);
       setHasRun(true);
@@ -155,7 +158,7 @@ export default function DashboardStudioPage() {
     } finally {
       setLoading(false);
     }
-  }, [timeRange]);
+  }, [timeRange, timeRangeLatest]);
 
   const runQuery = useCallback(() => runQueryFor(query), [runQueryFor, query]);
 
@@ -361,6 +364,13 @@ export default function DashboardStudioPage() {
                   placeholder="search * | stats count by hostname | sort -count"
                 />
               </div>
+              <TimePickerEnhanced
+                onRangeChange={(earliest, latest) => {
+                  setTimeRange(earliest);
+                  setTimeRangeLatest(latest || 'now');
+                }}
+                defaultRange={timeRange}
+              />
               <button onClick={runQuery} className="btn-primary flex items-center gap-2 px-4" disabled={loading}>
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
                 Run

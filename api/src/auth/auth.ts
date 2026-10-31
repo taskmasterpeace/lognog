@@ -57,7 +57,13 @@ if ((!JWT_SECRET || !JWT_REFRESH_SECRET) && process.env.NODE_ENV !== 'production
 const getJwtSecret = (): string => JWT_SECRET || DEV_JWT_SECRET;
 const getJwtRefreshSecret = (): string => JWT_REFRESH_SECRET || DEV_JWT_REFRESH_SECRET;
 const ACCESS_TOKEN_EXPIRY = '15m';
-const REFRESH_TOKEN_EXPIRY = '7d';
+// A login lasts 30 days from its last use: each renewal issues a fresh 30-day
+// token, so a screen used at least monthly (the studio board, the PC) stays in.
+const REFRESH_TOKEN_DAYS = 30;
+const REFRESH_TOKEN_EXPIRY = `${REFRESH_TOKEN_DAYS}d`;
+// Sign-ins kept per user. Every device (PC, board, phone, iPad) holds one, and
+// a sixth login used to silently log the oldest device out.
+const REFRESH_TOKENS_KEPT = 12;
 const SALT_ROUNDS = 12;
 
 // Types
@@ -365,20 +371,20 @@ export async function generateTokenPair(user: User | UserPublic): Promise<TokenP
   // Store refresh token hash
   const db = getSQLiteDB();
   const tokenHash = await bcrypt.hash(refreshToken, 10);
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+  const expiresAt = new Date(Date.now() + REFRESH_TOKEN_DAYS * 24 * 60 * 60 * 1000).toISOString();
 
   db.prepare(`
     INSERT INTO refresh_tokens (id, user_id, token_hash, expires_at)
     VALUES (?, ?, ?, ?)
   `).run(uuidv4(), user.id, tokenHash, expiresAt);
 
-  // Clean up old refresh tokens for this user (keep last 5)
+  // Clean up old refresh tokens for this user (keep the newest REFRESH_TOKENS_KEPT)
   db.prepare(`
     DELETE FROM refresh_tokens
     WHERE user_id = ? AND id NOT IN (
-      SELECT id FROM refresh_tokens WHERE user_id = ? ORDER BY created_at DESC LIMIT 5
+      SELECT id FROM refresh_tokens WHERE user_id = ? ORDER BY created_at DESC LIMIT ?
     )
-  `).run(user.id, user.id);
+  `).run(user.id, user.id, REFRESH_TOKENS_KEPT);
 
   return {
     accessToken,
@@ -409,9 +415,14 @@ export async function refreshTokens(refreshToken: string): Promise<TokenPair | n
 
     // Verify refresh token exists in database
     const db = getSQLiteDB();
+    // expires_at is stored as an ISO string, so compare against one. This used
+    // to read datetime("now"): SQLite builds without double-quoted string
+    // literals (ours) treat "now" as a missing column, the query threw, and
+    // every refresh failed, logging people out when the 15-minute access
+    // token ran out.
     const storedTokens = db.prepare(
-      'SELECT * FROM refresh_tokens WHERE user_id = ? AND expires_at > datetime("now")'
-    ).all(payload.userId) as { token_hash: string; id: string }[];
+      'SELECT * FROM refresh_tokens WHERE user_id = ? AND expires_at > ?'
+    ).all(payload.userId, new Date().toISOString()) as { token_hash: string; id: string }[];
 
     let validToken = false;
     let tokenId = '';

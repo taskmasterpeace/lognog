@@ -1,0 +1,186 @@
+#!/usr/bin/env node
+/*
+ * One-off dashboard repair, 2026-10-31 (Robert's LogNog walkthrough).
+ *
+ * The product dashboards live in the SQLite store, not in code, so this script
+ * is the record of what changed. It is idempotent: run it again and it writes
+ * the same rows. It backs the database up first unless --dry-run is given.
+ *
+ *   node scripts/dashboards/2026-10-31-real-use.cjs [--db /data/lognog.db] [--dry-run]
+ *
+ * What it does:
+ *  1. "Directors Palette — Real Use" and "HeyYoureHired — Real Use" leave
+ *     Robert's own account out of every use / cost panel. Only two DP tiles did
+ *     before, so cost, charged, margin, failures and the per-model tables were
+ *     all his own testing. A separate "Your own use" table shows what was left out.
+ *  2. Money goes first on DP Real Use, and tables are shorter, so the page fits.
+ *  3. "DP: Daily Overview" searched app_name/message names Directors Palette no
+ *     longer sends, so every panel said "No data". It now uses
+ *     index=directors-palette + event=..., and its count gauges are stat tiles.
+ *  4. "Studio Machines" charted machines answering (always the maximum, so it
+ *     never moved). It now charts missed pings, which is flat when all is well.
+ *  5. Each product dashboard shows its product logo (served by LogNog itself
+ *     from /logos/) and carries its product colour as the accent.
+ */
+const path = require('path');
+const fs = require('fs');
+
+const args = process.argv.slice(2);
+const dryRun = args.includes('--dry-run');
+const dbArg = args.indexOf('--db');
+const dbPath = dbArg >= 0 ? args[dbArg + 1] : process.env.SQLITE_PATH || '/data/lognog.db';
+
+let Database;
+for (const base of [process.cwd(), '/app', path.join(__dirname, '..', '..', 'api')]) {
+  try { Database = require(require.resolve('better-sqlite3', { paths: [base] })); break; } catch { /* next */ }
+}
+if (!Database) throw new Error('better-sqlite3 not found (run from /app in the api container)');
+
+const ROBERT_DP = 'user_id!="d3a01f94-671e-483a-89f6-0284f7aaaf85"';
+const ROBERT_DP_ONLY = 'user_id="d3a01f94-671e-483a-89f6-0284f7aaaf85"';
+const ROBERT_HYH = 'user_id!="f0ce2d4b-f7ab-4e46-bd05-c61d1367c660"';
+
+const DP = 'index=directors-palette';
+const GEN = `${DP} event=generation_completed ${ROBERT_DP}`;
+const SPEND = `${DP} event=credit_event amount<0 ${ROBERT_DP}`;
+
+// Product colours: Directors Palette cyan (its app accent), HeyYoureHired blue.
+const PRODUCTS = {
+  dp: { logo: '/logos/directors-palette.png', accent: '#06B6D4', header: '#0A0A0E' },
+  hyh: { logo: '/logos/hey-youre-hired.png', accent: '#2563EB', header: '#0A0A0E' },
+  presidium: { logo: '/logos/presidium.png' },
+  game: { logo: '/logos/cof.png' },
+  studio: { logo: '/logos/mkl.png' },
+};
+
+const DASH = {
+  dpReal: 'd7129277-b168-43a1-a8a9-da78bc76b500',
+  hyhReal: 'be45c6a6-cf41-4d2f-bb80-8180d65a5c9f',
+  dpDaily: '8b747afe-77e1-4cec-9d4e-905a3c90fb8a',
+  machines: '1497304d-ee98-4a19-a037-1e6c6a718e1d',
+};
+
+// Panels are matched by their CURRENT title within the dashboard; `title` is
+// the new one. x/y/w/h are grid units (12 columns).
+const P = (match, title, query, viz, x, y, w, h, description) => ({ match, title, query, viz, x, y, w, h, description });
+
+const dpRealUse = [
+  // Row 1: money first, then people.
+  P('AI cost (¢)', 'AI cost (¢)', `${SPEND} | stats sum(cost_cents) as cost`, 'stat', 0, 0, 2, 2, "What other people's generations cost us at the provider. Your own use is left out."),
+  P('Charged (¢)', 'Charged (¢)', `${SPEND} | stats sum(price_cents) as charged`, 'stat', 2, 0, 2, 2, 'Credits other people spent, in cents. Your own use is left out.'),
+  P('Margin (¢)', 'Margin (¢)', `${SPEND} | stats sum(margin_cents) as margin`, 'stat', 4, 0, 2, 2, 'Charged minus cost, other people only.'),
+  P('Other people', 'Other people', `${GEN} | stats dc(user_id) as people`, 'stat', 6, 0, 2, 2, "Accounts that finished an image or video. Your own account is left out."),
+  P('Their creations', 'Their creations', `${GEN} | stats count as made`, 'stat', 8, 0, 2, 2, 'Images and videos other people made.'),
+  P('Failed', 'Their failures', `${DP} event=generation_failed ${ROBERT_DP} | stats count as failed`, 'stat', 10, 0, 2, 2, 'Generations that failed for other people.'),
+  // Row 2: trend + uptime.
+  P('Made per day (image vs video, everyone incl. Robert)', 'Made per day (other people)', `${GEN} | timechart span=1d count by generation_type`, 'line', 0, 2, 8, 3),
+  P('Site up? (response time)', 'Site up? (response time)', 'index=uptime product="Directors Palette" | timechart span=15m avg(response_ms) as response_ms', 'line', 8, 2, 4, 3, 'From the Mac Mini check every 5 minutes.'),
+  // Row 3: what and how much.
+  P('What was made, by model (everyone)', 'What they made, by model', `${GEN} | stats count as made, dc(user_id) as people by generation_type, model_id | sort -made`, 'table', 0, 5, 6, 4),
+  P('AI cost vs charge, by model', 'Their cost vs charge, by model', `${SPEND} | stats count as uses, sum(cost_cents) as cost_cents, sum(price_cents) as charged_cents, sum(margin_cents) as margin_cents by model | sort -cost_cents`, 'table', 6, 5, 6, 4, 'From credit_event. Cents. Your own use is left out.'),
+  // Row 4: who + speed.
+  P('Who spends the most credits', 'Who spends the most credits', `${SPEND} | stats count as uses, sum(price_cents) as charged_cents by user_email | sort -charged_cents | head 15`, 'table', 0, 9, 6, 4),
+  P('How long each model takes', 'How long each model takes (their runs)', `${GEN} | stats count as made, avg(duration_ms) as avg_ms, p95(duration_ms) as slowest_5pct_ms by model_id | sort -made`, 'table', 6, 9, 6, 4),
+  // Row 5: problems.
+  P('Why generations failed', 'Why their generations failed', `${DP} event=generation_failed ${ROBERT_DP} | stats count by model_id, error | sort -count | head 15`, 'table', 0, 13, 6, 4),
+  P('Errors (what broke)', 'Errors on the site (everyone)', `${DP} severity<=3 | stats count by message | sort -count | head 15`, 'table', 6, 13, 3, 4, 'Site errors are about the site, not a person, so nobody is left out here.'),
+  P('Warnings', 'Warnings on the site', `${DP} severity=4 | stats count by message | sort -count | head 15`, 'table', 9, 13, 3, 4),
+  // Row 6: small tables.
+  P('Sign-ins, sign-ups, payments', 'Sign-ins, sign-ups, payments', `${DP} ${ROBERT_DP} (message="User login" OR message="User signup completed" OR event=payment_completed OR event=checkout_session_created OR event=checkout_session_failed) | stats count by message`, 'table', 0, 17, 3, 3),
+  P('Page views by signed-in people', 'Page views (other people)', `${DP} event=page_view ${ROBERT_DP} | stats count as views, dc(user_id) as people`, 'table', 3, 17, 3, 3),
+  P('Uploads', 'Uploads (other people)', `${DP} event=upload_completed ${ROBERT_DP} | stats count as uploads, dc(user_id) as people, sum(size_bytes) as bytes`, 'table', 6, 17, 3, 3),
+  P('Your own use (left out above)', 'Your own use (left out above)', `${DP} event=credit_event amount<0 ${ROBERT_DP_ONLY} | stats count as uses, sum(cost_cents) as cost_cents, sum(price_cents) as charged_cents`, 'table', 9, 17, 3, 3, "Robert's own account, so you can see what the panels above leave out."),
+];
+
+const hyhRealUse = [
+  P('Visitors', 'Visitors', 'index=hey-youre-hired ua_class!="bot" | stats dc(ip_address) as visitors', 'stat', 0, 0, 2, 2),
+  P('Blog views', 'Blog views', 'index=hey-youre-hired message="Blog article viewed" ua_class!="bot" | stats count as views', 'stat', 2, 0, 2, 2),
+  P('Read to the end', 'Read to the end', 'index=hey-youre-hired message="Blog article read completed" | stats count as reads', 'stat', 4, 0, 2, 2),
+  P('Signups', 'Signups', `index=hey-youre-hired message="Signup attempt" ${ROBERT_HYH} | stats count as signups`, 'stat', 6, 0, 2, 2),
+  P('Job searches', 'Job searches', `index=hey-youre-hired message="Feature used: job_recommendations" ${ROBERT_HYH} | stats count as searches`, 'stat', 8, 0, 2, 2, 'Your own account is left out.'),
+  P('Problems', 'Problems', 'index=hey-youre-hired severity<=4 message!="CSP violation (report-only)" | stats count as problems', 'stat', 10, 0, 2, 2),
+  P('Signup funnel', 'Signup funnel', `index=hey-youre-hired ${ROBERT_HYH} (message="Signup page view" OR message="Signup attempt" OR message="Profile created" OR message="User login") | stats count by message | sort -count`, 'bar', 0, 2, 6, 3),
+  P('Site up? (response time)', 'Site up? (response time)', 'index=uptime product="HeyYoureHired" | timechart span=15m avg(response_ms) as response_ms', 'line', 6, 2, 6, 3),
+  P('Most-read articles', 'Most-read articles', 'index=hey-youre-hired message="Blog article viewed" ua_class!="bot" | stats count as views by blog_title | sort -views | head 15', 'table', 0, 5, 6, 4),
+  P('Activity per day', 'Activity per day (not you)', `index=hey-youre-hired message!="CSP violation (report-only)" ${ROBERT_HYH} | timechart span=1d count`, 'line', 6, 5, 6, 4),
+  P('What broke (warnings + errors)', 'What broke (warnings + errors)', 'index=hey-youre-hired severity<=4 message!="CSP violation (report-only)" | stats count by message | sort -count | head 15', 'table', 0, 9, 6, 4),
+  P('Job searches: results + speed', 'Job searches: results + speed (not you)', `index=hey-youre-hired message="Feature completed: job_recommendations" ${ROBERT_HYH} | stats count as searches, avg(jobs_found) as avg_jobs, avg(duration_ms) as avg_ms`, 'table', 6, 9, 6, 2),
+  P('Bots', 'Bots', 'index=hey-youre-hired ua_class="bot" | stats count as bot_hits', 'stat', 6, 11, 2, 2),
+  P('Browser security (CSP) reports', 'Browser security (CSP) reports', 'index=hey-youre-hired message="CSP violation (report-only)" | stats count by violated_directive, blocked_uri | sort -count | head 10', 'table', 8, 11, 4, 2),
+  P('Bots by name', 'Bots by name', 'index=hey-youre-hired ua_class="bot" | stats count as hits, dc(ip_address) as ips, latest(ua) as example_ua by bot_name | sort -hits | head 20', 'table', 0, 13, 12, 4),
+];
+
+const dpDaily = [
+  P('API Requests Over Time', 'Events over time', `${DP} | timechart span=1h count`, 'line', 0, 0, 12, 3),
+  P('Generations Over Time', 'Generations over time', `${DP} event=generation_completed | timechart span=1h count`, 'line', 0, 3, 6, 3),
+  P('Errors Over Time', 'Errors + warnings over time', `${DP} severity<=4 | timechart span=1h count`, 'line', 6, 3, 6, 3),
+  P('Total Requests', 'Events', `${DP} | stats count`, 'stat', 0, 6, 3, 2),
+  P('Generations', 'Generations', `${DP} event=generation_completed | stats count`, 'stat', 3, 6, 3, 2),
+  P('Errors', 'Errors', `${DP} severity<=3 | stats count`, 'stat', 6, 6, 3, 2),
+  P('Payments', 'Payments', `${DP} event=payment_completed | stats count`, 'stat', 9, 6, 3, 2),
+];
+
+const machines = [
+  P('Machines answering over time', 'Missed pings over time (flat = every machine answering)', 'index=uptime kind=machine up=0 | timechart span=1h count by product', 'bar', 0, 6, 12, 3, 'One bar per machine that missed a ping in that hour. An empty chart means nothing was down.'),
+];
+
+function main() {
+  if (!fs.existsSync(dbPath)) throw new Error(`no database at ${dbPath}`);
+  if (!dryRun) {
+    const backup = `${dbPath}.bak-20261031-real-use`;
+    if (!fs.existsSync(backup)) {
+      const src = new Database(dbPath, { readonly: true });
+      src.backup(backup).then(() => { src.close(); apply(); });
+      console.log(`backup -> ${backup}`);
+      return;
+    }
+    console.log(`backup already exists: ${backup}`);
+  }
+  apply();
+}
+
+function apply() {
+  const db = new Database(dbPath, { readonly: dryRun });
+  const findPanel = db.prepare('SELECT id FROM dashboard_panels WHERE dashboard_id = ? AND (title = ? OR title = ?)');
+  const update = db.prepare(`UPDATE dashboard_panels SET title = ?, query = ?, visualization = ?, position_x = ?, position_y = ?, width = ?, height = ?, description = COALESCE(?, description) WHERE id = ?`);
+  const insert = db.prepare(`INSERT INTO dashboard_panels (id, dashboard_id, title, query, visualization, options, position_x, position_y, width, height, description) VALUES (?, ?, ?, ?, ?, '{}', ?, ?, ?, ?, ?)`);
+  const brand = db.prepare(`UPDATE dashboards SET logo_url = ?, accent_color = COALESCE(?, accent_color), header_color = COALESCE(?, header_color), updated_at = datetime('now') WHERE id = ?`);
+  const { randomUUID } = require('crypto');
+
+  let changed = 0;
+  const run = db.transaction(() => {
+    for (const [dash, panels] of [[DASH.dpReal, dpRealUse], [DASH.hyhReal, hyhRealUse], [DASH.dpDaily, dpDaily], [DASH.machines, machines]]) {
+      for (const p of panels) {
+        const row = findPanel.get(dash, p.match, p.title);
+        if (row) {
+          if (!dryRun) update.run(p.title, p.query, p.viz, p.x, p.y, p.w, p.h, p.description ?? null, row.id);
+          console.log(`update ${dash.slice(0, 8)} "${p.title}"`);
+        } else {
+          if (!dryRun) insert.run(randomUUID(), dash, p.title, p.query, p.viz, p.x, p.y, p.w, p.h, p.description ?? null);
+          console.log(`insert ${dash.slice(0, 8)} "${p.title}"`);
+        }
+        changed++;
+      }
+    }
+    // Logos + product colours, by dashboard name.
+    const dashboards = db.prepare('SELECT id, name FROM dashboards').all();
+    for (const d of dashboards) {
+      const n = d.name.toLowerCase();
+      const key = n.startsWith('directors palette') || n.startsWith('dp:') ? 'dp'
+        : n.startsWith('hey') || n.startsWith('hyh') ? 'hyh'
+        : n.startsWith('presidium') ? 'presidium'
+        : n.startsWith('game') ? 'game'
+        : n.startsWith('studio machines') || n.startsWith('main suite') ? 'studio'
+        : null;
+      if (!key) continue;
+      const b = PRODUCTS[key];
+      if (!dryRun) brand.run(b.logo, b.accent ?? null, b.header ?? null, d.id);
+      console.log(`brand ${d.name} -> ${key}`);
+    }
+  });
+  run();
+  db.close();
+  console.log(`${dryRun ? '[dry run] ' : ''}${changed} panels written`);
+}
+
+main();

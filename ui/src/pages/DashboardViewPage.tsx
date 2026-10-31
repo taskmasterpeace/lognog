@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef, createContext, useContext, type ReactNode } from 'react';
 import { authFetch } from '../api/client';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
@@ -106,6 +106,16 @@ import { getDefaultDashboard, setDefaultDashboard } from './DashboardsPage';
 
 // Shared LogNog brand chart palette (BRANDING.md §2.4) — aliased to keep usages small.
 const CHART_COLORS = CHART_PALETTE;
+const LOGNOG_HONEY = '#C8862B';
+
+// A product dashboard can carry its product's colour (the dashboard's accent):
+// single-series charts and the first line take it. LogNog's own dashboards,
+// with no accent set, stay LogNog honey.
+const DashboardAccent = createContext<string | undefined>(undefined);
+
+function seriesColors(accent: string | undefined): string[] {
+  return accent ? [accent, ...CHART_COLORS.filter((c) => c.toLowerCase() !== accent.toLowerCase())] : CHART_COLORS;
+}
 
 const VISUALIZATION_OPTIONS = [
   { value: 'table', label: 'Table', icon: Table2, desc: 'Raw rows across columns — best for details, top-N lists, and results you\'ll scan or export.', example: 'search severity<=3 | table _time host app_name message' },
@@ -139,6 +149,8 @@ interface PanelData {
   error: string | null;
   /** `| chart` presentation hint from the query compiler, when present. */
   chartHint?: ChartHint;
+  /** True once any answer (rows, empty or error) has landed for this panel. */
+  loadedOnce?: boolean;
 }
 
 // metadata.chart chartType -> this page's visualization values. Note 'line'
@@ -182,6 +194,22 @@ function pivotSplitBy(
   return { rows: out, series };
 }
 
+/** Measures its own height so a fixed-height chart (the gauge) fits the tile. */
+function FitHeight({ className, children }: { className?: string; children: (height: number) => ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [height, setHeight] = useState(0);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const update = () => setHeight(Math.floor(el.getBoundingClientRect().height));
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+  return <div ref={ref} className={className}>{height > 0 ? children(height) : null}</div>;
+}
+
 function PanelVisualization({
   panel,
   data,
@@ -195,8 +223,14 @@ function PanelVisualization({
 }) {
   const { resolvedTheme } = useTheme();
   const isDarkMode = resolvedTheme === 'dark';
+  const accent = useContext(DashboardAccent);
+  const mainColor = accent || LOGNOG_HONEY;
+  const lineColors = seriesColors(accent);
 
-  if (data.loading) {
+  // Spinner only on the first load. A refresh keeps the last results on screen
+  // and swaps them in place when the new ones land, so auto-refresh no longer
+  // blanks the whole dashboard every interval.
+  if (data.loading && !data.loadedOnce) {
     return (
       <div className="flex items-center justify-center h-full">
         <Loader2 className="w-6 h-6 text-honey-500 animate-spin" />
@@ -281,7 +315,7 @@ function PanelVisualization({
           }))}
           height={200}
           horizontal={true}
-          barColor="#C8862B"
+          barColor={mainColor}
           darkMode={isDarkMode}
           showValues={false}
           valueMin={format.yMin}
@@ -339,8 +373,8 @@ function PanelVisualization({
       // itself was drawn as a series ("severity" line next to "count").
       const pivot = pivotSplitBy(results, labelKey, valueKey, keys);
       const chartSeries = pivot
-        ? pivot.series.map((name, i) => ({ name, dataKey: name, color: CHART_COLORS[i % CHART_COLORS.length] }))
-        : seriesKeys.map((k, i) => ({ name: k, dataKey: k, color: CHART_COLORS[i % CHART_COLORS.length] }));
+        ? pivot.series.map((name, i) => ({ name, dataKey: name, color: lineColors[i % lineColors.length] }))
+        : seriesKeys.map((k, i) => ({ name: k, dataKey: k, color: lineColors[i % lineColors.length] }));
       // Perf: a fine-grained timechart over a long range can return thousands of
       // points; LTTB-downsample to ~800 (shape-preserving) before rendering.
       const chartData = downsampleRows(pivot ? pivot.rows : results, labelKey, chartSeries[0]?.dataKey, 800);
@@ -407,7 +441,7 @@ function PanelVisualization({
               height={190}
               darkMode={isDarkMode}
               trendLabel={lastIsPartial ? 'vs previous (last complete bucket)' : 'vs previous'}
-              color="#C8862B"
+              color={mainColor}
             />
           </div>
         );
@@ -422,8 +456,11 @@ function PanelVisualization({
         ? [...thresholdLines].sort((a, b) => b.value - a.value).find((t) => statValue >= t.value)
         : undefined;
       return (
-        <div className="flex flex-col items-center justify-center h-full">
-          <p className="text-4xl font-bold text-nog-900 dark:text-nog-100" style={thresholdHit ? { color: thresholdHit.color } : undefined}>
+        <div className="flex flex-col items-center justify-center h-full min-w-0 px-2" style={{ containerType: 'inline-size' }}>
+          <p
+            className="text-2xl font-bold text-nog-900 dark:text-nog-100 whitespace-nowrap leading-none"
+            style={{ fontSize: 'clamp(1.25rem, 18cqw, 2.25rem)', ...(thresholdHit ? { color: thresholdHit.color } : {}) }}
+          >
             {typeof statValue === 'number' ? formatPanelValue(statValue, format) : String(statValue ?? 0)}
           </p>
           {results.length === 1 && labelKey !== valueKey && results[0][labelKey] != null && (
@@ -497,17 +534,19 @@ function PanelVisualization({
         ? { low: gaugeOptions.thresholds.low, medium: gaugeOptions.thresholds.medium, high: gaugeOptions.thresholds.high ?? maxGaugeValue }
         : { low: maxGaugeValue * 0.33, medium: maxGaugeValue * 0.66, high: maxGaugeValue };
       return (
-        <div className="h-full w-full flex flex-col items-center justify-center">
+        <FitHeight className="h-full w-full flex flex-col items-center justify-center">
+          {(h) => (
           <GaugeChart
             value={gaugeValue}
             max={maxGaugeValue}
-            height={200}
+            height={h}
             darkMode={isDarkMode}
             thresholds={gaugeThresholds}
             unit={gaugeOptions.unit || ''}
             title={gaugeOptions.subtitle}
           />
-        </div>
+          )}
+        </FitHeight>
       );
 
     case 'wordcloud':
@@ -745,9 +784,9 @@ function PanelCard({
       <div className={`flex items-center justify-between p-3 border-b border-nog-100 dark:border-nog-700 ${editMode ? 'panel-drag-handle cursor-move' : ''}`}>
         <div className="flex items-center gap-2 min-w-0 flex-1 mr-2">
           {editMode && <Move className="w-4 h-4 text-nog-400 dark:text-nog-400 flex-shrink-0" />}
-          <VizIcon className="w-4 h-4 text-nog-400 dark:text-nog-400 flex-shrink-0" />
+          <VizIcon className={`w-4 h-4 text-nog-400 dark:text-nog-400 flex-shrink-0 ${['stat', 'single', 'gauge'].includes(panel.visualization) && !editMode ? 'hidden' : ''}`} />
           <div className="min-w-0 flex-1">
-            <h3 className="font-medium text-nog-900 dark:text-nog-100 text-sm leading-tight break-words" title={panel.title}>{panel.title}</h3>
+            <h3 className="font-medium text-nog-900 dark:text-nog-100 text-sm leading-tight line-clamp-2" title={panel.title}>{panel.title}</h3>
             {panel.description && (
               <p className="text-xs text-nog-500 dark:text-nog-400 truncate" title={panel.description}>
                 {panel.description}
@@ -755,7 +794,10 @@ function PanelCard({
             )}
           </div>
         </div>
-        <div className={`flex items-center gap-1 flex-shrink-0 ${editMode ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'} transition-opacity`} ref={menuRef}>
+        {/* Out of edit mode the panel buttons take no room until hovered (or
+            the menu is open): invisible-but-present buttons squeezed small
+            tiles' titles to a few letters. */}
+        <div className={`items-center gap-1 flex-shrink-0 ${editMode || showMenu ? 'flex' : 'hidden group-hover:flex group-focus-within:flex'}`} ref={menuRef}>
           {panelRefreshSeconds && (
             <span
               className="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium text-honey-700 dark:text-honey-300 bg-honey-100 dark:bg-honey-900/40"
@@ -1316,6 +1358,8 @@ export default function DashboardViewPage() {
   // Per-panel request sequence numbers, so a slow in-flight fetch can't clobber
   // a newer one (race guard for auto-refresh + manual + time/variable changes).
   const panelFetchSeq = useRef<Record<string, number>>({});
+  // Quiet retries after a 429, per panel (reset on any success or real error).
+  const panelBusyRetries = useRef<Record<string, number>>({});
   const [showAutoRefreshDropdown, setShowAutoRefreshDropdown] = useState(false);
   const [autoRefreshInterval, setAutoRefreshInterval] = useState(0);
   const [showPanelEditor, setShowPanelEditor] = useState(false);
@@ -1564,13 +1608,14 @@ export default function DashboardViewPage() {
 
     setPanelData((prev) => ({
       ...prev,
-      [panel.id]: { results: prev[panel.id]?.results || [], loading: true, error: null },
+      [panel.id]: { ...prev[panel.id], results: prev[panel.id]?.results || [], loading: true, error: null },
     }));
 
     try {
       const queryWithVars = substituteVariables(panel.query);
       const result = await executeSearch(queryWithVars, timeRange, timeRangeLatest);
       if (panelFetchSeq.current[panel.id] !== seq) return; // superseded
+      panelBusyRetries.current[panel.id] = 0;
       setPanelData((prev) => ({
         ...prev,
         [panel.id]: {
@@ -1578,16 +1623,30 @@ export default function DashboardViewPage() {
           loading: false,
           error: null,
           chartHint: result.metadata?.chart,
+          loadedOnce: true,
         },
       }));
     } catch (err) {
       if (panelFetchSeq.current[panel.id] !== seq) return; // superseded
+      const message = err instanceof Error ? err.message : String(err);
+      // Busy (429): keep what's on screen and quietly try again shortly,
+      // instead of a wall of "Too many requests" tiles.
+      if (/too many requests/i.test(message) && (panelBusyRetries.current[panel.id] || 0) < 3) {
+        panelBusyRetries.current[panel.id] = (panelBusyRetries.current[panel.id] || 0) + 1;
+        setTimeout(() => {
+          if (panelFetchSeq.current[panel.id] === seq) void fetchPanelDataRef.current?.(panel);
+        }, 4000 + Math.random() * 4000);
+        return;
+      }
+      panelBusyRetries.current[panel.id] = 0;
       setPanelData((prev) => ({
         ...prev,
-        [panel.id]: { results: [], loading: false, error: err instanceof Error ? err.message : String(err) },
+        [panel.id]: { results: [], loading: false, error: message, loadedOnce: true },
       }));
     }
   }, [timeRange, timeRangeLatest, substituteVariables]);
+  const fetchPanelDataRef = useRef(fetchPanelData);
+  fetchPanelDataRef.current = fetchPanelData;
 
   // Refetch only when something that affects RESULTS changes (queries, time,
   // variables, refresh) — not on every layout drag/resize, which merely changes
@@ -2295,6 +2354,7 @@ export default function DashboardViewPage() {
             </button>
           </div>
         ) : (
+          <DashboardAccent.Provider value={dashboard.accent_color || undefined}>
           <DashboardGrid
             layouts={panelLayouts}
             editMode={editMode}
@@ -2319,6 +2379,7 @@ export default function DashboardViewPage() {
               </div>
             ))}
           </DashboardGrid>
+          </DashboardAccent.Provider>
         )}
       </div>
 

@@ -417,11 +417,18 @@ export function denyReadonly(req: Request, res: Response, next: NextFunction): v
 export const requireWrite = denyReadonly;
 
 /**
- * Rate limiting by user (simple in-memory implementation)
+ * Rate limiting by user (simple in-memory implementation).
+ *
+ * Each rateLimit() call gets its own counters. They used to share one map, so
+ * every limited route a user touched (dashboard searches, the board's polling,
+ * token refresh) counted against whichever limit was smallest: a busy minute
+ * on a dashboard could make /auth/refresh answer 429 and end the session.
  */
-const rateLimitStore: Map<string, { count: number; resetTime: number }> = new Map();
+const rateLimitStores: Map<string, { count: number; resetTime: number }>[] = [];
 
 export function rateLimit(maxRequests: number = 100, windowMs: number = 60000) {
+  const rateLimitStore: Map<string, { count: number; resetTime: number }> = new Map();
+  rateLimitStores.push(rateLimitStore);
   return (req: Request, res: Response, next: NextFunction): void => {
     const key = req.user?.id || req.ip || 'anonymous';
     const now = Date.now();
@@ -452,12 +459,14 @@ export function rateLimit(maxRequests: number = 100, windowMs: number = 60000) {
 // Cleanup rate limit store periodically
 setInterval(() => {
   const now = Date.now();
-  for (const [key, record] of rateLimitStore) {
-    if (now > record.resetTime) {
-      rateLimitStore.delete(key);
+  for (const rateLimitStore of rateLimitStores) {
+    for (const [key, record] of rateLimitStore) {
+      if (now > record.resetTime) {
+        rateLimitStore.delete(key);
+      }
     }
   }
-}, 60000);
+}, 60000).unref();
 
 /**
  * Per-account login lockout — defense-in-depth on top of the per-IP rateLimit.

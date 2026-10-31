@@ -471,8 +471,9 @@ function parseRelativeTime(timeStr: string, referenceTime: number = Date.now()):
   return referenceTime;
 }
 
-// Execute a DSL query (rate limited: 120/min for CPU-intensive parsing)
-router.post('/query', authenticate, rateLimit(120, 60000), async (req: Request, res: Response) => {
+// Execute a DSL query (rate limited: 240/min per user for CPU-intensive parsing;
+// a dashboard fires one per panel, and the board and the PC share an account)
+router.post('/query', authenticate, rateLimit(240, 60000), async (req: Request, res: Response) => {
   try {
     const { query, earliest, latest, extract_fields = false, source_type, include_histogram = true } = req.body;
 
