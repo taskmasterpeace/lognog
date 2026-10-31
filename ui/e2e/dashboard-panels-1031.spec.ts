@@ -132,6 +132,23 @@ test('a fullscreen panel keeps the dashboard accent', async ({ page, context }) 
   expect(accentPixels, 'line drawn in the dashboard accent').toBeGreaterThan(50);
 });
 
+test('mouse screen: panel buttons take no room until hover or keyboard focus', async ({ page, context }) => {
+  await signIn(context);
+  await openDashboard(page, DP_DAILY);
+  const refresh = page.locator('div.group button[title="Refresh"]').first();
+  const rowWidth = () => refresh.evaluate((b) => b.parentElement!.getBoundingClientRect().width);
+  await page.mouse.move(1, 1);
+  expect(await rowWidth(), 'collapsed before hover').toBeLessThan(2);
+
+  await page.locator('div.group').first().hover();
+  await expect.poll(rowWidth, { message: 'shown on hover' }).toBeGreaterThan(40);
+
+  await page.mouse.move(1, 1);
+  await expect.poll(rowWidth).toBeLessThan(2);
+  await refresh.focus();
+  await expect.poll(rowWidth, { message: 'shown on keyboard focus' }).toBeGreaterThan(40);
+});
+
 test.describe('touch screen', () => {
   test.use({ hasTouch: true, isMobile: true, viewport: { width: 390, height: 844 } });
 

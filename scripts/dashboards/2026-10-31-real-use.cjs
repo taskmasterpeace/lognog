@@ -24,9 +24,9 @@
  *     now one line per machine showing the share of pings it answered each hour.
  *  5. The studio's own product dashboards (a fixed list of ids, below) get
  *     their product logo, served by LogNog itself from /logos/, when they have
- *     no logo or the old DP icon link that now 404s. HYH Real Use gets HYH's
- *     #00BCD4 accent. Any other logo or colour is left alone, and no other
- *     dashboard is touched.
+ *     no logo or the old DP icon link that now 404s. The listed HYH dashboards
+ *     get HYH's #00BCD4 accent where theirs is empty or the studio default.
+ *     Any other logo or colour is left alone, and no other dashboard is touched.
  *
  * Deploy: the api image does not include scripts/, so copy it in first:
  *   docker cp scripts/dashboards/2026-10-31-real-use.cjs <api>:/tmp/ && \
