@@ -53,6 +53,7 @@ import { readPanelFormat, formatPanelValue, THRESHOLD_COLORS, type PanelFormat }
 import { readDrilldownConfig, readRefreshSeconds, type DrilldownType } from '../components/dashboard/panelDrilldown';
 import { downloadCsv } from '../components/dashboard/csvExport';
 import { downsampleRows } from '../components/dashboard/downsample';
+import { showFirstLoadSpinner, isRefreshingInPlace, seriesColors, mainColor as accentMainColor, isBusyError, BUSY_RETRY_LIMIT } from '../components/dashboard/panelState';
 import { useTheme } from '../contexts/ThemeContext';
 import {
   getDashboard,
@@ -106,16 +107,11 @@ import { getDefaultDashboard, setDefaultDashboard } from './DashboardsPage';
 
 // Shared LogNog brand chart palette (BRANDING.md §2.4) — aliased to keep usages small.
 const CHART_COLORS = CHART_PALETTE;
-const LOGNOG_HONEY = '#C8862B';
 
-// A product dashboard can carry its product's colour (the dashboard's accent):
-// single-series charts and the first line take it. LogNog's own dashboards,
-// with no accent set, stay LogNog honey.
+// A dashboard with an accent colour (set in its branding) carries it into its
+// charts: single-series charts and the first line take it. Dashboards with no
+// accent keep LogNog honey.
 const DashboardAccent = createContext<string | undefined>(undefined);
-
-function seriesColors(accent: string | undefined): string[] {
-  return accent ? [accent, ...CHART_COLORS.filter((c) => c.toLowerCase() !== accent.toLowerCase())] : CHART_COLORS;
-}
 
 const VISUALIZATION_OPTIONS = [
   { value: 'table', label: 'Table', icon: Table2, desc: 'Raw rows across columns — best for details, top-N lists, and results you\'ll scan or export.', example: 'search severity<=3 | table _time host app_name message' },
@@ -224,13 +220,13 @@ function PanelVisualization({
   const { resolvedTheme } = useTheme();
   const isDarkMode = resolvedTheme === 'dark';
   const accent = useContext(DashboardAccent);
-  const mainColor = accent || LOGNOG_HONEY;
-  const lineColors = seriesColors(accent);
+  const mainColor = accentMainColor(accent);
+  const lineColors = seriesColors(accent, CHART_COLORS);
 
   // Spinner only on the first load. A refresh keeps the last results on screen
   // and swaps them in place when the new ones land, so auto-refresh no longer
   // blanks the whole dashboard every interval.
-  if (data.loading && !data.loadedOnce) {
+  if (showFirstLoadSpinner(data)) {
     return (
       <div className="flex items-center justify-center h-full">
         <Loader2 className="w-6 h-6 text-honey-500 animate-spin" />
@@ -797,7 +793,16 @@ function PanelCard({
         {/* Out of edit mode the panel buttons take no room until hovered (or
             the menu is open): invisible-but-present buttons squeezed small
             tiles' titles to a few letters. */}
-        <div className={`items-center gap-1 flex-shrink-0 ${editMode || showMenu ? 'flex' : 'hidden group-hover:flex group-focus-within:flex'}`} ref={menuRef}>
+        <div
+          className={`flex items-center gap-1 flex-shrink-0 ${
+            editMode || showMenu
+              ? ''
+              : // Mouse screens: collapsed to zero width until the card is hovered or a
+                // button gets keyboard focus. Touch screens (no hover): always shown.
+                '[@media(hover:hover)]:max-w-0 [@media(hover:hover)]:overflow-hidden [@media(hover:hover)]:opacity-0 group-hover:max-w-none group-hover:overflow-visible group-hover:opacity-100 focus-within:max-w-none focus-within:overflow-visible focus-within:opacity-100'
+          }`}
+          ref={menuRef}
+        >
           {panelRefreshSeconds && (
             <span
               className="hidden sm:inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium text-honey-700 dark:text-honey-300 bg-honey-100 dark:bg-honey-900/40"
@@ -808,7 +813,7 @@ function PanelCard({
             </span>
           )}
           <button onClick={onRefresh} className="p-1.5 text-nog-400 dark:text-nog-400 hover:text-nog-600 dark:hover:text-nog-200 hover:bg-nog-100 dark:hover:bg-nog-700 rounded" title="Refresh">
-            <RefreshCw className="w-3.5 h-3.5" />
+            <RefreshCw className={`w-3.5 h-3.5 ${data.loading ? 'animate-spin' : ''}`} />
           </button>
           <div className="relative">
             <button
@@ -873,7 +878,9 @@ function PanelCard({
           </div>
         </div>
       </div>
-      <div className="flex-1 p-3 min-h-0 overflow-y-auto">
+      {/* While a refresh or a new time range loads, the old numbers stay but dim,
+          so they never pass for the new range's. */}
+      <div className={`flex-1 p-3 min-h-0 overflow-y-auto transition-opacity ${isRefreshingInPlace(data) ? 'opacity-50' : ''}`} aria-busy={data.loading}>
         <PanelVisualization
           panel={panel}
           data={data}
@@ -1631,7 +1638,7 @@ export default function DashboardViewPage() {
       const message = err instanceof Error ? err.message : String(err);
       // Busy (429): keep what's on screen and quietly try again shortly,
       // instead of a wall of "Too many requests" tiles.
-      if (/too many requests/i.test(message) && (panelBusyRetries.current[panel.id] || 0) < 3) {
+      if (isBusyError(message) && (panelBusyRetries.current[panel.id] || 0) < BUSY_RETRY_LIMIT) {
         panelBusyRetries.current[panel.id] = (panelBusyRetries.current[panel.id] || 0) + 1;
         setTimeout(() => {
           if (panelFetchSeq.current[panel.id] === seq) void fetchPanelDataRef.current?.(panel);
@@ -2573,12 +2580,14 @@ export default function DashboardViewPage() {
               </div>
               {/* Content */}
               <div className="flex-1 p-4 min-h-0 overflow-auto">
+                <DashboardAccent.Provider value={dashboard?.accent_color || undefined}>
                 <PanelVisualization
                   panel={panel}
                   data={data}
                   onRefresh={() => fetchPanelData(panel)}
                   onDrilldown={handleDrilldown}
                 />
+                </DashboardAccent.Provider>
               </div>
             </div>
           </div>

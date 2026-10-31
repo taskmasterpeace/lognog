@@ -38,9 +38,11 @@ describe('refresh tokens', () => {
 });
 
 describe('rateLimit', () => {
+  // Before sign-in there is no req.user, so the key is the address; behind the
+  // proxy every request shares it (10.0.1.6 in production).
   const call = (mw: ReturnType<typeof rateLimit>) => {
     let status = 200;
-    const req = { user: { id: 'robert' }, ip: '10.0.1.6' } as unknown as Request;
+    const req = { ip: '10.0.1.6' } as unknown as Request;
     const res = {
       set: () => res,
       status: (s: number) => { status = s; return res; },
@@ -51,11 +53,11 @@ describe('rateLimit', () => {
     return passed ? 200 : status;
   };
 
-  it('each limit counts on its own: a busy dashboard cannot block token refresh', () => {
-    const search = rateLimit(3, 60_000);
+  it('each limit counts on its own: log shipping cannot block login or token refresh', () => {
+    const ingest = rateLimit(3, 60_000);
     const refresh = rateLimit(2, 60_000);
-    expect([call(search), call(search), call(search), call(search)]).toEqual([200, 200, 200, 429]);
-    // The search limit is used up; refresh still has its own allowance.
+    expect([call(ingest), call(ingest), call(ingest), call(ingest)]).toEqual([200, 200, 200, 429]);
+    // Ingest's allowance is used up; refresh still has its own.
     expect([call(refresh), call(refresh), call(refresh)]).toEqual([200, 200, 429]);
   });
 });

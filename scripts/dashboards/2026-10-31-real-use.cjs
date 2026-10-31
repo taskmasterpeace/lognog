@@ -20,8 +20,13 @@
  *  4. "Studio Machines": the two tables are tall enough for every machine, and
  *     the chart (a sideways bar of "machines answering", always the maximum) is
  *     now one line per machine showing the share of pings it answered each hour.
- *  5. Each product dashboard shows its product logo (served by LogNog itself
- *     from /logos/) and carries its product colour as the accent.
+ *  5. Product dashboards with no logo (or one on another site) get their
+ *     product logo, served by LogNog itself from /logos/. HYH dashboards get
+ *     HYH's #00BCD4 as their accent. Logos and colours someone set by hand are kept.
+ *
+ * Deploy: the api image does not include scripts/, so copy it in first:
+ *   docker cp scripts/dashboards/2026-10-31-real-use.cjs <api>:/tmp/ && \
+ *   docker exec -w /app <api> node /tmp/2026-10-31-real-use.cjs --db /data/lognog.db
  */
 const path = require('path');
 const fs = require('fs');
@@ -45,14 +50,17 @@ const DP = 'index=directors-palette';
 const GEN = `${DP} event=generation_completed ${ROBERT_DP}`;
 const SPEND = `${DP} event=credit_event amount<0 ${ROBERT_DP}`;
 
-// Product colours: Directors Palette cyan (its app accent), HeyYoureHired blue.
+// Product colours: Directors Palette cyan (its app accent); HeyYoureHired the
+// #00BCD4 already chosen by hand on the "Hey You're Hired" dashboard.
 const PRODUCTS = {
   dp: { logo: '/logos/directors-palette.png', accent: '#06B6D4', header: '#0A0A0E' },
-  hyh: { logo: '/logos/hey-youre-hired.png', accent: '#2563EB', header: '#0A0A0E' },
+  hyh: { logo: '/logos/hey-youre-hired.png', accent: '#00BCD4', header: '#0A0A0E' },
   presidium: { logo: '/logos/presidium.png' },
   game: { logo: '/logos/cof.png' },
   studio: { logo: '/logos/mkl.png' },
 };
+
+const DEFAULT_CYAN = '#06B6D4';
 
 const DASH = {
   dpReal: 'd7129277-b168-43a1-a8a9-da78bc76b500',
@@ -152,7 +160,7 @@ function apply() {
   const findPanel = db.prepare('SELECT id FROM dashboard_panels WHERE dashboard_id = ? AND (title = ? OR title = ?)');
   const update = db.prepare(`UPDATE dashboard_panels SET title = ?, query = ?, visualization = ?, position_x = ?, position_y = ?, width = ?, height = ?, description = COALESCE(?, description), options = COALESCE(?, options) WHERE id = ?`);
   const insert = db.prepare(`INSERT INTO dashboard_panels (id, dashboard_id, title, query, visualization, options, position_x, position_y, width, height, description) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
-  const brand = db.prepare(`UPDATE dashboards SET logo_url = ?, accent_color = COALESCE(?, accent_color), header_color = COALESCE(?, header_color), updated_at = datetime('now') WHERE id = ?`);
+  const brand = db.prepare(`UPDATE dashboards SET logo_url = ?, accent_color = ?, header_color = ?, updated_at = datetime('now') WHERE id = ?`);
   const { randomUUID } = require('crypto');
 
   let changed = 0;
@@ -171,7 +179,7 @@ function apply() {
       }
     }
     // Logos + product colours, by dashboard name.
-    const dashboards = db.prepare('SELECT id, name FROM dashboards').all();
+    const dashboards = db.prepare('SELECT id, name, logo_url, accent_color, header_color FROM dashboards').all();
     for (const d of dashboards) {
       const n = d.name.toLowerCase();
       const key = n.startsWith('directors palette') || n.startsWith('dp:') ? 'dp'
@@ -182,8 +190,18 @@ function apply() {
         : null;
       if (!key) continue;
       const b = PRODUCTS[key];
-      if (!dryRun) brand.run(b.logo, b.accent ?? null, b.header ?? null, d.id);
-      console.log(`brand ${d.name} -> ${key}`);
+      // Never replace branding someone set by hand: a logo uploaded in the
+      // branding dialog (a data: URL) stays, and so does a colour other than
+      // the studio default cyan these dashboards were created with. An empty
+      // logo, or one pointing at another site (CSP-blocked), gets the local file.
+      const logoIsOwn = d.logo_url && !/^https?:\/\//i.test(d.logo_url);
+      const logo = logoIsOwn ? d.logo_url : b.logo;
+      const keepColour = (cur) => cur && cur.toUpperCase() !== DEFAULT_CYAN;
+      const accent = keepColour(d.accent_color) ? d.accent_color : (b.accent ?? d.accent_color ?? null);
+      const header = keepColour(d.header_color) && d.header_color.toUpperCase() !== '#0A0A0E' ? d.header_color : (b.header ?? d.header_color ?? null);
+      if (logo === d.logo_url && accent === d.accent_color && header === d.header_color) continue;
+      if (!dryRun) brand.run(logo, accent, header, d.id);
+      console.log(`brand ${d.name} -> ${key}${logo !== d.logo_url ? ' logo' : ''}${accent !== d.accent_color ? ` accent ${accent}` : ''}`);
     }
   });
   run();

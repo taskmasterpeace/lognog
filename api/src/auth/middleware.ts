@@ -420,9 +420,11 @@ export const requireWrite = denyReadonly;
  * Rate limiting by user (simple in-memory implementation).
  *
  * Each rateLimit() call gets its own counters. They used to share one map, so
- * every limited route a user touched (dashboard searches, the board's polling,
- * token refresh) counted against whichever limit was smallest: a busy minute
- * on a dashboard could make /auth/refresh answer 429 and end the session.
+ * every limited route counted against whichever limit was smallest. Routes
+ * that run before sign-in are keyed by address, and behind the proxy every
+ * request has the same one: the studio's log shipping (ingest, 300/min) filled
+ * the same counter as /auth/login (5/min) and /auth/refresh (30/min), so login
+ * said "Too many requests" and refresh answered 429 and ended the session.
  */
 const rateLimitStores: Map<string, { count: number; resetTime: number }>[] = [];
 

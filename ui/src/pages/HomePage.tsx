@@ -418,7 +418,8 @@ export default function HomePage() {
           {data ? (
             // A failed background check keeps the last good numbers on screen
             // (it used to replace the whole page with an error box).
-            <span className={`hidden sm:inline ${error ? 'text-amber-600 dark:text-amber-400' : ''}`}>
+            // The warning shows on phones too; the plain "Updated" time stays desktop-only.
+            <span className={error ? 'inline text-amber-600 dark:text-amber-400' : 'hidden sm:inline'}>
               {error ? `Last check missed, showing ${clock(data.generated_at)}` : `Updated ${clock(data.generated_at)}`}
             </span>
           ) : <span className="hidden sm:inline">Refresh</span>}
