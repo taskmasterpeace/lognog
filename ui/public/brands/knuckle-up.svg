@@ -1,0 +1,35 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- KNUCKLE UP app icon — ink ground, gold KU monogram, blood baseline, hard pixel edges. NO purple. -->
+  <rect width="512" height="512" fill="#0d0b09"/>
+  <!-- subtle inner panel -->
+  <rect x="34" y="34" width="444" height="444" fill="#15110d"/>
+  <!-- gold pixel frame (hard, mitered) -->
+  <rect x="34" y="34" width="444" height="444" fill="none" stroke="#f5b21a" stroke-width="10"/>
+  <rect x="58" y="58" width="396" height="396" fill="none" stroke="#3a2f24" stroke-width="4"/>
+  <!-- scanline hint -->
+  <g opacity="0.10" fill="#efe7d4">
+    <rect x="58" y="120" width="396" height="3"/>
+    <rect x="58" y="200" width="396" height="3"/>
+    <rect x="58" y="300" width="396" height="3"/>
+    <rect x="58" y="380" width="396" height="3"/>
+  </g>
+  <!-- KU monogram: hard black offset shadow then gold, butt caps + miter joins = pixel edges -->
+  <g fill="none" stroke-linecap="butt" stroke-linejoin="miter" stroke-width="40">
+    <!-- shadow -->
+    <g stroke="#000" transform="translate(9,10)">
+      <path d="M150 150 L150 362"/>
+      <path d="M168 258 L236 150"/>
+      <path d="M168 258 L236 362"/>
+      <path d="M300 150 L300 322 Q300 360 338 360 Q376 360 376 322 L376 150"/>
+    </g>
+    <!-- gold -->
+    <g stroke="#f5b21a">
+      <path d="M150 150 L150 362"/>
+      <path d="M168 258 L236 150"/>
+      <path d="M168 258 L236 362"/>
+      <path d="M300 150 L300 322 Q300 360 338 360 Q376 360 376 322 L376 150"/>
+    </g>
+  </g>
+  <!-- blood baseline -->
+  <rect x="150" y="392" width="226" height="14" fill="#ff3b3b"/>
+</svg>
