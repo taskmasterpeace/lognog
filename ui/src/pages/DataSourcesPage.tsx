@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import ProjectLogo from '../components/ProjectLogo';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import {
@@ -311,6 +312,7 @@ export default function DataSourcesPage() {
                         onClick={() => navigate(`/search?q=${encodeURIComponent(`search index=${indexName}`)}`)}
                         className="flex items-center gap-3"
                       >
+                        <ProjectLogo value={indexName} size="xs" className="-ml-1" />
                         <div className={`text-sm font-medium ${muted ? 'line-through text-nog-500' : 'text-nog-900 dark:text-nog-100'}`}>
                           {indexName}
                         </div>
@@ -398,17 +400,22 @@ export default function DataSourcesPage() {
                             </div>
                           </td>
                           <td className="px-4 py-3">
-                            <div
-                              className="font-medium text-nog-900 dark:text-nog-100 max-w-[200px] truncate"
-                              title={source.app_name}
-                            >
-                              {source.app_name}
-                            </div>
-                            <div
-                              className="text-xs text-nog-500 dark:text-nog-400 max-w-[200px] truncate"
-                              title={source.hostname}
-                            >
-                              {source.hostname}
+                            <div className="flex items-center gap-2.5">
+                              <ProjectLogo value={source.app_name} size="sm" />
+                              <div className="min-w-0">
+                                <div
+                                  className="font-medium text-nog-900 dark:text-nog-100 max-w-[200px] truncate"
+                                  title={source.app_name}
+                                >
+                                  {source.app_name}
+                                </div>
+                                <div
+                                  className="text-xs text-nog-500 dark:text-nog-400 max-w-[200px] truncate"
+                                  title={source.hostname}
+                                >
+                                  {source.hostname}
+                                </div>
+                              </div>
                             </div>
                           </td>
                           <td className="px-4 py-3">

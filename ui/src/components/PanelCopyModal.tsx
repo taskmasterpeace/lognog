@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import ProjectLogo from './ProjectLogo';
 import { useQuery } from '@tanstack/react-query';
 import { X, Copy, Loader2, ChevronDown, Search } from 'lucide-react';
 import {
@@ -160,12 +161,14 @@ export function PanelCopyModal({ targetDashboardId, onClose, onSuccess }: PanelC
                       }`}
                     >
                       <div className="flex items-center gap-3">
-                        {project.logo_url && (
+                        {project.logo_url ? (
                           <img
                             src={project.logo_url}
                             alt={project.name}
                             className="w-10 h-10 rounded object-contain bg-white dark:bg-nog-800"
                           />
+                        ) : (
+                          <ProjectLogo value={project.name} size="md" />
                         )}
                         <div>
                           <div className="font-medium text-nog-900 dark:text-nog-100">
