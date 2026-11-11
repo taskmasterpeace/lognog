@@ -21,7 +21,7 @@ import DashboardBuilderWizard from '../components/DashboardBuilderWizard';
 import DashboardImportModal from '../components/dashboard/DashboardImportModal';
 import AppScopeFilter from '../components/AppScopeFilter';
 import ProjectLogo from '../components/ProjectLogo';
-import { findProjectBrand } from '../utils/projectBrands';
+import { findDashboardBrand, findProjectBrand, scopeLabel } from '../utils/projectBrands';
 import { useDateFormat } from '../contexts/DateFormatContext';
 import { useToast } from '../contexts/ToastContext';
 import { useConfirm } from '../components/ui/ConfirmDialog';
@@ -264,8 +264,8 @@ export default function DashboardsPage() {
                   <div className="p-4 sm:p-5">
                     <div className="flex items-start justify-between mb-3 gap-2">
                       <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
-                        {findProjectBrand(dashboard.app_scope) ? (
-                          <ProjectLogo value={dashboard.app_scope} size="md" className="shadow-md" />
+                        {findDashboardBrand(dashboard.app_scope) ? (
+                          <ProjectLogo value={dashboard.app_scope} kind="dashboard" size="md" className="shadow-md" />
                         ) : (
                           <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-honey-400 to-honey-600 rounded-lg flex items-center justify-center shadow-md flex-shrink-0">
                             <LayoutDashboard className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
@@ -313,7 +313,7 @@ export default function DashboardsPage() {
                       <div className="flex items-center gap-3 sm:gap-4 text-xs text-nog-500 dark:text-nog-400">
                         {dashboard.app_scope && dashboard.app_scope !== 'default' && (
                           <span className="px-2 py-0.5 bg-honey-100 dark:bg-honey-900/30 text-honey-700 dark:text-honey-400 rounded text-xs font-medium">
-                            {findProjectBrand(dashboard.app_scope)?.name ?? dashboard.app_scope}
+                            {findProjectBrand(dashboard.app_scope)?.name ?? scopeLabel(dashboard.app_scope)}
                           </span>
                         )}
                         <span className="flex items-center gap-1">
