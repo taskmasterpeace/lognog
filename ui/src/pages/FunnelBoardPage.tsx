@@ -185,6 +185,8 @@ export default function FunnelBoardPage() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // A focused button handles its own Space/Enter; do not also act on it here.
+      if (e.target instanceof HTMLElement && e.target.closest('button, a')) return;
       if (e.key === ' ') {
         e.preventDefault();
         setPaused((p) => !p);
@@ -203,7 +205,7 @@ export default function FunnelBoardPage() {
         </div>
       )}
       <div className="min-h-0 flex-1">
-        {error ? (
+        {error && !data ? (
           <div className="flex h-full items-center justify-center text-[4vh] text-nog-300">Could not load the funnel numbers. Trying again shortly.</div>
         ) : current === undefined ? (
           <div className="flex h-full items-center justify-center text-[4vh] text-nog-300">{data ? 'No products to show.' : 'Loading…'}</div>

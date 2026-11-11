@@ -75,6 +75,14 @@ const WHO: Record<string, string> = {
   paywall: 'people who saw the price',
   checkout: 'people who started checkout',
 };
+const WHO_ONE: Record<string, string> = {
+  visit: 'visitor',
+  signup_start: 'person who started sign-up',
+  signup: 'person who signed up',
+  activate: 'person who used it once',
+  paywall: 'person who saw the price',
+  checkout: 'person who started checkout',
+};
 const DID_NOT: Record<string, string> = {
   signup_start: 'left without starting sign-up',
   signup: 'did not finish signing up',
@@ -85,13 +93,19 @@ const DID_NOT: Record<string, string> = {
   paid: 'started checkout and did not pay',
 };
 
+/**
+ * Steps people take within minutes. Only these can be called a leak in a
+ * 7-day report: someone who signed up yesterday has not "failed to come back".
+ */
+const IMMEDIATE_STEPS = new Set(['signup_start', 'signup', 'checkout', 'paid']);
+
 function findLeak(ladders: LadderRung[][]): WeeklySection['biggestLeak'] {
   let best: WeeklySection['biggestLeak'] = null;
   for (const rungs of ladders) {
     let prev: LadderRung | null = null;
     for (const r of rungs) {
       if (!r.applies) continue;
-      if (prev && prev.reported && r.reported && prev.people > 0) {
+      if (prev && prev.reported && r.reported && prev.people > 0 && IMMEDIATE_STEPS.has(r.stage)) {
         const lost = prev.people - r.people;
         if (lost > 0 && (!best || lost > best.lost)) {
           const pctLost = Math.round((lost / prev.people) * 1000) / 10;
@@ -101,7 +115,7 @@ function findLeak(ladders: LadderRung[][]): WeeklySection['biggestLeak'] {
             lost,
             outOf: prev.people,
             pctLost,
-            sentence: `${lost.toLocaleString('en-US')} of ${prev.people.toLocaleString('en-US')} ${WHO[prev.stage] ?? 'people'} (${pctLost}%) ${DID_NOT[r.stage] ?? 'went no further'}.`,
+            sentence: `${lost.toLocaleString('en-US')} of ${prev.people.toLocaleString('en-US')} ${prev.people === 1 ? (WHO_ONE[prev.stage] ?? 'person') : (WHO[prev.stage] ?? 'people')} (${pctLost}%) ${DID_NOT[r.stage] ?? 'went no further'}.`,
           };
         }
       }
@@ -142,9 +156,9 @@ export function buildWeeklySection(product: FunnelProduct, events: FunnelEvent[]
   } else if (leak) {
     headline = `Biggest leak: ${leak.sentence}`;
   } else if (signup && signup.people > 0) {
-    headline = `${signup.people.toLocaleString('en-US')} new accounts this week, ${change(signup.people, beforeSignup?.people ?? 0)}.`;
+    headline = `${signup.people.toLocaleString('en-US')} new ${signup.people === 1 ? 'account' : 'accounts'} this week, ${change(signup.people, beforeSignup?.people ?? 0)}.`;
   } else if (visit && visit.reported) {
-    headline = `${visit.people.toLocaleString('en-US')} new visitors this week and no new accounts.`;
+    headline = `${visit.people.toLocaleString('en-US')} new ${visit.people === 1 ? 'visitor' : 'visitors'} this week and no new accounts.`;
   } else {
     headline = 'No new people this week.';
   }
@@ -173,7 +187,7 @@ export function buildWeeklySection(product: FunnelProduct, events: FunnelEvent[]
 function titleFor(weekStart: number, weekEnd: number): string {
   const fmt = (ms: number, withYear: boolean) =>
     new Date(ms).toLocaleDateString('en-US', { month: 'short', day: 'numeric', ...(withYear ? { year: 'numeric' } : {}), timeZone: 'America/New_York' });
-  return `${fmt(weekStart, false)} – ${fmt(weekEnd, true)}`;
+  return `7 days to ${fmt(weekEnd, true)}`;
 }
 
 /** Build the whole report from the live log store, cut to the indexes the caller may read. */
@@ -265,7 +279,7 @@ ${head}
 <td width="33%" style="background:${SAND};border-radius:8px;padding:10px 12px;"><div style="font-size:11px;text-transform:uppercase;color:${MUTED};">Money in</div><div style="font-size:22px;font-weight:700;color:${DARK};">${m.payments > 0 && m.paymentsWithoutAmount >= m.payments ? 'not reported' : money(m.revenueCents)}</div><div style="font-size:12px;color:${MUTED};">${m.paymentsWithoutAmount > 0 ? `${m.paymentsWithoutAmount} of ${m.payments} payments came with no amount` : `week before: ${money(m.revenueCentsBefore)}`}</div></td>
 </tr></table>
 <p style="margin:8px 0 0;font-size:12px;color:${MUTED};">Went quiet = has an account and has not used ${esc(s.product.name)} for ${s.product.quietDays} days.</p>
-${missing}
+${missing}${s.truncated ? `<p style="margin:10px 0 0;font-size:12px;color:${WARN};">Too many steps to read them all; the oldest were left out, so these numbers are low.</p>` : ''}
 </td></tr>`;
     })
     .join('\n');

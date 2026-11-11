@@ -125,8 +125,7 @@ router.get('/weekly', async (req: Request, res: Response) => {
 // Send the weekly email right now (admin only). The Monday 9:00 AM Eastern send is automatic.
 router.post('/weekly/send', requireAdmin, async (_req: Request, res: Response) => {
   try {
-    const result = await sendWeeklyFunnelReport();
-    res.json({ sent: result.sent, recipients: result.recipients, reason: result.reason, title: result.title });
+    res.json(await sendWeeklyFunnelReport());
   } catch (error) {
     console.error('Weekly funnel send error:', error);
     res.status(500).json({ error: 'Could not send the weekly funnel report' });
