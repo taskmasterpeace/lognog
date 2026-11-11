@@ -9,7 +9,9 @@ import { boardSeconds, moneyIn, nextSlide, pctText } from '../utils/funnels';
 /**
  * Funnel board (/funnels/board): the smartboard view. One product per slide,
  * led by its logo, type big enough to read from across the room, moving on by
- * itself. ?seconds=20 sets the pace, ?days=30 the range, ?product=slug pins one.
+ * itself. The first slide puts every product on one screen. ?seconds=20 sets
+ * the pace, ?days=30 the range, ?product=slug pins one, ?product=all holds on
+ * the every-product slide, ?label=SAMPLE stamps the screen (for made-up data).
  * Space pauses; the arrow keys step.
  */
 
@@ -101,11 +103,65 @@ function Slide({ row, days }: { row: FunnelOverviewRow; days: number }) {
   );
 }
 
+/** The five numbers on the every-product slide, and which earlier one each is measured against. */
+const SUMMARY_STEPS: Array<{ ladder: 'getIn' | 'pay'; stage: string; label: string; of?: { ladder: 'getIn' | 'pay'; stage: string; words: string } }> = [
+  { ladder: 'getIn', stage: 'visit', label: 'Visited' },
+  { ladder: 'getIn', stage: 'signup', label: 'Signed up', of: { ladder: 'getIn', stage: 'visit', words: 'of visitors' } },
+  { ladder: 'getIn', stage: 'activate', label: 'First real use', of: { ladder: 'getIn', stage: 'signup', words: 'of sign-ups' } },
+  { ladder: 'getIn', stage: 'return', label: 'Came back', of: { ladder: 'getIn', stage: 'activate', words: 'of first uses' } },
+  { ladder: 'pay', stage: 'paid', label: 'Paid', of: { ladder: 'pay', stage: 'signup', words: 'of sign-ups' } },
+];
+
+/** Every product on one screen: logo, name, and the five numbers that matter most. */
+function SummarySlide({ rows, days }: { rows: FunnelOverviewRow[]; days: number }) {
+  return (
+    <div className="flex h-full flex-col" data-testid="board-all">
+      <div className="flex items-end justify-between gap-[2vw]">
+        <h1 className="font-display text-[8vh] font-semibold leading-none tracking-tight text-nog-50">Funnels</h1>
+        <p className="pb-[0.6vh] text-[2.6vh] text-nog-300">People, not clicks · last {days} days</p>
+      </div>
+      <div className="mt-[3vh] flex min-h-0 flex-1 flex-col justify-around gap-[2vh]">
+        {rows.map((row) => (
+          <div key={row.product.slug} className="flex items-center gap-[2vw] rounded-[1.6vh] bg-nog-800 px-[2vw] py-[2vh]" data-product={row.product.slug}>
+            <BigLogo slug={row.product.slug} name={row.product.name} />
+            <div className="w-[19vw] shrink-0">
+              <div className="font-display text-[4.6vh] font-semibold leading-tight text-nog-50">{row.product.name}</div>
+              <div className="mt-[0.4vh] text-[2.2vh] text-nog-300">
+                {row.totals.events === 0 ? 'no funnel steps yet' : `${row.stopping.quiet.toLocaleString()} went quiet · ${moneyIn(row.paid.revenueCents, row.paid.payments, row.paid.paymentsWithoutAmount).value} in`}
+              </div>
+            </div>
+            <div className="flex min-w-0 flex-1 items-stretch justify-between gap-[1vw]">
+              {SUMMARY_STEPS.map((step) => {
+                const r = row[step.ladder].find((x) => x.stage === step.stage);
+                const base = step.of ? row[step.of.ladder].find((x) => x.stage === step.of!.stage) : undefined;
+                const share = r && base && base.applies && base.reported && base.people > 0 ? `${pctText((r.people / base.people) * 100)} ${step.of!.words}` : null;
+                return (
+                  <div key={step.stage} className="min-w-0 flex-1 text-center">
+                    <div className="truncate text-[2vh] font-semibold uppercase tracking-[0.08em] text-honey-300">{step.label}</div>
+                    <div className={`font-display text-[7vh] font-semibold leading-none tabular-nums ${r && r.applies && r.reported ? 'text-nog-50' : 'text-nog-500'}`}>
+                      {!r || !r.applies ? '—' : r.people.toLocaleString()}
+                    </div>
+                    <div className="mt-[0.4vh] text-[2vh] tabular-nums text-nog-300">
+                      {!r || !r.applies ? 'does not apply' : !r.reported ? 'not reported yet' : !step.of ? 'start' : share ?? '—'}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+        {rows.length === 0 && <div className="flex flex-1 items-center justify-center text-[4vh] text-nog-300">No products to show.</div>}
+      </div>
+    </div>
+  );
+}
+
 export default function FunnelBoardPage() {
   const [params] = useSearchParams();
   const days = [7, 30, 90].includes(Number(params.get('days'))) ? Number(params.get('days')) : 30;
   const seconds = boardSeconds(params.get('seconds'));
   const pinned = params.get('product');
+  const label = (params.get('label') || '').replace(/[^A-Za-z0-9 ]/g, '').slice(0, 24);
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
 
@@ -115,7 +171,9 @@ export default function FunnelBoardPage() {
     refetchInterval: 5 * 60 * 1000,
   });
   const all = data?.products ?? [];
-  const slides = pinned ? all.filter((p) => p.product.slug === pinned) : all;
+  // A slide is one product, or null for the every-product slide.
+  const slides: Array<FunnelOverviewRow | null> =
+    pinned === 'all' ? [null] : pinned ? all.filter((p) => p.product.slug === pinned) : all.length > 1 ? [null, ...all] : all;
   const count = slides.length;
   const current = count ? slides[index % count] : undefined;
 
@@ -139,11 +197,18 @@ export default function FunnelBoardPage() {
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-nog-900 px-[3.5vw] py-[4vh] text-nog-50" data-testid="funnel-board">
+      {label && (
+        <div className="pointer-events-none absolute left-1/2 top-[4vh] z-10 -translate-x-1/2 rounded-[1vh] border-[0.4vh] border-honey-400 px-[1.4vw] py-[0.6vh] text-[3.2vh] font-bold uppercase tracking-[0.2em] text-honey-300" data-testid="board-label">
+          {label}
+        </div>
+      )}
       <div className="min-h-0 flex-1">
         {error ? (
           <div className="flex h-full items-center justify-center text-[4vh] text-nog-300">Could not load the funnel numbers. Trying again shortly.</div>
-        ) : !current ? (
+        ) : current === undefined ? (
           <div className="flex h-full items-center justify-center text-[4vh] text-nog-300">{data ? 'No products to show.' : 'Loading…'}</div>
+        ) : current === null ? (
+          <SummarySlide rows={all} days={days} />
         ) : (
           <Slide key={current.product.slug} row={current} days={days} />
         )}
@@ -156,12 +221,12 @@ export default function FunnelBoardPage() {
         <div className="flex items-center gap-[0.8vw]" role="tablist" aria-label="Products">
           {slides.map((s, i) => (
             <button
-              key={s.product.slug}
+              key={s ? s.product.slug : 'all'}
               type="button"
               role="tab"
               aria-selected={i === index % Math.max(count, 1)}
-              aria-label={`Show ${s.product.name}`}
-              title={s.product.name}
+              aria-label={s ? `Show ${s.product.name}` : 'Show every product'}
+              title={s ? s.product.name : 'Every product'}
               onClick={() => setIndex(i)}
               className={`h-[1.6vh] rounded-full transition-all duration-300 hover:bg-honey-400 ${i === index % Math.max(count, 1) ? 'w-[5vw] bg-honey-500' : 'w-[1.6vh] bg-nog-600'}`}
             />
