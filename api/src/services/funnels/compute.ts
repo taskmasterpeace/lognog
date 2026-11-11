@@ -50,7 +50,7 @@ export interface FunnelReport {
   product: { slug: string; name: string; quietDays: number; activationMeans: string; paidMeans: string; notApplicable: string[] };
   window: { from: string; to: string; days: number };
   generatedAt: string;
-  totals: { events: number; people: number; eventsWithoutId: number; lastEventAt: string | null };
+  totals: { events: number; people: number; eventsWithoutId: number; lastEventAt: string | null; /** Older accounts seen coming back with no sign-up in view; kept off the new-people ladders. */ olderAccounts: number };
   getIn: LadderRung[];
   pay: LadderRung[];
   /** Why don't they sign up: visitors by where they came from. */
@@ -292,8 +292,19 @@ export function buildFunnelReport(product: FunnelProduct, events: FunnelEvent[],
   const all = [...people.values()];
   const stagesSeen = new Set<string>(usable.map((e) => e.stage));
 
-  // --- Ladders: people first seen inside the window, and how far they have got since. ---
-  const cohort = all.filter((p) => p.firstTs >= opts.from && p.firstTs <= opts.to);
+  // An account we never saw being created: it has an account id, and there is no
+  // sign-up event for it anywhere in view. That is an older customer coming back
+  // (landing logged out and signing in after months away, say), not a new person,
+  // so it must not sit on the ladders as "visited, never signed up" or as a new
+  // sign-up. Only applied when the product reports sign-ups at all; otherwise
+  // every account would look like this. The cost: a new person whose sign-up line
+  // was lost is also kept off the ladders rather than guessed onto them.
+  const signupReported = all.some((p) => p.first.signup !== undefined);
+  const isOlderAccount = (p: Person): boolean => signupReported && p.isUser && p.first.signup === undefined;
+  const olderAccounts = all.filter(isOlderAccount);
+
+  // --- Ladders: NEW people first seen inside the window, and how far they have got since. ---
+  const cohort = all.filter((p) => p.firstTs >= opts.from && p.firstTs <= opts.to && !isOlderAccount(p));
   const cohortMs = cohort.map((p) => milestones(p, product));
   const getIn = ladder(GET_IN_LADDER, cohortMs, product, stagesSeen);
   const pay = ladder(PAY_LADDER, cohortMs, product, stagesSeen);
@@ -323,7 +334,9 @@ export function buildFunnelReport(product: FunnelProduct, events: FunnelEvent[],
 
   // --- When do they stop using it (everyone with an account, not just this window) ---
   const quietMs = product.quietDays * DAY;
-  const accounts = all.filter((p) => p.first.signup !== undefined);
+  // Everyone with an account: sign-ups we saw, plus older accounts (their start is the first time we saw them).
+  const accounts = all.filter((p) => p.first.signup !== undefined || isOlderAccount(p));
+  const startOf = (p: Person): number => p.first.signup ?? p.firstTs;
   let active = 0;
   let quiet = 0;
   let neverUsed = 0;
@@ -336,8 +349,15 @@ export function buildFunnelReport(product: FunnelProduct, events: FunnelEvent[],
     // Cancelled = their latest cancellation is newer than their latest payment.
     if (m.lastChurn !== undefined && !p.payments.some((x) => x.ts > (m.lastChurn as number))) cancelled++;
     if (m.lastUse === undefined) {
+      if (p.first.signup === undefined) {
+        // An older account with no use in view. We do not know its history, so it
+        // is never "new" or "never used": it is active if we saw it lately, quiet if not.
+        if (now - p.events[p.events.length - 1].ts > quietMs) quiet++;
+        else active++;
+        continue;
+      }
       // Give brand-new accounts the quiet window before calling them lost.
-      if (now - (m.signup as number) > quietMs) neverUsed++;
+      if (now - startOf(p) > quietMs) neverUsed++;
       else {
         active++;
         newNotUsedYet++;
@@ -346,7 +366,8 @@ export function buildFunnelReport(product: FunnelProduct, events: FunnelEvent[],
     }
     if (now - m.lastUse > quietMs) {
       quiet++;
-      lasted.push(Math.max(0, (m.lastUse - (m.signup as number)) / DAY));
+      // "How long they lasted" runs from sign-up, so only for accounts whose sign-up we saw.
+      if (p.first.signup !== undefined) lasted.push(Math.max(0, (m.lastUse - p.first.signup) / DAY));
       const last = [...p.events].reverse().find((e) => e.stage === 'use' || e.stage === 'activate');
       if (last) lastBeforeQuiet.set(last.event, (lastBeforeQuiet.get(last.event) ?? 0) + 1);
     } else active++;
@@ -356,7 +377,9 @@ export function buildFunnelReport(product: FunnelProduct, events: FunnelEvent[],
   const RET_WEEKS = [1, 2, 4, 8];
   const byWeek = new Map<number, Person[]>();
   for (const p of accounts) {
-    const signup = p.first.signup as number;
+    // Retention is by the week of a sign-up we actually saw.
+    if (p.first.signup === undefined) continue;
+    const signup = p.first.signup;
     if (signup < opts.from || signup > opts.to) continue;
     const weekStart = Math.floor((dayNumber(signup) + 3) / 7); // Monday-based week number
     const members = byWeek.get(weekStart);
@@ -386,7 +409,7 @@ export function buildFunnelReport(product: FunnelProduct, events: FunnelEvent[],
   // Things done inside the product. Ladder steps (visit, sign-up, checkout) are
   // left out: every payer started a checkout, which says nothing.
   const IN_PRODUCT = new Set<string>(['use', 'activate', 'paywall']);
-  const payers = accounts.concat(all.filter((p) => p.first.signup === undefined && p.first.paid !== undefined)).filter((p) => p.first.paid !== undefined);
+  const payers = accounts.concat(all.filter((p) => p.first.signup === undefined && !isOlderAccount(p) && p.first.paid !== undefined)).filter((p) => p.first.paid !== undefined);
   const nonPayers = accounts.filter((p) => p.first.paid === undefined);
   const payerDid = new Map<string, number>();
   const nonPayerDid = new Map<string, number>();
@@ -472,7 +495,7 @@ export function buildFunnelReport(product: FunnelProduct, events: FunnelEvent[],
     product: { slug: product.slug, name: product.name, quietDays: product.quietDays, activationMeans: product.activationMeans, paidMeans: product.paidMeans, notApplicable: product.notApplicable },
     window: { from: new Date(opts.from).toISOString(), to: new Date(opts.to).toISOString(), days: Math.round((opts.to - opts.from) / DAY) },
     generatedAt: new Date(now).toISOString(),
-    totals: { events: usable.length, people: all.length, eventsWithoutId: withoutId, lastEventAt: lastTs ? new Date(lastTs).toISOString() : null },
+    totals: { events: usable.length, people: all.length, eventsWithoutId: withoutId, lastEventAt: lastTs ? new Date(lastTs).toISOString() : null, olderAccounts: olderAccounts.length },
     getIn,
     pay,
     bySource,

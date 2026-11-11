@@ -1016,6 +1016,7 @@ export interface FunnelTotals {
   people: number;
   eventsWithoutId: number;
   lastEventAt: string | null;
+  olderAccounts: number;
 }
 
 export interface FunnelReport {

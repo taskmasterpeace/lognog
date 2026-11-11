@@ -151,3 +151,69 @@ describe('third pass', () => {
     expect(r.movingToPaid.payments).toBe(2);
   });
 });
+
+describe('older accounts coming back', () => {
+  it('a customer dormant beyond the history who signs in is not a new "visited, never signed up" person', () => {
+    const r = report([
+      // someone genuinely new
+      { ts: T0 + DAY, stage: 'visit', event: 'landing_viewed', anonId: 'a_new' },
+      { ts: T0 + DAY + 1, stage: 'signup', event: 'signup_completed', anonId: 'a_new', userId: 'new' },
+      // an old customer: lands logged out, then signs in (the tie line carries both ids); no sign-up in view
+      { ts: T0 + 2 * DAY, stage: 'visit', event: 'landing_viewed', anonId: 'a_old' },
+      { ts: T0 + 2 * DAY + 5, stage: 'visit', event: 'signed_in', anonId: 'a_old', userId: 'old' },
+    ]);
+    expect(r.getIn.find((x) => x.stage === 'visit')?.people).toBe(1);
+    expect(r.getIn.find((x) => x.stage === 'signup')?.people).toBe(1);
+    expect(r.totals.olderAccounts).toBe(1);
+    expect(r.lastStepBeforeLeaving).toEqual([]);
+    expect(r.stopping.signedUp).toBe(2); // both have an account
+  });
+
+  it('an old customer whose first event in view is a use is not counted as a new sign-up', () => {
+    const r = report([at(T0, 'signup', 'new'), at(T0 + DAY, 'use', 'old'), at(T0 + 2 * DAY, 'paid', 'old', { event: 'subscription_renewed', amountCents: 2499 })]);
+    expect(r.getIn.find((x) => x.stage === 'signup')?.people).toBe(1);
+    expect(r.totals.olderAccounts).toBe(1);
+    expect(r.movingToPaid).toMatchObject({ payers: 0, payments: 1, revenueCents: 2499 });
+  });
+
+  it('a new visitor whose first event is anonymous is unaffected, even if they sign in later', () => {
+    const r = report([
+      { ts: T0, stage: 'visit', event: 'landing_viewed', anonId: 'a1' },
+      { ts: T0 + 10, stage: 'signup', event: 'signup_completed', anonId: 'a1', userId: 'u1' },
+      { ts: T0 + DAY, stage: 'visit', event: 'signed_in', anonId: 'a1', userId: 'u1' },
+    ]);
+    expect(r.getIn.find((x) => x.stage === 'signup')?.people).toBe(1);
+    expect(r.totals.olderAccounts).toBe(0);
+  });
+
+  it('a product that does not report sign-ups at all keeps the old behaviour', () => {
+    const r = report([at(T0, 'use', 'u1'), at(T0 + DAY, 'use', 'u2')]);
+    expect(r.getIn.find((x) => x.stage === 'activate')?.people).toBe(2);
+    expect(r.totals.olderAccounts).toBe(0);
+  });
+});
+
+describe('older accounts: status', () => {
+  it('an older account with no use in view is never "new, not used yet" or "never used"', () => {
+    const recent = report([
+      at(NOW - DAY, 'signup', 'new'),
+      { ts: NOW - 2 * DAY, stage: 'visit', event: 'landing_viewed', anonId: 'a_old' },
+      { ts: NOW - 2 * DAY + 5, stage: 'visit', event: 'signed_in', anonId: 'a_old', userId: 'old' },
+    ]);
+    expect(recent.stopping).toMatchObject({ signedUp: 2, active: 2, newNotUsedYet: 1, neverUsed: 0, quiet: 0 });
+    const longAgo = report([at(NOW - DAY, 'signup', 'new'), at(T0, 'churn', 'old_sub', { event: 'subscription_cancelled' })]);
+    expect(longAgo.stopping).toMatchObject({ signedUp: 2, neverUsed: 0, quiet: 1, newNotUsedYet: 1 });
+  });
+
+  it('"how long they lasted" is only measured for accounts whose sign-up was seen', () => {
+    const r = report([at(NOW - DAY, 'signup', 'new'), at(T0, 'use', 'old'), at(T0 + 5 * DAY, 'use', 'old')]);
+    expect(r.stopping.quiet).toBe(1);
+    expect(r.stopping.lastedBuckets.reduce((n, b) => n + b.people, 0)).toBe(0);
+  });
+
+  it('a sign-up line with no id does not switch the older-account rule on', () => {
+    const r = report([{ ts: T0, stage: 'signup', event: 'signup_completed' } as FunnelEvent, at(T0, 'use', 'u1'), at(T0 + DAY, 'use', 'u2')]);
+    expect(r.totals.olderAccounts).toBe(0);
+    expect(r.getIn.find((x) => x.stage === 'activate')?.people).toBe(2);
+  });
+});

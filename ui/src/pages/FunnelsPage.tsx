@@ -389,6 +389,7 @@ function ProductView({ report }: { report: FunnelReport }) {
       <p className="px-1 text-xs text-nog-500 dark:text-nog-400">
         {report.totals.events.toLocaleString()} funnel steps from {report.totals.people.toLocaleString()} people
         {report.totals.eventsWithoutId > 0 ? ` · ${report.totals.eventsWithoutId.toLocaleString()} steps had no id and are not counted` : ''}
+        {report.totals.olderAccounts > 0 ? ` · ${report.totals.olderAccounts.toLocaleString()} older accounts came back (not counted as new visitors)` : ''}
         {report.totals.lastEventAt ? ` · newest ${new Date(report.totals.lastEventAt).toLocaleString()}` : ''}
         {report.truncated ? ' · too many steps to read them all; the oldest were left out, so numbers are low' : ''} ·{' '}
         <Link className="font-medium text-honey-700 underline-offset-2 hover:underline dark:text-honey-400" to={`/search?q=${encodeURIComponent(`search index=${report.product.slug} funnel_stage=* | stats count by funnel_stage, funnel_event`)}&earliest=-${report.window.days}d`}>
