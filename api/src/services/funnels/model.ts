@@ -154,7 +154,7 @@ export const FUNNEL_FIELDS = [
   'timestamp', 'message', 'level', 'hostname', 'app_name',
 ] as const;
 
-/** Never stored on a funnel event, whichever product sent it. */
+/** Never stored for a strict (kids/family) product, and never allowed inside `props` for any product. */
 const PII_KEYS = new Set([
   'user_email', 'email', 'user_name', 'name', 'full_name', 'first_name', 'last_name',
   'ip', 'ip_address', 'user_agent', 'phone', 'address',
@@ -215,8 +215,9 @@ const STRICT_TOKEN_KEYS = [
 function cleanFunnelEvent(event: Record<string, unknown>, product: FunnelProduct, strict: boolean, stage: SentStage | null): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(event)) {
-    if (PII_KEYS.has(k)) continue;
-    if (strict && !(FUNNEL_FIELDS as readonly string[]).includes(k)) continue;
+    // Strict products keep the allowlist and nothing else. Other products mark
+    // lines their dashboards already read, so their other fields are left alone.
+    if (strict && (PII_KEYS.has(k) || !(FUNNEL_FIELDS as readonly string[]).includes(k))) continue;
     out[k] = v;
   }
 

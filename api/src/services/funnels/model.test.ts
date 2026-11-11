@@ -35,16 +35,15 @@ describe('funnel language: tidy-up on the way in', () => {
     expect(String(out.funnel_error)).toContain('unknown stage');
   });
 
-  it('removes personal fields from every funnel event', () => {
+  it('leaves a product's other fields alone when it marks a line it already sends', () => {
     const out = normalizeFunnelEvent(
-      { funnel_stage: 'signup', user_id: 'u1', user_email: 'x@y.com', ip_address: '1.2.3.4', user_agent: 'UA', name: 'Pat' },
+      { message: 'User signup', funnel_stage: 'signup', funnel_event: 'signup_completed', user_id: 'u1', user_email: 'x@y.com', auth_method: 'google', props: { email: 'x@y.com', plan_seen: 'pro' } },
       'hey-youre-hired',
     );
-    expect(out.user_email).toBeUndefined();
-    expect(out.ip_address).toBeUndefined();
-    expect(out.user_agent).toBeUndefined();
-    expect(out.name).toBeUndefined();
-    expect(out.user_id).toBe('u1');
+    // existing dashboards read these
+    expect(out).toMatchObject({ message: 'User signup', user_email: 'x@y.com', auth_method: 'google', user_id: 'u1', funnel_stage: 'signup' });
+    // but the funnel's own extras never carry personal values
+    expect(out.props).toEqual({ plan_seen: 'pro' });
   });
 
   it('refuses an email or a sentence as an id', () => {

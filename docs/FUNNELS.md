@@ -96,7 +96,7 @@ Example:
 
 ### Never in a funnel event
 
-Emails, names, IP addresses, browser strings, phone numbers, payment details, free text, uploaded content, and **anything about a child** (ids, names, answers, photos, recordings). On every line a product marks with `funnel_stage`, LogNog removes the common personal fields on the way in. For Homework Tree it keeps **only** the fields in the table above, checks every value is a short code, a number or a time, rewrites the message, and throws the rest away. That applies whatever the event says its product is: the index it lands in decides.
+Emails, names, IP addresses, browser strings, phone numbers, payment details, free text, uploaded content, and **anything about a child** (ids, names, answers, photos, recordings). The shared client never puts any of these in a funnel field, and LogNog refuses an email or a sentence as an id and drops personal keys from `props`, for every product. Products that mark a line they already send (see bridge rules) keep that line's other fields as they were, so existing dashboards keep working. For Homework Tree LogNog goes further: it keeps **only** the fields in the table above, checks every value is a short code, a number or a time, rewrites the message, and throws the rest away. That applies whatever the event says its product is: the index it lands in decides.
 
 Only the products declared in section 3 are touched. A line in any other index is stored exactly as sent.
 
