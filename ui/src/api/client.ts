@@ -1053,7 +1053,7 @@ export interface FunnelReport {
     medianDaysSignupToPaid: number | null;
     medianDaysFirstUseToPaid: number | null;
     daysToPayBuckets: Array<{ label: string; people: number }>;
-    plans: Array<{ plan: string; payers: number; revenueCents: number }>;
+    plans: Array<{ plan: string; payers: number; payments: number; paymentsWithoutAmount: number; revenueCents: number }>;
     cohorts: Array<{ cohort: string; payers: number }>;
     repeatPayers: number;
     checkoutAbandoned: number;

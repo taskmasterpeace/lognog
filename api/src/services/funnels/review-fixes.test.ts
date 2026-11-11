@@ -107,7 +107,7 @@ describe('maths fixes', () => {
       [at(T0 - 20 * DAY, 'signup', 'old'), at(T0 - 19 * DAY, 'paid', 'old', { amountCents: 2499, plan: 'pro' }), at(T0 + 11 * DAY, 'paid', 'old', { amountCents: 2499, plan: 'pro' })],
     );
     expect(r.movingToPaid).toMatchObject({ payers: 0, payments: 1, revenueCents: 2499 });
-    expect(r.movingToPaid.plans).toEqual([{ plan: 'pro', payers: 1, revenueCents: 2499 }]);
+    expect(r.movingToPaid.plans).toEqual([{ plan: 'pro', payers: 1, payments: 1, paymentsWithoutAmount: 0, revenueCents: 2499 }]);
   });
 
   it('two people who happen to send the same event id are still two people', () => {
