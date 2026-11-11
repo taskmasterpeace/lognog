@@ -90,6 +90,7 @@ Example:
 |---|---|---|---|
 | Stage | From the fixed list | `paywall` | `upgrade_modal` |
 | Event name | lower_snake_case, thing then what happened | `limit_hit`, `signup_completed` | `User Signed Up!` |
+| Renewal payments | Event name contains `renewed` | `family_plan_renewed` | `paid` |
 | Ids | Opaque tokens, no spaces, no `@` | `a_9f2c1d` | an email address |
 | Money | Whole cents plus currency | `699`, `"usd"` | `"$6.99"` |
 | Source | Short code | `tiktok` | a full URL |
@@ -98,7 +99,9 @@ Example:
 
 Emails, names, IP addresses, browser strings, phone numbers, payment details, free text, uploaded content, and **anything about a child** (ids, names, answers, photos, recordings). The shared client never puts any of these in a funnel field, and LogNog refuses an email or a sentence as an id and drops personal keys from `props`, for every product. Products that mark a line they already send (see bridge rules) keep that line's other fields as they were, so existing dashboards keep working. For Homework Tree LogNog goes further: it keeps **only** the fields in the table above, checks every value is a short code, a number or a time, rewrites the message, and throws the rest away. That applies whatever the event says its product is: the index it lands in decides.
 
-Only the products declared in section 3 are touched. A line in any other index is stored exactly as sent.
+Only lines that land in a declared product's index are touched. A line in any other index is stored exactly as sent, with one exception that leans the safe way: a line that names Homework Tree as its product is cut to the allowlist wherever it lands.
+
+For Homework Tree the stored line is built from the allowlist field by field, so a field LogNog does not know cannot get through, and a line that cannot be read at all is replaced by a bare stub. What this cannot stop is a product deliberately packing words into a code-like value (an id such as `sam-age-7` has no spaces and looks like a code). The product's own code must only ever send hashed ids and fixed codes; Homework Tree's does.
 
 No third-party analytics is needed or used. Ids are first-party and random. Nothing is matched by device fingerprint, and people are never joined across products.
 
@@ -145,6 +148,8 @@ So the page shows real numbers before each product ships its part, LogNog reads 
 | Hey You're Hired | `Payment conversion tracked` | `paid` |
 | Hey You're Hired | `Subscription synced` with `status=canceled` | `churn` |
 
+A bridged payment line that carries no amount (Hey You're Hired's old `Payment conversion tracked` line) counts as a payment and shows money as "not reported", never as $0.
+
 Bridge rules only apply to lines that arrive after this ships; they do not rewrite history. A bridged line is stored exactly as the product sent it, with the funnel fields added: nothing is removed, so anything that already reads those lines keeps working. That also means a bridged line still carries whatever personal fields the product put on it; the clean-up above starts when the product marks the line itself.
 
 ## 4. How the numbers are worked out
@@ -168,7 +173,7 @@ Bridge rules only apply to lines that arrive after this ships; they do not rewri
 
 **Before they pay.** For everyone who has paid: what they did in the 14 days before their first payment, next to how many non-payers ever did the same thing. "2.0×" means payers were twice as likely to have done it.
 
-**The move to paying.** New payers = people whose first payment is in the range. Money in = every payment in the range, renewals from older customers included. Also: the middle (median) number of days from sign-up to paying, which plan, repeat buyers, and checkouts started more than an hour ago and never finished. Invited testers and free access are never counted as paid; `paid` comes only from the payment provider's confirmation.
+**The move to paying.** New payers = people whose first payment is in the range and is not a renewal (an event named `..._renewed`). LogNog keeps 90 days of history, so a yearly customer whose only payment in view is a renewal is not mistaken for a new one as long as the product names renewals that way. Money in = every payment in the range, renewals from older customers included. Also: the middle (median) number of days from sign-up to paying, which plan, repeat buyers, and checkouts started more than an hour ago and never finished. Invited testers and free access are never counted as paid; `paid` comes only from the payment provider's confirmation.
 
 **Duplicates.** Two events from the same person with the same stage and `event_id` count once.
 

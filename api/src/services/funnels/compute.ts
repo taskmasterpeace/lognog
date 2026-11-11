@@ -63,6 +63,8 @@ export interface FunnelReport {
     active: number;
     quiet: number;
     neverUsed: number;
+    /** Accounts too new to judge that have not used it yet. Counted inside `active`. */
+    newNotUsedYet: number;
     cancelled: number;
     /** How long quiet people lasted, from sign-up to last use. */
     lastedBuckets: Array<{ label: string; people: number }>;
@@ -83,6 +85,8 @@ export interface FunnelReport {
   movingToPaid: {
     payers: number;
     payments: number;
+    /** Payments in the range that came with no amount (old log lines read through a bridge rule). */
+    paymentsWithoutAmount: number;
     revenueCents: number;
     medianDaysSignupToPaid: number | null;
     medianDaysFirstUseToPaid: number | null;
@@ -134,7 +138,9 @@ interface Person {
   first: Partial<Record<SentStage, number>>;
   events: FunnelEvent[];
   useDays: Set<number>;
-  payments: Array<{ ts: number; cents: number; plan?: string }>;
+  payments: Array<{ ts: number; cents: number; hasAmount: boolean; plan?: string; renewal: boolean }>;
+  /** First payment that is not a renewal. A person with only renewals is an older customer, not a new payer. */
+  firstNewPaid?: number;
 }
 
 /** Tie anonymous ids to accounts, then group every event under one person. */
@@ -171,7 +177,11 @@ export function buildPeople(events: FunnelEvent[]): { people: Map<string, Person
     // Where they first came from sticks; a tester who later pays stays a tester.
     if (!p.cohort && e.cohort) p.cohort = e.cohort;
     if (e.stage === 'use' || e.stage === 'activate') p.useDays.add(dayNumber(e.ts));
-    if (e.stage === 'paid') p.payments.push({ ts: e.ts, cents: e.amountCents ?? 0, plan: e.plan });
+    if (e.stage === 'paid') {
+      const renewal = /renew/.test(e.event);
+      p.payments.push({ ts: e.ts, cents: e.amountCents ?? 0, hasAmount: e.amountCents !== undefined, plan: e.plan, renewal });
+      if (!renewal && p.firstNewPaid === undefined) p.firstNewPaid = e.ts;
+    }
   }
   return { people, withoutId };
 }
@@ -316,6 +326,7 @@ export function buildFunnelReport(product: FunnelProduct, events: FunnelEvent[],
   let active = 0;
   let quiet = 0;
   let neverUsed = 0;
+  let newNotUsedYet = 0;
   let cancelled = 0;
   const lasted: number[] = [];
   const lastBeforeQuiet = new Map<string, number>();
@@ -326,7 +337,10 @@ export function buildFunnelReport(product: FunnelProduct, events: FunnelEvent[],
     if (m.lastUse === undefined) {
       // Give brand-new accounts the quiet window before calling them lost.
       if (now - (m.signup as number) > quietMs) neverUsed++;
-      else active++;
+      else {
+        active++;
+        newNotUsedYet++;
+      }
       continue;
     }
     if (now - m.lastUse > quietMs) {
@@ -344,7 +358,9 @@ export function buildFunnelReport(product: FunnelProduct, events: FunnelEvent[],
     const signup = p.first.signup as number;
     if (signup < opts.from || signup > opts.to) continue;
     const weekStart = Math.floor((dayNumber(signup) + 3) / 7); // Monday-based week number
-    byWeek.set(weekStart, [...(byWeek.get(weekStart) ?? []), p]);
+    const members = byWeek.get(weekStart);
+    if (members) members.push(p);
+    else byWeek.set(weekStart, [p]);
   }
   const retention = [...byWeek.entries()]
     .sort((a, b) => a[0] - b[0])
@@ -395,7 +411,8 @@ export function buildFunnelReport(product: FunnelProduct, events: FunnelEvent[],
     .slice(0, 12);
 
   // --- What the move to paying looks like (payments inside the window) ---
-  const windowPayers = payers.filter((p) => (p.first.paid as number) >= opts.from && (p.first.paid as number) <= opts.to);
+  // New payers: first payment in the range, and that payment is not a renewal.
+  const windowPayers = payers.filter((p) => p.firstNewPaid !== undefined && p.firstNewPaid === p.first.paid && p.firstNewPaid >= opts.from && p.firstNewPaid <= opts.to);
   const signupToPaid: number[] = [];
   const useToPaid: number[] = [];
   const cohortRows = new Map<string, number>();
@@ -412,12 +429,14 @@ export function buildFunnelReport(product: FunnelProduct, events: FunnelEvent[],
   // Money in = EVERY payment in the range, renewals from older customers included.
   const planRows = new Map<string, { payers: number; revenueCents: number }>();
   let payments = 0;
+  let paymentsWithoutAmount = 0;
   let revenueCents = 0;
   for (const p of all) {
     const plansPaid = new Set<string>();
     for (const x of p.payments) {
       if (x.ts < opts.from || x.ts > opts.to) continue;
       payments++;
+      if (!x.hasAmount) paymentsWithoutAmount++;
       revenueCents += x.cents;
       const plan = x.plan || 'unknown';
       const row = planRows.get(plan) ?? { payers: 0, revenueCents: 0 };
@@ -460,6 +479,7 @@ export function buildFunnelReport(product: FunnelProduct, events: FunnelEvent[],
       active,
       quiet,
       neverUsed,
+      newNotUsedYet,
       cancelled,
       lastedBuckets: bucketList(lasted),
       lastThingBeforeQuiet: top(lastBeforeQuiet, 8),
@@ -469,6 +489,7 @@ export function buildFunnelReport(product: FunnelProduct, events: FunnelEvent[],
     movingToPaid: {
       payers: windowPayers.length,
       payments,
+      paymentsWithoutAmount,
       revenueCents,
       medianDaysSignupToPaid: round1(median(signupToPaid)),
       medianDaysFirstUseToPaid: round1(median(useToPaid)),

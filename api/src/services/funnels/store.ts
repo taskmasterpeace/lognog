@@ -15,7 +15,8 @@ export const MAX_FUNNEL_ROWS = 300_000;
 const INDEX_NAME = /^[a-z][a-z0-9_-]{0,31}$/;
 
 function str(v: unknown, max = 128): string | undefined {
-  if (v === undefined || v === null || v === '') return undefined;
+  // Only real text or numbers; an object would turn into "[object Object]" and merge strangers into one person.
+  if ((typeof v !== 'string' && typeof v !== 'number') || v === '') return undefined;
   const s = String(v);
   return s.length > max ? s.slice(0, max) : s;
 }

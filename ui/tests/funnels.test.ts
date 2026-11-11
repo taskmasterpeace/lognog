@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { dropBetween, eventLabel, money, pctText, stageLabel, widthPct } from '../src/utils/funnels.ts';
+import { dropBetween, eventLabel, money, moneyIn, pctText, stageLabel, widthPct } from '../src/utils/funnels.ts';
 
 const rung = (stage: string, people: number, over: Record<string, unknown> = {}) => ({
   stage, label: stage, people, pctOfPrevious: null, lost: 0, pctOfTop: null, applies: true, reported: true, ...over,
@@ -39,4 +39,11 @@ test('a tiny rung keeps a visible bar; an empty one has none', () => {
   assert.equal(widthPct(0, 1000), 0);
   assert.equal(widthPct(500, 1000), 50);
   assert.equal(widthPct(5, 0), 0);
+});
+
+test('money in never reads as $0 when payments arrived without amounts', () => {
+  assert.deepEqual(moneyIn(0, 3, 3), { value: 'not reported', note: '3 payments came with no amount' });
+  assert.deepEqual(moneyIn(999, 3, 1), { value: '$9.99', note: '1 of 3 payments came with no amount' });
+  assert.deepEqual(moneyIn(999, 1, 0), { value: '$9.99' });
+  assert.deepEqual(moneyIn(0, 0, 0), { value: '$0' });
 });

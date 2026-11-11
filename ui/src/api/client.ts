@@ -1032,6 +1032,7 @@ export interface FunnelReport {
     active: number;
     quiet: number;
     neverUsed: number;
+    newNotUsedYet: number;
     cancelled: number;
     lastedBuckets: Array<{ label: string; people: number }>;
     lastThingBeforeQuiet: Array<{ event: string; people: number }>;
@@ -1047,6 +1048,7 @@ export interface FunnelReport {
   movingToPaid: {
     payers: number;
     payments: number;
+    paymentsWithoutAmount: number;
     revenueCents: number;
     medianDaysSignupToPaid: number | null;
     medianDaysFirstUseToPaid: number | null;
@@ -1066,7 +1068,7 @@ export interface FunnelOverviewRow {
   getIn: FunnelRung[];
   pay: FunnelRung[];
   stopping: { signedUp: number; active: number; quiet: number; neverUsed: number; cancelled: number };
-  paid: { payers: number; revenueCents: number; medianDaysSignupToPaid: number | null };
+  paid: { payers: number; payments: number; paymentsWithoutAmount: number; revenueCents: number; medianDaysSignupToPaid: number | null };
   notReported: string[];
   truncated: boolean;
 }

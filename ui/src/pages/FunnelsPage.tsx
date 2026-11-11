@@ -10,7 +10,7 @@ import {
   getFunnelReport,
 } from '../api/client';
 import { ProjectLogo } from '../components/ProjectLogo';
-import { dropBetween, eventLabel, money, pctText, rangeLabel, RANGES, stageLabel, widthPct } from '../utils/funnels';
+import { dropBetween, eventLabel, money, moneyIn, pctText, rangeLabel, RANGES, stageLabel, widthPct } from '../utils/funnels';
 
 /**
  * Funnels (/funnels): every product read against the same two ladders
@@ -194,7 +194,7 @@ function OverviewCard({ row, onOpen }: { row: FunnelOverviewRow; onOpen: () => v
           <div className="min-w-0">
             <div className="truncate font-display text-lg font-semibold tracking-tight text-nog-900 dark:text-nog-50">{row.product.name}</div>
             <div className="text-xs text-nog-500 dark:text-nog-400">
-              {row.stopping.signedUp.toLocaleString()} accounts · {row.stopping.quiet.toLocaleString()} went quiet · {row.paid.payers.toLocaleString()} new payers · {money(row.paid.revenueCents)} in
+              {row.stopping.signedUp.toLocaleString()} accounts · {row.stopping.quiet.toLocaleString()} went quiet · {row.paid.payers.toLocaleString()} new payers · money in: {moneyIn(row.paid.revenueCents, row.paid.payments, row.paid.paymentsWithoutAmount).value}
             </div>
           </div>
         </div>
@@ -299,7 +299,12 @@ function ProductView({ report }: { report: FunnelReport }) {
         <Question icon={MoonStar} title="When do they stop using it?" hint={`Everyone with an account. Quiet = no use for ${report.product.quietDays} days`} />
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
           <Stat label="Have an account" value={s.signedUp.toLocaleString()} />
-          <Stat label="Still using it" value={s.active.toLocaleString()} sub={pctText(s.signedUp ? (s.active / s.signedUp) * 100 : null)} tone="good" />
+          <Stat
+            label="Still using it"
+            value={(s.active - s.newNotUsedYet).toLocaleString()}
+            sub={s.newNotUsedYet > 0 ? `plus ${s.newNotUsedYet.toLocaleString()} new, not used yet` : pctText(s.signedUp ? (s.active / s.signedUp) * 100 : null)}
+            tone="good"
+          />
           <Stat label="Went quiet" value={s.quiet.toLocaleString()} sub={pctText(s.signedUp ? (s.quiet / s.signedUp) * 100 : null)} tone="warn" />
           <Stat label="Never used it" value={s.neverUsed.toLocaleString()} sub={pctText(s.signedUp ? (s.neverUsed / s.signedUp) * 100 : null)} tone="warn" />
           <Stat
@@ -351,7 +356,11 @@ function ProductView({ report }: { report: FunnelReport }) {
           <Question icon={CircleDollarSign} title="What does the move to paying look like?" hint={`First payments in the ${rangeLabel(report.window.days)}`} />
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             <Stat label="New payers" value={m.payers.toLocaleString()} sub={`paid for the first time · ${m.repeatPayers.toLocaleString()} have paid again`} tone="good" />
-            <Stat label="Money in" value={money(m.revenueCents)} sub={`${m.payments.toLocaleString()} payments, renewals included`} />
+            <Stat
+              label="Money in"
+              value={moneyIn(m.revenueCents, m.payments, m.paymentsWithoutAmount).value}
+              sub={moneyIn(m.revenueCents, m.payments, m.paymentsWithoutAmount).note ?? `${m.payments.toLocaleString()} payments, renewals included`}
+            />
             <Stat label="Days to pay" value={m.medianDaysSignupToPaid === null ? '—' : String(m.medianDaysSignupToPaid)} sub="typical, from sign-up" />
             <Stat label="Left at checkout" value={m.checkoutAbandoned.toLocaleString()} sub="started, never paid" tone={m.checkoutAbandoned > 0 ? 'warn' : 'plain'} />
           </div>

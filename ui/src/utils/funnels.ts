@@ -67,3 +67,13 @@ export function dropBetween(rungs: FunnelRung[], index: number): { lost: number;
   if (lost <= 0) return null;
   return { lost, pctLost: pctText((lost / prev.people) * 100) };
 }
+
+/**
+ * "Money in" as shown: an amount, or "not reported" when payments arrived
+ * without amounts (old log lines), so a real sale never reads as $0.
+ */
+export function moneyIn(revenueCents: number, payments: number, withoutAmount: number): { value: string; note?: string } {
+  if (payments > 0 && withoutAmount >= payments) return { value: 'not reported', note: `${payments.toLocaleString('en-US')} payments came with no amount` };
+  if (withoutAmount > 0) return { value: money(revenueCents), note: `${withoutAmount.toLocaleString('en-US')} of ${payments.toLocaleString('en-US')} payments came with no amount` };
+  return { value: money(revenueCents) };
+}
