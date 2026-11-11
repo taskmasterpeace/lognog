@@ -60,6 +60,8 @@ test('week-over-week change reads plainly', () => {
   assert.equal(weekChange(8, 5), 'up 3 from the week before');
   assert.equal(weekChange(5, 8), 'down 3 from the week before');
   assert.equal(weekChange(5, 5), 'the same as the week before');
+});
+
 test('money in never reads as $0 when payments arrived without amounts', () => {
   assert.deepEqual(moneyIn(0, 3, 3), { value: 'not reported', note: '3 payments came with no amount' });
   assert.deepEqual(moneyIn(999, 3, 1), { value: '$9.99', note: '1 of 3 payments came with no amount' });
