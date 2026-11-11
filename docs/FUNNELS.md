@@ -176,7 +176,17 @@ Bridge rules only apply to lines that arrive after this ships; they do not rewri
 
 **Limits.** Up to 300,000 funnel events per product are read per request, newest first. Past that, the oldest are left out and the page says the numbers are low. All days are UTC.
 
-## 5. Asking LogNog directly
+## 5. Weekly report and board
+
+| Thing | Where |
+|---|---|
+| Weekly report page | LogNog → Funnels → Weekly report (`/funnels/weekly`) |
+| Weekly email | Every Monday 9:00 AM Eastern, to `FUNNEL_WEEKLY_TO` (or, if unset, whoever already gets LogNog's scheduled reports) |
+| Board view for a wall screen | LogNog → Funnels → Board view (`/funnels/board?seconds=20&days=30`, add `&product=<slug>` to hold on one) |
+
+The weekly report puts the last 7 days next to the 7 days before, each measured as it stood when that week ended, and names the single biggest leak in one sentence. A product that has sent nothing says "No real data yet". Every section and slide is led by the product's own logo.
+
+## 6. Asking LogNog directly
 
 The Funnels page uses `GET /api/funnels/overview?days=30` and `GET /api/funnels/report?product=<slug>&days=30`. The same fields work in Search and on dashboards:
 
@@ -190,7 +200,7 @@ The Funnels page uses `GET /api/funnels/overview?days=30` and `GET /api/funnels/
 
 The ladders, quiet users, retention and "before they pay" need the per-person maths in `api/src/services/funnels/compute.ts`, which runs the same on ClickHouse and on the SQLite (Lite) build.
 
-## 6. Changing this language
+## 7. Changing this language
 
 - Adding an optional field: add it here and to `FUNNEL_FIELDS`; no version change.
 - Renaming or removing a field or stage: bump `funnel_v` and keep reading the old version.
