@@ -11,6 +11,7 @@ import { insertLogs, getBackendInfo } from '../db/backend.js';
 import { getPendingNotifications, markNotificationDelivered, AgentNotification } from '../db/sqlite.js';
 import { logIngestionStats } from '../services/internal-logger.js';
 import { processLogs } from '../services/source-processor.js';
+import { normalizeFunnelEvent } from '../services/funnels/model.js';
 
 const router = Router();
 
@@ -1075,7 +1076,16 @@ router.post('/http', authenticateIngestion, async (req, res) => {
 
     const receivedAt = new Date().toISOString().replace('Z', '');
 
-    const logs = body.map((event: Record<string, unknown>) => {
+    const logs = body.map((rawEvent: Record<string, unknown>) => {
+      // Product funnel events (docs/FUNNELS.md): check the stage name, drop
+      // personal fields, and read known old log lines as funnel steps.
+      // Anything that is not a funnel event comes back untouched.
+      let event = rawEvent;
+      try {
+        event = normalizeFunnelEvent(rawEvent, customIndex);
+      } catch {
+        event = rawEvent;
+      }
       // Try to extract timestamp from various common field names
       let timestamp = receivedAt;
       const tsField = event.timestamp || event.time || event['@timestamp'] || event.ts || event.datetime;
