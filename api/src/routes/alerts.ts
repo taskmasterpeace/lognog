@@ -23,6 +23,7 @@ import {
   AlertSeverity,
   AlertScheduleType,
   getNotificationChannels,
+  setSystemSettings,
 } from '../db/sqlite.js';
 import { findActionProblems } from '../services/alert-action-problems.js';
 import { evaluateAlert, testAlert, evaluateAllAlerts, normalizeTriggerType } from '../services/alerts.js';
@@ -40,6 +41,15 @@ import {
   restoreHiddenActions,
 } from '../auth/alert-action-guard.js';
 import { refuseAdminOnly } from '../auth/api-key-gate.js';
+import {
+  DIGEST_KEYS,
+  buildDigestFromHistory,
+  effectiveDigestSettings,
+  isDigestDue,
+  isValidDigestTime,
+  isValidDigestTz,
+  readDigestSettings,
+} from '../services/alert-digest.js';
 
 const router = Router();
 
@@ -149,6 +159,82 @@ router.get('/templates', (_req: Request, res: Response) => {
 // RELAY_BUS_KEY are set; the URL and key never leave the server.
 router.get('/relay/status', (_req: Request, res: Response) => {
   res.json({ configured: isRelayConfigured(), projects: [...RELAY_PROJECTS] });
+});
+
+// ---- Daily alert digest (admin only) ----
+// One relay message a day that sums up the last 24 hours of alerts. These are
+// server-wide settings, so only an admin (browser session or an 'admin' API
+// key) may read or change them. Registered before the `/:id` family.
+const DIGEST_ADMIN_ONLY = 'Only an administrator can see or change the daily alert digest';
+
+function presentDigestSettings() {
+  const raw = readDigestSettings();
+  const s = effectiveDigestSettings(raw);
+  return {
+    enabled: s.enabled,
+    time: s.time,
+    tz: s.tz,
+    send_when_quiet: s.sendWhenQuiet,
+    last_sent: s.lastSent,
+    due: isDigestDue(raw),
+    relayConfigured: isRelayConfigured(),
+  };
+}
+
+router.get('/digest', (req: Request, res: Response) => {
+  if (!mayUseScripts(req)) return refuseAdminOnly(req, res, DIGEST_ADMIN_ONLY);
+  try {
+    res.json(presentDigestSettings());
+  } catch (error) {
+    console.error('Error getting alert digest settings:', error);
+    res.status(500).json({ error: 'Failed to get alert digest settings' });
+  }
+});
+
+router.put('/digest', (req: Request, res: Response) => {
+  if (!mayUseScripts(req)) return refuseAdminOnly(req, res, DIGEST_ADMIN_ONLY);
+  try {
+    const { enabled, time, tz, send_when_quiet } = req.body ?? {};
+    const changes: Record<string, string> = {};
+
+    if (enabled !== undefined) {
+      if (typeof enabled !== 'boolean') return res.status(400).json({ error: 'enabled must be true or false' });
+      changes[DIGEST_KEYS.enabled] = String(enabled);
+    }
+    if (send_when_quiet !== undefined) {
+      if (typeof send_when_quiet !== 'boolean') return res.status(400).json({ error: 'send_when_quiet must be true or false' });
+      changes[DIGEST_KEYS.sendWhenQuiet] = String(send_when_quiet);
+    }
+    if (time !== undefined) {
+      if (!isValidDigestTime(time)) return res.status(400).json({ error: 'time must be HH:MM, from 00:00 to 23:59' });
+      changes[DIGEST_KEYS.time] = time;
+    }
+    if (tz !== undefined) {
+      if (!isValidDigestTz(tz)) return res.status(400).json({ error: 'tz must be a time zone name like America/New_York' });
+      changes[DIGEST_KEYS.tz] = tz.trim();
+    }
+    if (Object.keys(changes).length === 0) {
+      return res.status(400).json({ error: 'Nothing to change: send enabled, time, tz or send_when_quiet' });
+    }
+
+    setSystemSettings(changes);
+    res.json(presentDigestSettings());
+  } catch (error) {
+    console.error('Error updating alert digest settings:', error);
+    res.status(500).json({ error: 'Failed to update alert digest settings' });
+  }
+});
+
+// What the digest would say right now, from the real history. Sends nothing.
+router.post('/digest/preview', (req: Request, res: Response) => {
+  if (!mayUseScripts(req)) return refuseAdminOnly(req, res, DIGEST_ADMIN_ONLY);
+  try {
+    const { text, total, texted, recordedOnly, critical, byRule } = buildDigestFromHistory();
+    res.json({ text, total, texted, recordedOnly, critical, byRule });
+  } catch (error) {
+    console.error('Error building alert digest preview:', error);
+    res.status(500).json({ error: 'Failed to build the alert digest preview' });
+  }
 });
 
 // Get alert history (all alerts)

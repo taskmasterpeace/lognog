@@ -5,6 +5,7 @@ import { executeDSLQuery, replayIngestSpool } from '../db/backend.js';
 import { recordReportRun } from '../db/sqlite-report-runs.js';
 import { parseAndCompile } from '../dsl/index.js';
 import { evaluateAlert } from './alerts.js';
+import { runAlertDigestIfDue } from './alert-digest.js';
 import { logReportGenerated, reportErrorSummary, type ReportStage } from './internal-logger.js';
 import { getStaleSources, markStaleNotified, markSourceUnexpected } from './heartbeat.js';
 import { getPullCollectors, runPullCollector } from './pull-collector.js';
@@ -811,6 +812,14 @@ async function runSchedulerTick(): Promise<void> {
 
     // Check alerts
     await checkAlerts();
+
+    // Daily alert digest: one relay message a day. It never throws; the catch
+    // is a second guard so nothing here can stop the rest of the tick.
+    try {
+      await runAlertDigestIfDue();
+    } catch (digestError) {
+      console.error('Alert digest error:', digestError);
+    }
 
     // Phase 3: Heartbeat / no-data sweep (cheap, reads tiny presence table)
     try {
