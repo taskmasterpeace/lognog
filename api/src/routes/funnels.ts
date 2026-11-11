@@ -4,11 +4,15 @@
  *   GET /funnels/products            the products and what each stage means for them
  *   GET /funnels/report?product=&days=   one product's full funnel report
  *   GET /funnels/overview?days=      every product side by side
+ *   GET /funnels/weekly              this week next to last week (?format=html = the email)
+ *   POST /funnels/weekly/send        email the weekly report now (admin)
  *
  * Read-only. Every query is cut down to the indexes the caller may read.
  */
 import { Router, Request, Response } from 'express';
-import { authenticate } from '../auth/middleware.js';
+import { authenticate, requireAdmin } from '../auth/middleware.js';
+import { getWeeklyFunnelReport, renderWeeklyFunnelEmail } from '../services/funnels/weekly.js';
+import { sendWeeklyFunnelReport } from '../services/funnels/weekly-send.js';
 import { buildFunnelReport, FunnelReport } from '../services/funnels/compute.js';
 import { fetchFunnelEvents } from '../services/funnels/store.js';
 import { FUNNEL_PRODUCTS, FUNNEL_VERSION, FunnelProduct, SENT_STAGES, STAGE_LABELS, findFunnelProduct } from '../services/funnels/model.js';
@@ -96,6 +100,35 @@ router.get('/overview', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Funnel overview error:', error);
     res.status(500).json({ error: 'Could not build the funnel overview' });
+  }
+});
+
+// The weekly report as data (the /funnels/weekly page), or as the email itself with ?format=html.
+router.get('/weekly', async (req: Request, res: Response) => {
+  try {
+    const report = await getWeeklyFunnelReport({ allowedIndexes: req.allowedIndexes ?? null });
+    if (req.query.format === 'html') {
+      // Same HTML as the email, with the logos inlined so it opens on its own.
+      const { FUNNEL_LOGO_PNG_BASE64 } = await import('../services/funnels/logos.js');
+      const html = renderWeeklyFunnelEmail(report).replace(/cid:funnel-logo-([a-z0-9-]+)/g, (_m, slug: string) =>
+        FUNNEL_LOGO_PNG_BASE64[slug] ? `data:image/png;base64,${FUNNEL_LOGO_PNG_BASE64[slug]}` : '',
+      );
+      return res.type('html').send(html);
+    }
+    res.json(report);
+  } catch (error) {
+    console.error('Weekly funnel report error:', error);
+    res.status(500).json({ error: 'Could not build the weekly funnel report' });
+  }
+});
+
+// Send the weekly email right now (admin only). The Monday 9:00 AM Eastern send is automatic.
+router.post('/weekly/send', requireAdmin, async (_req: Request, res: Response) => {
+  try {
+    res.json(await sendWeeklyFunnelReport());
+  } catch (error) {
+    console.error('Weekly funnel send error:', error);
+    res.status(500).json({ error: 'Could not send the weekly funnel report' });
   }
 });
 

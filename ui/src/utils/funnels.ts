@@ -68,6 +68,26 @@ export function dropBetween(rungs: FunnelRung[], index: number): { lost: number;
   return { lost, pctLost: pctText((lost / prev.people) * 100) };
 }
 
+/** Seconds each product stays on the smartboard: 20 by default, kept between 5 and 300. */
+export function boardSeconds(raw: string | null | undefined): number {
+  const n = Math.floor(Number(raw));
+  if (!raw || !Number.isFinite(n)) return 20;
+  return Math.min(300, Math.max(5, n));
+}
+
+/** The slide after (or before) this one, wrapping round. Safe with no slides. */
+export function nextSlide(index: number, count: number, step: 1 | -1): number {
+  if (count <= 0) return 0;
+  return (((index + step) % count) + count) % count;
+}
+
+/** "up 3 from the week before" / "down 2 from the week before" / "the same as the week before". */
+export function weekChange(now: number, before: number): string {
+  if (now === before) return 'the same as the week before';
+  const diff = now - before;
+  return `${diff > 0 ? 'up' : 'down'} ${Math.abs(diff).toLocaleString('en-US')} from the week before`;
+}
+
 /**
  * "Money in" as shown: an amount, or "not reported" when payments arrived
  * without amounts (old log lines), so a real sale never reads as $0.

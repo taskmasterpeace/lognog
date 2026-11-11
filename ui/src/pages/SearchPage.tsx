@@ -502,13 +502,22 @@ export default function SearchPage() {
 
   // Auto-run the search once on mount if a query came in via URL params
   // (shareable/bookmarkable searches). Runs only once.
+  //
+  // The run is deferred one tick and cancelled on cleanup. Firing the mutation
+  // straight from the mount effect loses its result when React mounts the
+  // effect twice (StrictMode in development): the first run's observer is torn
+  // down and the page sat on "Searching logs..." for ever. With the timer, the
+  // throwaway first mount cancels its run and only the real mount searches.
   useEffect(() => {
     if (didAutoRunFromUrl.current) return;
     const urlQuery = searchParams.get('q');
-    if (urlQuery && urlQuery.trim()) {
+    if (!urlQuery || !urlQuery.trim()) return;
+    const timer = window.setTimeout(() => {
+      if (didAutoRunFromUrl.current) return;
       didAutoRunFromUrl.current = true;
       handleSearch();
-    }
+    }, 0);
+    return () => window.clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
