@@ -1,7 +1,7 @@
 import { ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router-dom';
-import { ArrowDown, ArrowRight, CircleDollarSign, DoorOpen, Filter, Loader2, MoonStar, Sparkles, AlertTriangle } from 'lucide-react';
+import { ArrowDown, ArrowRight, CalendarDays, CircleDollarSign, DoorOpen, Filter, Loader2, MonitorPlay, MoonStar, Sparkles, AlertTriangle } from 'lucide-react';
 import {
   FunnelOverviewRow,
   FunnelReport,
@@ -250,6 +250,15 @@ function ProductView({ report }: { report: FunnelReport }) {
   return (
     <div className="space-y-3">
       <Card>
+        <div className="mb-3 flex items-center gap-3" data-testid="product-header">
+          <ProjectLogo value={report.product.slug} size="lg" />
+          <div className="min-w-0">
+            <h2 className="truncate font-display text-2xl font-semibold tracking-tight text-nog-900 dark:text-nog-50">{report.product.name}</h2>
+            <p className="text-xs text-nog-500 dark:text-nog-400">
+              {report.totals.people.toLocaleString()} people seen · last {report.window.days} days
+            </p>
+          </div>
+        </div>
         <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-sm text-nog-600 dark:text-nog-300">
           <span><span className="font-semibold text-nog-900 dark:text-nog-50">First real use:</span> {report.product.activationMeans}</span>
           <span><span className="font-semibold text-nog-900 dark:text-nog-50">Paid:</span> {report.product.paidMeans}</span>
@@ -407,10 +416,24 @@ export default function FunnelsPage() {
           <h1 className="font-display text-3xl font-semibold tracking-tight text-nog-900 dark:text-nog-50">Funnels</h1>
           <p className="text-sm text-nog-500 dark:text-nog-400">Where people come in, where they fall off, and what turns them into customers. Same steps for every product.</p>
         </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Link
+            to="/funnels/weekly"
+            className="inline-flex items-center gap-1.5 rounded-full border border-nog-200 bg-white px-3 py-1.5 text-sm font-medium text-nog-700 transition-colors duration-200 hover:border-nog-300 hover:bg-nog-50 dark:border-nog-700 dark:bg-nog-800 dark:text-nog-200 dark:hover:bg-nog-700/60"
+          >
+            <CalendarDays className="h-4 w-4" strokeWidth={2} /> Weekly report
+          </Link>
+          <Link
+            to={`/funnels/board?days=${days}`}
+            className="inline-flex items-center gap-1.5 rounded-full border border-nog-200 bg-white px-3 py-1.5 text-sm font-medium text-nog-700 transition-colors duration-200 hover:border-nog-300 hover:bg-nog-50 dark:border-nog-700 dark:bg-nog-800 dark:text-nog-200 dark:hover:bg-nog-700/60"
+          >
+            <MonitorPlay className="h-4 w-4" strokeWidth={2} /> Board view
+          </Link>
         <div className="flex items-center gap-1 rounded-full border border-nog-200 bg-white p-1 dark:border-nog-700 dark:bg-nog-800" role="group" aria-label="Date range">
           {RANGES.map((d) => (
             <Pill key={d} active={days === d} onClick={() => set({ days: d })}>{d} days</Pill>
           ))}
+        </div>
         </div>
       </header>
 

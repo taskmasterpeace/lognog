@@ -258,7 +258,7 @@ const SCOPE_AWARE_READS: readonly RegExp[] = [
   /^\/status\/lights$/,
   /^\/reports\/weekly$/,
   // routes/funnels.ts: every read is cut to the product indexes the key may read.
-  /^\/funnels\/(products|report|overview)$/,
+  /^\/funnels\/(products|report|overview|weekly)$/,
 ];
 
 /**

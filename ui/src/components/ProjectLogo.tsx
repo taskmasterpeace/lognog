@@ -4,11 +4,11 @@ import { findProjectBrand } from '../utils/projectBrands';
 interface ProjectLogoProps {
   /** app_name, app_scope or project slug. */
   value?: string | null;
-  size?: 'xs' | 'sm' | 'md';
+  size?: 'xs' | 'sm' | 'md' | 'lg';
   className?: string;
 }
 
-const SIZES = { xs: 'w-5 h-5', sm: 'w-7 h-7', md: 'w-10 h-10' };
+const SIZES = { xs: 'w-5 h-5', sm: 'w-7 h-7', md: 'w-10 h-10', lg: 'w-14 h-14' };
 
 /** The product's logo in a small rounded tile. Renders nothing for unknown apps. */
 export function ProjectLogo({ value, size = 'sm', className = '' }: ProjectLogoProps) {

@@ -1075,6 +1075,42 @@ export async function getFunnelOverview(days: number): Promise<{ days: number; p
   return request(`/funnels/overview?days=${days}`);
 }
 
+export interface WeeklyFunnelStep {
+  stage: string;
+  label: string;
+  applies: boolean;
+  reported: boolean;
+  people: number;
+  pctOfPrevious: number | null;
+  lost: number;
+  peopleBefore: number | null;
+}
+
+export interface WeeklyFunnelSection {
+  product: { slug: string; name: string; quietDays: number };
+  hasData: boolean;
+  headline: string;
+  getIn: WeeklyFunnelStep[];
+  pay: WeeklyFunnelStep[];
+  biggestLeak: { from: string; to: string; lost: number; outOf: number; pctLost: number; sentence: string } | null;
+  quiet: { now: number; before: number; change: number; accounts: number };
+  money: { newPayers: number; newPayersBefore: number; payments: number; revenueCents: number; revenueCentsBefore: number };
+  notReported: string[];
+  truncated: boolean;
+}
+
+export interface WeeklyFunnelReportData {
+  generatedAt: string;
+  weekStart: string;
+  weekEnd: string;
+  title: string;
+  sections: WeeklyFunnelSection[];
+}
+
+export async function getWeeklyFunnelReport(): Promise<WeeklyFunnelReportData> {
+  return request('/funnels/weekly');
+}
+
 export async function getFunnelReport(product: string, days: number): Promise<FunnelReport> {
   return request(`/funnels/report?product=${encodeURIComponent(product)}&days=${days}`);
 }
