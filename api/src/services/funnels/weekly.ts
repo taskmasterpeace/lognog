@@ -36,7 +36,7 @@ export interface WeeklySection {
   pay: WeeklyStep[];
   biggestLeak: { from: string; to: string; lost: number; outOf: number; pctLost: number; sentence: string } | null;
   quiet: { now: number; before: number; change: number; accounts: number };
-  money: { newPayers: number; newPayersBefore: number; payments: number; revenueCents: number; revenueCentsBefore: number };
+  money: { newPayers: number; newPayersBefore: number; payments: number; paymentsWithoutAmount: number; revenueCents: number; revenueCentsBefore: number };
   notReported: string[];
   truncated: boolean;
 }
@@ -161,6 +161,7 @@ export function buildWeeklySection(product: FunnelProduct, events: FunnelEvent[]
       newPayers: now.movingToPaid.payers,
       newPayersBefore: before.movingToPaid.payers,
       payments: now.movingToPaid.payments,
+      paymentsWithoutAmount: now.movingToPaid.paymentsWithoutAmount,
       revenueCents: now.movingToPaid.revenueCents,
       revenueCentsBefore: before.movingToPaid.revenueCents,
     },
@@ -261,7 +262,7 @@ ${head}
 <td width="8"></td>
 <td width="33%" style="background:${SAND};border-radius:8px;padding:10px 12px;"><div style="font-size:11px;text-transform:uppercase;color:${MUTED};">New payers</div><div style="font-size:22px;font-weight:700;color:${DARK};">${m.newPayers.toLocaleString('en-US')}</div><div style="font-size:12px;color:${MUTED};">${esc(change(m.newPayers, m.newPayersBefore))}</div></td>
 <td width="8"></td>
-<td width="33%" style="background:${SAND};border-radius:8px;padding:10px 12px;"><div style="font-size:11px;text-transform:uppercase;color:${MUTED};">Money in</div><div style="font-size:22px;font-weight:700;color:${DARK};">${money(m.revenueCents)}</div><div style="font-size:12px;color:${MUTED};">week before: ${money(m.revenueCentsBefore)}</div></td>
+<td width="33%" style="background:${SAND};border-radius:8px;padding:10px 12px;"><div style="font-size:11px;text-transform:uppercase;color:${MUTED};">Money in</div><div style="font-size:22px;font-weight:700;color:${DARK};">${m.payments > 0 && m.paymentsWithoutAmount >= m.payments ? 'not reported' : money(m.revenueCents)}</div><div style="font-size:12px;color:${MUTED};">${m.paymentsWithoutAmount > 0 ? `${m.paymentsWithoutAmount} of ${m.payments} payments came with no amount` : `week before: ${money(m.revenueCentsBefore)}`}</div></td>
 </tr></table>
 <p style="margin:8px 0 0;font-size:12px;color:${MUTED};">Went quiet = has an account and has not used ${esc(s.product.name)} for ${s.product.quietDays} days.</p>
 ${missing}

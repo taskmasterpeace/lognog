@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 import { getWeeklyFunnelReport, WeeklyFunnelSection, WeeklyFunnelStep } from '../api/client';
 import { ProjectLogo } from '../components/ProjectLogo';
-import { money, weekChange } from '../utils/funnels';
+import { money, moneyIn, weekChange } from '../utils/funnels';
 
 /**
  * Weekly funnel report (/funnels/weekly): the same report that is emailed
@@ -78,8 +78,10 @@ function Section({ s }: { s: WeeklyFunnelSection }) {
             </div>
             <div className="rounded-[0.625rem] bg-nog-50 px-3 py-2 dark:bg-nog-900/40">
               <div className="text-[11px] font-medium uppercase tracking-wide text-nog-500 dark:text-nog-400">Money in</div>
-              <div className="text-2xl font-bold tabular-nums text-nog-900 dark:text-nog-50">{money(s.money.revenueCents)}</div>
-              <div className="text-xs text-nog-500 dark:text-nog-400">week before: {money(s.money.revenueCentsBefore)}</div>
+              <div className="text-2xl font-bold tabular-nums text-nog-900 dark:text-nog-50">{moneyIn(s.money.revenueCents, s.money.payments, s.money.paymentsWithoutAmount).value}</div>
+              <div className="text-xs text-nog-500 dark:text-nog-400">
+                {moneyIn(s.money.revenueCents, s.money.payments, s.money.paymentsWithoutAmount).note ?? `week before: ${money(s.money.revenueCentsBefore)}`}
+              </div>
             </div>
           </div>
           <p className="mt-2 text-xs text-nog-500 dark:text-nog-400">

@@ -52,7 +52,7 @@ describe('weekly funnel report: one product', () => {
   });
 
   it('counts new payers and money in for each week', () => {
-    expect(s.money).toEqual({ newPayers: 1, newPayersBefore: 1, payments: 1, revenueCents: 999, revenueCentsBefore: 2499 });
+    expect(s.money).toEqual({ newPayers: 1, newPayersBefore: 1, payments: 1, paymentsWithoutAmount: 0, revenueCents: 999, revenueCentsBefore: 2499 });
   });
 
   it('counts who has gone quiet, and the change', () => {

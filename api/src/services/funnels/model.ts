@@ -145,7 +145,7 @@ export function findFunnelProduct(slugOrIndex: string): FunnelProduct | undefine
 // Ingest-time tidy-up
 // ---------------------------------------------------------------------------
 
-/** Fields a funnel event may carry. Anything else is left alone on normal products, dropped on strict ones. */
+/** Fields a funnel event may carry. Anything else is left alone on normal products; strict ones are rebuilt from this list (buildStrictEvent). */
 export const FUNNEL_FIELDS = [
   'funnel_v', 'funnel_stage', 'funnel_event', 'product', 'surface', 'env',
   'anon_id', 'user_id', 'session_id', 'event_id',
@@ -171,7 +171,7 @@ function cleanProps(input: unknown, strict: boolean): Record<string, string | nu
   let n = 0;
   for (const [k, v] of Object.entries(input as Record<string, unknown>)) {
     if (n >= 20) break;
-    if (!PROP_KEY.test(k) || PII_KEYS.has(k)) continue;
+    if (!PROP_KEY.test(k) || PII_KEYS.has(k) || UNSAFE_KEYS.has(k)) continue;
     if (typeof v === 'number' && Number.isFinite(v)) out[k] = v;
     else if (typeof v === 'boolean') out[k] = v;
     else if (typeof v === 'string') {
@@ -192,7 +192,7 @@ function applyLegacyRules(event: Record<string, unknown>, product: FunnelProduct
   for (const rule of rules) {
     const hit = (v: string) => (rule.prefix ? v.startsWith(rule.match) : v === rule.match);
     if (!hit(message) && !hit(name)) continue;
-    if (rule.where && !Object.entries(rule.where).every(([k, v]) => String(event[k] ?? '') === v)) continue;
+    if (rule.where && !Object.entries(rule.where).every(([k, v]) => event[k] === v)) continue;
     const out: Record<string, unknown> = { ...event, funnel_v: FUNNEL_VERSION, funnel_stage: rule.stage, funnel_event: rule.event, funnel_legacy: 1 };
     if (!out.product) out.product = product.slug;
     for (const [std, old] of Object.entries(rule.copy ?? {})) {
@@ -203,102 +203,158 @@ function applyLegacyRules(event: Record<string, unknown>, product: FunnelProduct
   return event;
 }
 
-const STRICT_TOKEN_KEYS = [
+const TOKEN_KEYS = [
   'utm_source', 'utm_medium', 'utm_campaign', 'referrer_host', 'landing_path',
-  'cohort', 'plan', 'interval', 'currency', 'surface', 'env', 'hostname', 'app_name', 'level',
+  'cohort', 'plan', 'interval', 'currency', 'surface', 'env',
 ] as const;
+const ID_KEYS = ['anon_id', 'user_id', 'session_id', 'event_id'] as const;
+/** Keys that could reach an object's prototype; never copied. */
+const UNSAFE_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
+/** A time, written the standard way. Nothing else is accepted as a timestamp on a strict product. */
+const ISO_TIME = /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(:\d{2}(\.\d{1,6})?)?(Z|[+-]\d{2}:?\d{2})?$/;
+
+/** An id is an opaque token: a string or number, no spaces, no "@", not too long. */
+function cleanId(raw: unknown): string | undefined {
+  if (typeof raw !== 'string' && typeof raw !== 'number') return undefined;
+  const id = String(raw);
+  if (id === '' || id.length > 128 || id.includes('@') || /\s/.test(id)) return undefined;
+  return id;
+}
+
+function cleanCents(raw: unknown): number | undefined {
+  if (typeof raw !== 'number' && typeof raw !== 'string') return undefined;
+  if (raw === '') return undefined;
+  const cents = Math.round(Number(raw));
+  return Number.isFinite(cents) && cents >= 0 ? cents : undefined;
+}
+
+function cleanVersion(raw: unknown): number {
+  const v = typeof raw === 'number' || typeof raw === 'string' ? Number(raw) : NaN;
+  return Number.isInteger(v) && v > 0 && v < 1000 ? v : FUNNEL_VERSION;
+}
+
+function cleanEventName(raw: unknown, fallback: string): string {
+  const name = typeof raw === 'string' ? raw.toLowerCase().trim().replace(/[^a-z0-9_]+/g, '_') : '';
+  return EVENT_NAME.test(name) ? name : fallback;
+}
 
 /**
- * Clean one event that is being treated as a funnel step (or that tried to be
- * one). `stage` is the checked stage name, or null when the name was unknown.
+ * Strict (kids/family) products: the stored line is BUILT from the allowlist,
+ * field by field, each value checked for its kind. Nothing is copied across
+ * by default, so a field this function does not know about cannot survive.
  */
-function cleanFunnelEvent(event: Record<string, unknown>, product: FunnelProduct, strict: boolean, stage: SentStage | null): Record<string, unknown> {
+function buildStrictEvent(event: Record<string, unknown>, product: FunnelProduct, stage: SentStage | null): Record<string, unknown> {
+  const out: Record<string, unknown> = { product: product.slug, funnel_v: cleanVersion(event.funnel_v), level: 'info' };
+
+  const ts = event.timestamp;
+  if (typeof ts === 'number' && Number.isFinite(ts) && ts > 0) out.timestamp = ts;
+  else if (typeof ts === 'string' && ts.length <= 40 && ISO_TIME.test(ts) && Number.isFinite(Date.parse(ts))) out.timestamp = ts;
+
+  for (const key of ID_KEYS) {
+    const id = cleanId(event[key]);
+    if (id) out[key] = id;
+  }
+  for (const key of TOKEN_KEYS) {
+    const v = event[key];
+    if (typeof v === 'string' && SAFE_TOKEN.test(v)) out[key] = v;
+  }
+  const cents = cleanCents(event.amount_cents);
+  if (cents !== undefined) out.amount_cents = cents;
+  const props = cleanProps(event.props, true);
+  if (props) out.props = props;
+
+  if (stage === null) {
+    out.funnel_error = 'unknown stage';
+    out.message = 'funnel unknown stage';
+    return out;
+  }
+  out.funnel_stage = stage;
+  out.funnel_event = cleanEventName(event.funnel_event, stage);
+  out.message = `funnel ${stage} ${out.funnel_event}`;
+  return out;
+}
+
+/**
+ * Other products mark lines their dashboards already read, so the line's other
+ * fields are left as they were; only the funnel fields are checked.
+ */
+function tidyOpenEvent(event: Record<string, unknown>, product: FunnelProduct, stage: SentStage | null): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(event)) {
-    // Strict products keep the allowlist and nothing else. Other products mark
-    // lines their dashboards already read, so their other fields are left alone.
-    if (strict && (PII_KEYS.has(k) || !(FUNNEL_FIELDS as readonly string[]).includes(k))) continue;
+    if (UNSAFE_KEYS.has(k)) continue;
     out[k] = v;
   }
-
-  for (const idKey of ['anon_id', 'user_id', 'session_id', 'event_id'] as const) {
-    const raw = out[idKey];
-    // An id is an opaque token; an email, a sentence or an object is not an id.
-    if ((typeof raw !== 'string' && typeof raw !== 'number') || raw === '') {
-      delete out[idKey];
-      continue;
-    }
-    const id = String(raw);
-    if (id.length > 128 || id.includes('@') || /\s/.test(id)) delete out[idKey];
-    else out[idKey] = id;
+  for (const key of ID_KEYS) {
+    if (!(key in out)) continue;
+    const id = cleanId(out[key]);
+    if (id) out[key] = id;
+    else delete out[key];
   }
-
-  if (out.amount_cents !== undefined) {
-    const cents = Math.round(Number(out.amount_cents));
-    if (typeof out.amount_cents !== 'object' && Number.isFinite(cents) && cents >= 0) out.amount_cents = cents;
+  if ('amount_cents' in out) {
+    const cents = cleanCents(out.amount_cents);
+    if (cents !== undefined) out.amount_cents = cents;
     else delete out.amount_cents;
   }
-
-  const props = cleanProps(event.props, strict);
+  const props = cleanProps(event.props, false);
   if (props) out.props = props;
   else delete out.props;
-
-  if (strict) {
-    // The product is whatever the index says, never what the event claims.
-    out.product = product.slug;
-    for (const k of STRICT_TOKEN_KEYS) {
-      if (out[k] !== undefined && !(typeof out[k] === 'string' && SAFE_TOKEN.test(out[k] as string))) delete out[k];
-    }
-    const ts = out.timestamp;
-    const tsOk = (typeof ts === 'number' && Number.isFinite(ts)) || (typeof ts === 'string' && ts.length <= 40 && Number.isFinite(Date.parse(ts)));
-    if (!tsOk) delete out.timestamp;
-  } else if (typeof out.product !== 'string' || !out.product) {
-    out.product = product.slug;
-  }
+  if (typeof out.product !== 'string' || !out.product) out.product = product.slug;
 
   if (stage === null) {
     // Keep the line (so it shows up when someone searches), but it must not count.
     delete out.funnel_stage;
     delete out.funnel_event;
-    const said = String(event.funnel_stage ?? '').toLowerCase().replace(/[^a-z0-9_]+/g, '_').slice(0, 40);
-    out.funnel_error = strict ? 'unknown stage' : `unknown stage "${said}"`;
-    if (strict) out.message = 'funnel unknown stage';
+    const said = typeof event.funnel_stage === 'string' ? event.funnel_stage.toLowerCase().replace(/[^a-z0-9_]+/g, '_').slice(0, 40) : '';
+    out.funnel_error = `unknown stage "${said}"`;
     return out;
   }
-
   out.funnel_stage = stage;
-  const version = Number(event.funnel_v);
-  out.funnel_v = Number.isInteger(version) && version > 0 && version < 1000 ? version : FUNNEL_VERSION;
-  const rawEvent = typeof event.funnel_event === 'string' ? event.funnel_event.toLowerCase().trim().replace(/[^a-z0-9_]+/g, '_') : '';
-  out.funnel_event = EVENT_NAME.test(rawEvent) ? rawEvent : stage;
-  if (strict) out.message = `funnel ${stage} ${out.funnel_event}`;
+  out.funnel_v = cleanVersion(event.funnel_v);
+  out.funnel_event = cleanEventName(event.funnel_event, stage);
   return out;
 }
 
 /**
  * Called for every event on POST /ingest/http, before it is stored.
- * - Only products in FUNNEL_PRODUCTS are touched: an event in any other index
- *   comes back as the same object, whatever fields it has.
- * - An event with `funnel_stage` is checked and tidied (bad stage names are
- *   flagged, personal fields removed, strict products cut to the allowlist).
+ *
+ * - A line is only touched when it LANDS IN a declared product's index. A line
+ *   in any other index comes back as the same object, whatever it contains.
+ *   The one exception leans the safe way: a line that names a strict (kids)
+ *   product is cut to the allowlist wherever it lands.
+ * - An event with `funnel_stage` is checked: bad stage names are flagged, ids
+ *   and amounts are checked, strict products are rebuilt from the allowlist.
  * - An old-style event that matches a product's bridge rule gets funnel fields
  *   ADDED; nothing is removed from it, so whatever reads those lines today
- *   keeps working.
+ *   keeps working. Strict products have no bridge rules.
  * - Everything else is returned untouched (same object).
+ *
+ * It never throws. If a strict product's event cannot be read at all, a bare
+ * stub is stored in its place rather than the original.
  */
 export function normalizeFunnelEvent(event: Record<string, unknown>, indexName: string): Record<string, unknown> {
   if (!event || typeof event !== 'object' || Array.isArray(event)) return event;
-  // Where the event LANDS decides the product. The event's own `product` field
-  // can only make the rules stricter, never looser.
-  const byIndex = findFunnelProduct(indexName);
-  const byName = typeof event.product === 'string' ? findFunnelProduct(event.product) : undefined;
-  const product = byIndex ?? byName;
-  if (!product) return event;
-  const strict = !!byIndex?.strictPrivacy || !!byName?.strictPrivacy;
+  let strictProduct: FunnelProduct | undefined;
+  try {
+    // Where the event LANDS decides the product. The event's own `product`
+    // field can only make the rules stricter, never looser.
+    const byIndex = findFunnelProduct(indexName);
+    const named = typeof event.product === 'string' ? findFunnelProduct(event.product) : undefined;
+    strictProduct = byIndex?.strictPrivacy ? byIndex : named?.strictPrivacy ? named : undefined;
+    if (!byIndex && !strictProduct) return event;
 
-  if (event.funnel_stage === undefined) {
-    return applyLegacyRules(event, product);
+    const hasStage = Object.prototype.hasOwnProperty.call(event, 'funnel_stage') && event.funnel_stage !== undefined;
+    if (!hasStage) {
+      // Bridge rules only run for the product whose index this is.
+      return byIndex && !strictProduct ? applyLegacyRules(event, byIndex) : event;
+    }
+    const stageText = typeof event.funnel_stage === 'string' ? event.funnel_stage.toLowerCase().trim() : '';
+    const stage = isSentStage(stageText) ? stageText : null;
+    if (strictProduct) return buildStrictEvent(event, strictProduct, stage);
+    return tidyOpenEvent(event, byIndex as FunnelProduct, stage);
+  } catch {
+    if (strictProduct) {
+      return { product: strictProduct.slug, level: 'warn', message: 'funnel event dropped', funnel_error: 'could not be read' };
+    }
+    return event;
   }
-  const stage = typeof event.funnel_stage === 'string' ? event.funnel_stage.toLowerCase().trim() : '';
-  return cleanFunnelEvent(event, product, strict, isSentStage(stage) ? stage : null);
 }

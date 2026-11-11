@@ -1080,12 +1080,9 @@ router.post('/http', authenticateIngestion, async (req, res) => {
       // Product funnel events (docs/FUNNELS.md): check the stage name, drop
       // personal fields, and read known old log lines as funnel steps.
       // Anything that is not a funnel event comes back untouched.
-      let event = rawEvent;
-      try {
-        event = normalizeFunnelEvent(rawEvent, customIndex);
-      } catch {
-        event = rawEvent;
-      }
+      // normalizeFunnelEvent never throws (it catches inside and, for a kids
+      // product, stores a stub rather than the original).
+      const event = normalizeFunnelEvent(rawEvent, customIndex);
       // Try to extract timestamp from various common field names
       let timestamp = receivedAt;
       const tsField = event.timestamp || event.time || event['@timestamp'] || event.ts || event.datetime;

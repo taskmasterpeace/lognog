@@ -4,7 +4,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { ArrowRight, Pause, Play, X } from 'lucide-react';
 import { FunnelOverviewRow, FunnelRung, getFunnelOverview } from '../api/client';
 import { findProjectBrand } from '../utils/projectBrands';
-import { boardSeconds, money, nextSlide, pctText } from '../utils/funnels';
+import { boardSeconds, moneyIn, nextSlide, pctText } from '../utils/funnels';
 
 /**
  * Funnel board (/funnels/board): the smartboard view. One product per slide,
@@ -89,7 +89,11 @@ function Slide({ row, days }: { row: FunnelOverviewRow; days: number }) {
             <Tile label="Accounts" value={row.stopping.signedUp.toLocaleString()} sub={`${row.stopping.active.toLocaleString()} still using it`} />
             <Tile label="Went quiet" value={row.stopping.quiet.toLocaleString()} sub={`no use for ${row.product.quietDays} days`} />
             <Tile label="New payers" value={row.paid.payers.toLocaleString()} sub={row.paid.medianDaysSignupToPaid === null ? undefined : `${row.paid.medianDaysSignupToPaid} days to pay, typically`} />
-            <Tile label="Money in" value={money(row.paid.revenueCents)} />
+            <Tile
+              label="Money in"
+              value={moneyIn(row.paid.revenueCents, row.paid.payments, row.paid.paymentsWithoutAmount).value}
+              sub={moneyIn(row.paid.revenueCents, row.paid.payments, row.paid.paymentsWithoutAmount).note}
+            />
           </div>
         </>
       )}

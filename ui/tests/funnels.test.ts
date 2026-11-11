@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { boardSeconds, dropBetween, eventLabel, money, nextSlide, pctText, stageLabel, weekChange, widthPct } from '../src/utils/funnels.ts';
+import { boardSeconds, dropBetween, eventLabel, money, moneyIn, nextSlide, pctText, stageLabel, weekChange, widthPct } from '../src/utils/funnels.ts';
 
 const rung = (stage: string, people: number, over: Record<string, unknown> = {}) => ({
   stage, label: stage, people, pctOfPrevious: null, lost: 0, pctOfTop: null, applies: true, reported: true, ...over,
@@ -60,4 +60,9 @@ test('week-over-week change reads plainly', () => {
   assert.equal(weekChange(8, 5), 'up 3 from the week before');
   assert.equal(weekChange(5, 8), 'down 3 from the week before');
   assert.equal(weekChange(5, 5), 'the same as the week before');
+test('money in never reads as $0 when payments arrived without amounts', () => {
+  assert.deepEqual(moneyIn(0, 3, 3), { value: 'not reported', note: '3 payments came with no amount' });
+  assert.deepEqual(moneyIn(999, 3, 1), { value: '$9.99', note: '1 of 3 payments came with no amount' });
+  assert.deepEqual(moneyIn(999, 1, 0), { value: '$9.99' });
+  assert.deepEqual(moneyIn(0, 0, 0), { value: '$0' });
 });
