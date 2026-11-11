@@ -370,7 +370,7 @@ function ProductView({ report }: { report: FunnelReport }) {
         {report.totals.eventsWithoutId > 0 ? ` · ${report.totals.eventsWithoutId.toLocaleString()} steps had no id and are not counted` : ''}
         {report.totals.lastEventAt ? ` · newest ${new Date(report.totals.lastEventAt).toLocaleString()}` : ''}
         {report.truncated ? ' · too many steps to read them all; numbers are low' : ''} ·{' '}
-        <Link className="font-medium text-honey-700 underline-offset-2 hover:underline dark:text-honey-400" to={`/search?q=${encodeURIComponent(`search index=${report.product.slug} funnel_stage=* | stats count by funnel_stage, funnel_event`)}`}>
+        <Link className="font-medium text-honey-700 underline-offset-2 hover:underline dark:text-honey-400" to={`/search?q=${encodeURIComponent(`search index=${report.product.slug} funnel_stage=* | stats count by funnel_stage, funnel_event`)}&earliest=-${report.window.days}d`}>
           See the raw steps in Search
         </Link>
       </p>
