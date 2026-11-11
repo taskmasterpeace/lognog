@@ -299,7 +299,7 @@ export function buildFunnelReport(product: FunnelProduct, events: FunnelEvent[],
   // sign-up. Only applied when the product reports sign-ups at all; otherwise
   // every account would look like this. The cost: a new person whose sign-up line
   // was lost is also kept off the ladders rather than guessed onto them.
-  const signupReported = stagesSeen.has('signup');
+  const signupReported = all.some((p) => p.first.signup !== undefined);
   const isOlderAccount = (p: Person): boolean => signupReported && p.isUser && p.first.signup === undefined;
   const olderAccounts = all.filter(isOlderAccount);
 
@@ -349,6 +349,13 @@ export function buildFunnelReport(product: FunnelProduct, events: FunnelEvent[],
     // Cancelled = their latest cancellation is newer than their latest payment.
     if (m.lastChurn !== undefined && !p.payments.some((x) => x.ts > (m.lastChurn as number))) cancelled++;
     if (m.lastUse === undefined) {
+      if (p.first.signup === undefined) {
+        // An older account with no use in view. We do not know its history, so it
+        // is never "new" or "never used": it is active if we saw it lately, quiet if not.
+        if (now - p.events[p.events.length - 1].ts > quietMs) quiet++;
+        else active++;
+        continue;
+      }
       // Give brand-new accounts the quiet window before calling them lost.
       if (now - startOf(p) > quietMs) neverUsed++;
       else {
@@ -359,7 +366,8 @@ export function buildFunnelReport(product: FunnelProduct, events: FunnelEvent[],
     }
     if (now - m.lastUse > quietMs) {
       quiet++;
-      lasted.push(Math.max(0, (m.lastUse - startOf(p)) / DAY));
+      // "How long they lasted" runs from sign-up, so only for accounts whose sign-up we saw.
+      if (p.first.signup !== undefined) lasted.push(Math.max(0, (m.lastUse - p.first.signup) / DAY));
       const last = [...p.events].reverse().find((e) => e.stage === 'use' || e.stage === 'activate');
       if (last) lastBeforeQuiet.set(last.event, (lastBeforeQuiet.get(last.event) ?? 0) + 1);
     } else active++;

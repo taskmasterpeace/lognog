@@ -192,3 +192,28 @@ describe('older accounts coming back', () => {
     expect(r.totals.olderAccounts).toBe(0);
   });
 });
+
+describe('older accounts: status', () => {
+  it('an older account with no use in view is never "new, not used yet" or "never used"', () => {
+    const recent = report([
+      at(NOW - DAY, 'signup', 'new'),
+      { ts: NOW - 2 * DAY, stage: 'visit', event: 'landing_viewed', anonId: 'a_old' },
+      { ts: NOW - 2 * DAY + 5, stage: 'visit', event: 'signed_in', anonId: 'a_old', userId: 'old' },
+    ]);
+    expect(recent.stopping).toMatchObject({ signedUp: 2, active: 2, newNotUsedYet: 1, neverUsed: 0, quiet: 0 });
+    const longAgo = report([at(NOW - DAY, 'signup', 'new'), at(T0, 'churn', 'old_sub', { event: 'subscription_cancelled' })]);
+    expect(longAgo.stopping).toMatchObject({ signedUp: 2, neverUsed: 0, quiet: 1, newNotUsedYet: 1 });
+  });
+
+  it('"how long they lasted" is only measured for accounts whose sign-up was seen', () => {
+    const r = report([at(NOW - DAY, 'signup', 'new'), at(T0, 'use', 'old'), at(T0 + 5 * DAY, 'use', 'old')]);
+    expect(r.stopping.quiet).toBe(1);
+    expect(r.stopping.lastedBuckets.reduce((n, b) => n + b.people, 0)).toBe(0);
+  });
+
+  it('a sign-up line with no id does not switch the older-account rule on', () => {
+    const r = report([{ ts: T0, stage: 'signup', event: 'signup_completed' } as FunnelEvent, at(T0, 'use', 'u1'), at(T0 + DAY, 'use', 'u2')]);
+    expect(r.totals.olderAccounts).toBe(0);
+    expect(r.getIn.find((x) => x.stage === 'activate')?.people).toBe(2);
+  });
+});

@@ -166,7 +166,7 @@ Bridge rules only apply to lines that arrive after this ships; they do not rewri
 - A person counts on a rung if they reached that rung **or any later one**. A step a product does not report yet can therefore never make a later number bigger than an earlier one.
 - **Drop-off** between two rungs = people on the upper rung minus people on the lower one. The percentage shown is "of the rung above".
 - LogNog reads 90 extra days of history before the range, so an old customer who shows up again is not counted as new.
-- An account with no sign-up event for it anywhere in view is an **older account coming back** (someone signing in after months away). It is kept off the ladders, so it never reads as "visited, never signed up" or as a new sign-up; it still counts under "Have an account". This only applies to products that report sign-ups. The cost: a new person whose sign-up line was lost is also left off the ladders.
+- An account with no sign-up event for it anywhere in view is an **older account coming back** (someone signing in after months away). It is kept off the ladders, so it never reads as "visited, never signed up" or as a new sign-up; it still counts under "Have an account" (still using it if seen within the quiet window, otherwise quiet; never "new" or "never used", and left out of "how long they lasted"). This only applies to products that report sign-ups. The cost: a new person whose sign-up line was lost is also left off the ladders.
 
 **Went quiet.** Signed up, used it at least once, and the last `use` is older than the product's quiet window. New accounts get the full window before they can be called "never used".
 
