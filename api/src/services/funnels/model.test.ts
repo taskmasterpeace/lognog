@@ -101,7 +101,8 @@ describe('funnel language: tidy-up on the way in', () => {
 
     it('matches on the `event` field and on extra conditions', () => {
       expect(normalizeFunnelEvent({ message: 'Generation completed', event: 'generation_completed', user_id: 'u' }, 'directors-palette').funnel_stage).toBe('use');
-      expect(normalizeFunnelEvent({ message: 'credit_event', status: 'insufficient', user_id: 'u' }, 'directors-palette').funnel_stage).toBe('paywall');
+      expect(normalizeFunnelEvent({ message: 'credit_event', status: 'insufficient', action: 'deduct', user_id: 'u' }, 'directors-palette').funnel_stage).toBe('paywall');
+      expect(normalizeFunnelEvent({ message: 'credit_event', status: 'insufficient', action: 'bonus', user_id: 'u' }, 'directors-palette').funnel_stage).toBeUndefined();
       expect(normalizeFunnelEvent({ message: 'credit_event', status: 'ok', user_id: 'u' }, 'directors-palette').funnel_stage).toBeUndefined();
     });
 

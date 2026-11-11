@@ -94,7 +94,8 @@ export const FUNNEL_PRODUCTS: FunnelProduct[] = [
     legacyRules: [
       { match: 'User signup completed', stage: 'signup', event: 'signup_completed' },
       { match: 'generation_completed', stage: 'use', event: 'generation_completed' },
-      { match: 'credit_event', where: { status: 'insufficient' }, stage: 'paywall', event: 'out_of_points' },
+      // Only a refused charge is a paywall; a zero-point bonus line with the same status is not.
+      { match: 'credit_event', where: { status: 'insufficient', action: 'deduct' }, stage: 'paywall', event: 'out_of_points' },
       { match: 'checkout_session_created', stage: 'checkout', event: 'checkout_started', copy: { user_id: 'userId', plan: 'packageName' } },
       {
         match: 'payment_completed',

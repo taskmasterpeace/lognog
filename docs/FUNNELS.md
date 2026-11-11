@@ -135,7 +135,7 @@ So the page shows real numbers before each product ships its part, LogNog reads 
 |---|---|---|
 | Directors Palette | `User signup completed` | `signup` |
 | Directors Palette | `generation_completed` | `use` |
-| Directors Palette | `credit_event` with `status=insufficient` | `paywall` |
+| Directors Palette | `credit_event` with `status=insufficient` and `action=deduct` | `paywall` |
 | Directors Palette | `checkout_session_created` | `checkout` |
 | Directors Palette | `payment_completed` | `paid` |
 | Hey You're Hired | `User signup` | `signup` |
