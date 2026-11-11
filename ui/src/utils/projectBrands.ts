@@ -30,6 +30,7 @@ export const PROJECT_BRANDS: ProjectBrand[] = [
   { slug: 'knuckle-up', name: 'KNUCKLE UP', logo: '/brands/knuckle-up.svg', accent: '#F5B21A', aliases: ['knuckleup', 'mugen-platform'] },
   { slug: 'dramatis', name: 'DRAMATIS', logo: '/brands/dramatis.svg', accent: '#3EC5CF', aliases: ['audio-movie-studio', 'audiomoviestudio'] },
   { slug: 'verbadeck', name: 'VerbaDeck', logo: '/brands/verbadeck.png', accent: '#15A6D6', aliases: ['verba-deck'] },
+  { slug: 'presidium', name: 'Presidium', logo: '/brands/presidium.png', accent: '#FFD629', aliases: [] },
 ];
 
 const norm = (s: string) => s.toLowerCase().trim().replace(/[\s_.]+/g, '-').replace(/[^a-z0-9-]/g, '');
@@ -54,4 +55,24 @@ export function findProjectBrand(value?: string | null): ProjectBrand | undefine
     if (n === key || flat === key.replace(/-/g, '') || n.startsWith(key + '-')) return b;
   }
   return undefined;
+}
+
+/**
+ * Dashboard groups (app_scope) the studio named itself. They are short everyday words, so
+ * they are matched only for dashboards, never for log sources: "game" as an app name could
+ * be anything, but the "Game" dashboard group is always Consequences of Failure.
+ */
+export const DASHBOARD_SCOPE_BRANDS: Record<string, string> = {
+  game: 'consequences-of-failure',
+  studio: 'machine-king-labs',
+  'main-suite': 'machine-king-labs',
+};
+
+/** Find the product for a dashboard's app_scope: a known product name first, then the studio's own group names. */
+export function findDashboardBrand(scope?: string | null): ProjectBrand | undefined {
+  const known = findProjectBrand(scope);
+  if (known) return known;
+  if (!scope) return undefined;
+  const slug = DASHBOARD_SCOPE_BRANDS[norm(scope)];
+  return slug ? PROJECT_BRANDS.find((b) => b.slug === slug) : undefined;
 }
