@@ -28,7 +28,8 @@ function parseDays(raw: unknown): number {
 
 function canRead(product: FunnelProduct, allowed: string[] | null | undefined): boolean {
   if (!allowed || allowed.length === 0) return true;
-  return product.indexes.some((i) => allowed.includes(i));
+  const lower = allowed.map((i) => String(i).toLowerCase());
+  return product.indexes.some((i) => lower.includes(i));
 }
 
 async function reportFor(product: FunnelProduct, days: number, allowed: string[] | null | undefined): Promise<FunnelReport & { truncated: boolean }> {

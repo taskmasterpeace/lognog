@@ -36,7 +36,7 @@ LogNog **works out** these. Products never send them.
 | Worked out | Rule |
 |---|---|
 | First real use | The product's `activate` event if it declares one, otherwise the first `use` |
-| Came back | A `use` on a later calendar day than the first real use |
+| Came back | A `use` on a later calendar day (UTC) than the first real use, and at least 12 hours after it |
 | Went quiet | Has an account, and no `use` for the product's quiet window (see section 4) |
 | Never used | Has an account older than the quiet window and no `use` at all |
 
@@ -96,7 +96,9 @@ Example:
 
 ### Never in a funnel event
 
-Emails, names, IP addresses, browser strings, phone numbers, payment details, free text, uploaded content, and **anything about a child** (ids, names, answers, photos, recordings). LogNog removes the common ones on the way in for every product. For Homework Tree it keeps **only** the fields in the table above and throws the rest away.
+Emails, names, IP addresses, browser strings, phone numbers, payment details, free text, uploaded content, and **anything about a child** (ids, names, answers, photos, recordings). On every line a product marks with `funnel_stage`, LogNog removes the common personal fields on the way in. For Homework Tree it keeps **only** the fields in the table above, checks every value is a short code, a number or a time, rewrites the message, and throws the rest away. That applies whatever the event says its product is: the index it lands in decides.
+
+Only the products declared in section 3 are touched. A line in any other index is stored exactly as sent.
 
 No third-party analytics is needed or used. Ids are first-party and random. Nothing is matched by device fingerprint, and people are never joined across products.
 
@@ -143,7 +145,7 @@ So the page shows real numbers before each product ships its part, LogNog reads 
 | Hey You're Hired | `Payment conversion tracked` | `paid` |
 | Hey You're Hired | `Subscription synced` with `status=canceled` | `churn` |
 
-Bridge rules only apply to lines that arrive after this ships; they do not rewrite history.
+Bridge rules only apply to lines that arrive after this ships; they do not rewrite history. A bridged line is stored exactly as the product sent it, with the funnel fields added: nothing is removed, so anything that already reads those lines keeps working. That also means a bridged line still carries whatever personal fields the product put on it; the clean-up above starts when the product marks the line itself.
 
 ## 4. How the numbers are worked out
 
@@ -166,9 +168,13 @@ Bridge rules only apply to lines that arrive after this ships; they do not rewri
 
 **Before they pay.** For everyone who has paid: what they did in the 14 days before their first payment, next to how many non-payers ever did the same thing. "2.0×" means payers were twice as likely to have done it.
 
-**The move to paying.** First payments in the range: how many people, how many payments, money in, the middle (median) number of days from sign-up to paying, which plan, repeat buyers, and checkouts that were started and never finished. Invited testers and free access are never counted as paid; `paid` comes only from the payment provider's confirmation.
+**The move to paying.** New payers = people whose first payment is in the range. Money in = every payment in the range, renewals from older customers included. Also: the middle (median) number of days from sign-up to paying, which plan, repeat buyers, and checkouts started more than an hour ago and never finished. Invited testers and free access are never counted as paid; `paid` comes only from the payment provider's confirmation.
 
-**Duplicates.** Two events with the same stage and `event_id` count once.
+**Duplicates.** Two events from the same person with the same stage and `event_id` count once.
+
+**Cancelled.** Their latest cancellation is newer than their latest payment. Someone who cancels and later pays again is not counted as cancelled.
+
+**Limits.** Up to 300,000 funnel events per product are read per request, newest first. Past that, the oldest are left out and the page says the numbers are low. All days are UTC.
 
 ## 5. Asking LogNog directly
 

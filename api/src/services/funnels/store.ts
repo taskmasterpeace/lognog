@@ -64,7 +64,8 @@ export async function fetchFunnelEvents(
   allowedIndexes: string[] | null | undefined,
 ): Promise<{ events: FunnelEvent[]; truncated: boolean }> {
   const indexes = product.indexes.filter((i) => INDEX_NAME.test(i));
-  const readable = allowedIndexes && allowedIndexes.length > 0 ? indexes.filter((i) => allowedIndexes.includes(i)) : indexes;
+  const allowed = allowedIndexes && allowedIndexes.length > 0 ? allowedIndexes.map((i) => String(i).toLowerCase()) : null;
+  const readable = allowed ? indexes.filter((i) => allowed.includes(i)) : indexes;
   if (readable.length === 0) return { events: [], truncated: false };
 
   // Index names are validated against INDEX_NAME above; the timestamp is built from a number.
@@ -77,22 +78,27 @@ export async function fetchFunnelEvents(
     rows = getSQLiteLogsDB()
       .prepare(
         `SELECT timestamp, structured_data FROM logs
-         WHERE ${scope} AND timestamp >= ? AND json_extract(structured_data, '$.funnel_stage') IS NOT NULL
-         ORDER BY timestamp ASC LIMIT ?`,
+         WHERE ${scope} AND timestamp >= ? AND json_valid(structured_data)
+           AND json_extract(structured_data, '$.funnel_stage') IS NOT NULL
+         ORDER BY timestamp DESC LIMIT ?`,
       )
       .all(sinceLite, MAX_FUNNEL_ROWS + 1) as typeof rows;
   } else {
     rows = await executeRawQuery<{ timestamp: unknown; structured_data: unknown }>(
       `SELECT timestamp, structured_data FROM lognog.logs
-       WHERE ${scope} AND timestamp >= {since:String} AND JSONHas(structured_data, 'funnel_stage')
-       ORDER BY timestamp ASC LIMIT {limit:UInt32}`,
+       WHERE ${scope} AND timestamp >= parseDateTime64BestEffort({since:String}, 3, 'UTC')
+         AND JSONHas(structured_data, 'funnel_stage')
+       ORDER BY timestamp DESC LIMIT {limit:UInt32}`,
       { since, limit: MAX_FUNNEL_ROWS + 1 },
     );
   }
+  // Newest first from the store, so if there are too many the OLDEST are the
+  // ones left out; handed on oldest-first.
   const truncated = rows.length > MAX_FUNNEL_ROWS;
   const events: FunnelEvent[] = [];
-  for (const row of truncated ? rows.slice(0, MAX_FUNNEL_ROWS) : rows) {
-    const e = rowToFunnelEvent(row);
+  const kept = truncated ? rows.slice(0, MAX_FUNNEL_ROWS) : rows;
+  for (let i = kept.length - 1; i >= 0; i--) {
+    const e = rowToFunnelEvent(kept[i]);
     if (e) events.push(e);
   }
   return { events, truncated };

@@ -202,6 +202,9 @@ function OverviewCard({ row, onOpen }: { row: FunnelOverviewRow; onOpen: () => v
           Open <ArrowRight className="h-4 w-4" strokeWidth={2} />
         </span>
       </div>
+      {row.truncated && (
+        <p className="mt-2 text-xs font-medium text-orange-700 dark:text-orange-400">Too many steps to read them all. The oldest were left out, so these numbers are low.</p>
+      )}
       {row.totals.events === 0 ? (
         <p className="mt-3 text-sm text-nog-500 dark:text-nog-400">No funnel steps received yet.</p>
       ) : (
@@ -347,15 +350,15 @@ function ProductView({ report }: { report: FunnelReport }) {
         <Card>
           <Question icon={CircleDollarSign} title="What does the move to paying look like?" hint={`First payments in the ${rangeLabel(report.window.days)}`} />
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <Stat label="New payers" value={m.payers.toLocaleString()} sub={`${m.payments.toLocaleString()} payments · ${m.repeatPayers.toLocaleString()} paid again`} tone="good" />
-            <Stat label="Money in" value={money(m.revenueCents)} />
+            <Stat label="New payers" value={m.payers.toLocaleString()} sub={`paid for the first time · ${m.repeatPayers.toLocaleString()} have paid again`} tone="good" />
+            <Stat label="Money in" value={money(m.revenueCents)} sub={`${m.payments.toLocaleString()} payments, renewals included`} />
             <Stat label="Days to pay" value={m.medianDaysSignupToPaid === null ? '—' : String(m.medianDaysSignupToPaid)} sub="typical, from sign-up" />
             <Stat label="Left at checkout" value={m.checkoutAbandoned.toLocaleString()} sub="started, never paid" tone={m.checkoutAbandoned > 0 ? 'warn' : 'plain'} />
           </div>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div>
               <h3 className="mb-1.5 text-sm font-semibold text-nog-800 dark:text-nog-100">Which plan</h3>
-              <SmallTable head={['Plan', 'Payers', 'Money in']} rows={m.plans.map((p) => [eventLabel(p.plan), p.payers, money(p.revenueCents)])} empty="No payments in this range." />
+              <SmallTable head={['Plan', 'People who paid', 'Money in']} rows={m.plans.map((p) => [eventLabel(p.plan), p.payers, money(p.revenueCents)])} empty="No payments in this range." />
             </div>
             <div>
               <h3 className="mb-1.5 text-sm font-semibold text-nog-800 dark:text-nog-100">How long it took</h3>
@@ -369,7 +372,7 @@ function ProductView({ report }: { report: FunnelReport }) {
         {report.totals.events.toLocaleString()} funnel steps from {report.totals.people.toLocaleString()} people
         {report.totals.eventsWithoutId > 0 ? ` · ${report.totals.eventsWithoutId.toLocaleString()} steps had no id and are not counted` : ''}
         {report.totals.lastEventAt ? ` · newest ${new Date(report.totals.lastEventAt).toLocaleString()}` : ''}
-        {report.truncated ? ' · too many steps to read them all; numbers are low' : ''} ·{' '}
+        {report.truncated ? ' · too many steps to read them all; the oldest were left out, so numbers are low' : ''} ·{' '}
         <Link className="font-medium text-honey-700 underline-offset-2 hover:underline dark:text-honey-400" to={`/search?q=${encodeURIComponent(`search index=${report.product.slug} funnel_stage=* | stats count by funnel_stage, funnel_event`)}&earliest=-${report.window.days}d`}>
           See the raw steps in Search
         </Link>

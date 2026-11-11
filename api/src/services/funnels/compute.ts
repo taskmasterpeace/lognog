@@ -6,7 +6,8 @@
  *  - A person is one `user_id`. Before sign-up they are an `anon_id`; the first
  *    event that carries both ties the two together for good.
  *  - "First real use" = the product's `activate` event, or the first `use`.
- *  - "Came back" = a `use` on a later calendar day than the first real use.
+ *  - "Came back" = a `use` on a later calendar day (UTC) than the first real
+ *    use, and at least 12 hours after it.
  *  - "Went quiet" = signed up, and no `use` for the product's quiet window.
  *  - A person counts at a rung of a ladder if they reached that rung OR any
  *    later rung, so a step a product does not report yet never makes the
@@ -95,6 +96,18 @@ export interface FunnelReport {
 }
 
 const DAY = 86_400_000;
+const HOUR = 3_600_000;
+/** A second use only counts as "came back" this long after the first (so one late evening is not two visits). */
+const RETURN_GAP = 12 * HOUR;
+/** A checkout younger than this is still in progress, not abandoned. */
+const CHECKOUT_GRACE = HOUR;
+
+/** Largest value of a list; safe for very long lists (no argument spreading). */
+function maxOf(values: number[]): number {
+  let m = -Infinity;
+  for (const v of values) if (v > m) m = v;
+  return m;
+}
 
 function median(values: number[]): number | null {
   if (values.length === 0) return null;
@@ -143,7 +156,7 @@ export function buildPeople(events: FunnelEvent[]): { people: Map<string, Person
     }
     // Retries and double-sent webhooks: the same event id counts once.
     if (e.eventId) {
-      const dedupe = `${e.stage}|${e.eventId}`;
+      const dedupe = `${key}|${e.stage}|${e.eventId}`;
       if (seenEventIds.has(dedupe)) continue;
       seenEventIds.add(dedupe);
     }
@@ -171,14 +184,18 @@ function milestones(p: Person, product: FunnelProduct) {
   if (activate !== undefined) {
     const d0 = dayNumber(activate);
     for (const e of p.events) {
-      if (e.stage === 'use' && dayNumber(e.ts) > d0) {
+      if (e.stage === 'use' && dayNumber(e.ts) > d0 && e.ts - activate >= RETURN_GAP) {
         returned = e.ts;
         break;
       }
     }
   }
-  const useTimes = p.events.filter((e) => e.stage === 'use' || e.stage === 'activate').map((e) => e.ts);
-  const lastUse = useTimes.length ? Math.max(...useTimes) : undefined;
+  let lastUse: number | undefined;
+  let lastChurn: number | undefined;
+  for (const e of p.events) {
+    if ((e.stage === 'use' || e.stage === 'activate') && (lastUse === undefined || e.ts > lastUse)) lastUse = e.ts;
+    if (e.stage === 'churn' && (lastChurn === undefined || e.ts > lastChurn)) lastChurn = e.ts;
+  }
   return {
     visit: p.first.visit,
     signup_start: p.first.signup_start,
@@ -190,6 +207,7 @@ function milestones(p: Person, product: FunnelProduct) {
     paid: p.first.paid,
     churn: p.first.churn,
     lastUse,
+    lastChurn,
   };
 }
 type Milestones = ReturnType<typeof milestones>;
@@ -303,7 +321,8 @@ export function buildFunnelReport(product: FunnelProduct, events: FunnelEvent[],
   const lastBeforeQuiet = new Map<string, number>();
   for (const p of accounts) {
     const m = milestones(p, product);
-    if (m.churn !== undefined && !p.payments.some((x) => x.ts > (m.churn as number))) cancelled++;
+    // Cancelled = their latest cancellation is newer than their latest payment.
+    if (m.lastChurn !== undefined && !p.payments.some((x) => x.ts > (m.lastChurn as number))) cancelled++;
     if (m.lastUse === undefined) {
       // Give brand-new accounts the quiet window before calling them lost.
       if (now - (m.signup as number) > quietMs) neverUsed++;
@@ -333,7 +352,7 @@ export function buildFunnelReport(product: FunnelProduct, events: FunnelEvent[],
       const weekStartTs = (weekNo * 7 - 3) * DAY;
       const weeks = RET_WEEKS.map((n) => {
         // Only score a week once EVERY member has had the chance to finish it.
-        const lastSignup = Math.max(...members.map((p) => p.first.signup as number));
+        const lastSignup = maxOf(members.map((p) => p.first.signup as number));
         if (lastSignup + (n * 7 + 7) * DAY > now) return null;
         const came = members.filter((p) => {
           const d0 = dayNumber(p.first.signup as number);
@@ -379,32 +398,44 @@ export function buildFunnelReport(product: FunnelProduct, events: FunnelEvent[],
   const windowPayers = payers.filter((p) => (p.first.paid as number) >= opts.from && (p.first.paid as number) <= opts.to);
   const signupToPaid: number[] = [];
   const useToPaid: number[] = [];
-  const planRows = new Map<string, { payers: number; revenueCents: number }>();
   const cohortRows = new Map<string, number>();
-  let payments = 0;
-  let revenueCents = 0;
   let repeatPayers = 0;
   for (const p of windowPayers) {
     const m = milestones(p, product);
     const paidAt = p.first.paid as number;
     if (m.signup !== undefined && m.signup <= paidAt) signupToPaid.push((paidAt - m.signup) / DAY);
     if (m.activate !== undefined && m.activate <= paidAt) useToPaid.push((paidAt - m.activate) / DAY);
-    const inWindow = p.payments.filter((x) => x.ts >= opts.from && x.ts <= opts.to);
-    payments += inWindow.length;
     if (p.payments.length > 1) repeatPayers++;
-    const plan = p.payments[0]?.plan || 'unknown';
-    const row = planRows.get(plan) ?? { payers: 0, revenueCents: 0 };
-    row.payers++;
-    for (const x of inWindow) {
-      revenueCents += x.cents;
-      row.revenueCents += x.cents;
-    }
-    planRows.set(plan, row);
     const c = p.cohort || 'not set';
     cohortRows.set(c, (cohortRows.get(c) ?? 0) + 1);
   }
+  // Money in = EVERY payment in the range, renewals from older customers included.
+  const planRows = new Map<string, { payers: number; revenueCents: number }>();
+  let payments = 0;
+  let revenueCents = 0;
+  for (const p of all) {
+    const plansPaid = new Set<string>();
+    for (const x of p.payments) {
+      if (x.ts < opts.from || x.ts > opts.to) continue;
+      payments++;
+      revenueCents += x.cents;
+      const plan = x.plan || 'unknown';
+      const row = planRows.get(plan) ?? { payers: 0, revenueCents: 0 };
+      row.revenueCents += x.cents;
+      if (!plansPaid.has(plan)) {
+        plansPaid.add(plan);
+        row.payers++;
+      }
+      planRows.set(plan, row);
+    }
+  }
   const checkoutAbandoned = all.filter(
-    (p) => p.first.checkout !== undefined && p.first.checkout >= opts.from && p.first.checkout <= opts.to && !p.payments.some((x) => x.ts >= (p.first.checkout as number)),
+    (p) =>
+      p.first.checkout !== undefined &&
+      p.first.checkout >= opts.from &&
+      p.first.checkout <= opts.to &&
+      now - p.first.checkout > CHECKOUT_GRACE &&
+      !p.payments.some((x) => x.ts >= (p.first.checkout as number)),
   ).length;
 
   const applicableStages = [...new Set<string>([...GET_IN_LADDER, ...PAY_LADDER, 'churn'])].filter((s) => !product.notApplicable.includes(s));
@@ -414,7 +445,7 @@ export function buildFunnelReport(product: FunnelProduct, events: FunnelEvent[],
     return !stagesSeen.has(s);
   });
 
-  const lastTs = usable.length ? Math.max(...usable.map((e) => e.ts)) : null;
+  const lastTs = usable.length ? maxOf(usable.map((e) => e.ts)) : null;
   return {
     product: { slug: product.slug, name: product.name, quietDays: product.quietDays, activationMeans: product.activationMeans, paidMeans: product.paidMeans, notApplicable: product.notApplicable },
     window: { from: new Date(opts.from).toISOString(), to: new Date(opts.to).toISOString(), days: Math.round((opts.to - opts.from) / DAY) },
