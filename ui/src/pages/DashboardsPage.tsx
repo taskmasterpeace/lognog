@@ -21,7 +21,7 @@ import DashboardBuilderWizard from '../components/DashboardBuilderWizard';
 import DashboardImportModal from '../components/dashboard/DashboardImportModal';
 import AppScopeFilter from '../components/AppScopeFilter';
 import ProjectLogo from '../components/ProjectLogo';
-import { findDashboardBrand, findProjectBrand } from '../utils/projectBrands';
+import { findDashboardBrand, findProjectBrand, scopeLabel } from '../utils/projectBrands';
 import { useDateFormat } from '../contexts/DateFormatContext';
 import { useToast } from '../contexts/ToastContext';
 import { useConfirm } from '../components/ui/ConfirmDialog';
@@ -313,7 +313,7 @@ export default function DashboardsPage() {
                       <div className="flex items-center gap-3 sm:gap-4 text-xs text-nog-500 dark:text-nog-400">
                         {dashboard.app_scope && dashboard.app_scope !== 'default' && (
                           <span className="px-2 py-0.5 bg-honey-100 dark:bg-honey-900/30 text-honey-700 dark:text-honey-400 rounded text-xs font-medium">
-                            {findProjectBrand(dashboard.app_scope)?.name ?? dashboard.app_scope}
+                            {findProjectBrand(dashboard.app_scope)?.name ?? scopeLabel(dashboard.app_scope)}
                           </span>
                         )}
                         <span className="flex items-center gap-1">

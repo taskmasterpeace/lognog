@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import { PROJECT_BRANDS, DASHBOARD_SCOPE_BRANDS, findDashboardBrand, findProjectBrand } from '../src/utils/projectBrands.ts';
+import { PROJECT_BRANDS, DASHBOARD_SCOPE_BRANDS, findDashboardBrand, findProjectBrand, scopeLabel } from '../src/utils/projectBrands.ts';
 
 // The dashboard groups on the live site (logs.machinekinglabs.com, 2026-11-11), "Default" left out.
 const LIVE_SCOPES: Array<[string, string]> = [
@@ -51,4 +51,11 @@ test('every dashboard group points at a real product, and every logo file exists
     const file = fileURLToPath(new URL('../public' + b.logo, import.meta.url));
     assert.ok(existsSync(file), b.logo);
   }
+});
+
+test('group names read like names on the card chip', () => {
+  assert.equal(scopeLabel('main-suite'), 'Main Suite');
+  assert.equal(scopeLabel('game'), 'Game');
+  assert.equal(scopeLabel('studio'), 'Studio');
+  assert.equal(scopeLabel('some_other group'), 'Some Other Group');
 });

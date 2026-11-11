@@ -76,3 +76,12 @@ export function findDashboardBrand(scope?: string | null): ProjectBrand | undefi
   const slug = DASHBOARD_SCOPE_BRANDS[norm(scope)];
   return slug ? PROJECT_BRANDS.find((b) => b.slug === slug) : undefined;
 }
+
+/** A dashboard group's name as people read it: "main-suite" -> "Main Suite". */
+export function scopeLabel(scope: string): string {
+  return scope
+    .split(/[-_\s]+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
