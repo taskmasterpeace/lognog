@@ -326,11 +326,15 @@ export interface DigestRunResult {
 // if writing alert_digest_last_sent failed; `lastFailureMs` spaces out retries.
 let sentDate: string | null = null;
 let lastFailureMs: number | null = null;
+// Refused sends are retried, but never more than this many times in one local day.
+export const DIGEST_MAX_ATTEMPTS_PER_DAY = 3;
+let attempts: { date: string; count: number } = { date: '', count: 0 };
 
 /** Test hook: forget the in-memory guards. */
 export function resetAlertDigestStateForTest(): void {
   sentDate = null;
   lastFailureMs = null;
+  attempts = { date: '', count: 0 };
 }
 
 /** The scheduler's once-a-tick check. Sends at most one digest a day. Never throws. */
@@ -362,10 +366,23 @@ export async function runAlertDigestIfDue(now: Date = new Date()): Promise<Diges
       return { status: 'quiet' };
     }
 
+    if (attempts.date !== local.date) attempts = { date: local.date, count: 0 };
+    attempts.count += 1;
     const reply = await postToRelay('send', buildRelayPayload('STUDIO', digest.text, {}), relay);
     if (!reply.ok) {
-      lastFailureMs = now.getTime();
       const detail = describeRelayFailure(reply);
+      // A timeout can mean the relay DID deliver it and
+      // only the reply was lost. A missed digest is cheaper than the same digest many times,
+      // so that ends the day. A clear refusal is retried, a few times at most.
+      const noAnswer = reply.status === 0 && reply.why.some(w => w.startsWith('no answer within'));
+      if (noAnswer || attempts.count >= DIGEST_MAX_ATTEMPTS_PER_DAY) {
+        sentDate = local.date;
+        lastFailureMs = null;
+        setSystemSetting(DIGEST_KEYS.lastSent, local.date);
+        console.error(`[Alert digest] not confirmed, no more tries today: ${detail}`);
+        return { status: 'failed', detail };
+      }
+      lastFailureMs = now.getTime();
       console.error(`[Alert digest] not sent, will try again in a few minutes: ${detail}`);
       return { status: 'failed', detail };
     }

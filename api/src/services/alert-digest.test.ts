@@ -233,6 +233,7 @@ describe('runAlertDigestIfDue', () => {
       req.on('data', (c) => { b += c; });
       req.on('end', () => {
         bodies.push({ path: req.url || '', key: req.headers['x-bus-key'], body: JSON.parse(b) });
+        if (status === 0) return; // took the message, never answers (the client times out)
         res.writeHead(status, { 'Content-Type': 'application/json' });
         res.end(replyBody);
       });
@@ -363,6 +364,33 @@ describe('runAlertDigestIfDue', () => {
     expect(lastSent()).toBe('2026-06-10');
     expect((await runAlertDigestIfDue(at('2026-06-10T12:51:00Z'))).status).toBe('not_due');
   });
+
+  it('stops for the day after three refusals', async () => {
+    fire('2026-06-10 03:00:00');
+    status = 422;
+    replyBody = JSON.stringify({ ok: false, sent: false, why: ['not allowed'] });
+    expect((await runAlertDigestIfDue(NOW)).status).toBe('failed');
+    expect((await runAlertDigestIfDue(at('2026-06-10T12:40:00Z'))).status).toBe('failed');
+    expect(lastSent()).toBeNull();
+    expect((await runAlertDigestIfDue(at('2026-06-10T12:50:00Z'))).status).toBe('failed');
+    expect(lastSent()).toBe('2026-06-10');
+    status = 200;
+    replyBody = '{"ok":true,"sent":true}';
+    expect((await runAlertDigestIfDue(at('2026-06-10T13:00:00Z'))).status).toBe('not_due');
+    expect(bodies).toHaveLength(3);
+  });
+
+  it('a send the relay took but never answered is not sent again that day', async () => {
+    fire('2026-06-10 03:00:00');
+    status = 0;
+    const result = await runAlertDigestIfDue(NOW);
+    expect(result.status).toBe('failed');
+    expect(result.detail).toMatch(/no answer within/);
+    expect(lastSent()).toBe('2026-06-10');
+    status = 200;
+    expect((await runAlertDigestIfDue(at('2026-06-10T12:45:00Z'))).status).toBe('not_due');
+    expect(bodies).toHaveLength(1);
+  }, 20000);
 
   it('a relay that cannot be reached is a failed send too', async () => {
     fire('2026-06-10 03:00:00');
