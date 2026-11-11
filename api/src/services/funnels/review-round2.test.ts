@@ -151,3 +151,44 @@ describe('third pass', () => {
     expect(r.movingToPaid.payments).toBe(2);
   });
 });
+
+describe('older accounts coming back', () => {
+  it('a customer dormant beyond the history who signs in is not a new "visited, never signed up" person', () => {
+    const r = report([
+      // someone genuinely new
+      { ts: T0 + DAY, stage: 'visit', event: 'landing_viewed', anonId: 'a_new' },
+      { ts: T0 + DAY + 1, stage: 'signup', event: 'signup_completed', anonId: 'a_new', userId: 'new' },
+      // an old customer: lands logged out, then signs in (the tie line carries both ids); no sign-up in view
+      { ts: T0 + 2 * DAY, stage: 'visit', event: 'landing_viewed', anonId: 'a_old' },
+      { ts: T0 + 2 * DAY + 5, stage: 'visit', event: 'signed_in', anonId: 'a_old', userId: 'old' },
+    ]);
+    expect(r.getIn.find((x) => x.stage === 'visit')?.people).toBe(1);
+    expect(r.getIn.find((x) => x.stage === 'signup')?.people).toBe(1);
+    expect(r.totals.olderAccounts).toBe(1);
+    expect(r.lastStepBeforeLeaving).toEqual([]);
+    expect(r.stopping.signedUp).toBe(2); // both have an account
+  });
+
+  it('an old customer whose first event in view is a use is not counted as a new sign-up', () => {
+    const r = report([at(T0, 'signup', 'new'), at(T0 + DAY, 'use', 'old'), at(T0 + 2 * DAY, 'paid', 'old', { event: 'subscription_renewed', amountCents: 2499 })]);
+    expect(r.getIn.find((x) => x.stage === 'signup')?.people).toBe(1);
+    expect(r.totals.olderAccounts).toBe(1);
+    expect(r.movingToPaid).toMatchObject({ payers: 0, payments: 1, revenueCents: 2499 });
+  });
+
+  it('a new visitor whose first event is anonymous is unaffected, even if they sign in later', () => {
+    const r = report([
+      { ts: T0, stage: 'visit', event: 'landing_viewed', anonId: 'a1' },
+      { ts: T0 + 10, stage: 'signup', event: 'signup_completed', anonId: 'a1', userId: 'u1' },
+      { ts: T0 + DAY, stage: 'visit', event: 'signed_in', anonId: 'a1', userId: 'u1' },
+    ]);
+    expect(r.getIn.find((x) => x.stage === 'signup')?.people).toBe(1);
+    expect(r.totals.olderAccounts).toBe(0);
+  });
+
+  it('a product that does not report sign-ups at all keeps the old behaviour', () => {
+    const r = report([at(T0, 'use', 'u1'), at(T0 + DAY, 'use', 'u2')]);
+    expect(r.getIn.find((x) => x.stage === 'activate')?.people).toBe(2);
+    expect(r.totals.olderAccounts).toBe(0);
+  });
+});
