@@ -35,7 +35,7 @@ describe('funnel language: tidy-up on the way in', () => {
     expect(String(out.funnel_error)).toContain('unknown stage');
   });
 
-  it('leaves a product's other fields alone when it marks a line it already sends', () => {
+  it('leaves the other fields of a line alone when a product marks a line it already sends', () => {
     const out = normalizeFunnelEvent(
       { message: 'User signup', funnel_stage: 'signup', funnel_event: 'signup_completed', user_id: 'u1', user_email: 'x@y.com', auth_method: 'google', props: { email: 'x@y.com', plan_seen: 'pro' } },
       'hey-youre-hired',
