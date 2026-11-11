@@ -106,3 +106,48 @@ describe('reading stored rows, second pass', () => {
     expect(e?.anonId).toBe('a1');
   });
 });
+
+describe('third pass', () => {
+  it('kids product: an event name must already be a code; text is never turned into one', () => {
+    for (const bad of ['Timmy Smith failed math', 'timmy.smith@example.com', 'Sheet Read', 'x'.repeat(60)]) {
+      const out = normalizeFunnelEvent({ funnel_stage: 'use', user_id: 'p1', funnel_event: bad }, 'homework-tree');
+      expect(out.funnel_event, bad).toBe('use');
+      expect(out.message).toBe('funnel use use');
+    }
+    expect(normalizeFunnelEvent({ funnel_stage: 'use', user_id: 'p1', funnel_event: 'sheet_read' }, 'homework-tree').funnel_event).toBe('sheet_read');
+  });
+
+  it('kids product: a number is only a timestamp if it is a plausible time', () => {
+    expect(normalizeFunnelEvent({ funnel_stage: 'use', user_id: 'p1', timestamp: 1e300 }, 'homework-tree').timestamp).toBeUndefined();
+    expect(normalizeFunnelEvent({ funnel_stage: 'use', user_id: 'p1', timestamp: 12 }, 'homework-tree').timestamp).toBeUndefined();
+    expect(normalizeFunnelEvent({ funnel_stage: 'use', user_id: 'p1', timestamp: 1794400000 }, 'homework-tree').timestamp).toBe(1794400000);
+  });
+
+  it('kids product: an event that blows up when its product field is read still becomes a stub', () => {
+    const hostile = { funnel_stage: 'use', child_name: 'Timmy Smith' } as Record<string, unknown>;
+    Object.defineProperty(hostile, 'product', { enumerable: true, get() { throw new Error('boom'); } });
+    const out = normalizeFunnelEvent(hostile, 'homework-tree');
+    expect(out === hostile).toBe(false);
+    expect(text(out)).not.toMatch(/Timmy/);
+    expect(out.funnel_error).toBe('could not be read');
+  });
+
+  it('a stored amount of null, "", false or a list is "no amount", not a $0 sale', () => {
+    for (const bad of [null, '', false, []]) {
+      const e = rowToFunnelEvent({ timestamp: '2026-11-01 10:00:00.000', structured_data: JSON.stringify({ funnel_stage: 'paid', user_id: 'u', amount_cents: bad }) });
+      expect(e?.amountCents, JSON.stringify(bad)).toBeUndefined();
+    }
+    expect(rowToFunnelEvent({ timestamp: '2026-11-01 10:00:00.000', structured_data: JSON.stringify({ funnel_stage: 'paid', user_id: 'u', amount_cents: '699' }) })?.amountCents).toBe(699);
+  });
+
+  it('each plan row says how many of its payments had no amount', () => {
+    const r = report([at(T0, 'signup', 'u'), at(T0 + DAY, 'paid', 'u', { plan: 'pro' }), at(T0, 'signup', 'v'), at(T0 + DAY, 'paid', 'v', { plan: 'pro', amountCents: 2499 })]);
+    expect(r.movingToPaid.plans).toEqual([{ plan: 'pro', payers: 2, payments: 2, paymentsWithoutAmount: 1, revenueCents: 2499 }]);
+  });
+
+  it('an older customer seen only through a renewal is not on the "Paid" rung of new people', () => {
+    const r = report([at(T0 + DAY, 'paid', 'old', { event: 'subscription_renewed', amountCents: 2499 }), at(T0, 'signup', 'new'), at(T0 + DAY, 'paid', 'new', { amountCents: 2499 })]);
+    expect(r.pay.find((x) => x.stage === 'paid')?.people).toBe(1);
+    expect(r.movingToPaid.payments).toBe(2);
+  });
+});

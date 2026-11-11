@@ -218,8 +218,8 @@ describe('funnel maths: paying', () => {
       checkoutAbandoned: 1,
     });
     expect(r.movingToPaid.plans).toEqual([
-      { plan: 'monthly', payers: 1, revenueCents: 1398 },
-      { plan: 'yearly', payers: 1, revenueCents: 5999 },
+      { plan: 'monthly', payers: 1, payments: 2, paymentsWithoutAmount: 0, revenueCents: 1398 },
+      { plan: 'yearly', payers: 1, payments: 1, paymentsWithoutAmount: 0, revenueCents: 5999 },
     ]);
   });
 

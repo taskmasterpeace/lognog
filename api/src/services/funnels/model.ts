@@ -247,7 +247,8 @@ function buildStrictEvent(event: Record<string, unknown>, product: FunnelProduct
   const out: Record<string, unknown> = { product: product.slug, funnel_v: cleanVersion(event.funnel_v), level: 'info' };
 
   const ts = event.timestamp;
-  if (typeof ts === 'number' && Number.isFinite(ts) && ts > 0) out.timestamp = ts;
+  // Epoch seconds or milliseconds in a sane range (2001 to 2286); anything else is dropped.
+  if (typeof ts === 'number' && Number.isFinite(ts) && ts >= 1e9 && ts < 1e13) out.timestamp = ts;
   else if (typeof ts === 'string' && ts.length <= 40 && ISO_TIME.test(ts) && Number.isFinite(Date.parse(ts))) out.timestamp = ts;
 
   for (const key of ID_KEYS) {
@@ -269,7 +270,9 @@ function buildStrictEvent(event: Record<string, unknown>, product: FunnelProduct
     return out;
   }
   out.funnel_stage = stage;
-  out.funnel_event = cleanEventName(event.funnel_event, stage);
+  // The name must already be a code as sent. Text is never squeezed into one here
+  // ("Timmy Smith failed math" must not become timmy_smith_failed_math).
+  out.funnel_event = typeof event.funnel_event === 'string' && EVENT_NAME.test(event.funnel_event) ? event.funnel_event : stage;
   out.message = `funnel ${stage} ${out.funnel_event}`;
   return out;
 }
@@ -333,13 +336,14 @@ function tidyOpenEvent(event: Record<string, unknown>, product: FunnelProduct, s
  */
 export function normalizeFunnelEvent(event: Record<string, unknown>, indexName: string): Record<string, unknown> {
   if (!event || typeof event !== 'object' || Array.isArray(event)) return event;
-  let strictProduct: FunnelProduct | undefined;
+  // Where the event LANDS decides the product, and that is settled before any
+  // field of the event is read, so nothing the event does can undo it.
+  const byIndex = findFunnelProduct(indexName);
+  let strictProduct: FunnelProduct | undefined = byIndex?.strictPrivacy ? byIndex : undefined;
   try {
-    // Where the event LANDS decides the product. The event's own `product`
-    // field can only make the rules stricter, never looser.
-    const byIndex = findFunnelProduct(indexName);
+    // The event's own `product` field can only make the rules stricter, never looser.
     const named = typeof event.product === 'string' ? findFunnelProduct(event.product) : undefined;
-    strictProduct = byIndex?.strictPrivacy ? byIndex : named?.strictPrivacy ? named : undefined;
+    if (!strictProduct && named?.strictPrivacy) strictProduct = named;
     if (!byIndex && !strictProduct) return event;
 
     const hasStage = Object.prototype.hasOwnProperty.call(event, 'funnel_stage') && event.funnel_stage !== undefined;

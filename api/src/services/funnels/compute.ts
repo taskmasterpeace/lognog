@@ -91,7 +91,7 @@ export interface FunnelReport {
     medianDaysSignupToPaid: number | null;
     medianDaysFirstUseToPaid: number | null;
     daysToPayBuckets: Array<{ label: string; people: number }>;
-    plans: Array<{ plan: string; payers: number; revenueCents: number }>;
+    plans: Array<{ plan: string; payers: number; payments: number; paymentsWithoutAmount: number; revenueCents: number }>;
     cohorts: Array<{ cohort: string; payers: number }>;
     repeatPayers: number;
     checkoutAbandoned: number;
@@ -214,7 +214,8 @@ function milestones(p: Person, product: FunnelProduct) {
     return: returned,
     paywall: p.first.paywall,
     checkout: p.first.checkout,
-    paid: p.first.paid,
+    // A renewal on its own is an older customer paying again, not someone becoming a payer.
+    paid: p.firstNewPaid,
     churn: p.first.churn,
     lastUse,
     lastChurn,
@@ -427,7 +428,7 @@ export function buildFunnelReport(product: FunnelProduct, events: FunnelEvent[],
     cohortRows.set(c, (cohortRows.get(c) ?? 0) + 1);
   }
   // Money in = EVERY payment in the range, renewals from older customers included.
-  const planRows = new Map<string, { payers: number; revenueCents: number }>();
+  const planRows = new Map<string, { payers: number; payments: number; paymentsWithoutAmount: number; revenueCents: number }>();
   let payments = 0;
   let paymentsWithoutAmount = 0;
   let revenueCents = 0;
@@ -439,7 +440,9 @@ export function buildFunnelReport(product: FunnelProduct, events: FunnelEvent[],
       if (!x.hasAmount) paymentsWithoutAmount++;
       revenueCents += x.cents;
       const plan = x.plan || 'unknown';
-      const row = planRows.get(plan) ?? { payers: 0, revenueCents: 0 };
+      const row = planRows.get(plan) ?? { payers: 0, payments: 0, paymentsWithoutAmount: 0, revenueCents: 0 };
+      row.payments++;
+      if (!x.hasAmount) row.paymentsWithoutAmount++;
       row.revenueCents += x.cents;
       if (!plansPaid.has(plan)) {
         plansPaid.add(plan);

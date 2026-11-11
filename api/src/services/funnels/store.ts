@@ -36,7 +36,9 @@ export function rowToFunnelEvent(row: { timestamp: unknown; structured_data: unk
   const raw = String(row.timestamp ?? '');
   const ts = Date.parse(/[zZ]|[+-]\d\d:?\d\d$/.test(raw) ? raw : `${raw.replace(' ', 'T')}Z`);
   if (!Number.isFinite(ts)) return null;
-  const cents = Number(data.amount_cents);
+  // Only a real number or number-like text is an amount; null, "", false and lists are "no amount".
+  const rawCents = data.amount_cents;
+  const cents = typeof rawCents === 'number' || (typeof rawCents === 'string' && rawCents.trim() !== '') ? Number(rawCents) : NaN;
   return {
     ts,
     stage,

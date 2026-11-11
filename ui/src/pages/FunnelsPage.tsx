@@ -10,7 +10,7 @@ import {
   getFunnelReport,
 } from '../api/client';
 import { ProjectLogo } from '../components/ProjectLogo';
-import { dropBetween, eventLabel, money, moneyIn, pctText, rangeLabel, RANGES, stageLabel, widthPct } from '../utils/funnels';
+import { dropBetween, eventLabel, moneyIn, pctText, rangeLabel, RANGES, stageLabel, widthPct } from '../utils/funnels';
 
 /**
  * Funnels (/funnels): every product read against the same two ladders
@@ -367,7 +367,7 @@ function ProductView({ report }: { report: FunnelReport }) {
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div>
               <h3 className="mb-1.5 text-sm font-semibold text-nog-800 dark:text-nog-100">Which plan</h3>
-              <SmallTable head={['Plan', 'People who paid', 'Money in']} rows={m.plans.map((p) => [eventLabel(p.plan), p.payers, money(p.revenueCents)])} empty="No payments in this range." />
+              <SmallTable head={['Plan', 'People who paid', 'Money in']} rows={m.plans.map((p) => [eventLabel(p.plan), p.payers, moneyIn(p.revenueCents, p.payments, p.paymentsWithoutAmount).value])} empty="No payments in this range." />
             </div>
             <div>
               <h3 className="mb-1.5 text-sm font-semibold text-nog-800 dark:text-nog-100">How long it took</h3>
