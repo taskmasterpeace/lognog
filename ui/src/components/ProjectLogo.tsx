@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { findProjectBrand } from '../utils/projectBrands';
+import { findDashboardBrand, findProjectBrand } from '../utils/projectBrands';
 
 interface ProjectLogoProps {
   /** app_name, app_scope or project slug. */
   value?: string | null;
+  /** 'dashboard' also accepts the studio's own dashboard group names (Game, Studio, Main Suite). */
+  kind?: 'app' | 'dashboard';
   size?: 'xs' | 'sm' | 'md';
   className?: string;
 }
@@ -11,8 +13,8 @@ interface ProjectLogoProps {
 const SIZES = { xs: 'w-5 h-5', sm: 'w-7 h-7', md: 'w-10 h-10' };
 
 /** The product's logo in a small rounded tile. Renders nothing for unknown apps. */
-export function ProjectLogo({ value, size = 'sm', className = '' }: ProjectLogoProps) {
-  const brand = findProjectBrand(value);
+export function ProjectLogo({ value, kind = 'app', size = 'sm', className = '' }: ProjectLogoProps) {
+  const brand = kind === 'dashboard' ? findDashboardBrand(value) : findProjectBrand(value);
   const [broken, setBroken] = useState(false);
   if (!brand || broken) return null;
   return (
