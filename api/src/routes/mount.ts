@@ -46,6 +46,7 @@ import sourceConfigsRouter from './source-configs.js';
 import routingRulesRouter from './routing-rules.js';
 import sourcesRouter from './sources.js';
 import pullCollectorsRouter from './pull-collectors.js';
+import funnelsRouter from './funnels.js';
 
 export const API_ROUTERS = [
   ['/auth', authRouter],
@@ -86,6 +87,7 @@ export const API_ROUTERS = [
   ['/routing-rules', routingRulesRouter],
   ['/sources', sourcesRouter],
   ['/pull-collectors', pullCollectorsRouter],
+  ['/funnels', funnelsRouter],
 ] as const;
 
 /** Mount the API-key gate and every API router on `app`. */

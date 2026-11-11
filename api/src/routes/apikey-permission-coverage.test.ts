@@ -164,6 +164,8 @@ const SCOPED_READS = new Set([
   'GET /auth/me', 'POST /reports/generate',
   // from the release's sibling branches (Home, Weekly paper, Lab Lights); each filters to the key's indexes
   'GET /stats/home', 'GET /reports/weekly', 'GET /status/lights',
+  // product funnels: cut to the product indexes the key may read
+  'GET /funnels/products', 'GET /funnels/report', 'GET /funnels/overview', 'GET /funnels/weekly',
 ]);
 
 /** Changes that need an admin key even though they sit under /alerts or /dashboards. */

@@ -29,6 +29,7 @@ import {
   Bookmark,
   BarChart3,
   Lightbulb,
+  Filter,
 } from 'lucide-react';
 
 export interface NavItem {
@@ -47,6 +48,7 @@ export const MAIN_NAV: NavItem[] = [
   { to: '/home', label: 'Home', icon: Home },
   { to: '/search', label: 'Search', icon: Search },
   { to: '/dashboards', label: 'Dashboards', icon: LayoutDashboard },
+  { to: '/funnels', label: 'Funnels', icon: Filter },
   { to: '/alerts', label: 'Alerts', icon: Bell },
   { to: '/data-sources', label: 'Data Sources', icon: Database },
   { to: '/machines', label: 'Machines', icon: Server },
