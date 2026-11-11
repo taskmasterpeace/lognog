@@ -34,9 +34,9 @@ function Rungs({ title, rungs, tone }: { title: string; rungs: FunnelRung[]; ton
       <div className="mb-[1.2vh] text-[2.2vh] font-semibold uppercase tracking-[0.12em] text-honey-300">{title}</div>
       <div className="space-y-[1.4vh]">
         {rungs.map((r) => (
-          <div key={r.stage} className="flex items-center gap-[1.5vw]" data-stage={r.stage}>
-            <div className="w-[13vw] shrink-0 text-[3vh] font-medium leading-tight text-nog-100">{r.label}</div>
-            <div className="w-[7vw] shrink-0 text-right font-display text-[5.4vh] font-semibold leading-none tabular-nums text-nog-50">
+          <div key={r.stage} className="flex items-center gap-[1vw]" data-stage={r.stage}>
+            <div className="w-[14vw] shrink-0 whitespace-nowrap text-[3vh] font-medium leading-tight text-nog-100">{r.label}</div>
+            <div className="w-[6vw] shrink-0 text-right font-display text-[5.4vh] font-semibold leading-none tabular-nums text-nog-50">
               {r.applies ? r.people.toLocaleString() : '—'}
             </div>
             <div className="relative h-[3.4vh] min-w-0 flex-1 overflow-hidden rounded-[0.8vh] bg-nog-800">
@@ -47,7 +47,7 @@ function Rungs({ title, rungs, tone }: { title: string; rungs: FunnelRung[]; ton
                 />
               )}
             </div>
-            <div className="w-[11vw] shrink-0 text-[2.4vh] tabular-nums text-nog-300">
+            <div className="w-[9.5vw] shrink-0 whitespace-nowrap text-[2.2vh] tabular-nums text-nog-300">
               {!r.applies ? 'does not apply' : !r.reported ? 'not reported yet' : r.pctOfPrevious === null ? 'start' : `${pctText(r.pctOfPrevious)} made it`}
             </div>
           </div>
