@@ -203,6 +203,8 @@ describe('funnel maths: paying', () => {
     const exportDone = r.beforePaying.actions.find((a) => a.event === 'export_done')!;
     expect(exportDone).toEqual({ event: 'export_done', payersPct: 100, nonPayersPct: 50, lift: 2 });
     expect(r.beforePaying.actions.find((a) => a.event === 'limit_hit')?.lift).toBeNull(); // no non-payer did it
+    // ladder steps (sign-up, checkout) are not things they did in the product
+    expect(r.beforePaying.actions.map((x) => x.event).sort()).toEqual(['export_done', 'limit_hit']);
     expect(r.beforePaying.medianUseDaysBeforePaying).toBe(1.5);
   });
 

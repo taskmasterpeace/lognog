@@ -990,6 +990,95 @@ export async function getLabLights(apps?: string[]): Promise<LabLightsResult> {
   return request(`/status/lights${q}`);
 }
 
+// Product funnels API (docs/FUNNELS.md)
+export interface FunnelRung {
+  stage: string;
+  label: string;
+  people: number;
+  pctOfPrevious: number | null;
+  lost: number;
+  pctOfTop: number | null;
+  applies: boolean;
+  reported: boolean;
+}
+
+export interface FunnelProductInfo {
+  slug: string;
+  name: string;
+  quietDays: number;
+  activationMeans: string;
+  paidMeans: string;
+  notApplicable: string[];
+}
+
+export interface FunnelTotals {
+  events: number;
+  people: number;
+  eventsWithoutId: number;
+  lastEventAt: string | null;
+}
+
+export interface FunnelReport {
+  product: FunnelProductInfo;
+  window: { from: string; to: string; days: number };
+  generatedAt: string;
+  totals: FunnelTotals;
+  getIn: FunnelRung[];
+  pay: FunnelRung[];
+  bySource: Array<{ source: string; visitors: number; startedSignup: number; signedUp: number; signupRate: number | null }>;
+  lastStepBeforeLeaving: Array<{ event: string; people: number }>;
+  stopping: {
+    signedUp: number;
+    active: number;
+    quiet: number;
+    neverUsed: number;
+    cancelled: number;
+    lastedBuckets: Array<{ label: string; people: number }>;
+    lastThingBeforeQuiet: Array<{ event: string; people: number }>;
+    retention: Array<{ week: string; signedUp: number; weeks: Array<number | null> }>;
+  };
+  beforePaying: {
+    payers: number;
+    nonPayers: number;
+    lookbackDays: number;
+    actions: Array<{ event: string; payersPct: number; nonPayersPct: number; lift: number | null }>;
+    medianUseDaysBeforePaying: number | null;
+  };
+  movingToPaid: {
+    payers: number;
+    payments: number;
+    revenueCents: number;
+    medianDaysSignupToPaid: number | null;
+    medianDaysFirstUseToPaid: number | null;
+    daysToPayBuckets: Array<{ label: string; people: number }>;
+    plans: Array<{ plan: string; payers: number; revenueCents: number }>;
+    cohorts: Array<{ cohort: string; payers: number }>;
+    repeatPayers: number;
+    checkoutAbandoned: number;
+  };
+  notReported: string[];
+  truncated: boolean;
+}
+
+export interface FunnelOverviewRow {
+  product: FunnelProductInfo;
+  totals: FunnelTotals;
+  getIn: FunnelRung[];
+  pay: FunnelRung[];
+  stopping: { signedUp: number; active: number; quiet: number; neverUsed: number; cancelled: number };
+  paid: { payers: number; revenueCents: number; medianDaysSignupToPaid: number | null };
+  notReported: string[];
+  truncated: boolean;
+}
+
+export async function getFunnelOverview(days: number): Promise<{ days: number; products: FunnelOverviewRow[] }> {
+  return request(`/funnels/overview?days=${days}`);
+}
+
+export async function getFunnelReport(product: string, days: number): Promise<FunnelReport> {
+  return request(`/funnels/report?product=${encodeURIComponent(product)}&days=${days}`);
+}
+
 // Reports API
 export interface ScheduledReport {
   id: string;

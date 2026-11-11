@@ -82,6 +82,7 @@ import SilencesPage from './pages/SilencesPage';
 import DataSourcesPage from './pages/DataSourcesPage';
 import MachinesPage from './pages/MachinesPage';
 import LabLightsPage from './pages/LabLightsPage';
+import FunnelsPage from './pages/FunnelsPage';
 import AnomalyPage from './pages/AnomalyPage';
 import AssetsPage from './pages/AssetsPage';
 import IdentitiesPage from './pages/IdentitiesPage';
@@ -603,6 +604,18 @@ function AppRoutes() {
             <Layout>
               <AnimatedPage>
                 <SilencesPage />
+              </AnimatedPage>
+            </Layout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/funnels"
+        element={
+          <ProtectedRoute>
+            <Layout>
+              <AnimatedPage>
+                <FunnelsPage />
               </AnimatedPage>
             </Layout>
           </ProtectedRoute>

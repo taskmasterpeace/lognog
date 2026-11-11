@@ -46,7 +46,7 @@ export interface LadderRung {
 }
 
 export interface FunnelReport {
-  product: { slug: string; name: string; quietDays: number; activationMeans: string; paidMeans: string };
+  product: { slug: string; name: string; quietDays: number; activationMeans: string; paidMeans: string; notApplicable: string[] };
   window: { from: string; to: string; days: number };
   generatedAt: string;
   totals: { events: number; people: number; eventsWithoutId: number; lastEventAt: string | null };
@@ -347,6 +347,9 @@ export function buildFunnelReport(product: FunnelProduct, events: FunnelEvent[],
 
   // --- What comes before paying ---
   const LOOKBACK_DAYS = 14;
+  // Things done inside the product. Ladder steps (visit, sign-up, checkout) are
+  // left out: every payer started a checkout, which says nothing.
+  const IN_PRODUCT = new Set<string>(['use', 'activate', 'paywall']);
   const payers = accounts.concat(all.filter((p) => p.first.signup === undefined && p.first.paid !== undefined)).filter((p) => p.first.paid !== undefined);
   const nonPayers = accounts.filter((p) => p.first.paid === undefined);
   const payerDid = new Map<string, number>();
@@ -355,13 +358,13 @@ export function buildFunnelReport(product: FunnelProduct, events: FunnelEvent[],
   for (const p of payers) {
     const paidAt = p.first.paid as number;
     const names = new Set(
-      p.events.filter((e) => e.ts < paidAt && e.ts >= paidAt - LOOKBACK_DAYS * DAY && e.stage !== 'paid').map((e) => e.event),
+      p.events.filter((e) => e.ts < paidAt && e.ts >= paidAt - LOOKBACK_DAYS * DAY && IN_PRODUCT.has(e.stage)).map((e) => e.event),
     );
     for (const n of names) payerDid.set(n, (payerDid.get(n) ?? 0) + 1);
     useDaysBefore.push(new Set(p.events.filter((e) => e.stage === 'use' && e.ts < paidAt).map((e) => dayNumber(e.ts))).size);
   }
   for (const p of nonPayers) {
-    for (const n of new Set(p.events.map((e) => e.event))) nonPayerDid.set(n, (nonPayerDid.get(n) ?? 0) + 1);
+    for (const n of new Set(p.events.filter((e) => IN_PRODUCT.has(e.stage)).map((e) => e.event))) nonPayerDid.set(n, (nonPayerDid.get(n) ?? 0) + 1);
   }
   const actions = [...payerDid.entries()]
     .map(([event, n]) => {
@@ -413,7 +416,7 @@ export function buildFunnelReport(product: FunnelProduct, events: FunnelEvent[],
 
   const lastTs = usable.length ? Math.max(...usable.map((e) => e.ts)) : null;
   return {
-    product: { slug: product.slug, name: product.name, quietDays: product.quietDays, activationMeans: product.activationMeans, paidMeans: product.paidMeans },
+    product: { slug: product.slug, name: product.name, quietDays: product.quietDays, activationMeans: product.activationMeans, paidMeans: product.paidMeans, notApplicable: product.notApplicable },
     window: { from: new Date(opts.from).toISOString(), to: new Date(opts.to).toISOString(), days: Math.round((opts.to - opts.from) / DAY) },
     generatedAt: new Date(now).toISOString(),
     totals: { events: usable.length, people: all.length, eventsWithoutId: withoutId, lastEventAt: lastTs ? new Date(lastTs).toISOString() : null },
