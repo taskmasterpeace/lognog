@@ -9,6 +9,7 @@ import { buildFunnelReport, FunnelEvent, FunnelReport, LadderRung } from './comp
 import { FUNNEL_PRODUCTS, FunnelProduct } from './model.js';
 import { fetchFunnelEvents } from './store.js';
 import { FUNNEL_LOGO_PNG_BASE64 } from './logos.js';
+import { buildProductHealth } from './health.js';
 
 const DAY = 86_400_000;
 /** History read before the two weeks, so returning customers are not counted as new. */
@@ -39,6 +40,8 @@ export interface WeeklySection {
   money: { newPayers: number; newPayersBefore: number; payments: number; paymentsWithoutAmount: number; revenueCents: number; revenueCentsBefore: number };
   notReported: string[];
   truncated: boolean;
+  /** The product's one-sentence health line, for products that have one. */
+  healthLine?: string;
 }
 
 export interface WeeklyFunnelReport {
@@ -181,6 +184,7 @@ export function buildWeeklySection(product: FunnelProduct, events: FunnelEvent[]
     },
     notReported: now.notReported,
     truncated,
+    ...(product.health && hasData ? { healthLine: buildProductHealth(product, events, weekEnd, HISTORY_DAYS)?.line } : {}),
   };
 }
 
@@ -279,6 +283,7 @@ ${head}
 <td width="33%" style="background:${SAND};border-radius:8px;padding:10px 12px;"><div style="font-size:11px;text-transform:uppercase;color:${MUTED};">Money in</div><div style="font-size:22px;font-weight:700;color:${DARK};">${m.payments > 0 && m.paymentsWithoutAmount >= m.payments ? 'not reported' : money(m.revenueCents)}</div><div style="font-size:12px;color:${MUTED};">${m.paymentsWithoutAmount > 0 ? `${m.paymentsWithoutAmount} of ${m.payments} payments came with no amount` : `week before: ${money(m.revenueCentsBefore)}`}</div></td>
 </tr></table>
 <p style="margin:8px 0 0;font-size:12px;color:${MUTED};">Went quiet = has an account and has not used ${esc(s.product.name)} for ${s.product.quietDays} days.</p>
+${s.healthLine ? `<p style="margin:10px 0 0;font-size:13px;color:${DARK};">${esc(s.healthLine)}</p>` : ''}
 ${missing}${s.truncated ? `<p style="margin:10px 0 0;font-size:12px;color:${WARN};">Too many steps to read them all; the oldest were left out, so these numbers are low.</p>` : ''}
 </td></tr>`;
     })

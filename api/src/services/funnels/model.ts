@@ -78,6 +78,21 @@ export interface FunnelProduct {
   notApplicable: string[];
   /** Kids/family product: only allowlisted fields are kept, nothing free-text. */
   strictPrivacy?: boolean;
+  /** Wording for the product's nightly health block (services/funnels/health.ts). Products without it have no block. */
+  health?: {
+    /** One `use` event, as a thing done: "sheet read". */
+    unitOneRead: string;
+    /** Many of them: "sheets read". */
+    unitPlural: string;
+    /** Short plural noun: "sheets". */
+    unitShort: string;
+    personOne: string;
+    peoplePlural: string;
+    /** How many uses count as "getting hooked". */
+    hookedAt: number;
+    /** Honest limits shown under the block. */
+    notes: string[];
+  };
   legacyRules?: LegacyRule[];
 }
 
@@ -129,10 +144,24 @@ export const FUNNEL_PRODUCTS: FunnelProduct[] = [
     indexes: ['homework-tree', 'knowledge-league'],
     quietDays: 14,
     activation: 'first_use',
-    activationMeans: 'First homework session finished on the family account',
+    activationMeans: 'First sheet read on the family account',
     paidMeans: 'Family plan payment',
     notApplicable: [],
     strictPrivacy: true,
+    health: {
+      unitOneRead: 'sheet read',
+      unitPlural: 'sheets read',
+      unitShort: 'sheets',
+      personOne: 'family',
+      peoplePlural: 'families',
+      hookedAt: 3,
+      notes: [
+        'A family is one parent account. Nothing about a child is collected.',
+        'Quizzes, rounds and games run on the family\'s own device and are never reported, so they are not counted here.',
+        'Website only: sheets read inside the iPhone app are not counted per family.',
+        'Only successful sheet reads are reported so far, so there is no good-read rate yet.',
+      ],
+    },
   },
 ];
 

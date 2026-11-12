@@ -1009,6 +1009,7 @@ export interface FunnelProductInfo {
   activationMeans: string;
   paidMeans: string;
   notApplicable: string[];
+  hasHealth?: boolean;
 }
 
 export interface FunnelTotals {
@@ -1100,6 +1101,7 @@ export interface WeeklyFunnelSection {
   money: { newPayers: number; newPayersBefore: number; payments: number; paymentsWithoutAmount: number; revenueCents: number; revenueCentsBefore: number };
   notReported: string[];
   truncated: boolean;
+  healthLine?: string;
 }
 
 export interface WeeklyFunnelReportData {
@@ -1112,6 +1114,32 @@ export interface WeeklyFunnelReportData {
 
 export async function getWeeklyFunnelReport(): Promise<WeeklyFunnelReportData> {
   return request('/funnels/weekly');
+}
+
+export interface FunnelHealthNumber {
+  key: string;
+  label: string;
+  what: string;
+  now: number;
+  before: number;
+  period: 'day' | 'week' | 'right_now';
+  unit: 'count' | 'cents' | 'decimal';
+  notReported?: boolean;
+}
+
+export interface FunnelHealth {
+  product: { slug: string; name: string };
+  generatedAt: string;
+  hasData: boolean;
+  numbers: FunnelHealthNumber[];
+  line: string;
+  notes: string[];
+  truncated: boolean;
+}
+
+/** A product's nightly health numbers. Only ask for products whose report says `hasHealth`. */
+export async function getFunnelHealth(product: string): Promise<FunnelHealth> {
+  return request(`/funnels/health?product=${encodeURIComponent(product)}`);
 }
 
 export async function getFunnelReport(product: string, days: number): Promise<FunnelReport> {

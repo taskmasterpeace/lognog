@@ -84,6 +84,7 @@ function Section({ s }: { s: WeeklyFunnelSection }) {
               </div>
             </div>
           </div>
+          {s.healthLine && <p className="mt-2 text-sm text-nog-800 dark:text-nog-100" data-testid="weekly-health-line">{s.healthLine}</p>}
           <p className="mt-2 text-xs text-nog-500 dark:text-nog-400">
             Went quiet = has an account and has not used {s.product.name} for {s.product.quietDays} days.
             {s.notReported.length > 0 && <span className="text-orange-700 dark:text-orange-400"> Not reported by this product yet: {s.notReported.join(', ').replace(/_/g, ' ')}.</span>}

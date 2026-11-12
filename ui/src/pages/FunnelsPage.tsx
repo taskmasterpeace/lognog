@@ -3,14 +3,16 @@ import { useQuery } from '@tanstack/react-query';
 import { Link, useSearchParams } from 'react-router-dom';
 import { ArrowDown, ArrowRight, CalendarDays, CircleDollarSign, DoorOpen, Filter, Loader2, MonitorPlay, MoonStar, Sparkles, AlertTriangle } from 'lucide-react';
 import {
+  FunnelHealth,
   FunnelOverviewRow,
   FunnelReport,
   FunnelRung,
+  getFunnelHealth,
   getFunnelOverview,
   getFunnelReport,
 } from '../api/client';
 import { ProjectLogo } from '../components/ProjectLogo';
-import { dropBetween, eventLabel, moneyIn, pctText, rangeLabel, RANGES, stageLabel, widthPct } from '../utils/funnels';
+import { dropBetween, eventLabel, healthBefore, healthTrend, healthValue, moneyIn, pctText, rangeLabel, RANGES, stageLabel, widthPct } from '../utils/funnels';
 
 /**
  * Funnels (/funnels): every product read against the same two ladders
@@ -240,11 +242,66 @@ function OverviewCard({ row, onOpen }: { row: FunnelOverviewRow; onOpen: () => v
   );
 }
 
-function ProductView({ report }: { report: FunnelReport }) {
+/** The product's nightly health numbers, in its own words, each next to the period before. */
+function HealthBlock({ health }: { health: FunnelHealth }) {
+  // Bad news rising is not good news: these read red when they go up.
+  const worseWhenUp = new Set(['quiet', 'cancelled']);
+  // Neither good nor bad on its own: more families hitting the limit means more use AND more friction.
+  const neutral = new Set(['hit_limit']);
+  return (
+    <Card>
+      <header className="mb-3 flex items-start gap-3" data-testid="health-block">
+        <ProjectLogo value={health.product.slug} size="md" />
+        <div className="min-w-0">
+          <h2 className="font-display text-lg font-semibold tracking-tight text-nog-900 dark:text-nog-50">{health.product.name} health</h2>
+          <p className="text-xs text-nog-500 dark:text-nog-400">Today is the last 24 hours. This week is the last 7 days. Each number sits next to the period before it.</p>
+        </div>
+      </header>
+      <p className="mb-3 rounded border-l-4 border-honey-500 bg-nog-50 px-3 py-2 text-[15px] text-nog-900 dark:bg-nog-900/40 dark:text-nog-50" data-testid="health-line">
+        {health.line}
+      </p>
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+        {health.numbers.map((n) => {
+          const trend = healthTrend(n.now, n.before);
+          const bad = worseWhenUp.has(n.key) ? trend === 'up' : trend === 'down';
+          const tone = trend === 'same' || neutral.has(n.key) ? 'text-nog-500 dark:text-nog-400' : bad ? 'text-orange-700 dark:text-orange-400' : 'text-emerald-700 dark:text-emerald-400';
+          return (
+            <div key={n.key} className="rounded-[0.625rem] bg-nog-50 px-3 py-2.5 transition-shadow hover:shadow-sm dark:bg-nog-900/40" title={n.what} data-health={n.key}>
+              <div className="text-[11px] font-medium uppercase tracking-wide text-nog-500 dark:text-nog-400">{n.label}</div>
+              <div className="mt-0.5 text-2xl font-bold tabular-nums tracking-tight text-nog-900 dark:text-nog-50">{n.notReported ? 'not reported' : healthValue(n.now, n.unit)}</div>
+              <div className={`text-xs tabular-nums ${tone}`}>
+                {n.period === 'day' ? 'today' : n.period === 'week' ? 'this week' : 'right now'} · {healthBefore(n.before, n.unit, n.period)}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <ul className="mt-3 space-y-0.5 text-xs text-nog-500 dark:text-nog-400">
+        {health.notes.map((note) => (
+          <li key={note}>{note}</li>
+        ))}
+        {health.truncated && <li className="text-orange-700 dark:text-orange-400">Too many steps to read them all; the oldest were left out, so these numbers are low.</li>}
+      </ul>
+    </Card>
+  );
+}
+
+function ProductView({ report, health, healthFailed }: { report: FunnelReport; health?: FunnelHealth | null; healthFailed?: boolean }) {
+  const healthNotice = healthFailed && !health ? (
+    <Card className="text-sm text-orange-700 dark:text-orange-400">Could not load the health numbers for {report.product.name}. The rest of the page is unaffected.</Card>
+  ) : null;
   const s = report.stopping;
   const m = report.movingToPaid;
   const b = report.beforePaying;
-  if (report.totals.events === 0) return <EmptyState name={report.product.name} />;
+  if (report.totals.events === 0) {
+    return (
+      <div className="space-y-3">
+        {health && <HealthBlock health={health} />}
+        {healthNotice}
+        <EmptyState name={report.product.name} />
+      </div>
+    );
+  }
   const leavers = report.getIn.find((r) => r.stage === 'visit');
   const signedUp = report.getIn.find((r) => r.stage === 'signup');
   return (
@@ -266,6 +323,9 @@ function ProductView({ report }: { report: FunnelReport }) {
         </div>
         <div className="mt-2"><NotReported stages={report.notReported} /></div>
       </Card>
+
+      {health && <HealthBlock health={health} />}
+      {healthNotice}
 
       <div className="grid gap-3 lg:grid-cols-2">
         <Card>
@@ -407,6 +467,13 @@ export default function FunnelsPage() {
 
   const overview = useQuery({ queryKey: ['funnels', 'overview', days], queryFn: () => getFunnelOverview(days) });
   const report = useQuery({ queryKey: ['funnels', 'report', product, days], queryFn: () => getFunnelReport(product, days), enabled: !!product });
+  // Only some products have a health block; the report says which, so the others are never asked.
+  const health = useQuery({
+    queryKey: ['funnels', 'health', product],
+    queryFn: () => getFunnelHealth(product),
+    enabled: !!product && !!report.data?.product.hasHealth && report.data.product.slug === product,
+    refetchInterval: 5 * 60 * 1000,
+  });
 
   const set = (next: { product?: string; days?: number }) => {
     const p = new URLSearchParams(params);
@@ -476,7 +543,7 @@ export default function FunnelsPage() {
           </p>
         </div>
       )}
-      {!loading && !error && product && report.data && <ProductView report={report.data} />}
+      {!loading && !error && product && report.data && <ProductView report={report.data} health={health.data} healthFailed={health.isError} />}
     </div>
   );
 }
