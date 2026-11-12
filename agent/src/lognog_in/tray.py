@@ -11,12 +11,16 @@ try:
     import pystray
     from PIL import Image, ImageDraw
     TRAY_AVAILABLE = True
-except Exception:
+    TRAY_IMPORT_ERROR: Optional[str] = None
+except Exception as exc:
     # Not only ImportError: on Linux with no desktop (a server, a container, CI)
     # pystray picks its X11 backend at import time and raises
     # Xlib.error.DisplayNameError because $DISPLAY is unset. That used to kill
     # the whole agent on import, even with --headless. No tray, keep running.
     TRAY_AVAILABLE = False
+    # Keep what actually went wrong, so the log says "no $DISPLAY" or the real
+    # library error instead of always claiming pystray/pillow are missing.
+    TRAY_IMPORT_ERROR = f"{type(exc).__name__}: {exc}"
 
 from .shipper import ConnectionStatus
 
@@ -315,7 +319,7 @@ class SystemTray:
     def start(self) -> None:
         """Start the system tray icon."""
         if not TRAY_AVAILABLE:
-            logger.warning("System tray not available (pystray/pillow not installed)")
+            logger.warning("System tray not available (%s); running without a tray icon", TRAY_IMPORT_ERROR)
             return
 
         self._icon = pystray.Icon(
