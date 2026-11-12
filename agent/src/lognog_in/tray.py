@@ -11,7 +11,11 @@ try:
     import pystray
     from PIL import Image, ImageDraw
     TRAY_AVAILABLE = True
-except ImportError:
+except Exception:
+    # Not only ImportError: on Linux with no desktop (a server, a container, CI)
+    # pystray picks its X11 backend at import time and raises
+    # Xlib.error.DisplayNameError because $DISPLAY is unset. That used to kill
+    # the whole agent on import, even with --headless. No tray, keep running.
     TRAY_AVAILABLE = False
 
 from .shipper import ConnectionStatus

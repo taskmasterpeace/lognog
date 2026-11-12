@@ -8,7 +8,10 @@ WORKDIR /app
 # crashed `tsc` with SIGTRAP in the builder (2026-09-02) — with the lockfile
 # the same sources compile fine under this image.
 COPY package.json package-lock.json ./
-RUN npm ci --legacy-peer-deps
+# No --legacy-peer-deps: package.json `overrides` lets echarts-wordcloud 2.1.0
+# (peer echarts ^5, no newer release exists) use our echarts 6; its echarts API
+# calls all still exist in 6. Same command as CI, so CI and the image agree.
+RUN npm ci
 
 # Copy source code
 COPY . .
