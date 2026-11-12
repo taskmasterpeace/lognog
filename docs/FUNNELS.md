@@ -187,7 +187,7 @@ Bridge rules only apply to lines that arrive after this ships; they do not rewri
 | Thing | Where |
 |---|---|
 | Weekly report page | LogNog → Funnels → Weekly report (`/funnels/weekly`) |
-| Weekly email | Every Monday 9:00 AM Eastern, to the addresses in `FUNNEL_WEEKLY_TO`. If that is not set, nothing is sent |
+| Weekly email | Every Monday 9:00 AM Eastern, to the addresses in `FUNNEL_WEEKLY_TO`. If that is not set, to the recipients of LogNog's enabled scheduled reports that only an admin can edit (owned by an admin, or with no owner, which are admin-only to change), as long as that is 3 people or fewer; otherwise nothing is sent. `POST /api/funnels/weekly/send` (admin) only says how many people it would go to; it sends only with `?confirm=send` |
 | Board view for a wall screen | LogNog → Funnels → Board view (`/funnels/board?seconds=20&days=30`, add `&product=<slug>` to hold on one) |
 
 The weekly report puts the last 7 days next to the 7 days before, each measured as it stood when that week ended, and names the single biggest leak in one sentence. Only steps people take within minutes count as a leak there (starting sign-up, finishing it, checkout, paying), so a new account is not blamed for not having come back yet. The email goes at most once a week: if the mail server is reached and then reports a problem, it is not sent again. A product that has sent nothing says "No real data yet". Every section and slide is led by the product's own logo.

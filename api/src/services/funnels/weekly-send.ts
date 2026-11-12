@@ -1,9 +1,18 @@
 /**
  * Sends the weekly funnel report by email, once per Monday (Eastern).
  *
- * Who gets it: only the addresses in FUNNEL_WEEKLY_TO (comma-separated). If it
- * is not set, nothing is sent: revenue and customer numbers never go to anyone
- * who was not named for them.
+ * Who gets it (resolveWeeklyRecipients):
+ *  1. FUNNEL_WEEKLY_TO (comma-separated), when it is set. It always wins.
+ *  2. Otherwise, the people who already receive LogNog's ENABLED scheduled
+ *     reports that only an admin can edit: reports owned by an admin account,
+ *     and reports with no owner (routes/reports.ts makes those admin-only).
+ *     A report owned by an ordinary account is never used, so a non-admin
+ *     cannot pick who gets the business numbers. And only if that is a small
+ *     list (FALLBACK_MAX or fewer), so a big distribution list never receives
+ *     revenue and customer numbers by default.
+ *  3. Otherwise nobody, and nothing is sent.
+ * Addresses are never written to the log or returned: only how many, and a
+ * mail error is logged by its code, not its text (which can quote an address).
  *
  * At most once: the week is claimed in the database before anything else. A
  * problem BEFORE the mail server is called (cannot build the report) lets the
@@ -15,7 +24,16 @@ import nodemailer from 'nodemailer';
 import { getSQLiteDB } from '../../db/sqlite.js';
 import { getWeeklyFunnelReport, renderWeeklyFunnelEmail, weeklyFunnelDue, weeklyFunnelLogoAttachments, WeeklyFunnelReport } from './weekly.js';
 
-const EMAIL = /^[^\s@,;<>"]+@[^\s@,;<>"]+\.[^\s@,;<>"]+$/;
+// A plain address only: letters, digits and . _ % + - before the @, a dotted host after. No comments, groups or quotes.
+const EMAIL = /^[A-Za-z0-9._%+-]{1,64}@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)+$/;
+
+/** What is safe to log about a mail failure: its code, never its text (which can quote an address). */
+export function mailErrorCode(error: unknown): string {
+  const e = error as { code?: unknown; responseCode?: unknown } | null;
+  const code = e && typeof e.code === 'string' ? e.code : '';
+  const response = e && typeof e.responseCode === 'number' ? String(e.responseCode) : '';
+  return [code, response].filter(Boolean).join(' ').replace(/[^A-Za-z0-9_ -]/g, '').slice(0, 40) || 'unknown';
+}
 /** Tries per Monday at building the report before giving up on the week. */
 export const MAX_ATTEMPTS = 3;
 /** A claim older than this with no outcome was cut off (restart mid-send); it may be taken over. */
@@ -68,10 +86,70 @@ export function weekStatus(weekKey: string): { status: WeekStatus; attempts: num
   return row ?? null;
 }
 
-/** Only the people named in FUNNEL_WEEKLY_TO. No fallback. */
+/** The most people the fallback may reach. More than this and nothing is sent until FUNNEL_WEEKLY_TO names them. */
+export const FALLBACK_MAX = 3;
+
+export type RecipientSource = 'setting' | 'scheduled_reports' | 'none';
+export interface ResolvedRecipients {
+  list: string[];
+  source: RecipientSource;
+  /** Why nobody was resolved, in plain words. */
+  reason?: string;
+}
+
+function validUnique(raw: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const item of raw) {
+    const address = item.trim();
+    const key = address.toLowerCase();
+    if (!EMAIL.test(address) || seen.has(key)) continue;
+    seen.add(key);
+    out.push(address);
+  }
+  return out;
+}
+
+/** Who the weekly report goes to, and where that list came from. Never throws. */
+export function resolveWeeklyRecipients(): ResolvedRecipients {
+  const setting = (process.env.FUNNEL_WEEKLY_TO || '').trim();
+  if (setting) {
+    // The setting always wins, even when every address in it is unusable:
+    // a typo there must not quietly switch to a different list.
+    const named = validUnique(setting.split(','));
+    return named.length > 0 ? { list: named, source: 'setting' } : { list: [], source: 'none', reason: 'FUNNEL_WEEKLY_TO is set but holds no usable address.' };
+  }
+  let rows: Array<{ recipients: string | null }>;
+  try {
+    // Only reports that an admin alone can edit: owned by a current admin
+    // account (users_v2 is where accounts live), or with no owner.
+    rows = getSQLiteDB()
+      .prepare(
+        `SELECT recipients FROM scheduled_reports
+         WHERE enabled = 1
+           AND (owner_id IS NULL OR owner_id = '' OR owner_id IN (SELECT id FROM users_v2 WHERE role = 'admin'))`,
+      )
+      .all() as Array<{ recipients: string | null }>;
+  } catch {
+    return { list: [], source: 'none', reason: 'FUNNEL_WEEKLY_TO is not set and the scheduled reports could not be read.' };
+  }
+  const fallback = validUnique(rows.flatMap((r) => (typeof r.recipients === 'string' ? r.recipients.split(',') : [])));
+  if (fallback.length === 0) return { list: [], source: 'none', reason: 'FUNNEL_WEEKLY_TO is not set and no enabled scheduled report that only admins can edit has a recipient.' };
+  if (fallback.length > FALLBACK_MAX) {
+    return { list: [], source: 'none', reason: `FUNNEL_WEEKLY_TO is not set and the scheduled reports reach ${fallback.length} people, more than the ${FALLBACK_MAX} allowed without naming them.` };
+  }
+  return { list: fallback, source: 'scheduled_reports' };
+}
+
+/** The addresses only (see resolveWeeklyRecipients for where they came from). */
 export function weeklyFunnelRecipients(): string[] {
-  const named = (process.env.FUNNEL_WEEKLY_TO || '').split(',').map((s) => s.trim()).filter((s) => EMAIL.test(s));
-  return [...new Set(named)];
+  return resolveWeeklyRecipients().list;
+}
+
+/** The address of the LogNog site for the link in the email. */
+export function weeklyFunnelBaseUrl(): string {
+  const set = (process.env.PUBLIC_URL || process.env.LOGNOG_PUBLIC_URL || '').trim().replace(/\/+$/, '');
+  return set || 'https://logs.machinekinglabs.com';
 }
 
 function mailConfigured(): boolean {
@@ -80,9 +158,14 @@ function mailConfigured(): boolean {
 
 export interface WeeklySendResult {
   sent: boolean;
+  /** How many people (never who). */
   recipients: number;
   reason?: string;
   title?: string;
+  /** Where the recipient list came from. */
+  source?: RecipientSource;
+  /** True when this was only a check of who it would go to. */
+  dryRun?: boolean;
 }
 
 /** Hand a built report to the mail server. Separate so the caller knows exactly when mail was attempted. */
@@ -93,24 +176,47 @@ export async function mailWeeklyFunnelReport(report: WeeklyFunnelReport, recipie
     secure: process.env.SMTP_SECURE === 'true',
     auth: process.env.SMTP_USER && process.env.SMTP_PASS ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined,
   });
-  const base = (process.env.PUBLIC_URL || process.env.LOGNOG_PUBLIC_URL || '').replace(/\/+$/, '');
+  const base = weeklyFunnelBaseUrl();
   await transporter.sendMail({
     from: process.env.SMTP_FROM || 'noreply@lognog.local',
     to: recipients.join(', '),
     subject: `Weekly funnel report: ${report.title}`,
-    html: renderWeeklyFunnelEmail(report, base ? `${base}/funnels/weekly` : undefined),
+    html: renderWeeklyFunnelEmail(report, `${base}/funnels/weekly`),
     attachments: weeklyFunnelLogoAttachments(report),
   });
 }
 
-/** Build the report from live data and email it now (the admin "send now" button). Does not look at the day or at earlier sends. */
-export async function sendWeeklyFunnelReport(): Promise<WeeklySendResult> {
-  const recipients = weeklyFunnelRecipients();
-  if (!mailConfigured()) return { sent: false, recipients: 0, reason: 'No mail server is set up (SMTP_HOST / SMTP_USER).' };
-  if (recipients.length === 0) return { sent: false, recipients: 0, reason: 'Nobody to send it to: set FUNNEL_WEEKLY_TO.' };
+/**
+ * The admin "send now" route. It is a CHECK unless told otherwise: by default
+ * it only says how many people the report would go to and where that list came
+ * from; nothing is built and nothing is sent. It sends only with
+ * `{ send: true }`, so a mistyped flag can never cause a real email.
+ * A real send does not look at the day or at earlier sends.
+ */
+export async function sendWeeklyFunnelReport(opts: { send?: boolean } = {}): Promise<WeeklySendResult> {
+  const resolved = resolveWeeklyRecipients();
+  const mail = mailConfigured();
+  if (opts.send !== true) {
+    return {
+      sent: false,
+      dryRun: true,
+      recipients: resolved.list.length,
+      source: resolved.source,
+      reason: !mail ? 'No mail server is set up (SMTP_HOST / SMTP_USER).' : resolved.reason,
+    };
+  }
+  if (!mail) return { sent: false, recipients: 0, source: resolved.source, reason: 'No mail server is set up (SMTP_HOST / SMTP_USER).' };
+  if (resolved.list.length === 0) return { sent: false, recipients: 0, source: 'none', reason: resolved.reason ?? 'Nobody to send it to.' };
   const report = await getWeeklyFunnelReport();
-  await mailWeeklyFunnelReport(report, recipients);
-  return { sent: true, recipients: recipients.length, title: report.title };
+  try {
+    await mailWeeklyFunnelReport(report, resolved.list);
+  } catch (error) {
+    // Never rethrow the mail error: its text can quote an address and the route would log it.
+    console.error(`[Funnels] Weekly report by hand: the mail server reported a problem (${mailErrorCode(error)}).`);
+    return { sent: false, recipients: resolved.list.length, source: resolved.source, reason: `The mail server reported a problem (${mailErrorCode(error)}).`, title: report.title };
+  }
+  console.log(`[Funnels] Weekly report sent by hand to ${resolved.list.length} (list from ${resolved.source}).`);
+  return { sent: true, recipients: resolved.list.length, source: resolved.source, title: report.title };
 }
 
 let running = false;
@@ -139,11 +245,12 @@ export async function maybeSendWeeklyFunnelReport(now: Date = new Date(), deps: 
     const due = weeklyFunnelDue(now, null);
     if (!due.due) return null;
     if (!mailConfigured()) return null;
-    const recipients = weeklyFunnelRecipients();
+    const resolved = resolveWeeklyRecipients();
+    const recipients = resolved.list;
     if (recipients.length === 0) {
       if (saidNoRecipientsFor !== due.key) {
         saidNoRecipientsFor = due.key;
-        console.log('[Funnels] Weekly report not sent: FUNNEL_WEEKLY_TO is not set.');
+        console.log(`[Funnels] Weekly report not sent: ${resolved.reason ?? 'nobody to send it to.'}`);
       }
       return null;
     }
@@ -171,7 +278,7 @@ export async function maybeSendWeeklyFunnelReport(now: Date = new Date(), deps: 
       } catch {
         /* the 'mailing' mark already closes the week */
       }
-      console.error('[Funnels] Weekly report: the mail server reported a problem; not retrying this week:', error instanceof Error ? error.message : error);
+      console.error(`[Funnels] Weekly report: the mail server reported a problem (${mailErrorCode(error)}); not retrying this week.`);
       return { sent: false, recipients: recipients.length, reason: 'mail server problem', title: report.title };
     }
     try {
@@ -179,10 +286,10 @@ export async function maybeSendWeeklyFunnelReport(now: Date = new Date(), deps: 
     } catch {
       /* the 'mailing' mark already closes the week */
     }
-    console.log(`[Funnels] Weekly report for ${due.key} sent to ${recipients.length}.`);
+    console.log(`[Funnels] Weekly report for ${due.key} sent to ${recipients.length} (list from ${resolved.source}).`);
     return { sent: true, recipients: recipients.length, title: report.title };
   } catch (error) {
-    console.error('[Funnels] Weekly report failed:', error instanceof Error ? error.message : error);
+    console.error(`[Funnels] Weekly report failed (${error instanceof Error ? error.name : 'error'} ${mailErrorCode(error)}).`);
     return { sent: false, recipients: 0, reason: 'error' };
   } finally {
     running = false;

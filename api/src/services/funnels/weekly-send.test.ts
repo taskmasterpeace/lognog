@@ -7,8 +7,12 @@ import { join } from 'node:path';
 process.env.SQLITE_PATH = join(tmpdir(), `lognog-weekly-send-${process.env.VITEST_WORKER_ID ?? '0'}-${randomUUID()}.db`);
 
 import { getSQLiteDB } from '../../db/sqlite';
-import { claimWeek, markWeek, maybeSendWeeklyFunnelReport, MAX_ATTEMPTS, resetWeeklyFunnelMemory, weekStatus, weeklyFunnelRecipients, sendWeeklyFunnelReport, WeeklyDeps } from './weekly-send';
+import {
+  claimWeek, FALLBACK_MAX, markWeek, maybeSendWeeklyFunnelReport, MAX_ATTEMPTS, resetWeeklyFunnelMemory, resolveWeeklyRecipients,
+  mailErrorCode, weekStatus, weeklyFunnelBaseUrl, weeklyFunnelRecipients, sendWeeklyFunnelReport, WeeklyDeps,
+} from './weekly-send';
 import type { WeeklyFunnelReport } from './weekly';
+import { createUser, updateUserRole } from '../../auth/auth';
 
 const MONDAY_9 = new Date(Date.UTC(2026, 10, 16, 14, 0)); // Mon Nov 16 2026, 9:00 AM Eastern
 const KEY = '2026-11-16';
@@ -19,7 +23,7 @@ function deps(over: Partial<WeeklyDeps> = {}): WeeklyDeps & { build: ReturnType<
   return { build: vi.fn(async () => REPORT), mail: vi.fn(async () => undefined), ...over } as never;
 }
 
-const ENV = ['FUNNEL_WEEKLY_TO', 'SMTP_HOST', 'SMTP_USER'] as const;
+const ENV = ['FUNNEL_WEEKLY_TO', 'SMTP_HOST', 'SMTP_USER', 'PUBLIC_URL', 'LOGNOG_PUBLIC_URL'] as const;
 const saved: Record<string, string | undefined> = {};
 
 beforeEach(() => {
@@ -29,8 +33,14 @@ beforeEach(() => {
   process.env.FUNNEL_WEEKLY_TO = 'owner@example.test';
   getSQLiteDB().exec('DROP TABLE IF EXISTS funnel_weekly_sends');
   resetWeeklyFunnelMemory();
-  // A table the old fallback used to read. Its people must never get this report.
-  getSQLiteDB().exec("CREATE TABLE IF NOT EXISTS scheduled_reports_probe (recipients TEXT)");
+  getSQLiteDB().exec('DELETE FROM scheduled_reports');
+  try {
+    getSQLiteDB().exec("DELETE FROM users_v2 WHERE username LIKE 'wk-test-%'");
+  } catch {
+    /* the accounts table is created on first use */
+  }
+  delete process.env.PUBLIC_URL;
+  delete process.env.LOGNOG_PUBLIC_URL;
   vi.spyOn(console, 'log').mockImplementation(() => undefined);
   vi.spyOn(console, 'error').mockImplementation(() => undefined);
 });
@@ -48,7 +58,7 @@ describe('weekly funnel email: who gets it', () => {
     expect(weeklyFunnelRecipients()).toEqual(['owner@example.test', 'second@example.test']);
   });
 
-  it('nobody when it is not set: there is no fallback list', async () => {
+  it('nobody when it is not set and no scheduled report has a recipient', async () => {
     delete process.env.FUNNEL_WEEKLY_TO;
     expect(weeklyFunnelRecipients()).toEqual([]);
     const d = deps();
@@ -56,7 +66,7 @@ describe('weekly funnel email: who gets it', () => {
     expect(d.build).not.toHaveBeenCalled();
     expect(d.mail).not.toHaveBeenCalled();
     expect(weekStatus(KEY)).toBeNull();
-    expect((await sendWeeklyFunnelReport()).sent).toBe(false);
+    expect((await sendWeeklyFunnelReport({ send: true })).sent).toBe(false);
   });
 
   it('nothing happens without a mail server', async () => {
@@ -133,5 +143,171 @@ describe('weekly funnel email: at most once', () => {
     expect(claimWeek(KEY, minutesLater(16))).toBe(true);
     markWeek(KEY, 'mailing', 1);
     expect(claimWeek(KEY, minutesLater(60))).toBe(false);
+  });
+});
+
+function addReport(recipients: string, enabled = 1): void {
+  getSQLiteDB()
+    .prepare('INSERT INTO scheduled_reports (id, name, query, schedule, recipients, enabled) VALUES (?, ?, ?, ?, ?, ?)')
+    .run(randomUUID(), 'A report', 'search *', '0 9 * * 1', recipients, enabled);
+}
+
+describe('weekly funnel email: the fallback list', () => {
+  it('the setting always wins, even when scheduled reports have recipients', () => {
+    addReport('someone-else@example.test');
+    process.env.FUNNEL_WEEKLY_TO = 'owner@example.test';
+    expect(resolveWeeklyRecipients()).toEqual({ list: ['owner@example.test'], source: 'setting' });
+  });
+
+  it('a setting with only unusable addresses sends to nobody; it does not fall back', () => {
+    addReport('someone-else@example.test');
+    process.env.FUNNEL_WEEKLY_TO = 'not-an-address';
+    const r = resolveWeeklyRecipients();
+    expect(r.list).toEqual([]);
+    expect(r.source).toBe('none');
+  });
+
+  it('with no setting it uses the enabled scheduled reports: valid addresses only, no repeats', () => {
+    delete process.env.FUNNEL_WEEKLY_TO;
+    addReport('Owner@Example.test, owner@example.test, broken@, second@example.test');
+    addReport('disabled@example.test', 0);
+    const r = resolveWeeklyRecipients();
+    expect(r).toEqual({ list: ['Owner@Example.test', 'second@example.test'], source: 'scheduled_reports' });
+    expect(weeklyFunnelRecipients()).toHaveLength(2);
+  });
+
+  it('a disabled report alone gives nobody', () => {
+    delete process.env.FUNNEL_WEEKLY_TO;
+    addReport('disabled@example.test', 0);
+    expect(resolveWeeklyRecipients()).toMatchObject({ list: [], source: 'none' });
+  });
+
+  it('refuses a fallback list bigger than the cap, so a large list never gets business numbers by default', () => {
+    delete process.env.FUNNEL_WEEKLY_TO;
+    addReport(Array.from({ length: FALLBACK_MAX + 1 }, (_, i) => `p${i}@example.test`).join(','));
+    const r = resolveWeeklyRecipients();
+    expect(r.list).toEqual([]);
+    expect(r.source).toBe('none');
+    expect(r.reason).toMatch(/more than the 3 allowed/);
+    expect(r.reason).not.toMatch(/@/);
+  });
+
+  it('exactly the cap is allowed', () => {
+    delete process.env.FUNNEL_WEEKLY_TO;
+    addReport(Array.from({ length: FALLBACK_MAX }, (_, i) => `p${i}@example.test`).join(','));
+    expect(resolveWeeklyRecipients().list).toHaveLength(FALLBACK_MAX);
+  });
+
+  it('the Monday job mails the fallback list and logs how many, never who', async () => {
+    delete process.env.FUNNEL_WEEKLY_TO;
+    addReport('owner@example.test');
+    const logs: string[] = [];
+    vi.spyOn(console, 'log').mockImplementation((...a: unknown[]) => { logs.push(a.join(' ')); });
+    const d = deps();
+    expect(await maybeSendWeeklyFunnelReport(MONDAY_9, d)).toMatchObject({ sent: true, recipients: 1 });
+    expect(d.mail).toHaveBeenCalledWith(REPORT, ['owner@example.test']);
+    expect(logs.join(' | ')).toMatch(/sent to 1 \(list from scheduled_reports\)/);
+    expect(logs.join(' | ')).not.toMatch(/@/);
+  });
+
+  it('by default the send route is only a check: how many and from where, nothing built or sent', async () => {
+    delete process.env.FUNNEL_WEEKLY_TO;
+    addReport('owner@example.test');
+    const r = await sendWeeklyFunnelReport();
+    expect(r).toEqual({ sent: false, dryRun: true, recipients: 1, source: 'scheduled_reports', reason: undefined });
+    expect(JSON.stringify(r)).not.toMatch(/@/);
+    expect(weekStatus(KEY)).toBeNull();
+  });
+});
+
+describe('weekly funnel email: the link', () => {
+  it('uses PUBLIC_URL when set, without a trailing slash', () => {
+    process.env.PUBLIC_URL = 'https://logs.example.test/';
+    expect(weeklyFunnelBaseUrl()).toBe('https://logs.example.test');
+  });
+
+  it('falls back to the production address when nothing is set', () => {
+    expect(weeklyFunnelBaseUrl()).toBe('https://logs.machinekinglabs.com');
+  });
+});
+
+async function addUser(role: 'admin' | 'user' | 'readonly'): Promise<string> {
+  // Real accounts, made the way the app makes them (they live in users_v2).
+  const name = `wk-test-${randomUUID().slice(0, 8)}`;
+  const user = await createUser(name, `${name}@example.test`, 'a-long-test-password', role);
+  return user.id;
+}
+
+function addOwnedReport(recipients: string, ownerId: string | null): void {
+  getSQLiteDB()
+    .prepare('INSERT INTO scheduled_reports (id, name, query, schedule, recipients, enabled, owner_id) VALUES (?, ?, ?, ?, ?, 1, ?)')
+    .run(randomUUID(), 'A report', 'search *', '0 9 * * 1', recipients, ownerId);
+}
+
+describe('weekly funnel email: who may steer the fallback', () => {
+  it('uses reports owned by an admin and reports with no owner', async () => {
+    delete process.env.FUNNEL_WEEKLY_TO;
+    addOwnedReport('admin-picked@example.test', await addUser('admin'));
+    addOwnedReport('legacy@example.test', null);
+    expect(resolveWeeklyRecipients().list.sort()).toEqual(['admin-picked@example.test', 'legacy@example.test']);
+  });
+
+  it('never uses a report owned by an ordinary account, so a non-admin cannot pick who gets the numbers', async () => {
+    delete process.env.FUNNEL_WEEKLY_TO;
+    addOwnedReport('owner@example.test', null);
+    addOwnedReport('joe-picked@evil.test', await addUser('user'));
+    expect(resolveWeeklyRecipients()).toEqual({ list: ['owner@example.test'], source: 'scheduled_reports' });
+  });
+
+  it('a report whose owner is no longer an admin (or no longer exists) stops counting', async () => {
+    delete process.env.FUNNEL_WEEKLY_TO;
+    const formerAdmin = await addUser('admin');
+    addOwnedReport('was-admin@example.test', formerAdmin);
+    addOwnedReport('ghost@example.test', 'no-such-account');
+    expect(resolveWeeklyRecipients().list).toEqual(['was-admin@example.test']);
+    updateUserRole(formerAdmin, 'user');
+    expect(resolveWeeklyRecipients()).toMatchObject({ list: [], source: 'none' });
+  });
+
+  it('ordinary accounts existing does not switch the fallback off for admin-only reports', async () => {
+    delete process.env.FUNNEL_WEEKLY_TO;
+    await addUser('user');
+    await addUser('readonly');
+    addOwnedReport('owner@example.test', null);
+    expect(resolveWeeklyRecipients()).toEqual({ list: ['owner@example.test'], source: 'scheduled_reports' });
+  });
+
+  it('only plain addresses count: comments, groups and quoted forms are refused', () => {
+    delete process.env.FUNNEL_WEEKLY_TO;
+    addReport('grp:a@x.test, a@x.test(, a(c)@x.test, "A" <b@x.test>, c@x.test:b, fine@example.test');
+    expect(resolveWeeklyRecipients().list).toEqual(['fine@example.test']);
+  });
+});
+
+describe('weekly funnel email: sending by hand', () => {
+  it('nothing but an explicit send:true sends', async () => {
+    delete process.env.FUNNEL_WEEKLY_TO;
+    addReport('owner@example.test');
+    for (const opts of [undefined, {}, { send: false }, { send: 'true' }, { send: 1 }, { dryRun: false }]) {
+      const r = await sendWeeklyFunnelReport(opts as never);
+      expect(r.sent, JSON.stringify(opts)).toBe(false);
+      expect(r.dryRun).toBe(true);
+    }
+  });
+
+  it('a mail failure is reported by its code, never its text', () => {
+    const err = Object.assign(new Error('all recipients were rejected: 550 5.1.1 <owner@x.test> unknown'), { code: 'EENVELOPE', responseCode: 550 });
+    expect(mailErrorCode(err)).toBe('EENVELOPE 550');
+    expect(mailErrorCode(new Error('<owner@x.test> rejected'))).toBe('unknown');
+    expect(mailErrorCode({ code: 'x@y.test<script>' })).not.toMatch(/[@<>]/);
+  });
+
+  it('the Monday job logs a mail failure without the address', async () => {
+    const errors: string[] = [];
+    vi.spyOn(console, 'error').mockImplementation((...a: unknown[]) => { errors.push(a.map(String).join(' ')); });
+    const d = deps({ mail: vi.fn(async () => { throw Object.assign(new Error('550 <owner@example.test> rejected'), { code: 'EENVELOPE' }); }) });
+    await maybeSendWeeklyFunnelReport(MONDAY_9, d);
+    expect(errors.join(' | ')).toMatch(/EENVELOPE/);
+    expect(errors.join(' | ')).not.toMatch(/@/);
   });
 });

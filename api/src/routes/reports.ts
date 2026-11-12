@@ -50,7 +50,12 @@ function loadOwnedReport(req: Request, res: Response): ScheduledReport | null {
     res.status(404).json({ error: 'Report not found' });
     return null;
   }
-  if (!requireOwnerOrAdmin(req, res, report, 'report')) return null;
+  // A report with no owner (made before reports had owners) belongs to the
+  // admins: only an admin may change, run or delete it. Its recipients can be
+  // used for the weekly funnel email (services/funnels/weekly-send.ts), so an
+  // ordinary account must not be able to rewrite them.
+  const owned = report.owner_id ? report : { ...report, owner_id: 'no owner: admins only' };
+  if (!requireOwnerOrAdmin(req, res, owned, 'report')) return null;
   return report;
 }
 
