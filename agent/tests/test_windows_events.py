@@ -50,10 +50,13 @@ class TestWindowsEventCollector:
 
     def test_collector_initialization(self):
         """Test collector initialization."""
-        try:
-            from lognog_in.collectors.windows_events import WindowsEventCollector
-        except ImportError:
-            pytest.skip("pywin32 not available")
+        from lognog_in.collectors import windows_events
+        from lognog_in.collectors.windows_events import WindowsEventCollector
+
+        # The module imports everywhere (detect_record_reset is pure Python);
+        # only the collector itself needs pywin32, and refuses without it.
+        if not windows_events.HAS_PYWIN32:
+            pytest.skip("pywin32 not available (Windows only)")
 
         collector = WindowsEventCollector(
             channels=["Application"],
@@ -70,10 +73,13 @@ class TestWindowsEventCollector:
 
     def test_collector_stats(self):
         """Test collector statistics."""
-        try:
-            from lognog_in.collectors.windows_events import WindowsEventCollector
-        except ImportError:
-            pytest.skip("pywin32 not available")
+        from lognog_in.collectors import windows_events
+        from lognog_in.collectors.windows_events import WindowsEventCollector
+
+        # The module imports everywhere (detect_record_reset is pure Python);
+        # only the collector itself needs pywin32, and refuses without it.
+        if not windows_events.HAS_PYWIN32:
+            pytest.skip("pywin32 not available (Windows only)")
 
         collector = WindowsEventCollector(
             channels=["Application", "System"],
@@ -87,6 +93,14 @@ class TestWindowsEventCollector:
         assert stats["event_ids_filter"] == [1000]
         assert stats["events_collected"] == 0
         assert stats["events_filtered"] == 0
+
+    def test_collector_refuses_without_pywin32(self, monkeypatch):
+        """Without pywin32 the collector says so instead of half-starting."""
+        from lognog_in.collectors import windows_events
+
+        monkeypatch.setattr(windows_events, "HAS_PYWIN32", False)
+        with pytest.raises(ImportError, match="pywin32"):
+            windows_events.WindowsEventCollector(channels=["Application"], hostname="h")
 
     def test_bookmark_database(self):
         """Test bookmark persistence."""

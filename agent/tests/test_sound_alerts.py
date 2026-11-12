@@ -82,7 +82,9 @@ def test_sound_alert_manager_play_alert():
 
     manager = SoundAlertManager(config)
 
-    with patch.object(manager.player, 'play_sound') as mock_play:
+    # Pretend a sound backend exists: this checks the manager's routing, and
+    # CI runners (headless Linux) have no audio player at all.
+    with patch.object(manager.player, 'is_available', return_value=True),          patch.object(manager.player, 'play_sound') as mock_play:
         manager.play_alert("critical")
         mock_play.assert_called_once_with("default", Severity.CRITICAL, 80)
 
@@ -127,8 +129,9 @@ def test_sound_alert_manager_invalid_severity():
 
     manager = SoundAlertManager(config)
 
-    # Should fall back to INFO for invalid severity
-    with patch.object(manager.player, 'play_sound') as mock_play:
+    # Should fall back to INFO for invalid severity (backend faked as present,
+    # as above: CI runners have no audio player)
+    with patch.object(manager.player, 'is_available', return_value=True),          patch.object(manager.player, 'play_sound') as mock_play:
         manager.play_alert("invalid_severity")
         # Should use INFO severity as fallback
         mock_play.assert_called_once()
