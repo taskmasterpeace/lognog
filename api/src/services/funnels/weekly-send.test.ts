@@ -7,7 +7,10 @@ import { join } from 'node:path';
 process.env.SQLITE_PATH = join(tmpdir(), `lognog-weekly-send-${process.env.VITEST_WORKER_ID ?? '0'}-${randomUUID()}.db`);
 
 import { getSQLiteDB } from '../../db/sqlite';
-import { claimWeek, markWeek, maybeSendWeeklyFunnelReport, MAX_ATTEMPTS, resetWeeklyFunnelMemory, weekStatus, weeklyFunnelRecipients, sendWeeklyFunnelReport, WeeklyDeps } from './weekly-send';
+import {
+  claimWeek, FALLBACK_MAX, markWeek, maybeSendWeeklyFunnelReport, MAX_ATTEMPTS, resetWeeklyFunnelMemory, resolveWeeklyRecipients,
+  weekStatus, weeklyFunnelBaseUrl, weeklyFunnelRecipients, sendWeeklyFunnelReport, WeeklyDeps,
+} from './weekly-send';
 import type { WeeklyFunnelReport } from './weekly';
 
 const MONDAY_9 = new Date(Date.UTC(2026, 10, 16, 14, 0)); // Mon Nov 16 2026, 9:00 AM Eastern
@@ -19,7 +22,7 @@ function deps(over: Partial<WeeklyDeps> = {}): WeeklyDeps & { build: ReturnType<
   return { build: vi.fn(async () => REPORT), mail: vi.fn(async () => undefined), ...over } as never;
 }
 
-const ENV = ['FUNNEL_WEEKLY_TO', 'SMTP_HOST', 'SMTP_USER'] as const;
+const ENV = ['FUNNEL_WEEKLY_TO', 'SMTP_HOST', 'SMTP_USER', 'PUBLIC_URL', 'LOGNOG_PUBLIC_URL'] as const;
 const saved: Record<string, string | undefined> = {};
 
 beforeEach(() => {
@@ -29,8 +32,9 @@ beforeEach(() => {
   process.env.FUNNEL_WEEKLY_TO = 'owner@example.test';
   getSQLiteDB().exec('DROP TABLE IF EXISTS funnel_weekly_sends');
   resetWeeklyFunnelMemory();
-  // A table the old fallback used to read. Its people must never get this report.
-  getSQLiteDB().exec("CREATE TABLE IF NOT EXISTS scheduled_reports_probe (recipients TEXT)");
+  getSQLiteDB().exec('DELETE FROM scheduled_reports');
+  delete process.env.PUBLIC_URL;
+  delete process.env.LOGNOG_PUBLIC_URL;
   vi.spyOn(console, 'log').mockImplementation(() => undefined);
   vi.spyOn(console, 'error').mockImplementation(() => undefined);
 });
@@ -48,7 +52,7 @@ describe('weekly funnel email: who gets it', () => {
     expect(weeklyFunnelRecipients()).toEqual(['owner@example.test', 'second@example.test']);
   });
 
-  it('nobody when it is not set: there is no fallback list', async () => {
+  it('nobody when it is not set and no scheduled report has a recipient', async () => {
     delete process.env.FUNNEL_WEEKLY_TO;
     expect(weeklyFunnelRecipients()).toEqual([]);
     const d = deps();
@@ -133,5 +137,90 @@ describe('weekly funnel email: at most once', () => {
     expect(claimWeek(KEY, minutesLater(16))).toBe(true);
     markWeek(KEY, 'mailing', 1);
     expect(claimWeek(KEY, minutesLater(60))).toBe(false);
+  });
+});
+
+function addReport(recipients: string, enabled = 1): void {
+  getSQLiteDB()
+    .prepare('INSERT INTO scheduled_reports (id, name, query, schedule, recipients, enabled) VALUES (?, ?, ?, ?, ?, ?)')
+    .run(randomUUID(), 'A report', 'search *', '0 9 * * 1', recipients, enabled);
+}
+
+describe('weekly funnel email: the fallback list', () => {
+  it('the setting always wins, even when scheduled reports have recipients', () => {
+    addReport('someone-else@example.test');
+    process.env.FUNNEL_WEEKLY_TO = 'owner@example.test';
+    expect(resolveWeeklyRecipients()).toEqual({ list: ['owner@example.test'], source: 'setting' });
+  });
+
+  it('a setting with only unusable addresses sends to nobody; it does not fall back', () => {
+    addReport('someone-else@example.test');
+    process.env.FUNNEL_WEEKLY_TO = 'not-an-address';
+    const r = resolveWeeklyRecipients();
+    expect(r.list).toEqual([]);
+    expect(r.source).toBe('none');
+  });
+
+  it('with no setting it uses the enabled scheduled reports: valid addresses only, no repeats', () => {
+    delete process.env.FUNNEL_WEEKLY_TO;
+    addReport('Owner@Example.test, owner@example.test, broken@, second@example.test');
+    addReport('disabled@example.test', 0);
+    const r = resolveWeeklyRecipients();
+    expect(r).toEqual({ list: ['Owner@Example.test', 'second@example.test'], source: 'scheduled_reports' });
+    expect(weeklyFunnelRecipients()).toHaveLength(2);
+  });
+
+  it('a disabled report alone gives nobody', () => {
+    delete process.env.FUNNEL_WEEKLY_TO;
+    addReport('disabled@example.test', 0);
+    expect(resolveWeeklyRecipients()).toMatchObject({ list: [], source: 'none' });
+  });
+
+  it('refuses a fallback list bigger than the cap, so a large list never gets business numbers by default', () => {
+    delete process.env.FUNNEL_WEEKLY_TO;
+    addReport(Array.from({ length: FALLBACK_MAX + 1 }, (_, i) => `p${i}@example.test`).join(','));
+    const r = resolveWeeklyRecipients();
+    expect(r.list).toEqual([]);
+    expect(r.source).toBe('none');
+    expect(r.reason).toMatch(/more than the 3 allowed/);
+    expect(r.reason).not.toMatch(/@/);
+  });
+
+  it('exactly the cap is allowed', () => {
+    delete process.env.FUNNEL_WEEKLY_TO;
+    addReport(Array.from({ length: FALLBACK_MAX }, (_, i) => `p${i}@example.test`).join(','));
+    expect(resolveWeeklyRecipients().list).toHaveLength(FALLBACK_MAX);
+  });
+
+  it('the Monday job mails the fallback list and logs how many, never who', async () => {
+    delete process.env.FUNNEL_WEEKLY_TO;
+    addReport('owner@example.test');
+    const logs: string[] = [];
+    vi.spyOn(console, 'log').mockImplementation((...a: unknown[]) => { logs.push(a.join(' ')); });
+    const d = deps();
+    expect(await maybeSendWeeklyFunnelReport(MONDAY_9, d)).toMatchObject({ sent: true, recipients: 1 });
+    expect(d.mail).toHaveBeenCalledWith(REPORT, ['owner@example.test']);
+    expect(logs.join(' | ')).toMatch(/sent to 1 \(list from scheduled_reports\)/);
+    expect(logs.join(' | ')).not.toMatch(/@/);
+  });
+
+  it('a dry run says how many and from where, builds nothing and sends nothing', async () => {
+    delete process.env.FUNNEL_WEEKLY_TO;
+    addReport('owner@example.test');
+    const r = await sendWeeklyFunnelReport({ dryRun: true });
+    expect(r).toEqual({ sent: false, dryRun: true, recipients: 1, source: 'scheduled_reports', reason: undefined });
+    expect(JSON.stringify(r)).not.toMatch(/@/);
+    expect(weekStatus(KEY)).toBeNull();
+  });
+});
+
+describe('weekly funnel email: the link', () => {
+  it('uses PUBLIC_URL when set, without a trailing slash', () => {
+    process.env.PUBLIC_URL = 'https://logs.example.test/';
+    expect(weeklyFunnelBaseUrl()).toBe('https://logs.example.test');
+  });
+
+  it('falls back to the production address when nothing is set', () => {
+    expect(weeklyFunnelBaseUrl()).toBe('https://logs.machinekinglabs.com');
   });
 });

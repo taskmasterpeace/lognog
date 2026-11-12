@@ -123,9 +123,12 @@ router.get('/weekly', async (req: Request, res: Response) => {
 });
 
 // Send the weekly email right now (admin only). The Monday 9:00 AM Eastern send is automatic.
-router.post('/weekly/send', requireAdmin, async (_req: Request, res: Response) => {
+// With ?dryRun=1 (or {"dryRun": true}) nothing is sent: it answers how many people it
+// would go to and where that list came from. Addresses are never returned.
+router.post('/weekly/send', requireAdmin, async (req: Request, res: Response) => {
   try {
-    res.json(await sendWeeklyFunnelReport());
+    const dryRun = req.query.dryRun === '1' || req.query.dryRun === 'true' || req.body?.dryRun === true;
+    res.json(await sendWeeklyFunnelReport({ dryRun }));
   } catch (error) {
     console.error('Weekly funnel send error:', error);
     res.status(500).json({ error: 'Could not send the weekly funnel report' });
