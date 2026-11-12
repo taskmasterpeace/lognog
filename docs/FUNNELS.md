@@ -192,6 +192,28 @@ Bridge rules only apply to lines that arrive after this ships; they do not rewri
 
 The weekly report puts the last 7 days next to the 7 days before, each measured as it stood when that week ended, and names the single biggest leak in one sentence. Only steps people take within minutes count as a leak there (starting sign-up, finishing it, checkout, paying), so a new account is not blamed for not having come back yet. The email goes at most once a week: if the mail server is reached and then reports a problem, it is not sent again. A product that has sent nothing says "No real data yet". Every section and slide is led by the product's own logo.
 
+### Product health
+
+A product can declare a `health` block in `FUNNEL_PRODUCTS` (Homework Tree does). It is a handful of nightly numbers in the product's own words, worked out from the same funnel events, each next to the period before it, plus one sentence that can be read out.
+
+| Where | What |
+|---|---|
+| LogNog → Funnels → Homework Tree | The "Homework Tree health" block, above the ladders |
+| `GET /api/funnels/health?product=homework-tree` | The same numbers and the sentence (`line`) |
+| Monday weekly report | The sentence, in the Homework Tree section |
+
+| Number | From |
+|---|---|
+| Money in, new paying families, renewals (today) | `paid` events; a renewal is an event named `..._renewed` |
+| Paying families, monthly run-rate (right now) | Latest `paid` not followed by `churn`; yearly plans spread over 12 months |
+| Sheets read, families that used it (today) | `use` events |
+| Active families, sheets per active family (this week) | `use` events in the last 7 days |
+| Reached 3 sheets, came back a second week (this week) | `use` counts per family |
+| Hit the free limit, started checkout (this week) | `paywall`, `checkout` |
+| Gone quiet, cancelled | No `use` for the quiet window; `churn` |
+
+Not counted, on purpose: quizzes, rounds and games (they run on the family's device), anything per child, and activity inside the iPhone app.
+
 ## 6. Asking LogNog directly
 
 The Funnels page uses `GET /api/funnels/overview?days=30` and `GET /api/funnels/report?product=<slug>&days=30`. The same fields work in Search and on dashboards:

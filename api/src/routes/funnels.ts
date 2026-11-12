@@ -4,6 +4,7 @@
  *   GET /funnels/products            the products and what each stage means for them
  *   GET /funnels/report?product=&days=   one product's full funnel report
  *   GET /funnels/overview?days=      every product side by side
+ *   GET /funnels/health?product=     a product's nightly health numbers and one-sentence line
  *   GET /funnels/weekly              this week next to last week (?format=html = the email)
  *   POST /funnels/weekly/send        email the weekly report now (admin)
  *
@@ -14,6 +15,7 @@ import { authenticate, requireAdmin } from '../auth/middleware.js';
 import { getWeeklyFunnelReport, renderWeeklyFunnelEmail } from '../services/funnels/weekly.js';
 import { sendWeeklyFunnelReport } from '../services/funnels/weekly-send.js';
 import { buildFunnelReport, FunnelReport } from '../services/funnels/compute.js';
+import { buildProductHealth } from '../services/funnels/health.js';
 import { fetchFunnelEvents } from '../services/funnels/store.js';
 import { FUNNEL_PRODUCTS, FUNNEL_VERSION, FunnelProduct, SENT_STAGES, STAGE_LABELS, findFunnelProduct } from '../services/funnels/model.js';
 
@@ -56,6 +58,7 @@ router.get('/products', (req: Request, res: Response) => {
       paidMeans: p.paidMeans,
       notApplicable: p.notApplicable,
       strictPrivacy: !!p.strictPrivacy,
+      hasHealth: !!p.health,
     })),
   });
 });
@@ -70,6 +73,22 @@ router.get('/report', async (req: Request, res: Response) => {
   } catch (error) {
     console.error('Funnel report error:', error);
     res.status(500).json({ error: 'Could not build the funnel report' });
+  }
+});
+
+// A product's nightly health numbers and its one-sentence line (only products that declare one).
+router.get('/health', async (req: Request, res: Response) => {
+  try {
+    const product = findFunnelProduct(String(req.query.product ?? ''));
+    if (!product || !canRead(product, req.allowedIndexes)) return res.status(404).json({ error: 'Unknown product' });
+    if (!product.health) return res.status(404).json({ error: 'This product has no health block' });
+    const now = Date.now();
+    // 90 days of history: enough for paying-now and gone-quiet to be right.
+    const { events, truncated } = await fetchFunnelEvents(product, now - HISTORY_DAYS * DAY, req.allowedIndexes);
+    res.json({ ...buildProductHealth(product, events, now), truncated });
+  } catch (error) {
+    console.error('Funnel health error:', error);
+    res.status(500).json({ error: 'Could not build the health numbers' });
   }
 });
 

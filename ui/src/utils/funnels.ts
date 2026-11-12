@@ -1,5 +1,25 @@
 import type { FunnelRung } from '../api/client';
 
+/** A health number as shown: "$6.99", "3.5", "14". */
+export function healthValue(value: number, unit: 'count' | 'cents' | 'decimal'): string {
+  if (unit === 'cents') return money(value);
+  if (unit === 'decimal') return (Math.round(value * 10) / 10).toLocaleString('en-US');
+  return Math.round(value).toLocaleString('en-US');
+}
+
+/** What a health number is compared with, in words. */
+export function healthBefore(value: number, unit: 'count' | 'cents' | 'decimal', period: 'day' | 'week' | 'right_now'): string {
+  const lead = period === 'day' ? 'day before' : 'week before';
+  return `${lead}: ${healthValue(value, unit)}`;
+}
+
+/** Up, down or level against the earlier period. */
+export function healthTrend(now: number, before: number): 'up' | 'down' | 'same' {
+  if (now > before) return 'up';
+  if (now < before) return 'down';
+  return 'same';
+}
+
 /** Date ranges the Funnels page offers, in days. */
 export const RANGES = [7, 30, 90];
 

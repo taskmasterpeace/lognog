@@ -1,6 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { boardSeconds, dropBetween, eventLabel, money, moneyIn, nextSlide, pctText, stageLabel, weekChange, widthPct } from '../src/utils/funnels.ts';
+import {
+  boardSeconds, dropBetween, eventLabel, healthBefore, healthTrend, healthValue, money, moneyIn, nextSlide, pctText, stageLabel, weekChange, widthPct,
+} from '../src/utils/funnels.ts';
 
 const rung = (stage: string, people: number, over: Record<string, unknown> = {}) => ({
   stage, label: stage, people, pctOfPrevious: null, lost: 0, pctOfTop: null, applies: true, reported: true, ...over,
@@ -67,4 +69,16 @@ test('money in never reads as $0 when payments arrived without amounts', () => {
   assert.deepEqual(moneyIn(999, 3, 1), { value: '$9.99', note: '1 of 3 payments came with no amount' });
   assert.deepEqual(moneyIn(999, 1, 0), { value: '$9.99' });
   assert.deepEqual(moneyIn(0, 0, 0), { value: '$0' });
+});
+
+test('health numbers read plainly, with what they are compared against', () => {
+  assert.equal(healthValue(699, 'cents'), '$6.99');
+  assert.equal(healthValue(3.46, 'decimal'), '3.5');
+  assert.equal(healthValue(1400, 'count'), '1,400');
+  assert.equal(healthBefore(2, 'count', 'day'), 'day before: 2');
+  assert.equal(healthBefore(1398, 'cents', 'week'), 'week before: $13.98');
+  assert.equal(healthBefore(31, 'count', 'right_now'), 'week before: 31');
+  assert.equal(healthTrend(3, 1), 'up');
+  assert.equal(healthTrend(1, 3), 'down');
+  assert.equal(healthTrend(2, 2), 'same');
 });
