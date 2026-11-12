@@ -25,14 +25,19 @@ test('every live dashboard group gets its product logo', () => {
   }
 });
 
-test('the default group and unknown groups get no logo', () => {
-  for (const scope of ['default', 'Default', '', null, undefined, 'something-else']) {
+test('the default group shows the LogNog logo', () => {
+  assert.equal(findDashboardBrand('default')?.slug, 'lognog');
+  assert.equal(findDashboardBrand('Default')?.slug, 'lognog');
+});
+
+test('empty and unknown groups get no logo', () => {
+  for (const scope of ['', null, undefined, 'something-else']) {
     assert.equal(findDashboardBrand(scope), undefined, String(scope));
   }
 });
 
 test('studio group names never match a log source', () => {
-  for (const app of ['game', 'studio', 'main-suite', 'game-server', 'studio-api']) {
+  for (const app of ['game', 'studio', 'main-suite', 'default', 'game-server', 'studio-api']) {
     assert.equal(findProjectBrand(app), undefined, app);
   }
 });

@@ -66,6 +66,8 @@ export const DASHBOARD_SCOPE_BRANDS: Record<string, string> = {
   game: 'consequences-of-failure',
   studio: 'machine-king-labs',
   'main-suite': 'machine-king-labs',
+  // Dashboards not filed under a product are LogNog's own.
+  default: 'lognog',
 };
 
 /** Find the product for a dashboard's app_scope: a known product name first, then the studio's own group names. */
