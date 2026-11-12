@@ -20,7 +20,7 @@
  * been called the week is closed whatever happens next, because the message
  * may have gone; a possible missed week is better than a hundred copies.
  */
-import nodemailer from 'nodemailer';
+import { sendMail } from '../mailer.js';
 import { getSQLiteDB } from '../../db/sqlite.js';
 import { getWeeklyFunnelReport, renderWeeklyFunnelEmail, weeklyFunnelDue, weeklyFunnelLogoAttachments, WeeklyFunnelReport } from './weekly.js';
 
@@ -170,14 +170,8 @@ export interface WeeklySendResult {
 
 /** Hand a built report to the mail server. Separate so the caller knows exactly when mail was attempted. */
 export async function mailWeeklyFunnelReport(report: WeeklyFunnelReport, recipients: string[]): Promise<void> {
-  const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT || '587', 10),
-    secure: process.env.SMTP_SECURE === 'true',
-    auth: process.env.SMTP_USER && process.env.SMTP_PASS ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined,
-  });
   const base = weeklyFunnelBaseUrl();
-  await transporter.sendMail({
+  await sendMail({
     from: process.env.SMTP_FROM || 'noreply@lognog.local',
     to: recipients.join(', '),
     subject: `Weekly funnel report: ${report.title}`,
