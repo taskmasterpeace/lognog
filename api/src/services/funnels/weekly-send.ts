@@ -4,12 +4,12 @@
  * Who gets it (resolveWeeklyRecipients):
  *  1. FUNNEL_WEEKLY_TO (comma-separated), when it is set. It always wins.
  *  2. Otherwise, the people who already receive LogNog's ENABLED scheduled
- *     reports, but only when BOTH hold:
- *       - only admins can edit scheduled reports (no ordinary `user` account
- *         exists; read-only accounts cannot edit). Otherwise a non-admin could
- *         add an address to a report and so pick who gets the business numbers.
- *       - it is a small list (FALLBACK_MAX or fewer), so a big distribution
- *         list never receives revenue and customer numbers by default.
+ *     reports that only an admin can edit: reports owned by an admin account,
+ *     and reports with no owner (routes/reports.ts makes those admin-only).
+ *     A report owned by an ordinary account is never used, so a non-admin
+ *     cannot pick who gets the business numbers. And only if that is a small
+ *     list (FALLBACK_MAX or fewer), so a big distribution list never receives
+ *     revenue and customer numbers by default.
  *  3. Otherwise nobody, and nothing is sent.
  * Addresses are never written to the log or returned: only how many, and a
  * mail error is logged by its code, not its text (which can quote an address).
@@ -121,19 +121,20 @@ export function resolveWeeklyRecipients(): ResolvedRecipients {
   }
   let rows: Array<{ recipients: string | null }>;
   try {
-    const db = getSQLiteDB();
-    // Scheduled reports can be edited by any account that is not read-only. The
-    // fallback is only trusted while every such account is an admin.
-    const others = db.prepare("SELECT count(*) AS n FROM users WHERE role NOT IN ('admin', 'readonly')").get() as { n: number };
-    if (others.n > 0) {
-      return { list: [], source: 'none', reason: 'FUNNEL_WEEKLY_TO is not set, and people who are not admins can edit scheduled reports, so their recipients are not used. Name the recipients in FUNNEL_WEEKLY_TO.' };
-    }
-    rows = db.prepare('SELECT recipients FROM scheduled_reports WHERE enabled = 1').all() as Array<{ recipients: string | null }>;
+    // Only reports that an admin alone can edit: owned by a current admin
+    // account (users_v2 is where accounts live), or with no owner.
+    rows = getSQLiteDB()
+      .prepare(
+        `SELECT recipients FROM scheduled_reports
+         WHERE enabled = 1
+           AND (owner_id IS NULL OR owner_id = '' OR owner_id IN (SELECT id FROM users_v2 WHERE role = 'admin'))`,
+      )
+      .all() as Array<{ recipients: string | null }>;
   } catch {
     return { list: [], source: 'none', reason: 'FUNNEL_WEEKLY_TO is not set and the scheduled reports could not be read.' };
   }
   const fallback = validUnique(rows.flatMap((r) => (typeof r.recipients === 'string' ? r.recipients.split(',') : [])));
-  if (fallback.length === 0) return { list: [], source: 'none', reason: 'FUNNEL_WEEKLY_TO is not set and no enabled scheduled report has a recipient.' };
+  if (fallback.length === 0) return { list: [], source: 'none', reason: 'FUNNEL_WEEKLY_TO is not set and no enabled scheduled report that only admins can edit has a recipient.' };
   if (fallback.length > FALLBACK_MAX) {
     return { list: [], source: 'none', reason: `FUNNEL_WEEKLY_TO is not set and the scheduled reports reach ${fallback.length} people, more than the ${FALLBACK_MAX} allowed without naming them.` };
   }
@@ -288,7 +289,7 @@ export async function maybeSendWeeklyFunnelReport(now: Date = new Date(), deps: 
     console.log(`[Funnels] Weekly report for ${due.key} sent to ${recipients.length} (list from ${resolved.source}).`);
     return { sent: true, recipients: recipients.length, title: report.title };
   } catch (error) {
-    console.error(`[Funnels] Weekly report failed (${mailErrorCode(error)}).`);
+    console.error(`[Funnels] Weekly report failed (${error instanceof Error ? error.name : 'error'} ${mailErrorCode(error)}).`);
     return { sent: false, recipients: 0, reason: 'error' };
   } finally {
     running = false;

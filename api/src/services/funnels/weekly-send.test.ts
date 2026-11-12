@@ -12,6 +12,7 @@ import {
   mailErrorCode, weekStatus, weeklyFunnelBaseUrl, weeklyFunnelRecipients, sendWeeklyFunnelReport, WeeklyDeps,
 } from './weekly-send';
 import type { WeeklyFunnelReport } from './weekly';
+import { createUser, updateUserRole } from '../../auth/auth';
 
 const MONDAY_9 = new Date(Date.UTC(2026, 10, 16, 14, 0)); // Mon Nov 16 2026, 9:00 AM Eastern
 const KEY = '2026-11-16';
@@ -33,7 +34,11 @@ beforeEach(() => {
   getSQLiteDB().exec('DROP TABLE IF EXISTS funnel_weekly_sends');
   resetWeeklyFunnelMemory();
   getSQLiteDB().exec('DELETE FROM scheduled_reports');
-  getSQLiteDB().exec("DELETE FROM users WHERE username LIKE 'wk-test-%'");
+  try {
+    getSQLiteDB().exec("DELETE FROM users_v2 WHERE username LIKE 'wk-test-%'");
+  } catch {
+    /* the accounts table is created on first use */
+  }
   delete process.env.PUBLIC_URL;
   delete process.env.LOGNOG_PUBLIC_URL;
   vi.spyOn(console, 'log').mockImplementation(() => undefined);
@@ -226,44 +231,50 @@ describe('weekly funnel email: the link', () => {
   });
 });
 
-function addUser(role: 'admin' | 'user' | 'readonly'): void {
-  // Fill whatever columns this database's users table has (it differs between setups).
-  const db = getSQLiteDB();
-  const cols = (db.prepare('PRAGMA table_info(users)').all() as Array<{ name: string; notnull: number; dflt_value: unknown }>);
-  const values: Record<string, unknown> = { id: randomUUID(), username: `wk-test-${randomUUID().slice(0, 8)}`, role };
-  for (const c of cols) {
-    if (c.name in values) continue;
-    if (c.name === 'email') values.email = `wk-${randomUUID().slice(0, 8)}@example.test`;
-    else if (c.notnull && c.dflt_value === null) values[c.name] = 'x';
-  }
-  const names = Object.keys(values);
-  db.prepare(`INSERT INTO users (${names.join(', ')}) VALUES (${names.map(() => '?').join(', ')})`).run(...names.map((n) => values[n]));
+async function addUser(role: 'admin' | 'user' | 'readonly'): Promise<string> {
+  // Real accounts, made the way the app makes them (they live in users_v2).
+  const name = `wk-test-${randomUUID().slice(0, 8)}`;
+  const user = await createUser(name, `${name}@example.test`, 'a-long-test-password', role);
+  return user.id;
+}
+
+function addOwnedReport(recipients: string, ownerId: string | null): void {
+  getSQLiteDB()
+    .prepare('INSERT INTO scheduled_reports (id, name, query, schedule, recipients, enabled, owner_id) VALUES (?, ?, ?, ?, ?, 1, ?)')
+    .run(randomUUID(), 'A report', 'search *', '0 9 * * 1', recipients, ownerId);
 }
 
 describe('weekly funnel email: who may steer the fallback', () => {
-  it('is not used when an ordinary (non-admin) account exists, because that account can edit scheduled reports', () => {
+  it('uses reports owned by an admin and reports with no owner', async () => {
     delete process.env.FUNNEL_WEEKLY_TO;
-    addReport('owner@example.test');
-    addUser('admin');
-    expect(resolveWeeklyRecipients().source).toBe('scheduled_reports');
-    addUser('user');
-    const r = resolveWeeklyRecipients();
-    expect(r.list).toEqual([]);
-    expect(r.source).toBe('none');
-    expect(r.reason).toMatch(/not admins can edit scheduled reports/);
+    addOwnedReport('admin-picked@example.test', await addUser('admin'));
+    addOwnedReport('legacy@example.test', null);
+    expect(resolveWeeklyRecipients().list.sort()).toEqual(['admin-picked@example.test', 'legacy@example.test']);
   });
 
-  it('read-only accounts do not switch it off (they cannot edit reports)', () => {
+  it('never uses a report owned by an ordinary account, so a non-admin cannot pick who gets the numbers', async () => {
     delete process.env.FUNNEL_WEEKLY_TO;
-    addReport('owner@example.test');
-    addUser('readonly');
+    addOwnedReport('owner@example.test', null);
+    addOwnedReport('joe-picked@evil.test', await addUser('user'));
     expect(resolveWeeklyRecipients()).toEqual({ list: ['owner@example.test'], source: 'scheduled_reports' });
   });
 
-  it('the setting still works when ordinary accounts exist', () => {
-    addUser('user');
-    process.env.FUNNEL_WEEKLY_TO = 'owner@example.test';
-    expect(resolveWeeklyRecipients()).toEqual({ list: ['owner@example.test'], source: 'setting' });
+  it('a report whose owner is no longer an admin (or no longer exists) stops counting', async () => {
+    delete process.env.FUNNEL_WEEKLY_TO;
+    const formerAdmin = await addUser('admin');
+    addOwnedReport('was-admin@example.test', formerAdmin);
+    addOwnedReport('ghost@example.test', 'no-such-account');
+    expect(resolveWeeklyRecipients().list).toEqual(['was-admin@example.test']);
+    updateUserRole(formerAdmin, 'user');
+    expect(resolveWeeklyRecipients()).toMatchObject({ list: [], source: 'none' });
+  });
+
+  it('ordinary accounts existing does not switch the fallback off for admin-only reports', async () => {
+    delete process.env.FUNNEL_WEEKLY_TO;
+    await addUser('user');
+    await addUser('readonly');
+    addOwnedReport('owner@example.test', null);
+    expect(resolveWeeklyRecipients()).toEqual({ list: ['owner@example.test'], source: 'scheduled_reports' });
   });
 
   it('only plain addresses count: comments, groups and quoted forms are refused', () => {

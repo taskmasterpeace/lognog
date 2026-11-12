@@ -82,6 +82,27 @@ describe('ownership', () => {
     expect((await request(app).delete(`/reports/${id}`)).status).toBe(204);
   });
 
+  it('reports with no owner: only an admin can edit, run or delete them', async () => {
+    // A report from before reports had owners. Its recipients can be used for the
+    // weekly funnel email, so an ordinary account must not be able to rewrite them.
+    const { getSQLiteDB } = await import('../db/sqlite.js');
+    const id = 'legacy-ownerless-report';
+    getSQLiteDB()
+      .prepare('INSERT INTO scheduled_reports (id, name, query, schedule, recipients, enabled, owner_id) VALUES (?, ?, ?, ?, ?, 1, NULL)')
+      .run(id, 'legacy', 'search *', '0 8 * * 1', 'owner@example.com');
+
+    as(bob);
+    expect((await request(app).put(`/reports/${id}`).send({ recipients: 'bob-picked@example.com' })).status).toBe(403);
+    expect((await request(app).post(`/reports/${id}/trigger`)).status).toBe(403);
+    expect((await request(app).delete(`/reports/${id}`)).status).toBe(403);
+    const row = getSQLiteDB().prepare('SELECT recipients FROM scheduled_reports WHERE id = ?').get(id) as { recipients: string };
+    expect(row.recipients).toBe('owner@example.com');
+
+    as(admin);
+    expect((await request(app).put(`/reports/${id}`).send({ name: 'renamed by admin' })).status).toBe(200);
+    expect((await request(app).delete(`/reports/${id}`)).status).toBe(204);
+  });
+
   it('dashboards: only owner/admin can edit, share or delete', async () => {
     as(alice);
     const created = await request(app).post('/dashboards').send({ name: 'ops board' });
