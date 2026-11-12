@@ -9,7 +9,7 @@ process.env.SQLITE_PATH = join(tmpdir(), `lognog-weekly-send-${process.env.VITES
 import { getSQLiteDB } from '../../db/sqlite';
 import {
   claimWeek, FALLBACK_MAX, markWeek, maybeSendWeeklyFunnelReport, MAX_ATTEMPTS, resetWeeklyFunnelMemory, resolveWeeklyRecipients,
-  weekStatus, weeklyFunnelBaseUrl, weeklyFunnelRecipients, sendWeeklyFunnelReport, WeeklyDeps,
+  mailErrorCode, weekStatus, weeklyFunnelBaseUrl, weeklyFunnelRecipients, sendWeeklyFunnelReport, WeeklyDeps,
 } from './weekly-send';
 import type { WeeklyFunnelReport } from './weekly';
 
@@ -33,6 +33,7 @@ beforeEach(() => {
   getSQLiteDB().exec('DROP TABLE IF EXISTS funnel_weekly_sends');
   resetWeeklyFunnelMemory();
   getSQLiteDB().exec('DELETE FROM scheduled_reports');
+  getSQLiteDB().exec("DELETE FROM users WHERE username LIKE 'wk-test-%'");
   delete process.env.PUBLIC_URL;
   delete process.env.LOGNOG_PUBLIC_URL;
   vi.spyOn(console, 'log').mockImplementation(() => undefined);
@@ -60,7 +61,7 @@ describe('weekly funnel email: who gets it', () => {
     expect(d.build).not.toHaveBeenCalled();
     expect(d.mail).not.toHaveBeenCalled();
     expect(weekStatus(KEY)).toBeNull();
-    expect((await sendWeeklyFunnelReport()).sent).toBe(false);
+    expect((await sendWeeklyFunnelReport({ send: true })).sent).toBe(false);
   });
 
   it('nothing happens without a mail server', async () => {
@@ -204,10 +205,10 @@ describe('weekly funnel email: the fallback list', () => {
     expect(logs.join(' | ')).not.toMatch(/@/);
   });
 
-  it('a dry run says how many and from where, builds nothing and sends nothing', async () => {
+  it('by default the send route is only a check: how many and from where, nothing built or sent', async () => {
     delete process.env.FUNNEL_WEEKLY_TO;
     addReport('owner@example.test');
-    const r = await sendWeeklyFunnelReport({ dryRun: true });
+    const r = await sendWeeklyFunnelReport();
     expect(r).toEqual({ sent: false, dryRun: true, recipients: 1, source: 'scheduled_reports', reason: undefined });
     expect(JSON.stringify(r)).not.toMatch(/@/);
     expect(weekStatus(KEY)).toBeNull();
@@ -222,5 +223,80 @@ describe('weekly funnel email: the link', () => {
 
   it('falls back to the production address when nothing is set', () => {
     expect(weeklyFunnelBaseUrl()).toBe('https://logs.machinekinglabs.com');
+  });
+});
+
+function addUser(role: 'admin' | 'user' | 'readonly'): void {
+  // Fill whatever columns this database's users table has (it differs between setups).
+  const db = getSQLiteDB();
+  const cols = (db.prepare('PRAGMA table_info(users)').all() as Array<{ name: string; notnull: number; dflt_value: unknown }>);
+  const values: Record<string, unknown> = { id: randomUUID(), username: `wk-test-${randomUUID().slice(0, 8)}`, role };
+  for (const c of cols) {
+    if (c.name in values) continue;
+    if (c.name === 'email') values.email = `wk-${randomUUID().slice(0, 8)}@example.test`;
+    else if (c.notnull && c.dflt_value === null) values[c.name] = 'x';
+  }
+  const names = Object.keys(values);
+  db.prepare(`INSERT INTO users (${names.join(', ')}) VALUES (${names.map(() => '?').join(', ')})`).run(...names.map((n) => values[n]));
+}
+
+describe('weekly funnel email: who may steer the fallback', () => {
+  it('is not used when an ordinary (non-admin) account exists, because that account can edit scheduled reports', () => {
+    delete process.env.FUNNEL_WEEKLY_TO;
+    addReport('owner@example.test');
+    addUser('admin');
+    expect(resolveWeeklyRecipients().source).toBe('scheduled_reports');
+    addUser('user');
+    const r = resolveWeeklyRecipients();
+    expect(r.list).toEqual([]);
+    expect(r.source).toBe('none');
+    expect(r.reason).toMatch(/not admins can edit scheduled reports/);
+  });
+
+  it('read-only accounts do not switch it off (they cannot edit reports)', () => {
+    delete process.env.FUNNEL_WEEKLY_TO;
+    addReport('owner@example.test');
+    addUser('readonly');
+    expect(resolveWeeklyRecipients()).toEqual({ list: ['owner@example.test'], source: 'scheduled_reports' });
+  });
+
+  it('the setting still works when ordinary accounts exist', () => {
+    addUser('user');
+    process.env.FUNNEL_WEEKLY_TO = 'owner@example.test';
+    expect(resolveWeeklyRecipients()).toEqual({ list: ['owner@example.test'], source: 'setting' });
+  });
+
+  it('only plain addresses count: comments, groups and quoted forms are refused', () => {
+    delete process.env.FUNNEL_WEEKLY_TO;
+    addReport('grp:a@x.test, a@x.test(, a(c)@x.test, "A" <b@x.test>, c@x.test:b, fine@example.test');
+    expect(resolveWeeklyRecipients().list).toEqual(['fine@example.test']);
+  });
+});
+
+describe('weekly funnel email: sending by hand', () => {
+  it('nothing but an explicit send:true sends', async () => {
+    delete process.env.FUNNEL_WEEKLY_TO;
+    addReport('owner@example.test');
+    for (const opts of [undefined, {}, { send: false }, { send: 'true' }, { send: 1 }, { dryRun: false }]) {
+      const r = await sendWeeklyFunnelReport(opts as never);
+      expect(r.sent, JSON.stringify(opts)).toBe(false);
+      expect(r.dryRun).toBe(true);
+    }
+  });
+
+  it('a mail failure is reported by its code, never its text', () => {
+    const err = Object.assign(new Error('all recipients were rejected: 550 5.1.1 <owner@x.test> unknown'), { code: 'EENVELOPE', responseCode: 550 });
+    expect(mailErrorCode(err)).toBe('EENVELOPE 550');
+    expect(mailErrorCode(new Error('<owner@x.test> rejected'))).toBe('unknown');
+    expect(mailErrorCode({ code: 'x@y.test<script>' })).not.toMatch(/[@<>]/);
+  });
+
+  it('the Monday job logs a mail failure without the address', async () => {
+    const errors: string[] = [];
+    vi.spyOn(console, 'error').mockImplementation((...a: unknown[]) => { errors.push(a.map(String).join(' ')); });
+    const d = deps({ mail: vi.fn(async () => { throw Object.assign(new Error('550 <owner@example.test> rejected'), { code: 'EENVELOPE' }); }) });
+    await maybeSendWeeklyFunnelReport(MONDAY_9, d);
+    expect(errors.join(' | ')).toMatch(/EENVELOPE/);
+    expect(errors.join(' | ')).not.toMatch(/@/);
   });
 });

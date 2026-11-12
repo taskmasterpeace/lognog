@@ -5,7 +5,7 @@
  *   GET /funnels/report?product=&days=   one product's full funnel report
  *   GET /funnels/overview?days=      every product side by side
  *   GET /funnels/weekly              this week next to last week (?format=html = the email)
- *   POST /funnels/weekly/send        email the weekly report now (admin)
+ *   POST /funnels/weekly/send        check who the weekly report would go to; ?confirm=send emails it (admin)
  *
  * Read-only. Every query is cut down to the indexes the caller may read.
  */
@@ -122,15 +122,18 @@ router.get('/weekly', async (req: Request, res: Response) => {
   }
 });
 
-// Send the weekly email right now (admin only). The Monday 9:00 AM Eastern send is automatic.
-// With ?dryRun=1 (or {"dryRun": true}) nothing is sent: it answers how many people it
-// would go to and where that list came from. Addresses are never returned.
+// The weekly email by hand (admin only). The Monday 9:00 AM Eastern send is automatic.
+// This is a CHECK by default: it answers how many people the report would go to and
+// where that list came from, and sends nothing. It sends only when the request says
+// exactly ?confirm=send (or {"confirm": "send"}), so a mistyped flag cannot send.
+// Addresses are never returned.
 router.post('/weekly/send', requireAdmin, async (req: Request, res: Response) => {
   try {
-    const dryRun = req.query.dryRun === '1' || req.query.dryRun === 'true' || req.body?.dryRun === true;
-    res.json(await sendWeeklyFunnelReport({ dryRun }));
+    const send = req.query.confirm === 'send' || req.body?.confirm === 'send';
+    res.json(await sendWeeklyFunnelReport({ send }));
   } catch (error) {
-    console.error('Weekly funnel send error:', error);
+    // Not the error object: a mail error's text can quote an address.
+    console.error('Weekly funnel send error:', error instanceof Error ? error.name : 'error');
     res.status(500).json({ error: 'Could not send the weekly funnel report' });
   }
 });
