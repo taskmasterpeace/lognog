@@ -144,7 +144,7 @@ export const FUNNEL_PRODUCTS: FunnelProduct[] = [
     indexes: ['homework-tree', 'knowledge-league'],
     quietDays: 14,
     activation: 'first_use',
-    activationMeans: 'First homework session finished on the family account',
+    activationMeans: 'First sheet read on the family account',
     paidMeans: 'Family plan payment',
     notApplicable: [],
     strictPrivacy: true,

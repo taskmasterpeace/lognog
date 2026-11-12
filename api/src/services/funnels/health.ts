@@ -166,7 +166,7 @@ export function buildProductHealth(product: FunnelProduct, events: FunnelEvent[]
     ? `${product.name} tonight: no activity recorded yet.`
     : `${product.name} tonight: ${plural(today.usesDay, cfg.unitOneRead, U)} by ${plural(today.usersDay, cfg.personOne, P)}, ` +
       `${plural(today.activeWeek, cfg.personOne, P)} active this week, ` +
-      `the typical active ${cfg.personOne} did ${today.typicalUsesWeek} this week, ` +
+      `about ${today.typicalUsesWeek} ${today.typicalUsesWeek === 1 ? cfg.unitShort.replace(/s$/, '') : cfg.unitShort} per active ${cfg.personOne} this week, ` +
       `${today.hitLimit.toLocaleString('en-US')} hit the free limit, ` +
       `${plural(today.newPayers, `new paying ${cfg.personOne}`, `new paying ${P}`)}, ${dollars(today.moneyCents)} in, ` +
       `${today.cancelledWeek === 0 ? 'nobody cancelled this week' : `${today.cancelledWeek.toLocaleString('en-US')} cancelled this week`}.`;

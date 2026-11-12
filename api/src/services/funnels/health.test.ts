@@ -75,7 +75,7 @@ describe('product health: Homework Tree', () => {
 
   it('gives one sentence that can be read out', () => {
     expect(h.line).toBe(
-      'Homework Tree tonight: 3 sheets read by 2 families, 3 families active this week, the typical active family did 1 this week, 1 hit the free limit, 1 new paying family, $59.99 in, 1 cancelled this week.',
+      'Homework Tree tonight: 3 sheets read by 2 families, 3 families active this week, about 1 sheet per active family this week, 1 hit the free limit, 1 new paying family, $59.99 in, 1 cancelled this week.',
     );
   });
 

@@ -128,7 +128,7 @@ No third-party analytics is needed or used. Ids are first-party and random. Noth
 |---|---|---|---|---|---|
 | Directors Palette | `directors-palette` | First finished image or video | Bought a points pack (one-time) | 30 days | Cancelled (no subscription) |
 | Hey You're Hired | `hey-youre-hired` | Profile half done + first Smart Jobs run (its own `activate`) | Subscription payment | 14 days | — |
-| Homework Tree | `homework-tree` | First homework session on the family account | Family plan payment | 14 days | — |
+| Homework Tree | `homework-tree` | First sheet read on the family account | Family plan payment | 14 days | — |
 
 ### Bridge rules (old lines that already count)
 
