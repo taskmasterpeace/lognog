@@ -1,4 +1,5 @@
-import nodemailer from 'nodemailer';
+import type { SendMailOptions } from 'nodemailer';
+import { sendMail } from './mailer.js';
 import * as cron from 'node-cron';
 import { maybeSendWeeklyFunnelReport } from './funnels/weekly-send.js';
 import { getSQLiteDB, getAlerts, Alert, getScheduledSavedSearches, updateSavedSearchCache, updateSavedSearchError, cleanupExpiredSearchCache, SavedSearch, getSystemSetting, getProjectBySlug, pruneAlertThrottleKeys } from '../db/sqlite.js';
@@ -43,25 +44,14 @@ interface ScheduledReport {
   created_at: string;
 }
 
-// SMTP Configuration
-const SMTP_CONFIG = {
-  host: process.env.SMTP_HOST,
-  port: parseInt(process.env.SMTP_PORT || '587', 10),
-  secure: process.env.SMTP_SECURE === 'true',
-  auth: process.env.SMTP_USER && process.env.SMTP_PASS ? {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  } : undefined,
-};
-
 const SMTP_FROM = process.env.SMTP_FROM || 'noreply@lognog.local';
 
-// Create transporter if SMTP is configured
-let transporter: nodemailer.Transporter | null = null;
+// Mail goes through services/mailer.ts (one connection builder for every
+// sender, with the port fallback). Here we only note whether a server is named.
+const mailEnabled = !!process.env.SMTP_HOST;
 
-if (SMTP_CONFIG.host) {
-  transporter = nodemailer.createTransport(SMTP_CONFIG);
-  console.log(`SMTP configured: ${SMTP_CONFIG.host}:${SMTP_CONFIG.port}`);
+if (mailEnabled) {
+  console.log(`SMTP configured: ${process.env.SMTP_HOST}:${parseInt(process.env.SMTP_PORT || '587', 10)}`);
 } else {
   console.log('SMTP not configured - scheduled report emails will be skipped');
 }
@@ -472,10 +462,10 @@ async function runReportInner(
 
     // Send email
     let outcome: ReportRunResult & { html?: string };
-    if (transporter) {
+    if (mailEnabled) {
       const recipients = report.recipients.split(',').map(e => e.trim());
 
-      const mailOptions: nodemailer.SendMailOptions = {
+      const mailOptions: SendMailOptions = {
         from: SMTP_FROM,
         to: recipients.join(', '),
         subject,
@@ -494,7 +484,7 @@ async function runReportInner(
       }
 
       stage = 'mail';
-      await transporter.sendMail(mailOptions);
+      await sendMail(mailOptions);
       stage = 'finish';
 
       const duration_ms = Math.round(performance.now() - startTime);
