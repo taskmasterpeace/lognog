@@ -24,6 +24,8 @@ export interface HealthNumber {
   period: 'day' | 'week' | 'right_now';
   /** 'count' | 'cents' | 'decimal' (one decimal place) */
   unit: 'count' | 'cents' | 'decimal';
+  /** True when the number cannot be trusted as shown (payments arrived with no amount): show "not reported". */
+  notReported?: boolean;
 }
 
 export interface ProductHealth {
@@ -106,9 +108,10 @@ function snapshot(product: FunnelProduct, events: FunnelEvent[], at: number, his
       weekCounts.push(usesWeek);
     }
     // "For the first time" can only be said about someone whose beginning is in
-    // view. A family first seen right at the edge of the history we hold may have
-    // been using it long before, so they are not counted as newly hooked.
-    const beginningInView = p.firstTs > historyStart + 7 * DAY;
+    // view: their sign-up is among the events we hold, and not right at the edge
+    // of that history. Anyone else may have been using it long before (even with
+    // a gap), so they are never counted as newly hooked.
+    const beginningInView = p.first.signup !== undefined && p.firstTs > historyStart + 7 * DAY;
     // Hooked: the Nth use ever fell inside this week.
     if (beginningInView && uses.length >= cfg.hookedAt && uses[cfg.hookedAt - 1] > weekStart) s.hooked++;
     // Second week: first use that is 7+ days after their very first use fell inside this week.
@@ -132,7 +135,8 @@ function snapshot(product: FunnelProduct, events: FunnelEvent[], at: number, his
           if (renewal) s.renewals++;
         }
         lastPaid = { ts: e.ts, cents: e.amountCents ?? 0 };
-        if (e.interval) lastInterval = e.interval;
+        // The latest payment's own plan length, never one remembered from an earlier payment.
+        lastInterval = e.interval;
       } else if (e.stage === 'churn') {
         lastChurn = e.ts;
       }
@@ -190,6 +194,10 @@ export function buildProductHealth(product: FunnelProduct, events: FunnelEvent[]
     n('cancelled', 'Cancelled', `${cap(P)} that cancelled in the last 7 days.`, today.cancelledWeek, lastWeek.cancelledWeek, 'week'),
   ];
 
+  // Money in is unknown, not zero, when every payment today came without an amount.
+  const moneyTile = numbers.find((x) => x.key === 'money_in');
+  if (moneyTile && today.paymentsToday > 0 && today.paymentsTodayNoAmount >= today.paymentsToday) moneyTile.notReported = true;
+
   const hasData = usable.length > 0;
   // Money as said out loud: never "$0" for payments that arrived without an amount.
   const moneySaid =
@@ -208,9 +216,9 @@ export function buildProductHealth(product: FunnelProduct, events: FunnelEvent[]
 
   const notes = [
     ...cfg.notes,
-    `LogNog keeps ${historyDays} days. "Paying ${P}" and the run-rate only see payments from that time, so a yearly plan drops out ${historyDays} days after it was paid. "For the first time" numbers only count ${P} first seen in that time.`,
+    `LogNog keeps ${historyDays} days. "Paying ${P}" and the run-rate only see payments from that time, so a yearly plan drops out ${historyDays} days after it was paid. "For the first time" numbers only count ${P} whose sign-up is in that time.`,
   ];
-  if (today.runRateUnknown > 0) notes.push(`${plural(today.runRateUnknown, `paying ${cfg.personOne} is`, `paying ${P} are`)} left out of the run-rate: the payment did not say whether the plan is monthly or yearly.`);
+  if (today.runRateUnknown > 0) notes.push(`${plural(today.runRateUnknown, `paying ${cfg.personOne} is`, `paying ${P} are`)} left out of the run-rate: the latest payment did not say its amount or whether the plan is monthly or yearly.`);
   if (today.paymentsTodayNoAmount > 0) notes.push(`${plural(today.paymentsTodayNoAmount, 'payment', 'payments')} today came with no amount, so money in is understated.`);
 
   return {

@@ -158,8 +158,8 @@ describe('product health: cases found in review', () => {
     const h = buildProductHealth(ht, edge, NOW)!;
     expect(num(h, 'hooked').now).toBe(0);
     expect(num(h, 'second_week').now).toBe(0);
-    // A family that started three weeks ago and reads its 3rd sheet today does count.
-    const fresh = buildProductHealth(ht, [read(20 * DAY, 'new'), read(19 * DAY, 'new'), read(HOUR, 'new')], NOW)!;
+    // A family that signed up three weeks ago and reads its 3rd sheet today does count.
+    const fresh = buildProductHealth(ht, [ago(21 * DAY, 'signup', 'new'), read(20 * DAY, 'new'), read(19 * DAY, 'new'), read(HOUR, 'new')], NOW)!;
     expect(num(fresh, 'hooked').now).toBe(1);
   });
 
@@ -184,5 +184,32 @@ describe('product health: cases found in review', () => {
     const h = buildProductHealth(ht, [read(30 * DAY, 'a')], NOW)!;
     expect(h.line).not.toMatch(/per active family/);
     expect(h.line).toMatch(/0 families active this week, 0 hit the free limit this week/);
+  });
+});
+
+describe('product health: second review round', () => {
+  it('a long-time family with a gap in use is not "reaching 3 sheets for the first time" again', () => {
+    // No sign-up in view: their first visible read is 60 days ago, but they may go back years.
+    const h = buildProductHealth(ht, [read(60 * DAY, 'old'), read(30 * DAY, 'old'), read(HOUR, 'old')], NOW)!;
+    expect(num(h, 'hooked').now).toBe(0);
+    expect(num(h, 'second_week').now).toBe(0);
+    expect(num(h, 'active_week').now).toBe(1); // still an active family
+  });
+
+  it('the run-rate uses the plan length of the latest payment, never an earlier one', () => {
+    const h = buildProductHealth(ht, [
+      ago(20 * DAY, 'paid', 'a', { event: 'family_plan_paid', amountCents: 699, interval: 'month' }),
+      ago(2 * DAY, 'paid', 'a', { event: 'family_plan_paid', amountCents: 5999 }), // plan length not stated
+    ], NOW)!;
+    expect(num(h, 'paying_now').now).toBe(1);
+    expect(num(h, 'run_rate').now).toBe(0);
+    expect(h.notes.join(' ')).toMatch(/1 paying family is left out of the run-rate/);
+  });
+
+  it('the money tile is marked "not reported" when every payment today came without an amount', () => {
+    const none = buildProductHealth(ht, [ago(HOUR, 'paid', 'a', { event: 'family_plan_paid', interval: 'month' })], NOW)!;
+    expect(num(none, 'money_in').notReported).toBe(true);
+    const some = buildProductHealth(ht, [ago(HOUR, 'paid', 'a', { event: 'family_plan_paid', amountCents: 699, interval: 'month' })], NOW)!;
+    expect(num(some, 'money_in').notReported).toBeUndefined();
   });
 });

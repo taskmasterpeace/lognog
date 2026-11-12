@@ -268,7 +268,7 @@ function HealthBlock({ health }: { health: FunnelHealth }) {
           return (
             <div key={n.key} className="rounded-[0.625rem] bg-nog-50 px-3 py-2.5 transition-shadow hover:shadow-sm dark:bg-nog-900/40" title={n.what} data-health={n.key}>
               <div className="text-[11px] font-medium uppercase tracking-wide text-nog-500 dark:text-nog-400">{n.label}</div>
-              <div className="mt-0.5 text-2xl font-bold tabular-nums tracking-tight text-nog-900 dark:text-nog-50">{healthValue(n.now, n.unit)}</div>
+              <div className="mt-0.5 text-2xl font-bold tabular-nums tracking-tight text-nog-900 dark:text-nog-50">{n.notReported ? 'not reported' : healthValue(n.now, n.unit)}</div>
               <div className={`text-xs tabular-nums ${tone}`}>
                 {n.period === 'day' ? 'today' : n.period === 'week' ? 'this week' : 'right now'} · {healthBefore(n.before, n.unit, n.period)}
               </div>

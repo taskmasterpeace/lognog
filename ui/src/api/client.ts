@@ -1124,6 +1124,7 @@ export interface FunnelHealthNumber {
   before: number;
   period: 'day' | 'week' | 'right_now';
   unit: 'count' | 'cents' | 'decimal';
+  notReported?: boolean;
 }
 
 export interface FunnelHealth {
