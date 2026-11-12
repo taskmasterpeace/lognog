@@ -47,7 +47,7 @@ export interface LadderRung {
 }
 
 export interface FunnelReport {
-  product: { slug: string; name: string; quietDays: number; activationMeans: string; paidMeans: string; notApplicable: string[] };
+  product: { slug: string; name: string; quietDays: number; activationMeans: string; paidMeans: string; notApplicable: string[]; hasHealth: boolean };
   window: { from: string; to: string; days: number };
   generatedAt: string;
   totals: { events: number; people: number; eventsWithoutId: number; lastEventAt: string | null; /** Older accounts seen coming back with no sign-up in view; kept off the new-people ladders. */ olderAccounts: number };
@@ -492,7 +492,7 @@ export function buildFunnelReport(product: FunnelProduct, events: FunnelEvent[],
 
   const lastTs = usable.length ? maxOf(usable.map((e) => e.ts)) : null;
   return {
-    product: { slug: product.slug, name: product.name, quietDays: product.quietDays, activationMeans: product.activationMeans, paidMeans: product.paidMeans, notApplicable: product.notApplicable },
+    product: { slug: product.slug, name: product.name, quietDays: product.quietDays, activationMeans: product.activationMeans, paidMeans: product.paidMeans, notApplicable: product.notApplicable, hasHealth: !!product.health },
     window: { from: new Date(opts.from).toISOString(), to: new Date(opts.to).toISOString(), days: Math.round((opts.to - opts.from) / DAY) },
     generatedAt: new Date(now).toISOString(),
     totals: { events: usable.length, people: all.length, eventsWithoutId: withoutId, lastEventAt: lastTs ? new Date(lastTs).toISOString() : null, olderAccounts: olderAccounts.length },

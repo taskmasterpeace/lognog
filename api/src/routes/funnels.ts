@@ -83,9 +83,9 @@ router.get('/health', async (req: Request, res: Response) => {
     if (!product || !canRead(product, req.allowedIndexes)) return res.status(404).json({ error: 'Unknown product' });
     if (!product.health) return res.status(404).json({ error: 'This product has no health block' });
     const now = Date.now();
-    // 90 days of history: enough for paying-now and gone-quiet to be right.
+    // All the history LogNog keeps. Longer-lived facts (a yearly plan paid earlier) are out of view; the block says so.
     const { events, truncated } = await fetchFunnelEvents(product, now - HISTORY_DAYS * DAY, req.allowedIndexes);
-    res.json({ ...buildProductHealth(product, events, now), truncated });
+    res.json({ ...buildProductHealth(product, events, now, HISTORY_DAYS), truncated });
   } catch (error) {
     console.error('Funnel health error:', error);
     res.status(500).json({ error: 'Could not build the health numbers' });

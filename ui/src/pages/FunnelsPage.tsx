@@ -246,6 +246,8 @@ function OverviewCard({ row, onOpen }: { row: FunnelOverviewRow; onOpen: () => v
 function HealthBlock({ health }: { health: FunnelHealth }) {
   // Bad news rising is not good news: these read red when they go up.
   const worseWhenUp = new Set(['quiet', 'cancelled']);
+  // Neither good nor bad on its own: more families hitting the limit means more use AND more friction.
+  const neutral = new Set(['hit_limit']);
   return (
     <Card>
       <header className="mb-3 flex items-start gap-3" data-testid="health-block">
@@ -262,7 +264,7 @@ function HealthBlock({ health }: { health: FunnelHealth }) {
         {health.numbers.map((n) => {
           const trend = healthTrend(n.now, n.before);
           const bad = worseWhenUp.has(n.key) ? trend === 'up' : trend === 'down';
-          const tone = trend === 'same' ? 'text-nog-500 dark:text-nog-400' : bad ? 'text-orange-700 dark:text-orange-400' : 'text-emerald-700 dark:text-emerald-400';
+          const tone = trend === 'same' || neutral.has(n.key) ? 'text-nog-500 dark:text-nog-400' : bad ? 'text-orange-700 dark:text-orange-400' : 'text-emerald-700 dark:text-emerald-400';
           return (
             <div key={n.key} className="rounded-[0.625rem] bg-nog-50 px-3 py-2.5 transition-shadow hover:shadow-sm dark:bg-nog-900/40" title={n.what} data-health={n.key}>
               <div className="text-[11px] font-medium uppercase tracking-wide text-nog-500 dark:text-nog-400">{n.label}</div>
@@ -284,7 +286,10 @@ function HealthBlock({ health }: { health: FunnelHealth }) {
   );
 }
 
-function ProductView({ report, health }: { report: FunnelReport; health?: FunnelHealth | null }) {
+function ProductView({ report, health, healthFailed }: { report: FunnelReport; health?: FunnelHealth | null; healthFailed?: boolean }) {
+  const healthNotice = healthFailed && !health ? (
+    <Card className="text-sm text-orange-700 dark:text-orange-400">Could not load the health numbers for {report.product.name}. The rest of the page is unaffected.</Card>
+  ) : null;
   const s = report.stopping;
   const m = report.movingToPaid;
   const b = report.beforePaying;
@@ -292,6 +297,7 @@ function ProductView({ report, health }: { report: FunnelReport; health?: Funnel
     return (
       <div className="space-y-3">
         {health && <HealthBlock health={health} />}
+        {healthNotice}
         <EmptyState name={report.product.name} />
       </div>
     );
@@ -319,6 +325,7 @@ function ProductView({ report, health }: { report: FunnelReport; health?: Funnel
       </Card>
 
       {health && <HealthBlock health={health} />}
+      {healthNotice}
 
       <div className="grid gap-3 lg:grid-cols-2">
         <Card>
@@ -460,8 +467,13 @@ export default function FunnelsPage() {
 
   const overview = useQuery({ queryKey: ['funnels', 'overview', days], queryFn: () => getFunnelOverview(days) });
   const report = useQuery({ queryKey: ['funnels', 'report', product, days], queryFn: () => getFunnelReport(product, days), enabled: !!product });
-  // Only some products have a health block; the call answers null for the rest.
-  const health = useQuery({ queryKey: ['funnels', 'health', product], queryFn: () => getFunnelHealth(product), enabled: !!product, refetchInterval: 5 * 60 * 1000 });
+  // Only some products have a health block; the report says which, so the others are never asked.
+  const health = useQuery({
+    queryKey: ['funnels', 'health', product],
+    queryFn: () => getFunnelHealth(product),
+    enabled: !!product && !!report.data?.product.hasHealth && report.data.product.slug === product,
+    refetchInterval: 5 * 60 * 1000,
+  });
 
   const set = (next: { product?: string; days?: number }) => {
     const p = new URLSearchParams(params);
@@ -531,7 +543,7 @@ export default function FunnelsPage() {
           </p>
         </div>
       )}
-      {!loading && !error && product && report.data && <ProductView report={report.data} health={health.data} />}
+      {!loading && !error && product && report.data && <ProductView report={report.data} health={health.data} healthFailed={health.isError} />}
     </div>
   );
 }

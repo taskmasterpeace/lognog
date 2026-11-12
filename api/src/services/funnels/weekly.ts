@@ -184,7 +184,7 @@ export function buildWeeklySection(product: FunnelProduct, events: FunnelEvent[]
     },
     notReported: now.notReported,
     truncated,
-    ...(product.health && hasData ? { healthLine: buildProductHealth(product, events, weekEnd)?.line } : {}),
+    ...(product.health && hasData ? { healthLine: buildProductHealth(product, events, weekEnd, HISTORY_DAYS)?.line } : {}),
   };
 }
 

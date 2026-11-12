@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildProductHealth } from './health';
+import { buildProductHealth, perMonthCents } from './health';
 import { FunnelEvent } from './compute';
 import { findFunnelProduct, FUNNEL_PRODUCTS } from './model';
 
@@ -75,14 +75,14 @@ describe('product health: Homework Tree', () => {
 
   it('gives one sentence that can be read out', () => {
     expect(h.line).toBe(
-      'Homework Tree tonight: 3 sheets read by 2 families, 3 families active this week, about 1 sheet per active family this week, 1 hit the free limit, 1 new paying family, $59.99 in, 1 cancelled this week.',
+      'Homework Tree, last 24 hours: 3 sheets read by 2 families, 3 families active this week, about 1 sheet per active family this week, 1 hit the free limit this week, 1 new paying family, $59.99 in, 1 cancelled this week.',
     );
   });
 
   it('says plainly when there is nothing yet, and never divides by zero', () => {
     const empty = buildProductHealth(ht, [], NOW)!;
     expect(empty.hasData).toBe(false);
-    expect(empty.line).toBe('Homework Tree tonight: no activity recorded yet.');
+    expect(empty.line).toBe('Homework Tree, last 24 hours: no activity recorded yet.');
     for (const n of empty.numbers) expect(Number.isFinite(n.now) && Number.isFinite(n.before)).toBe(true);
   });
 
@@ -115,5 +115,74 @@ describe('product health: which products have one', () => {
   it('only products that declare it', () => {
     expect(FUNNEL_PRODUCTS.filter((p) => p.health).map((p) => p.slug)).toEqual(['homework-tree']);
     expect(buildProductHealth(findFunnelProduct('directors-palette')!, [], NOW)).toBeNull();
+  });
+});
+
+describe('product health: cases found in review', () => {
+  const paid = (ms: number, who: string, cents: number | undefined, interval?: string, event = 'family_plan_paid') =>
+    ago(ms, 'paid', who, { event, amountCents: cents, interval });
+
+  it('says plainly that yearly plans drop out of view after the history LogNog keeps', () => {
+    const h = buildProductHealth(ht, [read(HOUR, 'a')], NOW)!;
+    expect(h.notes.join(' ')).toMatch(/a yearly plan drops out 90 days after it was paid/);
+    expect(num(h, 'paying_now').what).toMatch(/in the last 90 days/);
+  });
+
+  it('never guesses a plan length: unknown ones are left out of the run-rate and named', () => {
+    expect(perMonthCents(5999, 'year')).toBeCloseTo(499.9, 1);
+    expect(perMonthCents(5999, 'yearly')).toBeCloseTo(499.9, 1);
+    expect(perMonthCents(699, 'month')).toBe(699);
+    expect(perMonthCents(699, 'week')).toBeCloseTo(3029, 0);
+    expect(perMonthCents(5999, undefined)).toBeNull();
+    expect(perMonthCents(5999, 'one_time')).toBeNull();
+    const h = buildProductHealth(ht, [paid(DAY * 3, 'a', 5999, undefined), paid(DAY * 3, 'b', 699, 'month')], NOW)!;
+    expect(num(h, 'paying_now').now).toBe(2);
+    expect(num(h, 'run_rate').now).toBe(699); // not 699 + 5999
+    expect(h.notes.join(' ')).toMatch(/1 paying family is left out of the run-rate/);
+  });
+
+  it('an old customer who cancelled and pays again today is not a new paying family', () => {
+    const h = buildProductHealth(ht, [
+      paid(40 * DAY, 'old', 699, 'month', 'family_plan_renewed'),
+      ago(10 * DAY, 'churn', 'old', { event: 'family_plan_cancelled' }),
+      paid(HOUR, 'old', 699, 'month'),
+    ], NOW)!;
+    expect(num(h, 'new_payers').now).toBe(0);
+    expect(num(h, 'money_in').now).toBe(699);
+    expect(num(h, 'paying_now').now).toBe(1);
+  });
+
+  it('"for the first time" is only said about families whose beginning is in view', () => {
+    // First seen at the very edge of the 90 days: they may have been reading sheets long before.
+    const edge = [read(89 * DAY, 'longtime'), read(50 * DAY, 'longtime'), read(HOUR, 'longtime')];
+    const h = buildProductHealth(ht, edge, NOW)!;
+    expect(num(h, 'hooked').now).toBe(0);
+    expect(num(h, 'second_week').now).toBe(0);
+    // A family that started three weeks ago and reads its 3rd sheet today does count.
+    const fresh = buildProductHealth(ht, [read(20 * DAY, 'new'), read(19 * DAY, 'new'), read(HOUR, 'new')], NOW)!;
+    expect(num(fresh, 'hooked').now).toBe(1);
+  });
+
+  it('a payment and a cancellation at the same moment count once: as paying', () => {
+    const t = NOW - 2 * DAY;
+    const h = buildProductHealth(ht, [
+      { ts: t, stage: 'paid', event: 'family_plan_paid', userId: 'x', amountCents: 699, interval: 'month' },
+      { ts: t, stage: 'churn', event: 'family_plan_cancelled', userId: 'x' },
+    ], NOW)!;
+    expect(num(h, 'paying_now').now + num(h, 'cancelled').now).toBe(1);
+    expect(num(h, 'paying_now').now).toBe(1);
+  });
+
+  it('a payment with no amount is never read out as "$0 in"', () => {
+    const h = buildProductHealth(ht, [paid(HOUR, 'a', undefined, 'month')], NOW)!;
+    expect(h.line).toMatch(/1 new paying family, money not reported,/);
+    expect(h.line).not.toMatch(/\$0 in/);
+    expect(h.notes.join(' ')).toMatch(/1 payment today came with no amount/);
+  });
+
+  it('with nobody active this week the sentence does not say "about 0 sheets per active family"', () => {
+    const h = buildProductHealth(ht, [read(30 * DAY, 'a')], NOW)!;
+    expect(h.line).not.toMatch(/per active family/);
+    expect(h.line).toMatch(/0 families active this week, 0 hit the free limit this week/);
   });
 });

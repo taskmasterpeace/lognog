@@ -1009,6 +1009,7 @@ export interface FunnelProductInfo {
   activationMeans: string;
   paidMeans: string;
   notApplicable: string[];
+  hasHealth?: boolean;
 }
 
 export interface FunnelTotals {
@@ -1135,13 +1136,9 @@ export interface FunnelHealth {
   truncated: boolean;
 }
 
-/** A product's nightly health numbers. Answers null for products that have none. */
-export async function getFunnelHealth(product: string): Promise<FunnelHealth | null> {
-  try {
-    return await request(`/funnels/health?product=${encodeURIComponent(product)}`);
-  } catch {
-    return null;
-  }
+/** A product's nightly health numbers. Only ask for products whose report says `hasHealth`. */
+export async function getFunnelHealth(product: string): Promise<FunnelHealth> {
+  return request(`/funnels/health?product=${encodeURIComponent(product)}`);
 }
 
 export async function getFunnelReport(product: string, days: number): Promise<FunnelReport> {

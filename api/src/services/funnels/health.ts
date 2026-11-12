@@ -65,11 +65,25 @@ interface Snapshot {
   cancelledWeek: number;
   payingNow: number;
   runRateCents: number;
+  /** Paying people whose plan length is unknown, so they are left out of the run-rate. */
+  runRateUnknown: number;
+  /** Payments today that came with no amount. */
+  paymentsToday: number;
+  paymentsTodayNoAmount: number;
   quiet: number;
 }
 
+/** Cents per month for a plan length, or null when the length is not one we know. */
+export function perMonthCents(cents: number, interval: string | undefined): number | null {
+  const i = (interval || '').toLowerCase();
+  if (i === 'month' || i === 'monthly') return cents;
+  if (i === 'year' || i === 'yearly' || i === 'annual') return cents / 12;
+  if (i === 'week' || i === 'weekly') return (cents * 52) / 12;
+  return null; // missing, one_time or anything else: not guessed
+}
+
 /** Everything as it stood at `at`, using only events up to then. */
-function snapshot(product: FunnelProduct, events: FunnelEvent[], at: number): Snapshot {
+function snapshot(product: FunnelProduct, events: FunnelEvent[], at: number, historyStart: number): Snapshot {
   const cfg = product.health!;
   const { people } = buildPeople(events.filter((e) => e.ts <= at));
   const dayStart = at - DAY;
@@ -77,7 +91,8 @@ function snapshot(product: FunnelProduct, events: FunnelEvent[], at: number): Sn
   const quietMs = product.quietDays * DAY;
   const s: Snapshot = {
     moneyCents: 0, newPayers: 0, renewals: 0, usesDay: 0, usersDay: 0, activeWeek: 0, typicalUsesWeek: 0,
-    hooked: 0, secondWeek: 0, hitLimit: 0, startedCheckout: 0, cancelledWeek: 0, payingNow: 0, runRateCents: 0, quiet: 0,
+    hooked: 0, secondWeek: 0, hitLimit: 0, startedCheckout: 0, cancelledWeek: 0, payingNow: 0, runRateCents: 0, runRateUnknown: 0,
+    paymentsToday: 0, paymentsTodayNoAmount: 0, quiet: 0,
   };
   const weekCounts: number[] = [];
   for (const p of people.values()) {
@@ -90,10 +105,14 @@ function snapshot(product: FunnelProduct, events: FunnelEvent[], at: number): Sn
       s.activeWeek++;
       weekCounts.push(usesWeek);
     }
+    // "For the first time" can only be said about someone whose beginning is in
+    // view. A family first seen right at the edge of the history we hold may have
+    // been using it long before, so they are not counted as newly hooked.
+    const beginningInView = p.firstTs > historyStart + 7 * DAY;
     // Hooked: the Nth use ever fell inside this week.
-    if (uses.length >= cfg.hookedAt && uses[cfg.hookedAt - 1] > weekStart) s.hooked++;
+    if (beginningInView && uses.length >= cfg.hookedAt && uses[cfg.hookedAt - 1] > weekStart) s.hooked++;
     // Second week: first use that is 7+ days after their very first use fell inside this week.
-    if (uses.length > 1) {
+    if (beginningInView && uses.length > 1) {
       const later = uses.find((t) => t - uses[0] >= 7 * DAY);
       if (later !== undefined && later > weekStart) s.secondWeek++;
     }
@@ -108,6 +127,8 @@ function snapshot(product: FunnelProduct, events: FunnelEvent[], at: number): Sn
         const renewal = /renew/.test(e.event);
         if (e.ts > dayStart) {
           s.moneyCents += e.amountCents ?? 0;
+          s.paymentsToday++;
+          if (e.amountCents === undefined) s.paymentsTodayNoAmount++;
           if (renewal) s.renewals++;
         }
         lastPaid = { ts: e.ts, cents: e.amountCents ?? 0 };
@@ -116,13 +137,17 @@ function snapshot(product: FunnelProduct, events: FunnelEvent[], at: number): Sn
         lastChurn = e.ts;
       }
     }
-    if (p.firstNewPaid !== undefined && p.firstNewPaid > dayStart) s.newPayers++;
-    if (lastChurn !== undefined && lastChurn > weekStart && !(lastPaid && lastPaid.ts > lastChurn)) s.cancelledWeek++;
-    if (lastPaid && !(lastChurn !== undefined && lastChurn > lastPaid.ts)) {
+    // New = their first payment in view is today's and it is not a renewal (same rule as the ladders).
+    if (p.firstNewPaid !== undefined && p.firstNewPaid === p.first.paid && p.firstNewPaid > dayStart) s.newPayers++;
+    // A payment at or after the cancellation wins: they are paying, not cancelled.
+    const cancelledAfterPaying = lastChurn !== undefined && !(lastPaid && lastPaid.ts >= lastChurn);
+    if (cancelledAfterPaying && (lastChurn as number) > weekStart) s.cancelledWeek++;
+    if (lastPaid && !cancelledAfterPaying) {
       s.payingNow++;
-      // Monthly run-rate from what they last paid and how often.
-      const perMonth = lastInterval === 'year' ? lastPaid.cents / 12 : lastInterval === 'week' ? (lastPaid.cents * 52) / 12 : lastPaid.cents;
-      s.runRateCents += Math.round(perMonth);
+      // Monthly run-rate from what they last paid and how often. Unknown plan lengths are left out, not guessed.
+      const perMonth = perMonthCents(lastPaid.cents, lastInterval);
+      if (perMonth === null || lastPaid.cents <= 0) s.runRateUnknown++;
+      else s.runRateCents += Math.round(perMonth);
     }
     // Quiet: used it at least once, and not for the product's quiet window.
     if (uses.length > 0 && at - uses[uses.length - 1] > quietMs) s.quiet++;
@@ -132,13 +157,17 @@ function snapshot(product: FunnelProduct, events: FunnelEvent[], at: number): Sn
 }
 
 /** Build the health block for one product. Pure: pass the events and the moment. */
-export function buildProductHealth(product: FunnelProduct, events: FunnelEvent[], now: number): ProductHealth | null {
+/** How far back the caller's events go, in days (LogNog keeps 90). */
+export const HEALTH_HISTORY_DAYS = 90;
+
+export function buildProductHealth(product: FunnelProduct, events: FunnelEvent[], now: number, historyDays: number = HEALTH_HISTORY_DAYS): ProductHealth | null {
   const cfg = product.health;
   if (!cfg) return null;
   const usable = events.filter((e) => Number.isFinite(e.ts) && e.ts <= now);
-  const today = snapshot(product, usable, now);
-  const yesterday = snapshot(product, usable, now - DAY);
-  const lastWeek = snapshot(product, usable, now - 7 * DAY);
+  const historyStart = now - historyDays * DAY;
+  const today = snapshot(product, usable, now, historyStart);
+  const yesterday = snapshot(product, usable, now - DAY, historyStart);
+  const lastWeek = snapshot(product, usable, now - 7 * DAY, historyStart);
   const U = cfg.unitPlural;
   const P = cfg.peoplePlural;
   const n = (key: string, label: string, what: string, a: number, b: number, period: HealthNumber['period'], unit: HealthNumber['unit'] = 'count'): HealthNumber => ({ key, label, what, now: a, before: b, period, unit });
@@ -147,8 +176,8 @@ export function buildProductHealth(product: FunnelProduct, events: FunnelEvent[]
     n('money_in', 'Money in', 'Payments confirmed by the payment provider, renewals included.', today.moneyCents, yesterday.moneyCents, 'day', 'cents'),
     n('new_payers', `New paying ${P}`, `${cap(P)} that paid for the first time.`, today.newPayers, yesterday.newPayers, 'day'),
     n('renewals', 'Renewals', 'Existing customers whose plan renewed.', today.renewals, yesterday.renewals, 'day'),
-    n('paying_now', `Paying ${P}`, `${cap(P)} whose latest payment has not been followed by a cancellation.`, today.payingNow, lastWeek.payingNow, 'right_now'),
-    n('run_rate', 'Monthly run-rate', 'What the paying base is worth per month (yearly plans spread over 12 months).', today.runRateCents, lastWeek.runRateCents, 'right_now', 'cents'),
+    n('paying_now', `Paying ${P}`, `${cap(P)} whose latest payment in the last ${historyDays} days has not been followed by a cancellation.`, today.payingNow, lastWeek.payingNow, 'right_now'),
+    n('run_rate', 'Monthly run-rate', `What those paying ${P} are worth per month (yearly plans spread over 12 months; payments with an unknown plan length are left out).`, today.runRateCents, lastWeek.runRateCents, 'right_now', 'cents'),
     n('uses_today', cap(U), `The core unit of work: how many ${U} in the last 24 hours.`, today.usesDay, yesterday.usesDay, 'day'),
     n('users_today', `${cap(P)} that used it`, `How many ${P} did at least one.`, today.usersDay, yesterday.usersDay, 'day'),
     n('active_week', `Active ${P}`, `${cap(P)} with at least one in the last 7 days.`, today.activeWeek, lastWeek.activeWeek, 'week'),
@@ -162,14 +191,27 @@ export function buildProductHealth(product: FunnelProduct, events: FunnelEvent[]
   ];
 
   const hasData = usable.length > 0;
+  // Money as said out loud: never "$0" for payments that arrived without an amount.
+  const moneySaid =
+    today.paymentsToday > 0 && today.paymentsTodayNoAmount >= today.paymentsToday
+      ? 'money not reported'
+      : `${dollars(today.moneyCents)} in${today.paymentsTodayNoAmount > 0 ? ' (some payments had no amount)' : ''}`;
+  const typical = today.activeWeek > 0 ? `about ${today.typicalUsesWeek} ${today.typicalUsesWeek === 1 ? cfg.unitShort.replace(/s$/, '') : cfg.unitShort} per active ${cfg.personOne} this week, ` : '';
   const line = !hasData
-    ? `${product.name} tonight: no activity recorded yet.`
-    : `${product.name} tonight: ${plural(today.usesDay, cfg.unitOneRead, U)} by ${plural(today.usersDay, cfg.personOne, P)}, ` +
+    ? `${product.name}, last 24 hours: no activity recorded yet.`
+    : `${product.name}, last 24 hours: ${plural(today.usesDay, cfg.unitOneRead, U)} by ${plural(today.usersDay, cfg.personOne, P)}, ` +
       `${plural(today.activeWeek, cfg.personOne, P)} active this week, ` +
-      `about ${today.typicalUsesWeek} ${today.typicalUsesWeek === 1 ? cfg.unitShort.replace(/s$/, '') : cfg.unitShort} per active ${cfg.personOne} this week, ` +
-      `${today.hitLimit.toLocaleString('en-US')} hit the free limit, ` +
-      `${plural(today.newPayers, `new paying ${cfg.personOne}`, `new paying ${P}`)}, ${dollars(today.moneyCents)} in, ` +
-      `${today.cancelledWeek === 0 ? 'nobody cancelled this week' : `${today.cancelledWeek.toLocaleString('en-US')} cancelled this week`}.`;
+      typical +
+      `${today.hitLimit.toLocaleString('en-US')} hit the free limit this week, ` +
+      `${plural(today.newPayers, `new paying ${cfg.personOne}`, `new paying ${P}`)}, ${moneySaid}, ` +
+      `${today.cancelledWeek === 0 ? 'no cancellations this week' : `${today.cancelledWeek.toLocaleString('en-US')} cancelled this week`}.`;
+
+  const notes = [
+    ...cfg.notes,
+    `LogNog keeps ${historyDays} days. "Paying ${P}" and the run-rate only see payments from that time, so a yearly plan drops out ${historyDays} days after it was paid. "For the first time" numbers only count ${P} first seen in that time.`,
+  ];
+  if (today.runRateUnknown > 0) notes.push(`${plural(today.runRateUnknown, `paying ${cfg.personOne} is`, `paying ${P} are`)} left out of the run-rate: the payment did not say whether the plan is monthly or yearly.`);
+  if (today.paymentsTodayNoAmount > 0) notes.push(`${plural(today.paymentsTodayNoAmount, 'payment', 'payments')} today came with no amount, so money in is understated.`);
 
   return {
     product: { slug: product.slug, name: product.name },
@@ -177,7 +219,7 @@ export function buildProductHealth(product: FunnelProduct, events: FunnelEvent[]
     hasData,
     numbers,
     line,
-    notes: cfg.notes,
+    notes,
   };
 }
 
